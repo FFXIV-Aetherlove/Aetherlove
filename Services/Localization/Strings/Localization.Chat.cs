@@ -1,0 +1,56 @@
+namespace AetherLove.Services.Localization;
+
+internal static class ChatEn
+{
+    public static readonly System.Collections.Generic.Dictionary<string, string> Strings = new()
+    {
+        ["chat.no_conversation_selected"] = "No conversation selected.",
+        ["chat.unreadable_message"] = "[unreadable message]",
+        ["chat.report_submitted_toast"] = "Report submitted. Our moderation team will review it.",
+        ["chat.view_profile"] = "View profile",
+        ["chat.menu_open_profile"] = "Open profile",
+        ["chat.menu_pin"] = "Pin chat",
+        ["chat.menu_unpin"] = "Unpin chat",
+        ["chat.menu_unmatch"] = "Unmatch",
+        ["chat.menu_block"] = "Block",
+        ["chat.menu_report_user"] = "Report User",
+        ["chat.unmatch_title"] = "Unmatch",
+        ["chat.unmatch_body"] = "When you unmatch with this player, the chat will be hidden from both people. If you re-match later, your history will reappear.",
+        ["chat.unmatch_confirm"] = "Unmatch",
+        ["chat.block_title"] = "Block User",
+        ["chat.block_body"] = "When you block a user, the chat will be hidden from both people and they will not appear in your matches in the future.",
+        ["chat.block_confirm"] = "Block",
+        ["chat.cancel"] = "Cancel",
+        ["chat.loading_messages"] = "Loading messages…",
+        ["chat.error"] = "Error: {0}",
+        ["chat.seen_suffix"] = " · seen",
+        ["chat.send"] = "Send",
+        ["chat.emoji_button"] = ":)",
+        ["chat.system_notice_line1"] = "This is a private chat between you and {0}. This chat is end-to-end encrypted, AetherLove staff cannot read your messages. In the top right you'll find a menu to unmatch, block, or report your match.",
+        ["chat.system_notice_line2"] = "Remember: {0} does not know your full name or location until you share it with them. Take care of your own privacy and only share more if you're ready.",
+        ["chat.i_understand"] = "I understand",
+        ["chat.report_title"] = "Report User",
+        ["chat.report_reason_prompt"] = "Please describe the reason for your report:",
+        ["chat.report_agree"] = "I agree to submit a report against {0}",
+        ["chat.report_agree_contents"] = "I agree to send the contents of this conversation to the AetherLove staff",
+        ["chat.submitting"] = "Submitting…",
+        ["chat.submit"] = "Submit",
+
+        // ChatListScreen
+        ["chat.preview_me_prefix"] = "Me: ",
+        ["chat.matches_title"] = "Matches",
+        ["chat.archive_title"] = "Archived",
+        ["chat.menu_archive"] = "Archive chat",
+        ["chat.menu_unarchive"] = "Unarchive chat",
+        ["chat.no_archived"] = "No archived chats",
+        ["chat.all_archived"] = "All your chats are archived",
+        ["chat.loading"] = "Loading…",
+        ["chat.matches_load_error"] = "Couldn't load matches: {0}",
+        ["chat.empty_state"] = "You have no matches yet — but that'll change soon. Keep swiping!",
+        ["chat.new_match"] = "new match",
+        ["chat.say_hi"] = "You matched — say hi!",
+        ["chat.time_ago_minutes"] = "{0}m ago",
+        ["chat.time_ago_hours"] = "{0}h ago",
+        ["chat.time_ago_days"] = "{0}d ago",
+    };
+}

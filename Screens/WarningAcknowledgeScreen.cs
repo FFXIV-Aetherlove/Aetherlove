@@ -1,0 +1,222 @@
+using System;
+using System.Linq;
+using System.Numerics;
+using System.Threading;
+using System.Threading.Tasks;
+using AetherLove.Navigation;
+using AetherLove.Services;
+using AetherLove.Services.Auth;
+using AetherLove.Services.Hub;
+using AetherLove.Services.Localization;
+using AetherLove.Shared.Profile;
+using AetherLove.UI;
+using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Utility.Raii;
+
+namespace AetherLove.Screens;
+
+/// <summary>Acknowledge screen for unseen moderation warnings.</summary>
+public sealed class WarningAcknowledgeScreen
+{
+    private readonly ScreenRouter _router;
+    private readonly SessionBootstrapper _bootstrap;
+    private readonly AetherLoveHubClient _hub;
+
+    private static float PadX => Px(16f);
+
+    private WarningDto[] _toAcknowledge = [];
+    private volatile bool _submitting;
+    private volatile string? _submitError;
+
+    public WarningAcknowledgeScreen(ScreenRouter router,
+                                    SessionBootstrapper bootstrap,
+                                    AetherLoveHubClient hub)
+    {
+        _router = router;
+        _bootstrap = bootstrap;
+        _hub = hub;
+    }
+
+    public void OnShow()
+    {
+        var conn = _bootstrap.LastConnection;
+        _toAcknowledge = conn?.Warnings.Where(w => !w.Seen).ToArray() ?? [];
+        _submitting = false;
+        _submitError = null;
+
+        if (_toAcknowledge.Length == 0)
+        {
+            NavigateToTarget();
+        }
+    }
+
+    public void Draw()
+    {
+        var t = ThemeService.Current;
+        var winW = ImGui.GetWindowSize().X;
+        var scrollH = ImGui.GetContentRegionAvail().Y;
+
+        PushScrollbarStyle();
+
+        using (var scroll = ImRaii.Child("##warnAck", new Vector2(0f, scrollH), false))
+        {
+            PopScrollbarStyle();
+
+            if (!scroll.Success)
+            {
+                return;
+            }
+
+            ImGui.Spacing();
+            ImGui.Spacing();
+
+            var heading = _toAcknowledge.Length == 1
+                ? Loc.T("common.warnings_heading_one")
+                : Loc.T("common.warnings_heading_many", _toAcknowledge.Length);
+            ImGui.SetCursorPosX(PadX);
+            ImGui.TextColored(new Vector4(0.95f, 0.78f, 0.30f, 1f), heading);
+            ImGui.Spacing();
+
+            var dl = ImGui.GetWindowDrawList();
+            ImGui.SetCursorPosX(PadX);
+            var p = ImGui.GetCursorScreenPos();
+            var endX = p.X + winW - PadX * 2f;
+            dl.AddLine(p, new Vector2(endX, p.Y), 0x88FFBB33u, 1f);
+            ImGui.SetCursorPosY(ImGui.GetCursorPosY() + Px(6f));
+            ImGui.Spacing();
+
+            ImGui.SetCursorPosX(PadX);
+            ImGui.PushTextWrapPos(winW - PadX);
+            ImGui.TextColored(new Vector4(0.85f, 0.85f, 0.85f, 1f),
+                Loc.T("common.warnings_body"));
+            ImGui.PopTextWrapPos();
+            ImGui.Spacing();
+            ImGui.Spacing();
+
+            foreach (var w in _toAcknowledge)
+            {
+                DrawWarningCard(w, winW);
+            }
+
+            var notes = _bootstrap.LastConnection?.ModerationNotes;
+            if (!string.IsNullOrWhiteSpace(notes))
+            {
+                ImGui.Spacing();
+                ImGui.SetCursorPosX(PadX);
+                ImGui.TextColored(new Vector4(0.55f, 0.55f, 0.55f, 1f), Loc.T("common.moderator_notes_label"));
+                ImGui.SetCursorPosX(PadX);
+                ImGui.PushTextWrapPos(winW - PadX);
+                ImGui.TextColored(new Vector4(0.80f, 0.80f, 0.80f, 1f), notes);
+                ImGui.PopTextWrapPos();
+                ImGui.Spacing();
+            }
+
+            ImGui.Spacing();
+            ImGui.SetCursorPosX(PadX);
+            ImGui.PushStyleColor(ImGuiCol.Button, t.ButtonNormal);
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, t.ButtonHovered);
+            ImGui.PushStyleColor(ImGuiCol.ButtonActive, t.ButtonActive);
+            ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
+
+            var btnLabel = _submitting ? Loc.T("common.acknowledging") : Loc.T("common.i_understand");
+            if (_submitting)
+            {
+                ImGui.BeginDisabled();
+            }
+            if (ImGui.Button(btnLabel, new Vector2(winW - PadX * 2f, Px(36f))))
+            {
+                StartAcknowledge();
+            }
+            if (_submitting)
+            {
+                ImGui.EndDisabled();
+            }
+            ImGui.PopStyleVar();
+            ImGui.PopStyleColor(3);
+
+            if (_submitError is not null)
+            {
+                ImGui.Spacing();
+                ImGui.SetCursorPosX(PadX);
+                ImGui.PushTextWrapPos(winW - PadX);
+                ImGui.TextColored(new Vector4(0.95f, 0.45f, 0.45f, 1f),
+                    Loc.T("common.warnings_submit_error", _submitError));
+                ImGui.PopTextWrapPos();
+            }
+        }
+    }
+
+    private static void DrawWarningCard(WarningDto w, float winW)
+    {
+        ImGui.SetCursorPosX(PadX);
+        ImGui.PushTextWrapPos(winW - PadX);
+
+        ImGui.TextColored(new Vector4(0.55f, 0.55f, 0.55f, 1f),
+            w.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm"));
+        ImGui.SetCursorPosX(PadX);
+        ImGui.TextColored(new Vector4(0.92f, 0.92f, 0.92f, 1f), w.Reason);
+        ImGui.PopTextWrapPos();
+
+        ImGui.Spacing();
+        ImGui.Spacing();
+    }
+
+    private void StartAcknowledge()
+    {
+        if (_submitting)
+        {
+            return;
+        }
+        _submitting = true;
+        _submitError = null;
+
+        var ids = _toAcknowledge.Select(w => w.Id).ToArray();
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _hub.MarkWarningsSeenAsync(ids, CancellationToken.None).ConfigureAwait(false);
+
+                MarkSeenInCachedSnapshot(ids);
+
+                NavigateToTarget();
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.Warning(ex, "[Warnings] MarkWarningsSeenAsync failed.");
+                _submitError = HubErrorText.Localize(ex);
+            }
+            finally
+            {
+                _submitting = false;
+            }
+        });
+    }
+
+    private void MarkSeenInCachedSnapshot(Guid[] ids)
+    {
+        var conn = _bootstrap.LastConnection;
+        if (conn is null)
+        {
+            return;
+        }
+        for (int i = 0; i < conn.Warnings.Length; i++)
+        {
+            if (!conn.Warnings[i].Seen && ids.Contains(conn.Warnings[i].Id))
+            {
+                conn.Warnings[i] = conn.Warnings[i] with { Seen = true };
+            }
+        }
+    }
+
+    private void NavigateToTarget()
+    {
+        // Only mid-onboarding goes to the wizard. Everything else (including the transient Pending
+        // during a reconnect) goes to Deck, so acknowledging never drops an active user into onboarding.
+        var target = _bootstrap.LastResult == SessionBootstrapResult.SignedInOnboarding
+            ? Screen.Onboarding
+            : Screen.Deck;
+        _router.Navigate(target);
+    }
+}

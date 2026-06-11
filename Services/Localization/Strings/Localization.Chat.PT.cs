@@ -1,0 +1,56 @@
+namespace AetherLove.Services.Localization;
+
+internal static class ChatPt
+{
+    public static readonly System.Collections.Generic.Dictionary<string, string> Strings = new()
+    {
+        ["chat.no_conversation_selected"] = "Nenhuma conversa selecionada.",
+        ["chat.unreadable_message"] = "[mensagem ilegível]",
+        ["chat.report_submitted_toast"] = "Denúncia enviada. Nossa equipe de moderação vai analisá-la.",
+        ["chat.view_profile"] = "Ver perfil",
+        ["chat.menu_open_profile"] = "Abrir perfil",
+        ["chat.menu_pin"] = "Fixar conversa",
+        ["chat.menu_unpin"] = "Desafixar conversa",
+        ["chat.menu_unmatch"] = "Desfazer match",
+        ["chat.menu_block"] = "Bloquear",
+        ["chat.menu_report_user"] = "Denunciar Usuário",
+        ["chat.unmatch_title"] = "Desfazer match",
+        ["chat.unmatch_body"] = "Quando você desfaz o match com este jogador, a conversa fica oculta para os dois. Se vocês derem match de novo mais tarde, o histórico reaparece.",
+        ["chat.unmatch_confirm"] = "Desfazer match",
+        ["chat.block_title"] = "Bloquear Usuário",
+        ["chat.block_body"] = "Quando você bloqueia um usuário, a conversa fica oculta para os dois e ele não aparecerá nos seus matches no futuro.",
+        ["chat.block_confirm"] = "Bloquear",
+        ["chat.cancel"] = "Cancelar",
+        ["chat.loading_messages"] = "Carregando mensagens…",
+        ["chat.error"] = "Erro: {0}",
+        ["chat.seen_suffix"] = " · visto",
+        ["chat.send"] = "Enviar",
+        ["chat.emoji_button"] = ":)",
+        ["chat.system_notice_line1"] = "Este é um chat privado entre você e {0}. Este chat é criptografado de ponta a ponta, a equipe do AetherLove não consegue ler suas mensagens. No canto superior direito, você encontra um menu para desfazer o match, bloquear ou denunciar seu match.",
+        ["chat.system_notice_line2"] = "Lembre-se: {0} não sabe seu nome completo nem sua localização até você compartilhar. Cuide da sua própria privacidade e só compartilhe mais quando estiver pronto.",
+        ["chat.i_understand"] = "Eu entendi",
+        ["chat.report_title"] = "Denunciar Usuário",
+        ["chat.report_reason_prompt"] = "Por favor, descreva o motivo da sua denúncia:",
+        ["chat.report_agree"] = "Eu concordo em enviar uma denúncia contra {0}",
+        ["chat.report_agree_contents"] = "Eu concordo em enviar o conteúdo desta conversa para a equipe do AetherLove",
+        ["chat.submitting"] = "Enviando…",
+        ["chat.submit"] = "Enviar",
+
+        // ChatListScreen
+        ["chat.preview_me_prefix"] = "Eu: ",
+        ["chat.matches_title"] = "Matches",
+        ["chat.archive_title"] = "Arquivados",
+        ["chat.menu_archive"] = "Arquivar conversa",
+        ["chat.menu_unarchive"] = "Desarquivar conversa",
+        ["chat.no_archived"] = "Nenhuma conversa arquivada",
+        ["chat.all_archived"] = "Todas as suas conversas estão arquivadas",
+        ["chat.loading"] = "Carregando…",
+        ["chat.matches_load_error"] = "Não foi possível carregar os matches: {0}",
+        ["chat.empty_state"] = "Você ainda não tem matches — mas isso vai mudar logo. Continue deslizando!",
+        ["chat.new_match"] = "novo match",
+        ["chat.say_hi"] = "Vocês deram match — diga oi!",
+        ["chat.time_ago_minutes"] = "há {0}min",
+        ["chat.time_ago_hours"] = "há {0}h",
+        ["chat.time_ago_days"] = "há {0}d",
+    };
+}

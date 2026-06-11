@@ -1,0 +1,56 @@
+namespace AetherLove.Services.Localization;
+
+internal static class ChatRu
+{
+    public static readonly System.Collections.Generic.Dictionary<string, string> Strings = new()
+    {
+        ["chat.no_conversation_selected"] = "Чат не выбран.",
+        ["chat.unreadable_message"] = "[нечитаемое сообщение]",
+        ["chat.report_submitted_toast"] = "Жалоба отправлена. Команда модераторов рассмотрит её.",
+        ["chat.view_profile"] = "Открыть профиль",
+        ["chat.menu_open_profile"] = "Открыть профиль",
+        ["chat.menu_pin"] = "Закрепить чат",
+        ["chat.menu_unpin"] = "Открепить чат",
+        ["chat.menu_unmatch"] = "Отменить пару",
+        ["chat.menu_block"] = "Заблокировать",
+        ["chat.menu_report_user"] = "Пожаловаться на пользователя",
+        ["chat.unmatch_title"] = "Отменить пару",
+        ["chat.unmatch_body"] = "При отмене пары с этим игроком, чат будет скрыт у обоих. При появлении пары в будущем, ваша история появится вновь.",
+        ["chat.unmatch_confirm"] = "Отменить пару",
+        ["chat.block_title"] = "Заблокировать пользователя",
+        ["chat.block_body"] = "При блокировке этого пользователя, чат будет скрыт у обоих, и он не будет появляться в ваших парах в будущем.",
+        ["chat.block_confirm"] = "Заблокировать",
+        ["chat.cancel"] = "Отмена",
+        ["chat.loading_messages"] = "Загрузка сообщений…",
+        ["chat.error"] = "Ошибка: {0}",
+        ["chat.seen_suffix"] = " · просмотрено",
+        ["chat.send"] = "Отправить",
+        ["chat.emoji_button"] = ":)",
+        ["chat.system_notice_line1"] = "Это приватный чат между вами и {0}. Этот чат защищён сквозным шифрованием, администрация AetherLove не имеет доступа к вашим сообщениям. В правом верхнем углу вы найдёте меню для отмены пары, блокировки или жалобы на вашу пару.",
+        ["chat.system_notice_line2"] = "Помните: {0} не знает вашего полного имени или местоположения, до тех пор, пока вы сами не поделитесь этим. Будьте осторожны с чувствительной/конфиденциальной информацией и делитесь этим, только когда будете уверены в этом.",
+        ["chat.i_understand"] = "Понятно",
+        ["chat.report_title"] = "Пожаловаться на пользователя",
+        ["chat.report_reason_prompt"] = "Пожалуйста, опишите причину вашей жалобы:",
+        ["chat.report_agree"] = "Я согласен(а) подать жалобу на {0}",
+        ["chat.report_agree_contents"] = "Я согласен(а) отправить содержимое этого чата администрации AetherLove",
+        ["chat.submitting"] = "Отправка…",
+        ["chat.submit"] = "Отправить",
+
+        // ChatListScreen
+        ["chat.preview_me_prefix"] = "Я: ",
+        ["chat.matches_title"] = "Пары",
+        ["chat.archive_title"] = "Архив",
+        ["chat.menu_archive"] = "Архивировать чат",
+        ["chat.menu_unarchive"] = "Вернуть из архива",
+        ["chat.no_archived"] = "Нет архивированных чатов",
+        ["chat.all_archived"] = "Все ваши чаты в архиве",
+        ["chat.loading"] = "Загрузка…",
+        ["chat.matches_load_error"] = "Не удалось загрузить пары: {0}",
+        ["chat.empty_state"] = "У вас пока нет пар — но скоро это изменится. Продолжайте листать!",
+        ["chat.new_match"] = "новая пара",
+        ["chat.say_hi"] = "У Вас пара! — скажите привет!",
+        ["chat.time_ago_minutes"] = "{0} мин назад",
+        ["chat.time_ago_hours"] = "{0} ч назад",
+        ["chat.time_ago_days"] = "{0} дн назад",
+    };
+}

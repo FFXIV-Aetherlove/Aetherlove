@@ -1,0 +1,56 @@
+namespace AetherLove.Services.Localization;
+
+internal static class ChatEs
+{
+    public static readonly System.Collections.Generic.Dictionary<string, string> Strings = new()
+    {
+        ["chat.no_conversation_selected"] = "No hay ninguna conversación seleccionada.",
+        ["chat.unreadable_message"] = "[mensaje ilegible]",
+        ["chat.report_submitted_toast"] = "Denuncia enviada. Nuestro equipo de moderación la revisará.",
+        ["chat.view_profile"] = "Ver perfil",
+        ["chat.menu_open_profile"] = "Abrir perfil",
+        ["chat.menu_pin"] = "Fijar chat",
+        ["chat.menu_unpin"] = "Dejar de fijar chat",
+        ["chat.menu_unmatch"] = "Deshacer coincidencia",
+        ["chat.menu_block"] = "Bloquear",
+        ["chat.menu_report_user"] = "Denunciar usuario",
+        ["chat.unmatch_title"] = "Deshacer coincidencia",
+        ["chat.unmatch_body"] = "Cuando deshaces la coincidencia con este jugador, el chat quedará oculto para ambas personas. Si volvéis a coincidir más adelante, vuestro historial reaparecerá.",
+        ["chat.unmatch_confirm"] = "Deshacer coincidencia",
+        ["chat.block_title"] = "Bloquear usuario",
+        ["chat.block_body"] = "Cuando bloqueas a un usuario, el chat quedará oculto para ambas personas y no volverá a aparecer en tus coincidencias en el futuro.",
+        ["chat.block_confirm"] = "Bloquear",
+        ["chat.cancel"] = "Cancelar",
+        ["chat.loading_messages"] = "Cargando mensajes…",
+        ["chat.error"] = "Error: {0}",
+        ["chat.seen_suffix"] = " · visto",
+        ["chat.send"] = "Enviar",
+        ["chat.emoji_button"] = ":)",
+        ["chat.system_notice_line1"] = "Este es un chat privado entre tú y {0}. Este chat está cifrado de extremo a extremo, el equipo de AetherLove no puede leer tus mensajes. Arriba a la derecha encontrarás un menú para deshacer la coincidencia, bloquear o denunciar a tu coincidencia.",
+        ["chat.system_notice_line2"] = "Recuerda: {0} no conoce tu nombre completo ni tu ubicación hasta que se los compartas. Cuida tu propia privacidad y comparte más solo si te sientes preparado.",
+        ["chat.i_understand"] = "Entiendo",
+        ["chat.report_title"] = "Denunciar usuario",
+        ["chat.report_reason_prompt"] = "Por favor, describe el motivo de tu denuncia:",
+        ["chat.report_agree"] = "Acepto presentar una denuncia contra {0}",
+        ["chat.report_agree_contents"] = "Acepto enviar el contenido de esta conversación al equipo de AetherLove",
+        ["chat.submitting"] = "Enviando…",
+        ["chat.submit"] = "Enviar",
+
+        // ChatListScreen
+        ["chat.preview_me_prefix"] = "Yo: ",
+        ["chat.matches_title"] = "Coincidencias",
+        ["chat.archive_title"] = "Archivados",
+        ["chat.menu_archive"] = "Archivar chat",
+        ["chat.menu_unarchive"] = "Desarchivar chat",
+        ["chat.no_archived"] = "No hay chats archivados",
+        ["chat.all_archived"] = "Todos tus chats están archivados",
+        ["chat.loading"] = "Cargando…",
+        ["chat.matches_load_error"] = "No se pudieron cargar las coincidencias: {0}",
+        ["chat.empty_state"] = "Aún no tienes coincidencias — pero eso cambiará pronto. ¡Sigue deslizando!",
+        ["chat.new_match"] = "coincidencia nueva",
+        ["chat.say_hi"] = "Habéis coincidido — ¡saluda!",
+        ["chat.time_ago_minutes"] = "hace {0} min",
+        ["chat.time_ago_hours"] = "hace {0} h",
+        ["chat.time_ago_days"] = "hace {0} d",
+    };
+}

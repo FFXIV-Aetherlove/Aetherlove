@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Dalamud.NET.Sdk/15.0.0">
+  <PropertyGroup>
+    <Version>0.9.33.0</Version>
+    <Authors>Astraea, Nihal</Authors>
+    <Company>Astraea</Company>
+    <Copyright>Copyright © 2026 Astraea</Copyright>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!--
+    Dalamud manifest fields. DalamudPackager reads these MSBuild properties at build
+    time and writes them into the output AetherLove.json (overriding any same-named
+    field in the committed source manifest). InternalName defaults to the assembly
+    name (AetherLovePlugin) and must stay matching the built DLL.
+  -->
+  <PropertyGroup>
+    <Name>AetherLove</Name>
+    <Author>Astraea, Nihal</Author>
+    <Punchline>Swipe for joy.</Punchline>
+    <Description>FFXIV in-game dating and matchmaking — swipe, match, and chat with other adventurers. /al opens the phone.</Description>
+    <ApplicableVersion>any</ApplicableVersion>
+    <Tags>dating;social;matchmaking;chat</Tags>
+    <RepoUrl>https://git.honse.farm/astraea/aetherlove</RepoUrl>
+    <PackageProjectUrl>https://git.honse.farm/astraea/aetherlove</PackageProjectUrl>
+    <IconUrl>https://aetherlove.space/logo_mini.png</IconUrl>
+    <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="Media\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="System.Windows.Extensions" Version="10.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.8" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.8" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="10.0.8" />
+    <PackageReference Include="BouncyCastle.Cryptography" Version="2.6.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\AetherLove.Shared\AetherLove.Shared.csproj" />
+    <ProjectReference Include="..\OtterGui\OtterGui.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Emoji\" />
+    <Folder Include="Emoji\Segments\" />
+    <Folder Include="Screens\Onboarding\" />
+    <Folder Include="Services\Localization\" />
+    <Folder Include="Windows\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Update="Media\notifications\aol.wav">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Update="Media\notifications\facebook.wav">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Update="Media\notifications\facebook_oldskool.wav">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Update="Media\notifications\icq.wav">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Update="Media\notifications\iphone.wav">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Update="Media\notifications\msn.wav">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Update="Media\notifications\samsung.wav">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Update="Media\notifications\samsung_whistle.wav">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Update="Media\notifications\xiaomi.wav">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+</Project>

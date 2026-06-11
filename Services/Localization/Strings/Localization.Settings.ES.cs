@@ -1,0 +1,88 @@
+namespace AetherLove.Services.Localization;
+
+internal static class SettingsEs
+{
+    public static readonly System.Collections.Generic.Dictionary<string, string> Strings = new()
+    {
+        ["settings.title"] = "Ajustes",
+
+        ["settings.section_appearance"] = "Apariencia",
+        ["settings.section_phone_size"] = "Tamaño del teléfono",
+        ["settings.section_plugin_language"] = "Idioma del plugin",
+        ["settings.section_privacy"] = "Privacidad",
+        ["settings.section_general"] = "General",
+        ["settings.section_notifications"] = "Notificaciones",
+        ["settings.section_moderation"] = "Moderación",
+
+        ["settings.phone_size_small"] = "Pequeño",
+        ["settings.phone_size_medium"] = "Mediano",
+        ["settings.phone_size_large"] = "Grande",
+        ["settings.phone_size_caption"] = "Escala todo el teléfono. Los tamaños mayores son ideales para pantallas de alta resolución; puede que Grande no quepa en una pantalla de 1080p.",
+
+        ["settings.disable_startup_heartbeat"] = "Desactivar el sonido de latido al iniciar",
+
+        ["settings.view_changelog"] = "Ver registro de cambios",
+        ["settings.send_feedback"] = "Enviar comentarios",
+        ["settings.delete_account"] = "Eliminar cuenta",
+        ["settings.create_new_profile"] = "Crear un perfil nuevo",
+        ["settings.cancel"] = "Cancelar",
+        ["settings.back"] = "Atrás",
+
+        ["settings.always_blur_nsfw"] = "Difuminar siempre el NSFW",
+        ["settings.always_blur_nsfw_tooltip"] = "Cuando está activado, las fotos adicionales etiquetadas como NSFW en otros perfiles se difuminan hasta que haces clic para revelar cada una. Los avatares y los retratos principales siempre son aptos para el trabajo, en cualquier caso. Desactivar esto muestra cada foto tal cual.",
+        ["settings.nsfw_profile"] = "Mi perfil es NSFW (+18)",
+        ["settings.nsfw_profile_tooltip"] = "Marca tu perfil como para adultos/NSFW para que solo lo vean las personas que tienen el NSFW activado. Se activa automáticamente cuando añades fotos NSFW o eliges rol +18, y permanece activo hasta que las quites.",
+        ["settings.nsfw_profile_locked"] = "No puedes desactivarlo mientras tengas fotos NSFW o rol +18 (ERP) seleccionado. Elimina primero tus imágenes NSFW y desactiva el rol +18.",
+
+        ["settings.enable_notifications"] = "Activar notificaciones",
+        ["settings.enable_notifications_tooltip"] = "Interruptor principal de todas las notificaciones. Desactívalo para silenciar todos los avisos de chat dentro del juego, los pop-ups y los sonidos de abajo.",
+        ["settings.enable_notification_sounds"] = "Activar sonidos de notificación",
+        ["settings.enable_notification_sounds_tooltip"] = "Los sonidos de notificación solo se reproducirán si el audio del juego y el audio de los efectos especiales no están silenciados. El control de volumen se gestiona desde el volumen de Windows.",
+        ["settings.announce_messages_chat"] = "Anunciar mensajes nuevos en el chat del juego",
+        ["settings.announce_matches_chat"] = "Anunciar coincidencias nuevas en el chat del juego",
+        ["settings.popup_messages"] = "Mostrar un pop-up para mensajes nuevos",
+        ["settings.popup_matches"] = "Mostrar un pop-up para coincidencias nuevas",
+        ["settings.auto_open_minimized"] = "Abrir minimizado automáticamente al iniciar sesión",
+        ["settings.pulse_optout"] = "Mensajes ocasionales en el juego",
+        ["settings.pulse_optout_tooltip"] = "De vez en cuando, AetherLove puede dejar un mensaje divertido en tu chat del juego. Desactívalo para detenerlos.",
+        ["settings.combat_behavior"] = "Al entrar en combate",
+        ["settings.combat_behavior_hide"] = "Ocultar AetherLove",
+        ["settings.combat_behavior_minimize"] = "Minimizar a burbuja",
+        ["settings.combat_behavior_leave_open"] = "Dejar abierto",
+        ["settings.notification_sound"] = "Sonido de notificación",
+        ["settings.play"] = "Reproducir",
+
+        ["settings.delete_warning_intro"] = "Esta acción es permanente y no se puede deshacer. Por favor, lee lo siguiente con atención antes de continuar:",
+        ["settings.delete_bullet_account"] = "Tu cuenta se eliminará permanentemente.",
+        ["settings.delete_bullet_matches"] = "Todas tus coincidencias se eliminarán.",
+        ["settings.delete_bullet_preferences"] = "Tus preferencias de coincidencia se borrarán.",
+        ["settings.delete_bullet_pictures"] = "Tus fotos de perfil se eliminarán.",
+        ["settings.delete_reregister"] = "Siempre puedes volver a registrarte en cualquier momento.",
+        ["settings.delete_previous_failed"] = "El intento anterior falló: {0}",
+
+        ["settings.deleting_title"] = "Eliminando cuenta",
+        ["settings.deleting_body"] = "Eliminando tus datos y deshaciendo coincidencias con tus contactos",
+        ["settings.deleted_title"] = "Cuenta eliminada",
+        ["settings.deleted_body"] = "Tu cuenta se ha eliminado, tus datos y fotos se han borrado, y se han deshecho tus coincidencias. Ahora puedes desinstalar el plugin, o completar el registro y crear un perfil nuevo.",
+
+        ["settings.warnings_button_unseen"] = "Advertencias ({0} sin ver / {1})",
+        ["settings.warnings_button"] = "Advertencias ({0})",
+        ["settings.warnings_title"] = "Advertencias",
+        ["settings.no_warnings"] = "No hay advertencias registradas.",
+        ["settings.back_to_settings_arrow"] = "← Volver a los ajustes",
+
+        ["settings.back_to_settings"] = "Volver a los ajustes",
+        ["settings.feedback_thanks"] = "¡Gracias! Tus comentarios se han enviado al equipo de AetherLove.",
+        ["settings.feedback_intro"] = "¿Encontraste un error, tienes una idea o quieres sugerir algo? Cuéntanoslo.",
+        ["settings.feedback_note"] = "Ten en cuenta: los comentarios no se pueden usar para apelar un baneo o una advertencia.",
+        ["settings.feedback_type"] = "Tipo",
+        ["settings.feedback_kind_bug"] = "Error",
+        ["settings.feedback_kind_improvement"] = "Mejora",
+        ["settings.feedback_kind_other"] = "Otro",
+        ["settings.feedback_your_message"] = "Tu mensaje",
+        ["settings.sending"] = "Enviando…",
+        ["settings.submit"] = "Enviar",
+        ["settings.feedback_rate_limited"] = "Solo puedes enviar comentarios {0} veces por hora. Inténtalo de nuevo más tarde.",
+        ["settings.feedback_send_failed"] = "No se pudieron enviar tus comentarios. Inténtalo de nuevo.",
+    };
+}

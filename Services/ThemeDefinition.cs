@@ -1,0 +1,52 @@
+using System;
+using System.Numerics;
+
+namespace AetherLove.Services;
+
+/// <summary>Immutable colour palette for one visual theme. Vector4 values are ImGui RGBA in [0,1].</summary>
+public sealed class ThemeDefinition
+{
+    public required string Name { get; init; }
+    public required string BackgroundImageFile { get; init; }
+
+    public required Vector4 Accent { get; init; }
+    public required Vector4 AccentLight { get; init; }
+    public required Vector4 AccentDark { get; init; }
+    public required Vector4 ChipFill { get; init; }
+
+    public required Vector4 ButtonNormal { get; init; }
+    public required Vector4 ButtonHovered { get; init; }
+    public required Vector4 ButtonActive { get; init; }
+
+
+    public uint AccentU32 => ToU32(Accent);
+    public uint AccentLightU32 => ToU32(AccentLight);
+    public uint AccentDarkU32 => ToU32(AccentDark);
+    public uint ChipFillU32 => ToU32(ChipFill);
+    public uint ChipBorderU32 => AccentU32;
+
+    public uint AccentWithAlpha(float a) => WithAlpha(Accent, a);
+    public uint AccentLightWithAlpha(float a) => WithAlpha(AccentLight, a);
+    public uint AccentDarkWithAlpha(float a) => WithAlpha(AccentDark, a);
+
+    public uint AccentLightRgb => AccentLightU32 & 0x00FFFFFF;
+    public uint AccentDarkRgb => AccentDarkU32 & 0x00FFFFFF;
+
+    public Vector4 ScrollbarGrab => Accent with { W = 0.85f };
+    public Vector4 ScrollbarGrabHovered => AccentLight with { W = 1.00f };
+    public Vector4 ScrollbarGrabActive => AccentDark with { W = 1.00f };
+
+
+    /// <summary>Converts ImGui Vector4(R,G,B,A) to draw-list uint ABGR 0xAABBGGRR.</summary>
+    private static uint ToU32(Vector4 c) =>
+        ((uint)MathF.Round(Math.Clamp(c.W, 0f, 1f) * 255f) << 24) |
+        ((uint)MathF.Round(Math.Clamp(c.Z, 0f, 1f) * 255f) << 16) |
+        ((uint)MathF.Round(Math.Clamp(c.Y, 0f, 1f) * 255f) << 8) |
+        ((uint)MathF.Round(Math.Clamp(c.X, 0f, 1f) * 255f));
+
+    private static uint WithAlpha(Vector4 c, float a) =>
+        ((uint)MathF.Round(Math.Clamp(a, 0f, 1f) * 255f) << 24) |
+        ((uint)MathF.Round(Math.Clamp(c.Z, 0f, 1f) * 255f) << 16) |
+        ((uint)MathF.Round(Math.Clamp(c.Y, 0f, 1f) * 255f) << 8) |
+        ((uint)MathF.Round(Math.Clamp(c.X, 0f, 1f) * 255f));
+}
