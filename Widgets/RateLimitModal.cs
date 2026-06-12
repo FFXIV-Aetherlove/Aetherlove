@@ -31,9 +31,9 @@ public sealed class RateLimitModal
 
     private void DrawBody(float availW)
     {
-        ModalUi.Header(availW, FontAwesomeIcon.Stopwatch, Loc.T("common.rate_limit_title"), ModalUi.Amber);
+        ModalUi.Header(availW, FontAwesomeIcon.Stopwatch, Loc.T("common.rate_limit_title"), UiColors.Amber);
 
-        ImGui.TextColored(ModalUi.Body, BuildBodyText());
+        ImGui.TextColored(UiColors.Body, BuildBodyText());
         ImGui.Spacing();
         ImGui.Spacing();
 

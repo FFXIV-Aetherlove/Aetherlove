@@ -4,6 +4,7 @@ using System.Numerics;
 using System.Threading.Tasks;
 using AetherLove.Services;
 using AetherLove.Services.Localization;
+using AetherLove.UI;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Textures;
 
@@ -55,7 +56,7 @@ public partial class OnboardingScreen
         }
 
         var t = ThemeService.Current;
-        var muted = new Vector4(0.55f, 0.55f, 0.55f, 0.80f);
+        var muted = UiColors.Muted with { W = 0.80f };
 
         DrawSectionHeading(Loc.T("onboarding.avatar_heading"), t);
         ImGui.TextWrapped(Loc.T("onboarding.avatar_intro"));
@@ -65,7 +66,7 @@ public partial class OnboardingScreen
         ImGui.PopTextWrapPos();
         ImGui.Spacing();
         ImGui.PushTextWrapPos(0f);
-        ImGui.TextColored(new Vector4(0.95f, 0.45f, 0.45f, 1f),
+        ImGui.TextColored(UiColors.Danger,
             Loc.T("onboarding.avatar_sfw_warning"));
         ImGui.PopTextWrapPos();
         ImGui.Spacing();
@@ -83,7 +84,7 @@ public partial class OnboardingScreen
             if (_avatarPath.Length > 0)
             {
                 ImGui.SameLine();
-                ImGui.TextColored(new Vector4(0.55f, 0.85f, 0.55f, 1f), Path.GetFileName(_avatarPath));
+                ImGui.TextColored(UiColors.SuccessSoft, Path.GetFileName(_avatarPath));
                 ImGui.Spacing();
                 ImGui.TextColored(muted, Loc.T("onboarding.avatar_crop_hint"));
             }
@@ -97,7 +98,7 @@ public partial class OnboardingScreen
         {
             _matchAnimElapsed += ImGui.GetIO().DeltaTime;
 
-            ImGui.TextColored(new Vector4(0.35f, 0.85f, 0.45f, 1f), Loc.T("onboarding.avatar_set"));
+            ImGui.TextColored(UiColors.Success, Loc.T("onboarding.avatar_set"));
             ImGui.Spacing();
 
             var tex = _avatarHandle?.GetWrapOrDefault();

@@ -48,7 +48,7 @@ public sealed class BannedScreen
             ImGui.SetCursorPosX(PadX);
             var p = ImGui.GetCursorScreenPos();
             var endX = p.X + winW - PadX * 2f;
-            dl.AddLine(p, new Vector2(endX, p.Y), 0x88FF3333u, 1f);
+            dl.AddLine(p, new Vector2(endX, p.Y), UiColors.DangerDivider, 1f);
             ImGui.SetCursorPosY(ImGui.GetCursorPosY() + Px(6f));
             ImGui.Spacing();
 
@@ -65,7 +65,7 @@ public sealed class BannedScreen
             if (!string.IsNullOrWhiteSpace(reason))
             {
                 ImGui.SetCursorPosX(PadX);
-                ImGui.TextColored(new Vector4(0.55f, 0.55f, 0.55f, 1f), Loc.T("common.banned_reason_label"));
+                ImGui.TextColored(UiColors.Muted, Loc.T("common.banned_reason_label"));
                 ImGui.SetCursorPosX(PadX);
                 ImGui.PushTextWrapPos(winW - PadX);
                 ImGui.TextColored(new Vector4(0.88f, 0.88f, 0.88f, 1f), reason);
@@ -78,7 +78,7 @@ public sealed class BannedScreen
             if (!string.IsNullOrWhiteSpace(notes))
             {
                 ImGui.SetCursorPosX(PadX);
-                ImGui.TextColored(new Vector4(0.55f, 0.55f, 0.55f, 1f), Loc.T("common.moderator_notes_label"));
+                ImGui.TextColored(UiColors.Muted, Loc.T("common.moderator_notes_label"));
                 ImGui.SetCursorPosX(PadX);
                 ImGui.PushTextWrapPos(winW - PadX);
                 ImGui.TextColored(new Vector4(0.80f, 0.80f, 0.80f, 1f), notes);

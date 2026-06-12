@@ -87,7 +87,7 @@ public sealed class WarningAcknowledgeScreen
 
             ImGui.SetCursorPosX(PadX);
             ImGui.PushTextWrapPos(winW - PadX);
-            ImGui.TextColored(new Vector4(0.85f, 0.85f, 0.85f, 1f),
+            ImGui.TextColored(UiColors.Body,
                 Loc.T("common.warnings_body"));
             ImGui.PopTextWrapPos();
             ImGui.Spacing();
@@ -103,7 +103,7 @@ public sealed class WarningAcknowledgeScreen
             {
                 ImGui.Spacing();
                 ImGui.SetCursorPosX(PadX);
-                ImGui.TextColored(new Vector4(0.55f, 0.55f, 0.55f, 1f), Loc.T("common.moderator_notes_label"));
+                ImGui.TextColored(UiColors.Muted, Loc.T("common.moderator_notes_label"));
                 ImGui.SetCursorPosX(PadX);
                 ImGui.PushTextWrapPos(winW - PadX);
                 ImGui.TextColored(new Vector4(0.80f, 0.80f, 0.80f, 1f), notes);
@@ -139,7 +139,7 @@ public sealed class WarningAcknowledgeScreen
                 ImGui.Spacing();
                 ImGui.SetCursorPosX(PadX);
                 ImGui.PushTextWrapPos(winW - PadX);
-                ImGui.TextColored(new Vector4(0.95f, 0.45f, 0.45f, 1f),
+                ImGui.TextColored(UiColors.Danger,
                     Loc.T("common.warnings_submit_error", _submitError));
                 ImGui.PopTextWrapPos();
             }
@@ -151,7 +151,7 @@ public sealed class WarningAcknowledgeScreen
         ImGui.SetCursorPosX(PadX);
         ImGui.PushTextWrapPos(winW - PadX);
 
-        ImGui.TextColored(new Vector4(0.55f, 0.55f, 0.55f, 1f),
+        ImGui.TextColored(UiColors.Muted,
             w.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm"));
         ImGui.SetCursorPosX(PadX);
         ImGui.TextColored(new Vector4(0.92f, 0.92f, 0.92f, 1f), w.Reason);

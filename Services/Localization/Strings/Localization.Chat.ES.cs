@@ -46,6 +46,7 @@ internal static class ChatEs
         ["chat.all_archived"] = "Todos tus chats están archivados",
         ["chat.loading"] = "Cargando…",
         ["chat.matches_load_error"] = "No se pudieron cargar las coincidencias: {0}",
+        ["chat.connectivity_error"] = "No se pudo conectar al servidor de AetherLove. Inténtalo de nuevo o visita Discord para ver el estado del servidor.",
         ["chat.empty_state"] = "Aún no tienes coincidencias — pero eso cambiará pronto. ¡Sigue deslizando!",
         ["chat.new_match"] = "coincidencia nueva",
         ["chat.say_hi"] = "Habéis coincidido — ¡saluda!",

@@ -129,7 +129,7 @@ public sealed class ChangelogWindow : Window
 
         foreach (var item in items)
         {
-            ImGui.TextColored(new Vector4(0.55f, 0.55f, 0.55f, 1f), "•");
+            ImGui.TextColored(UiColors.Muted, "•");
             ImGui.SameLine(0, 6f);
             ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
             ImGui.TextWrapped(item);

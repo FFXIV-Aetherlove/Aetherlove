@@ -16,12 +16,6 @@ public sealed class ConfettiBurst
         public bool IsCircle;
     }
 
-    // ImGui colour format: (A << 24) | (B << 16) | (G << 8) | R.
-    private static readonly uint[] Colors =
-    [
-        0x00B478FFu, 0x00FF64C8u, 0x0032C8FFu, 0x00BED250u, 0x0078E678u, 0x006482FFu,
-    ];
-
     private const int Count = 48;
     private const float Duration = 5f;
     private const float FadeStart = 4f;
@@ -120,7 +114,7 @@ public sealed class ConfettiBurst
         p.Rot = _rng.NextSingle() * MathF.Tau;
         p.RotSpeed = (_rng.NextSingle() - 0.5f) * 7f;
         p.Life = 0f;
-        p.BaseColor = Colors[_rng.Next(Colors.Length)];
+        p.BaseColor = UiColors.ConfettiPalette[_rng.Next(UiColors.ConfettiPalette.Length)];
         p.IsCircle = _rng.NextSingle() < 0.28f;
         p.Size = p.IsCircle ? Px(2.5f) + _rng.NextSingle() * Px(2.0f)
                             : Px(4.5f) + _rng.NextSingle() * Px(4.5f);

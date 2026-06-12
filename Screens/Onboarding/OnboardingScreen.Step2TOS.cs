@@ -1,6 +1,7 @@
 using System;
 using System.Numerics;
 using AetherLove.Services.Localization;
+using AetherLove.UI;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility.Raii;
 
@@ -59,7 +60,7 @@ public partial class OnboardingScreen
 
         if (_tosAccepted)
         {
-            ImGui.TextColored(new Vector4(0.35f, 0.85f, 0.45f, 1f),
+            ImGui.TextColored(UiColors.Success,
                 Loc.T("onboarding.tos_accepted"));
         }
         else

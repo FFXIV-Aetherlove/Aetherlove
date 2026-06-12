@@ -83,7 +83,6 @@ internal static class CommonEn
         // Bottom navigation bar
         ["common.nav_swipe"] = "Swipe",
         ["common.nav_matches"] = "Matches",
-        ["common.nav_profile"] = "Profile",
         ["common.nav_settings"] = "Settings",
         ["common.nav_minimize"] = "Minimize",
 

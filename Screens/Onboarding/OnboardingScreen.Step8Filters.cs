@@ -3,6 +3,7 @@ using System.Linq;
 using System.Numerics;
 using AetherLove.Services;
 using AetherLove.Services.Localization;
+using AetherLove.UI;
 using Dalamud.Bindings.ImGui;
 
 namespace AetherLove.Screens;
@@ -39,7 +40,7 @@ public partial class OnboardingScreen
     private void DrawStepFilters()
     {
         var t = ThemeService.Current;
-        var muted = new Vector4(0.55f, 0.55f, 0.55f, 0.75f);
+        var muted = UiColors.Muted with { W = 0.75f };
 
         ImGui.Spacing();
         ImGui.TextWrapped(Loc.T("onboarding.filters_intro"));

@@ -8,6 +8,7 @@ using AetherLove.Services;
 using AetherLove.Services.Localization;
 using AetherLove.Shared;
 using AetherLove.Shared.Profile.Enums;
+using AetherLove.UI;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Utility.Raii;
@@ -204,7 +205,7 @@ public partial class OnboardingScreen
         ImGui.SetNextItemWidth(Px(260f));
         ImGui.InputText("##dname", ref _displayName, 32);
         if (_displayName.Contains(' ')) _displayName = _displayName.Replace(" ", "");
-        ImGui.TextColored(new Vector4(0.52f, 0.52f, 0.52f, 0.85f), Loc.T("onboarding.profile_display_name_hint"));
+        ImGui.TextColored(UiColors.Hint, Loc.T("onboarding.profile_display_name_hint"));
         ImGui.Spacing();
 
         DrawFieldLabel(Loc.T("onboarding.profile_about_me"), t);
@@ -239,14 +240,14 @@ public partial class OnboardingScreen
         ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
         ImGui.TextColored(
             effectiveLen > EmojiText.MaxBioLength
-                ? new Vector4(0.9f, 0.35f, 0.35f, 1f)
-                : new Vector4(0.52f, 0.52f, 0.52f, 0.85f),
+                ? UiColors.BioOverLimit
+                : UiColors.Hint,
             Loc.T("onboarding.profile_char_count", effectiveLen));
         ImGui.PopTextWrapPos();
 
         ImGui.Spacing();
-        ImGui.TextColored(new Vector4(0.52f, 0.52f, 0.52f, 0.85f), Loc.T("onboarding.profile_preview"));
-        ImGui.PushStyleColor(ImGuiCol.ChildBg, new Vector4(0.07f, 0.07f, 0.07f, 0.60f));
+        ImGui.TextColored(UiColors.Hint, Loc.T("onboarding.profile_preview"));
+        ImGui.PushStyleColor(ImGuiCol.ChildBg, UiColors.PreviewPaneBg);
         ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, Px(4f));
         var previewW = Px(340f);
         var previewH = _bio.Length > 0
@@ -300,7 +301,7 @@ public partial class OnboardingScreen
 
         DrawSectionHeading(Loc.T("onboarding.profile_languages_speak"), t);
 
-        ImGui.TextColored(new Vector4(0.55f, 0.55f, 0.55f, 0.80f),
+        ImGui.TextColored(UiColors.Muted with { W = 0.80f },
             Loc.T("onboarding.profile_languages_hint"));
         ImGui.Spacing();
         DrawLanguagePills();
@@ -311,7 +312,7 @@ public partial class OnboardingScreen
         DrawSectionHeading(Loc.T("onboarding.profile_content_heading"), t);
 
         ImGui.PushTextWrapPos(0f);
-        ImGui.TextColored(new Vector4(0.55f, 0.55f, 0.55f, 0.80f),
+        ImGui.TextColored(UiColors.Muted with { W = 0.80f },
             Loc.T("onboarding.profile_content_hint"));
         ImGui.PopTextWrapPos();
         ImGui.Spacing();
@@ -327,7 +328,7 @@ public partial class OnboardingScreen
         DrawSectionHeading(Loc.T("onboarding.profile_looking_for_heading"), t);
 
         ImGui.PushTextWrapPos(0f);
-        ImGui.TextColored(new Vector4(0.55f, 0.55f, 0.55f, 0.80f),
+        ImGui.TextColored(UiColors.Muted with { W = 0.80f },
             Loc.T("onboarding.profile_looking_for_hint"));
         ImGui.PopTextWrapPos();
         ImGui.Spacing();
@@ -383,9 +384,9 @@ public partial class OnboardingScreen
             var nsfwStyled = _nsfwOptIn;
             if (nsfwStyled)
             {
-                ImGui.PushStyleColor(ImGuiCol.FrameBg,        new Vector4(0.55f, 0.10f, 0.10f, 0.90f));
-                ImGui.PushStyleColor(ImGuiCol.FrameBgHovered, new Vector4(0.70f, 0.18f, 0.18f, 1.00f));
-                ImGui.PushStyleColor(ImGuiCol.FrameBgActive,  new Vector4(0.40f, 0.06f, 0.06f, 1.00f));
+                ImGui.PushStyleColor(ImGuiCol.FrameBg, UiColors.NsfwFrameBg);
+                ImGui.PushStyleColor(ImGuiCol.FrameBgHovered, UiColors.NsfwFrameBgHovered);
+                ImGui.PushStyleColor(ImGuiCol.FrameBgActive, UiColors.NsfwFrameBgActive);
             }
             if (erpSelected)
             {
@@ -415,7 +416,7 @@ public partial class OnboardingScreen
         DrawSectionHeading(Loc.T("onboarding.profile_timezone"), t);
 
         ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
-        ImGui.TextColored(new Vector4(0.55f, 0.55f, 0.55f, 0.80f),
+        ImGui.TextColored(UiColors.Muted with { W = 0.80f },
             Loc.T("onboarding.profile_timezone_hint"));
         ImGui.PopTextWrapPos();
         ImGui.Spacing();

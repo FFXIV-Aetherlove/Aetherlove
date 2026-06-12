@@ -18,7 +18,6 @@ public sealed class OutdatedScreen
         var winW = ImGui.GetWindowSize().X;
         var scrollH = ImGui.GetContentRegionAvail().Y;
         var PadX = Px(16f);
-        var warn = new Vector4(0.95f, 0.65f, 0.14f, 1f);
 
         PushScrollbarStyle();
 
@@ -39,7 +38,7 @@ public sealed class OutdatedScreen
             var icon = FontAwesomeIcon.CloudDownloadAlt.ToIconString();
             var iconSz = ImGui.CalcTextSize(icon);
             ImGui.SetCursorPosX((winW - iconSz.X) * 0.5f);
-            ImGui.TextColored(warn, icon);
+            ImGui.TextColored(UiColors.Amber, icon);
             ImGui.SetWindowFontScale(1.0f);
             ImGui.PopFont();
             ImGui.Spacing();
@@ -49,7 +48,7 @@ public sealed class OutdatedScreen
                 var title = Loc.T("common.outdated_title");
                 var titleSz = ImGui.CalcTextSize(title);
                 ImGui.SetCursorPosX((winW - titleSz.X) * 0.5f);
-                ImGui.TextColored(warn, title);
+                ImGui.TextColored(UiColors.Amber, title);
             }
             ImGui.Spacing();
 

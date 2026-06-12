@@ -27,11 +27,11 @@ public sealed class ImageRequirementsModal
 
     private void DrawBody(float availW)
     {
-        ModalUi.Header(availW, FontAwesomeIcon.Image, Loc.T("common.img_requirements_title"), ModalUi.Amber);
+        ModalUi.Header(availW, FontAwesomeIcon.Image, Loc.T("common.img_requirements_title"), UiColors.Amber);
 
-        ImGui.TextColored(ModalUi.Body, _message);
+        ImGui.TextColored(UiColors.Body, _message);
         ImGui.Spacing();
-        ImGui.TextColored(ModalUi.Subtle,
+        ImGui.TextColored(UiColors.Subtle,
             Loc.T("common.img_requirements_sizes",
                 PhotoSpec.AvatarSize, PhotoSpec.AvatarSize, PhotoSpec.PortraitWidth, PhotoSpec.PortraitHeight));
         ImGui.Spacing();

@@ -1,6 +1,7 @@
 using System.Numerics;
 using AetherLove.Services;
 using AetherLove.Services.Localization;
+using AetherLove.UI;
 using Dalamud.Bindings.ImGui;
 
 namespace AetherLove.Screens;
@@ -34,7 +35,7 @@ public partial class OnboardingScreen
             Loc.T("onboarding.how6_body"));
 
         ImGui.Spacing();
-        ImGui.TextColored(new Vector4(0.55f, 0.55f, 0.55f, 0.85f),
+        ImGui.TextColored(UiColors.Muted with { W = 0.85f },
             Loc.T("onboarding.how_ready"));
     }
 

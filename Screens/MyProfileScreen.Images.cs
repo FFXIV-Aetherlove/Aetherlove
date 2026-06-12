@@ -205,6 +205,11 @@ public partial class MyProfileScreen
                 }
                 HydrateServerPhotos(state.Photos);
 
+                if (avatarUpload is not null)
+                {
+                    _ownAvatar.Refresh();
+                }
+
                 _imgAvatarConfirmed = false;
                 _imgAvatarPath = "";
                 _imgAvatarHandle = null;
@@ -269,7 +274,7 @@ public partial class MyProfileScreen
         {
             ImGui.Spacing();
             ImGui.PushTextWrapPos(0f);
-            ImGui.TextColored(new Vector4(0.95f, 0.45f, 0.45f, 1f),
+            ImGui.TextColored(UiColors.Danger,
                 Loc.T("profile.load_photos_failed", _editFormLoadError));
             ImGui.PopTextWrapPos();
             ImGui.Spacing();
@@ -286,7 +291,7 @@ public partial class MyProfileScreen
             if (scroll.Success)
             {
                 var availW = ImGui.GetContentRegionAvail().X;
-                var muted = new Vector4(0.55f, 0.55f, 0.55f, 0.75f);
+                var muted = UiColors.Muted with { W = 0.75f };
 
                 DrawSectionHeading(Loc.T("profile.profile_picture"), t);
                 ImGui.PushTextWrapPos(availW);
@@ -322,7 +327,7 @@ public partial class MyProfileScreen
         if (HasUnsavedChanges && !declared && !savingNow)
         {
             ImGui.PushTextWrapPos(0f);
-            ImGui.TextColored(new Vector4(0.95f, 0.55f, 0.30f, 1f),
+            ImGui.TextColored(UiColors.ReviewOrange,
                 Loc.T("profile.declare_before_save"));
             ImGui.PopTextWrapPos();
         }
@@ -417,7 +422,7 @@ public partial class MyProfileScreen
                 ImGui.SameLine(0f, Px(12f));
                 ImGui.BeginGroup();
             }
-            ImGui.TextColored(new Vector4(0.35f, 0.85f, 0.45f, 1f), Loc.T("profile.profile_picture_set"));
+            ImGui.TextColored(UiColors.Success, Loc.T("profile.profile_picture_set"));
             ImGui.Spacing();
             PushThemeButton(t);
             if (ImGui.Button($"{Loc.T("profile.change_photo")}##chgAv2", Px(110f, 26f)))
@@ -481,7 +486,7 @@ public partial class MyProfileScreen
             ImGui.SetCursorPos(new Vector2(slotsX + i * (SlotW + SlotGap), slotsY));
             var sp = ImGui.GetCursorScreenPos();
 
-            dl.AddRectFilled(sp, sp + new Vector2(SlotW, SlotH), 0x33000000, Px(4f));
+            dl.AddRectFilled(sp, sp + new Vector2(SlotW, SlotH), UiColors.PhotoSlotFill, Px(4f));
 
             // Background = stored thumbnail (so user can see what they have); foreground UI overlays.
             if (storedSet && serverTex != null && !slot.Confirmed && !slot.PendingRemove)
@@ -508,11 +513,11 @@ public partial class MyProfileScreen
             }
             else if (storedSet)
             {
-                borderCol = 0xFF44AA44;
+                borderCol = UiColors.PhotoSlotStoredBorder;
             }
             else if (isMain)
             {
-                borderCol = 0xFF997733;
+                borderCol = UiColors.PhotoSlotMainBorder;
             }
             else
             {
@@ -545,7 +550,7 @@ public partial class MyProfileScreen
             else if (!storedSet)
             {
                 var ph = isMain ? Loc.T("profile.slot_main") : $"+{i}";
-                var col = isMain ? 0xFFBBAA44u : 0xFF888888u;
+                var col = isMain ? UiColors.PhotoSlotMainLabel : UiColors.TextMuted;
                 var sz = ImGui.CalcTextSize(ph);
                 dl.AddText(sp + new Vector2((SlotW - sz.X) * 0.5f, (SlotH - sz.Y) * 0.5f), col, ph);
             }
@@ -572,7 +577,7 @@ public partial class MyProfileScreen
 
         if (_imgActiveSlot < 0)
         {
-            ImGui.TextColored(new Vector4(0.52f, 0.52f, 0.52f, 0.85f),
+            ImGui.TextColored(UiColors.Hint,
                 Loc.T("profile.tap_slot"));
             return;
         }
@@ -613,7 +618,7 @@ public partial class MyProfileScreen
             if (isMain)
             {
                 ImGui.PushTextWrapPos(0f);
-                ImGui.TextColored(new Vector4(0.95f, 0.45f, 0.45f, 1f),
+                ImGui.TextColored(UiColors.Danger,
                     Loc.T("profile.main_must_be_sfw"));
                 ImGui.PopTextWrapPos();
             }
@@ -639,7 +644,7 @@ public partial class MyProfileScreen
                 }
                 ImGui.Spacing();
                 ImGui.PushTextWrapPos(0f);
-                ImGui.TextColored(new Vector4(0.95f, 0.45f, 0.45f, 1f),
+                ImGui.TextColored(UiColors.Danger,
                     Loc.T("profile.sfw_mismatch_warning"));
                 ImGui.PopTextWrapPos();
             }
@@ -667,7 +672,7 @@ public partial class MyProfileScreen
         }
         else if (hasStored)
         {
-            ImGui.TextColored(new Vector4(0.35f, 0.85f, 0.45f, 1f), Loc.T("profile.photo_set"));
+            ImGui.TextColored(UiColors.Success, Loc.T("profile.photo_set"));
 
             // Surface the server's current SFW/NSFW declaration for extras so the user can see it.
             if (!isMain)
@@ -676,8 +681,8 @@ public partial class MyProfileScreen
                 if (serverPhoto is not null)
                 {
                     var declColor = serverPhoto.IsNsfw
-                        ? new Vector4(0.95f, 0.55f, 0.30f, 1f)
-                        : new Vector4(0.55f, 0.85f, 0.55f, 1f);
+                        ? UiColors.ReviewOrange
+                        : UiColors.SuccessSoft;
                     ImGui.SameLine(0f, Px(20f));
                     ImGui.TextColored(declColor,
                         serverPhoto.IsNsfw ? Loc.T("profile.currently_nsfw") : Loc.T("profile.currently_sfw"));
@@ -715,7 +720,7 @@ public partial class MyProfileScreen
         }
         else
         {
-            ImGui.TextColored(new Vector4(0.52f, 0.52f, 0.52f, 0.85f),
+            ImGui.TextColored(UiColors.Hint,
                 isMain ? Loc.T("profile.photo_required") : Loc.T("profile.photo_optional"));
             ImGui.Spacing();
 

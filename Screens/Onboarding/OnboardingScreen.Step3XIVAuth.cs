@@ -4,6 +4,7 @@ using AetherLove.Navigation;
 using AetherLove.Services;
 using AetherLove.Services.Auth;
 using AetherLove.Services.Localization;
+using AetherLove.UI;
 using Dalamud.Bindings.ImGui;
 
 namespace AetherLove.Screens;
@@ -178,7 +179,7 @@ public partial class OnboardingScreen
 
         var Ok = Loc.T("onboarding.auth_signed_in");
         ImGui.SetCursorPosX(centerX - ImGui.CalcTextSize(Ok).X * 0.5f);
-        ImGui.TextColored(new Vector4(0.35f, 0.85f, 0.45f, 1f), Ok);
+        ImGui.TextColored(UiColors.Success, Ok);
 
         if (_authCompletedShownAt == DateTime.MinValue)
         {
@@ -204,7 +205,7 @@ public partial class OnboardingScreen
 
         ImGui.Spacing();
         ImGui.SetCursorPosX(centerX - ImGui.CalcTextSize(heading).X * 0.5f);
-        ImGui.TextColored(new Vector4(0.35f, 0.85f, 0.45f, 1f), heading);
+        ImGui.TextColored(UiColors.Success, heading);
         ImGui.Spacing();
         ImGui.Spacing();
         ImGui.PushTextWrapPos(0f);
@@ -225,7 +226,7 @@ public partial class OnboardingScreen
             : (_authService.ErrorMessage ?? Loc.T("onboarding.auth_failed"));
 
         ImGui.PushTextWrapPos(0f);
-        ImGui.TextColored(new Vector4(0.95f, 0.45f, 0.45f, 1f), msg);
+        ImGui.TextColored(UiColors.Danger, msg);
         ImGui.PopTextWrapPos();
         ImGui.Spacing();
         ImGui.Spacing();

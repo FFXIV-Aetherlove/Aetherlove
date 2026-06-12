@@ -47,6 +47,7 @@ internal static class ChatFr
         ["chat.all_archived"] = "Tous vos chats sont archivés",
         ["chat.loading"] = "Chargement…",
         ["chat.matches_load_error"] = "Impossible de charger les correspondances : {0}",
+        ["chat.connectivity_error"] = "Impossible de se connecter au serveur AetherLove. Veuillez réessayer ou consulter Discord pour voir l'état du serveur.",
         ["chat.empty_state"] = "Vous n'avez pas encore de correspondances — mais cela changera bientôt. Continuez à swiper !",
         ["chat.new_match"] = "nouvelle correspondance",
         ["chat.say_hi"] = "Vous avez un match — dites bonjour !",

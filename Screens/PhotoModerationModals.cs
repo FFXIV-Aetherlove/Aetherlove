@@ -43,11 +43,11 @@ internal static class PhotoModerationModals
             var Title = Loc.T("common.lalafell_nsfw_title");
             var titleSz = ImGui.CalcTextSize(Title);
             ImGui.SetCursorPosX((availW - titleSz.X) * 0.5f);
-            ImGui.TextColored(new Vector4(0.95f, 0.55f, 0.30f, 1f), Title);
+            ImGui.TextColored(UiColors.ReviewOrange, Title);
         }
 
         ImGui.Spacing();
-        ImGui.PushStyleColor(ImGuiCol.Separator, new Vector4(0.95f, 0.55f, 0.30f, 0.35f));
+        ImGui.PushStyleColor(ImGuiCol.Separator, UiColors.ReviewOrange with { W = 0.35f });
         ImGui.Separator();
         ImGui.PopStyleColor();
         ImGui.Spacing();
@@ -85,11 +85,11 @@ internal static class PhotoModerationModals
             var Title = Loc.T("common.undeclared_photo_title");
             var titleSz = ImGui.CalcTextSize(Title);
             ImGui.SetCursorPosX((availW - titleSz.X) * 0.5f);
-            ImGui.TextColored(new Vector4(0.95f, 0.55f, 0.30f, 1f), Title);
+            ImGui.TextColored(UiColors.ReviewOrange, Title);
         }
 
         ImGui.Spacing();
-        ImGui.PushStyleColor(ImGuiCol.Separator, new Vector4(0.95f, 0.55f, 0.30f, 0.35f));
+        ImGui.PushStyleColor(ImGuiCol.Separator, UiColors.ReviewOrange with { W = 0.35f });
         ImGui.Separator();
         ImGui.PopStyleColor();
         ImGui.Spacing();

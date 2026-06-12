@@ -104,7 +104,7 @@ public sealed class EmojiPickerPopup
 
         if (!any)
         {
-            ImGui.TextColored(new Vector4(0.55f, 0.55f, 0.55f, 1f), Loc.T("common.emoji_none_found"));
+            ImGui.TextColored(UiColors.Muted, Loc.T("common.emoji_none_found"));
         }
     }
 }

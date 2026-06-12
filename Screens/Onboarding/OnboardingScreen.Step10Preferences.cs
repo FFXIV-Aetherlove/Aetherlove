@@ -1,6 +1,7 @@
 using System.Numerics;
 using AetherLove.Services;
 using AetherLove.Services.Localization;
+using AetherLove.UI;
 using Dalamud.Bindings.ImGui;
 
 namespace AetherLove.Screens;
@@ -18,7 +19,7 @@ public partial class OnboardingScreen
         ImGui.Spacing();
         ImGui.SetCursorPosX(Px(PreferencesPadX));
         ImGui.PushTextWrapPos(winW - Px(PreferencesPadX));
-        ImGui.TextColored(new Vector4(0.85f, 0.85f, 0.85f, 1f),
+        ImGui.TextColored(UiColors.Body,
             Loc.T("onboarding.prefs_intro"));
         ImGui.PopTextWrapPos();
         ImGui.Spacing();

@@ -79,7 +79,6 @@ internal static class CommonRu
         // Bottom navigation bar
         ["common.nav_swipe"] = "Анкеты",
         ["common.nav_matches"] = "Пары",
-        ["common.nav_profile"] = "Профиль",
         ["common.nav_settings"] = "Настр.",
         ["common.nav_minimize"] = "Свернуть",
 

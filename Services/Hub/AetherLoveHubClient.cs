@@ -25,6 +25,9 @@ public sealed class AetherLoveHubClient
         _signal = signal;
     }
 
+    /// <summary>True when the hub connection is live — lets callers tell a connectivity failure apart from a server-side error.</summary>
+    public bool IsConnected => _signal.IsConnected;
+
     /// <summary>Ensures the hub is connected and returns it. Throws via RequireConnection if there's no valid token.</summary>
     private async Task<HubConnection> ConnAsync(CancellationToken ct)
     {

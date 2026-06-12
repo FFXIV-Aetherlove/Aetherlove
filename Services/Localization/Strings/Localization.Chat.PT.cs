@@ -46,6 +46,7 @@ internal static class ChatPt
         ["chat.all_archived"] = "Todas as suas conversas estão arquivadas",
         ["chat.loading"] = "Carregando…",
         ["chat.matches_load_error"] = "Não foi possível carregar os matches: {0}",
+        ["chat.connectivity_error"] = "Não foi possível conectar ao servidor do AetherLove. Tente novamente ou visite o Discord para ver o status do servidor.",
         ["chat.empty_state"] = "Você ainda não tem matches — mas isso vai mudar logo. Continue deslizando!",
         ["chat.new_match"] = "novo match",
         ["chat.say_hi"] = "Vocês deram match — diga oi!",

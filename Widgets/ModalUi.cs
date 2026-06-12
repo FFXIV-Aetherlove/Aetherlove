@@ -7,21 +7,9 @@ using Dalamud.Interface;
 namespace AetherLove.Widgets;
 
 /// <summary>Shared building blocks for the modal bodies drawn through <see cref="ModalHost"/>: the standard
-/// icon/title header, the body text colours, and a themed full-width button.</summary>
+/// icon/title header and a themed full-width button. Accent/body colours live in <see cref="UiColors"/>.</summary>
 internal static class ModalUi
 {
-    /// <summary>Caution accent (amber) for warning-style modals.</summary>
-    internal static readonly Vector4 Amber = new(0.95f, 0.65f, 0.14f, 1f);
-
-    /// <summary>Error accent (red) for failure-style modals.</summary>
-    internal static readonly Vector4 Danger = new(0.95f, 0.45f, 0.45f, 1f);
-
-    /// <summary>Primary body text.</summary>
-    internal static readonly Vector4 Body = new(0.85f, 0.85f, 0.85f, 1f);
-
-    /// <summary>Secondary / detail body text.</summary>
-    internal static readonly Vector4 Subtle = new(0.70f, 0.70f, 0.74f, 1f);
-
     /// <summary>Centered title (in <paramref name="accent"/>) over an accent-tinted separator.</summary>
     internal static void Header(float availW, string title, Vector4 accent)
     {

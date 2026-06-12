@@ -47,6 +47,7 @@ internal static class ChatDe
         ["chat.all_archived"] = "Alle deine Chats sind archiviert",
         ["chat.loading"] = "Wird geladen…",
         ["chat.matches_load_error"] = "Matches konnten nicht geladen werden: {0}",
+        ["chat.connectivity_error"] = "Verbindung zum AetherLove-Server fehlgeschlagen. Versuche es erneut oder schau auf Discord nach dem Serverstatus.",
         ["chat.empty_state"] = "Du hast noch keine Matches — aber das ändert sich bald. Wische weiter!",
         ["chat.new_match"] = "neues Match",
         ["chat.say_hi"] = "Ihr habt gematcht — sag Hallo!",

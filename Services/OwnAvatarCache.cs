@@ -9,8 +9,8 @@ using Dalamud.Interface.Textures;
 namespace AetherLove.Services;
 
 /// <summary>
-/// Keeps the user's own avatar warm for overlays. <see cref="Texture"/> serves the last
-/// disk-cached copy instantly; <see cref="Refresh"/> re-fetches in the background and swaps the
+/// Keeps the user's own avatar warm for the match overlay and the nav bar. <see cref="Texture"/> serves
+/// the last disk-cached copy instantly; <see cref="Refresh"/> re-fetches in the background and swaps the
 /// texture when done, so a stale avatar shows briefly instead of a grey placeholder.
 /// </summary>
 public sealed class OwnAvatarCache : IDisposable
@@ -26,8 +26,8 @@ public sealed class OwnAvatarCache : IDisposable
         _hub = hub;
     }
 
-    private static string CachePath => Path.Combine(
-        Plugin.PluginInterface.ConfigDirectory.FullName, "MatchOverlayCache", "self.webp");
+    private static string CacheDir => Path.Combine(
+        Plugin.PluginInterface.ConfigDirectory.FullName, "MatchOverlayCache");
 
     /// <summary>The last known avatar, or null before the first successful fetch on a fresh install.</summary>
     public ISharedImmediateTexture? Texture
@@ -37,17 +37,7 @@ public sealed class OwnAvatarCache : IDisposable
             if (_texture is null && !_diskProbed)
             {
                 _diskProbed = true;
-                try
-                {
-                    if (File.Exists(CachePath))
-                    {
-                        _texture = Plugin.TextureProvider.GetFromFile(CachePath);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Plugin.Log.Warning(ex, "[OwnAvatarCache] Could not load the cached avatar.");
-                }
+                ProbeDisk();
             }
             return _texture;
         }
@@ -76,14 +66,7 @@ public sealed class OwnAvatarCache : IDisposable
                 {
                     return;
                 }
-
-                Directory.CreateDirectory(Path.GetDirectoryName(CachePath)!);
-                File.WriteAllBytes(CachePath, avatar);
-                if (ct.IsCancellationRequested)
-                {
-                    return;
-                }
-                _texture = Plugin.TextureProvider.GetFromFile(CachePath);
+                Store(avatar, ct);
             }
             catch (OperationCanceledException) { }
             catch (Exception ex)
@@ -91,6 +74,39 @@ public sealed class OwnAvatarCache : IDisposable
                 Plugin.Log.Warning(ex, "[OwnAvatarCache] Refresh failed.");
             }
         }, ct);
+    }
+
+    private void ProbeDisk()
+    {
+        try
+        {
+            if (!Directory.Exists(CacheDir))
+            {
+                return;
+            }
+            var newest = Directory.EnumerateFiles(CacheDir, "self_*.webp")
+                .OrderByDescending(File.GetLastWriteTimeUtc)
+                .FirstOrDefault();
+            if (newest is not null)
+            {
+                _texture = Plugin.TextureProvider.GetFromFile(newest);
+            }
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Warning(ex, "[OwnAvatarCache] Could not load the cached avatar.");
+        }
+    }
+
+    private void Store(byte[] bytes, CancellationToken ct)
+    {
+        var tex = AvatarDiskCache.Store(CacheDir, "self", bytes);
+        if (ct.IsCancellationRequested || tex is null)
+        {
+            return;
+        }
+        _texture = tex;
+        _diskProbed = true;
     }
 
     public void Dispose()

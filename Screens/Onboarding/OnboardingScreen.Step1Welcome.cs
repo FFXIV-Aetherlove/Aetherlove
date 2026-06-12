@@ -75,7 +75,7 @@ public partial class OnboardingScreen
 
         ImGui.Spacing();
         ImGui.PushTextWrapPos(0f);
-        ImGui.TextColored(new Vector4(0.52f, 0.52f, 0.52f, 0.85f), lang.WelcomeFooter);
+        ImGui.TextColored(UiColors.Hint, lang.WelcomeFooter);
         ImGui.PopTextWrapPos();
     }
 

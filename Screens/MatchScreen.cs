@@ -70,18 +70,8 @@ public class MatchScreen
             return;
         }
         var cacheDir = Path.Combine(Plugin.PluginInterface.ConfigDirectory.FullName, "MatchOverlayCache");
-        try { Directory.CreateDirectory(cacheDir); } catch { return; }
-        try
-        {
-            var path = Path.Combine(cacheDir, $"{_pending.PeerProfileId}.webp");
-            File.WriteAllBytes(path, _pending.PeerAvatarWebp);
-            _peerAvatarTex = Plugin.TextureProvider.GetFromFile(path);
-            _cachedPeerId = _pending.PeerProfileId;
-        }
-        catch (Exception ex)
-        {
-            Plugin.Log.Warning(ex, "[MatchScreen] Failed to cache peer avatar.");
-        }
+        _peerAvatarTex = AvatarDiskCache.Store(cacheDir, _pending.PeerProfileId.ToString(), _pending.PeerAvatarWebp);
+        _cachedPeerId = _pending.PeerProfileId;
     }
 
     public void Draw()

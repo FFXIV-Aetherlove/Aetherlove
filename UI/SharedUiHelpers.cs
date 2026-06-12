@@ -36,6 +36,38 @@ internal static class SharedUiHelpers
 
     internal static void PopThemeButton() => ImGui.PopStyleColor(3);
 
+    /// <summary>The community Discord invite, shared by the connectivity/error screens and Settings.</summary>
+    internal const string DiscordInvite = "https://discord.gg/SkyQmpxWhB";
+
+    /// <summary>Discord-blurple call-to-action button; opens the community invite on click.</summary>
+    internal static void DrawDiscordButton(string label, Vector2 size)
+    {
+        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.345f, 0.396f, 0.949f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.42f, 0.47f, 1.0f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.28f, 0.32f, 0.80f, 1f));
+        ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
+        if (ImGui.Button(label, size))
+        {
+            OpenDiscord();
+        }
+        ImGui.PopStyleVar();
+        ImGui.PopStyleColor(3);
+    }
+
+    /// <summary>Opens the community Discord invite in the user's browser. Failures are logged, never surfaced.</summary>
+    internal static void OpenDiscord()
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(
+                new System.Diagnostics.ProcessStartInfo(DiscordInvite) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Warning(ex, "[SharedUiHelpers] Failed to open Discord invite.");
+        }
+    }
+
     /// <summary>Pushes the thin themed scrollbar style used by every scrolling panel; pair with
     /// <see cref="PopScrollbarStyle"/> (4 colours + 1 var).</summary>
     internal static void PushScrollbarStyle()
@@ -206,7 +238,7 @@ internal static class SharedUiHelpers
             var lx = origin.X + h * barW;
             dl.AddText(ImGui.GetFont(), labelFsz,
                 new Vector2(lx + Px(1f), origin.Y + barH + Px(4f)),
-                0xFF888888u, $"{h:D2}:00");
+                UiColors.TextMuted, $"{h:D2}:00");
         }
 
         ImGui.SetCursorScreenPos(new Vector2(origin.X, origin.Y + barH + labelH + Px(4f)));

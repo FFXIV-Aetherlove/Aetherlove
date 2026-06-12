@@ -9,6 +9,7 @@ using AetherLove.Services.Crypto;
 using AetherLove.Services.Hub;
 using AetherLove.Services.Localization;
 using AetherLove.Shared.Messaging;
+using AetherLove.UI;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
@@ -108,7 +109,7 @@ public sealed class PassphraseUnlockScreen
 
             ImGui.SetCursorPosX(PadX);
             ImGui.PushTextWrapPos(winW - PadX);
-            ImGui.TextColored(new Vector4(0.85f, 0.85f, 0.85f, 1f),
+            ImGui.TextColored(UiColors.Body,
                 Loc.T("common.passphrase_intro"));
             ImGui.PopTextWrapPos();
             ImGui.Spacing();
@@ -124,7 +125,7 @@ public sealed class PassphraseUnlockScreen
             if (_bundle is null && _error is not null)
             {
                 ImGui.SetCursorPosX(PadX);
-                ImGui.TextColored(new Vector4(0.95f, 0.45f, 0.45f, 1f), _error);
+                ImGui.TextColored(UiColors.Danger, _error);
                 return;
             }
 
@@ -153,7 +154,7 @@ public sealed class PassphraseUnlockScreen
             {
                 ImGui.SetCursorPosX(PadX);
                 ImGui.PushTextWrapPos(winW - PadX);
-                ImGui.TextColored(new Vector4(0.95f, 0.45f, 0.45f, 1f), _error);
+                ImGui.TextColored(UiColors.Danger, _error);
                 ImGui.PopTextWrapPos();
                 ImGui.Spacing();
             }
@@ -183,7 +184,7 @@ public sealed class PassphraseUnlockScreen
             ImGui.Spacing();
             ImGui.SetCursorPosX(PadX);
             ImGui.PushTextWrapPos(winW - PadX);
-            ImGui.TextColored(new Vector4(0.55f, 0.55f, 0.55f, 1f),
+            ImGui.TextColored(UiColors.Muted,
                 Loc.T("common.passphrase_forgot"));
             ImGui.PopTextWrapPos();
             ImGui.Spacing();

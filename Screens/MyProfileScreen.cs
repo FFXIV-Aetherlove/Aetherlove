@@ -80,6 +80,7 @@ public partial class MyProfileScreen
     private float _savedTimer;
 
     private readonly AetherLoveHubClient _hubClient;
+    private readonly OwnAvatarCache _ownAvatar;
     private CancellationTokenSource _cts = new();
     private volatile bool _editFormHydrated;
     private volatile bool _editFormLoading;
@@ -109,11 +110,12 @@ public partial class MyProfileScreen
     private readonly PendingImagePick _imgPendingPick;
 
     public MyProfileScreen(ProfileScreen profileScreen, AetherLoveHubClient hubClient,
-                           RateLimitModal rateLimitModal,
+                           OwnAvatarCache ownAvatar, RateLimitModal rateLimitModal,
                            SaveErrorModal saveErrorModal, ImageRequirementsModal imageReqModal)
     {
         _profileScreen = profileScreen;
         _hubClient = hubClient;
+        _ownAvatar = ownAvatar;
         _rateLimitModal = rateLimitModal;
         _saveErrorModal = saveErrorModal;
         _imgPendingPick = new PendingImagePick(imageReqModal);
@@ -569,7 +571,7 @@ public partial class MyProfileScreen
         {
             ImGui.Spacing();
             ImGui.PushTextWrapPos(0f);
-            ImGui.TextColored(new Vector4(0.95f, 0.45f, 0.45f, 1f),
+            ImGui.TextColored(UiColors.Danger,
                 Loc.T("profile.load_profile_failed", _editFormLoadError));
             ImGui.PopTextWrapPos();
             ImGui.Spacing();
@@ -628,7 +630,7 @@ public partial class MyProfileScreen
 
     private void DrawEditForm(ThemeDefinition t, float w)
     {
-        var muted = new Vector4(0.55f, 0.55f, 0.55f, 0.75f);
+        var muted = UiColors.Muted with { W = 0.75f };
         ImGui.Spacing();
 
         DrawSectionHeading(Loc.T("profile.heading_identity"), t);
@@ -673,13 +675,13 @@ public partial class MyProfileScreen
         var effectiveLen = AetherLove.Shared.EmojiText.EffectiveLength(_bio);
         ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
         ImGui.TextColored(
-            effectiveLen > AetherLove.Shared.EmojiText.MaxBioLength ? new Vector4(0.9f, 0.35f, 0.35f, 1f) : muted,
+            effectiveLen > AetherLove.Shared.EmojiText.MaxBioLength ? UiColors.BioOverLimit : muted,
             Loc.T("profile.char_count", effectiveLen));
         ImGui.PopTextWrapPos();
 
         ImGui.Spacing();
         ImGui.TextColored(muted, Loc.T("profile.preview"));
-        ImGui.PushStyleColor(ImGuiCol.ChildBg, new Vector4(0.07f, 0.07f, 0.07f, 0.60f));
+        ImGui.PushStyleColor(ImGuiCol.ChildBg, UiColors.PreviewPaneBg);
         ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, Px(4f));
         var previewW = w - Px(8f);
         // Height grows with content; subtract the child border before measuring.
@@ -790,9 +792,9 @@ public partial class MyProfileScreen
             ImGui.Spacing();
             if (_nsfwOptIn)
             {
-                ImGui.PushStyleColor(ImGuiCol.FrameBg, new Vector4(0.55f, 0.10f, 0.10f, 0.90f));
-                ImGui.PushStyleColor(ImGuiCol.FrameBgHovered, new Vector4(0.70f, 0.18f, 0.18f, 1.00f));
-                ImGui.PushStyleColor(ImGuiCol.FrameBgActive, new Vector4(0.40f, 0.06f, 0.06f, 1.00f));
+                ImGui.PushStyleColor(ImGuiCol.FrameBg, UiColors.NsfwFrameBg);
+                ImGui.PushStyleColor(ImGuiCol.FrameBgHovered, UiColors.NsfwFrameBgHovered);
+                ImGui.PushStyleColor(ImGuiCol.FrameBgActive, UiColors.NsfwFrameBgActive);
                 ImGui.Checkbox(Loc.T("profile.nsfw_optin"), ref _nsfwOptIn);
                 ImGui.PopStyleColor(3);
             }
@@ -834,7 +836,7 @@ public partial class MyProfileScreen
         else if (_spotifyTrackName.Length > 0)
         {
             ImGui.PushTextWrapPos(0f);
-            ImGui.TextColored(new Vector4(0.35f, 0.85f, 0.45f, 1f), $"  {_spotifyTrackName}");
+            ImGui.TextColored(UiColors.Success, $"  {_spotifyTrackName}");
             ImGui.PopTextWrapPos();
         }
         else if (_spotifyTrackId.Length > 0)

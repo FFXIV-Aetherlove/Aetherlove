@@ -42,6 +42,7 @@ public class ChatListScreen
     private readonly ConcurrentDictionary<Guid, byte[]> _keyByPeer = new();
     private volatile bool _fetching;
     private volatile string? _fetchError;
+    private volatile bool _connectivityError;
     private CancellationTokenSource _cts = new();
 
     private Guid _selectedPeerId;
@@ -98,6 +99,7 @@ public class ChatListScreen
         }
         _fetching = true;
         _fetchError = null;
+        _connectivityError = false;
         var ct = _cts.Token;
         _ = Task.Run(async () =>
         {
@@ -126,7 +128,14 @@ public class ChatListScreen
                 {
                     return;
                 }
-                _fetchError = HubErrorText.Localize(ex);
+                if (!_hub.IsConnected)
+                {
+                    _connectivityError = true;
+                }
+                else
+                {
+                    _fetchError = HubErrorText.Localize(ex);
+                }
                 Plugin.Log.Warning(ex, "[ChatListScreen] GetMyMatchesAsync failed.");
             }
             finally
@@ -139,27 +148,9 @@ public class ChatListScreen
     private void CacheAvatars(IEnumerable<MatchSummaryDto> matches)
     {
         var cacheDir = Path.Combine(Plugin.PluginInterface.ConfigDirectory.FullName, "ChatAvatarCache");
-        try
-        {
-            Directory.CreateDirectory(cacheDir);
-        }
-        catch (Exception ex)
-        {
-            Plugin.Log.Warning(ex, "[ChatListScreen] Could not create the avatar cache directory; avatars will not be cached.");
-            return;
-        }
         foreach (var m in matches)
         {
-            try
-            {
-                var path = Path.Combine(cacheDir, $"{m.PeerProfileId}.webp");
-                File.WriteAllBytes(path, m.PeerAvatarWebp);
-                _avatarTexCache[m.PeerProfileId] = Plugin.TextureProvider.GetFromFile(path);
-            }
-            catch (Exception ex)
-            {
-                Plugin.Log.Warning(ex, $"[ChatListScreen] Failed to cache avatar for {m.PeerProfileId}.");
-            }
+            _avatarTexCache[m.PeerProfileId] = AvatarDiskCache.Store(cacheDir, m.PeerProfileId.ToString(), m.PeerAvatarWebp);
         }
     }
 
@@ -401,10 +392,15 @@ public class ChatListScreen
             Widgets.LoadingIndicator.Draw();
             return;
         }
+        if (_connectivityError && all.Length == 0)
+        {
+            DrawConnectivityError();
+            return;
+        }
         if (_fetchError is not null && all.Length == 0)
         {
             ImGui.PushTextWrapPos(0f);
-            ImGui.TextColored(new Vector4(0.95f, 0.45f, 0.45f, 1f),
+            ImGui.TextColored(UiColors.Danger,
                 Loc.T("chat.matches_load_error", _fetchError));
             ImGui.PopTextWrapPos();
             return;
@@ -466,6 +462,90 @@ public class ChatListScreen
             }
             ImGui.PopStyleColor();
         }
+    }
+
+    /// <summary>Full-panel "couldn't reach the server" state: a disconnected icon, the localized message,
+    /// and Try-again / Discord actions. Shown when a matches fetch fails while the hub is not connected.</summary>
+    private void DrawConnectivityError()
+    {
+        var t = ThemeService.Current;
+        var winSize = ImGui.GetWindowSize();
+        var winPos = ImGui.GetWindowPos();
+
+        const float IconScale = 2.6f;
+        var Padding = Px(24f);
+        var Gap = Px(22f);
+        var ButtonGap = Px(20f);
+        var buttonH = Px(32f);
+
+        var icon = FontAwesomeIcon.Unlink.ToIconString();
+        ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIconFixedWidth);
+        ImGui.SetWindowFontScale(IconScale * UiScale.S);
+        var iconSz = ImGui.CalcTextSize(icon);
+        ImGui.SetWindowFontScale(1.0f);
+        ImGui.PopFont();
+
+        var msg = Loc.T("chat.connectivity_error");
+        var wrapWidth = winSize.X - Padding * 2f;
+
+        string[] lines;
+        float lineHeight, textBlockH;
+        using (UiFonts.H3?.Push())
+        {
+            lines = WrapLines(msg, wrapWidth);
+            lineHeight = ImGui.GetTextLineHeight();
+            textBlockH = lineHeight * lines.Length;
+        }
+
+        var totalH = iconSz.Y + Gap + textBlockH + ButtonGap + buttonH;
+        var blockTop = winPos.Y + (winSize.Y - totalH) * 0.40f;
+
+        var iconX = winPos.X + (winSize.X - iconSz.X) * 0.5f;
+        ImGui.SetCursorScreenPos(new Vector2(iconX, blockTop));
+        ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIconFixedWidth);
+        ImGui.SetWindowFontScale(IconScale * UiScale.S);
+        ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0.92f, 0.46f, 0.46f, 0.85f));
+        ImGui.TextUnformatted(icon);
+        ImGui.PopStyleColor();
+        ImGui.SetWindowFontScale(1.0f);
+        ImGui.PopFont();
+
+        // Centre each wrapped line individually; TextWrapped left-aligns.
+        var textY = blockTop + iconSz.Y + Gap;
+        using (UiFonts.H3?.Push())
+        {
+            ImGui.PushStyleColor(ImGuiCol.Text, t.AccentLight);
+            for (int i = 0; i < lines.Length; i++)
+            {
+                var lineSz = ImGui.CalcTextSize(lines[i]);
+                ImGui.SetCursorScreenPos(new Vector2(
+                    winPos.X + (winSize.X - lineSz.X) * 0.5f,
+                    textY + i * lineHeight));
+                ImGui.TextUnformatted(lines[i]);
+            }
+            ImGui.PopStyleColor();
+        }
+
+        var retryLabel = Loc.T("common.try_again");
+        const string discordLabel = "Discord";
+        var style = ImGui.GetStyle();
+        var retryW = ImGui.CalcTextSize(retryLabel).X + style.FramePadding.X * 2f + Px(10f);
+        var discordW = ImGui.CalcTextSize(discordLabel).X + style.FramePadding.X * 2f + Px(10f);
+        var buttonsX = winPos.X + (winSize.X - (retryW + style.ItemSpacing.X + discordW)) * 0.5f;
+        var buttonsY = textY + textBlockH + ButtonGap;
+
+        ImGui.SetCursorScreenPos(new Vector2(buttonsX, buttonsY));
+        PushThemeButton(t);
+        if (ImGui.Button(retryLabel + "##connRetry", new Vector2(retryW, buttonH)))
+        {
+            StartFetch();
+        }
+        ImGui.SameLine();
+        if (ImGui.Button(discordLabel + "##connDiscord", new Vector2(discordW, buttonH)))
+        {
+            OpenDiscord();
+        }
+        PopThemeButton();
     }
 
     private static void DrawEmptyState()
@@ -661,7 +741,7 @@ public class ChatListScreen
         var timeSize = ImGui.CalcTextSize(timeAgo);
         drawList.AddText(
             cursorStart + new Vector2(windowWidth - timeSize.X - Px(10), Px(12)),
-            0xFF888888,
+            UiColors.TextMuted,
             timeAgo);
 
         // Last-message preview ("Me: …" for outgoing, the text itself for incoming).

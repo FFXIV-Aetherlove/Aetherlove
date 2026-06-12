@@ -5,6 +5,7 @@ using System.Numerics;
 using System.Threading.Tasks;
 using AetherLove.Services;
 using AetherLove.Services.Localization;
+using AetherLove.UI;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility.Raii;
 using OtterGui.Widgets;
@@ -77,7 +78,7 @@ public partial class OnboardingScreen
                 _locationComboIdx = newLocIdx;
         }
         else
-            ImGui.TextColored(new Vector4(0.52f, 0.52f, 0.52f, 0.85f), Loc.T("onboarding.opt_location_unavailable"));
+            ImGui.TextColored(UiColors.Hint, Loc.T("onboarding.opt_location_unavailable"));
         ImGui.Spacing();
 
         ImGui.Text(Loc.T("onboarding.opt_fav_expansion"));
@@ -89,7 +90,7 @@ public partial class OnboardingScreen
         ImGui.Text(Loc.T("onboarding.opt_fav_spotify"));
         ImGui.SameLine(); HelpTooltip(Loc.T("onboarding.opt_fav_spotify_tip"));
         ImGui.Spacing();
-        ImGui.TextColored(new Vector4(0.52f, 0.52f, 0.52f, 0.85f), SpotifyTrack.DisplayPrefix);
+        ImGui.TextColored(UiColors.Hint, SpotifyTrack.DisplayPrefix);
         ImGui.SameLine(0f, 0f);
         ImGui.SetNextItemWidth(Px(160f));
         if (ImGui.InputText("##spotify", ref _spotifyInput, 256))
@@ -100,11 +101,11 @@ public partial class OnboardingScreen
         else if (_spotifyTrackName.Length > 0)
         {
             ImGui.PushTextWrapPos(0f);
-            ImGui.TextColored(new Vector4(0.35f, 0.85f, 0.45f, 1f), $"  {_spotifyTrackName}");
+            ImGui.TextColored(UiColors.Success, $"  {_spotifyTrackName}");
             ImGui.PopTextWrapPos();
         }
         else if (_spotifyTrackId.Length > 0)
-            ImGui.TextColored(new Vector4(0.52f, 0.52f, 0.52f, 0.85f), Loc.T("onboarding.opt_spotify_track_id", _spotifyTrackId));
+            ImGui.TextColored(UiColors.Hint, Loc.T("onboarding.opt_spotify_track_id", _spotifyTrackId));
         ImGui.Spacing();
 
         ImGui.Text(Loc.T("onboarding.opt_fav_movie"));

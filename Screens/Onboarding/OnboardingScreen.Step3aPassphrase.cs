@@ -94,14 +94,14 @@ public partial class OnboardingScreen
         var showMatchErr = !matches && (_passphraseConfirm.Length > 0 || _passphraseSubmitAttempted);
         if (showLengthErr)
         {
-            ImGui.TextColored(new Vector4(0.95f, 0.45f, 0.45f, 1f),
+            ImGui.TextColored(UiColors.Danger,
                 _passphrase.Length == 0
                     ? Loc.T("onboarding.pass_err_empty")
                     : Loc.T("onboarding.pass_err_too_short", PassphraseMinLength));
         }
         if (showMatchErr)
         {
-            ImGui.TextColored(new Vector4(0.95f, 0.45f, 0.45f, 1f),
+            ImGui.TextColored(UiColors.Danger,
                 _passphraseConfirm.Length == 0
                     ? Loc.T("onboarding.pass_err_confirm_empty")
                     : Loc.T("onboarding.pass_err_mismatch"));
@@ -120,7 +120,7 @@ public partial class OnboardingScreen
         {
             ImGui.Spacing();
             ImGui.PushTextWrapPos(0f);
-            ImGui.TextColored(new Vector4(0.95f, 0.45f, 0.45f, 1f), _passphraseError);
+            ImGui.TextColored(UiColors.Danger, _passphraseError);
             ImGui.PopTextWrapPos();
         }
         if (_passphraseProcessing)

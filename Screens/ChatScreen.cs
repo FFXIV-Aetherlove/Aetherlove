@@ -153,19 +153,8 @@ public class ChatScreen
 
     private void LoadHeaderAvatar()
     {
-        _headerAvatarTex = null;
-        try
-        {
-            var cacheDir = Path.Combine(Plugin.PluginInterface.ConfigDirectory.FullName, "ChatAvatarCache");
-            Directory.CreateDirectory(cacheDir);
-            var path = Path.Combine(cacheDir, $"{_peerId}.webp");
-            File.WriteAllBytes(path, _peerAvatar);
-            _headerAvatarTex = Plugin.TextureProvider.GetFromFile(path);
-        }
-        catch (Exception ex)
-        {
-            Plugin.Log.Warning(ex, "[ChatScreen] Failed to load header avatar.");
-        }
+        var cacheDir = Path.Combine(Plugin.PluginInterface.ConfigDirectory.FullName, "ChatAvatarCache");
+        _headerAvatarTex = AvatarDiskCache.Store(cacheDir, _peerId.ToString(), _peerAvatar);
     }
 
     private void StartLoadConversation()
@@ -622,7 +611,7 @@ public class ChatScreen
             }
             if (_loadError is not null)
             {
-                ImGui.TextColored(new Vector4(0.95f, 0.45f, 0.45f, 1f), Loc.T("chat.error", _loadError));
+                ImGui.TextColored(UiColors.Danger, Loc.T("chat.error", _loadError));
             }
 
             var lineH = ImGui.GetTextLineHeight();
@@ -1085,10 +1074,10 @@ public class ChatScreen
             var Title = Loc.T("chat.report_title");
             var titleSz = ImGui.CalcTextSize(Title);
             ImGui.SetCursorPosX((availW - titleSz.X) * 0.5f);
-            ImGui.TextColored(new Vector4(0.95f, 0.65f, 0.14f, 1f), Title);
+            ImGui.TextColored(UiColors.Amber, Title);
         }
         ImGui.Spacing();
-        ImGui.PushStyleColor(ImGuiCol.Separator, new Vector4(0.95f, 0.65f, 0.14f, 0.35f));
+        ImGui.PushStyleColor(ImGuiCol.Separator, UiColors.Amber with { W = 0.35f });
         ImGui.Separator();
         ImGui.PopStyleColor();
         ImGui.Spacing();
@@ -1117,7 +1106,7 @@ public class ChatScreen
         if (_reportError is not null)
         {
             ImGui.PushTextWrapPos(0f);
-            ImGui.TextColored(new Vector4(0.95f, 0.45f, 0.45f, 1f), _reportError);
+            ImGui.TextColored(UiColors.Danger, _reportError);
             ImGui.PopTextWrapPos();
             ImGui.Spacing();
         }

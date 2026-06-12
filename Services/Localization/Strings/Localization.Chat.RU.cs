@@ -46,6 +46,7 @@ internal static class ChatRu
         ["chat.all_archived"] = "Все ваши чаты в архиве",
         ["chat.loading"] = "Загрузка…",
         ["chat.matches_load_error"] = "Не удалось загрузить пары: {0}",
+        ["chat.connectivity_error"] = "Не удалось подключиться к серверу AetherLove. Попробуйте ещё раз или загляните в Discord, чтобы узнать статус сервера.",
         ["chat.empty_state"] = "У вас пока нет пар — но скоро это изменится. Продолжайте листать!",
         ["chat.new_match"] = "новая пара",
         ["chat.say_hi"] = "У Вас пара! — скажите привет!",

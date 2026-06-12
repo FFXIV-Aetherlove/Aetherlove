@@ -13,6 +13,7 @@ using AetherLove.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Interface;
+using Dalamud.Interface.Textures;
 using Dalamud.Interface.Windowing;
 
 namespace AetherLove.Windows;
@@ -38,6 +39,7 @@ public class MainPluginWindow : Window, IDisposable
     private readonly OutdatedScreen _outdatedScreen;
     private readonly NotificationCenter _notifications;
     private readonly AetherLoveHubClient _hubClient;
+    private readonly OwnAvatarCache _ownAvatar;
 
     private MiniWindow? _miniWindow;
 
@@ -65,7 +67,8 @@ public class MainPluginWindow : Window, IDisposable
         OfflineScreen offlineScreen,
         OutdatedScreen outdatedScreen,
         NotificationCenter notifications,
-        AetherLoveHubClient hubClient
+        AetherLoveHubClient hubClient,
+        OwnAvatarCache ownAvatar
     ) : base("AetherLove##MainWindow",
              ImGuiWindowFlags.NoResize
            | ImGuiWindowFlags.NoScrollbar
@@ -93,9 +96,15 @@ public class MainPluginWindow : Window, IDisposable
         _outdatedScreen = outdatedScreen;
         _notifications = notifications;
         _hubClient = hubClient;
+        _ownAvatar = ownAvatar;
     }
 
     public void SetMiniWindow(MiniWindow mini) => _miniWindow = mini;
+
+    public override void OnOpen()
+    {
+        _ownAvatar.Refresh(onlyIfCold: true);
+    }
 
     public void OpenToChat()
     {
@@ -282,14 +291,14 @@ public class MainPluginWindow : Window, IDisposable
 
         var drawList = ImGui.GetWindowDrawList();
 
-        // Null target = Minimize.
+        // Null target = Minimize. Profile draws the avatar (DrawProfileNavButton), so its label is unused.
         var items = new (FontAwesomeIcon icon, string label, Screen? target)[]
         {
-            (FontAwesomeIcon.LayerGroup,  Loc.T("common.nav_swipe"),    Screen.Deck),
-            (FontAwesomeIcon.Comment,     Loc.T("common.nav_matches"),  Screen.ChatList),
-            (FontAwesomeIcon.User,        Loc.T("common.nav_profile"),  Screen.MyProfile),
-            (FontAwesomeIcon.Cog,         Loc.T("common.nav_settings"), Screen.Settings),
-            (FontAwesomeIcon.MobileAlt,   Loc.T("common.nav_minimize"), null),
+            (FontAwesomeIcon.LayerGroup, Loc.T("common.nav_swipe"), Screen.Deck),
+            (FontAwesomeIcon.Comment, Loc.T("common.nav_matches"), Screen.ChatList),
+            (FontAwesomeIcon.User, string.Empty, Screen.MyProfile),
+            (FontAwesomeIcon.Cog, Loc.T("common.nav_settings"), Screen.Settings),
+            (FontAwesomeIcon.MobileAlt, Loc.T("common.nav_minimize"), null),
         };
 
         var slotWidth = (winSize.X - Px(BezelLeft) - Px(BezelRight)) / items.Length;
@@ -301,43 +310,50 @@ public class MainPluginWindow : Window, IDisposable
         {
             var (icon, label, target) = items[i];
             var isActive = target.HasValue && IsNavActive(target.Value, _router.Current);
-            var color = isActive ? accentCol : 0xFF888888u;
+            var color = isActive ? accentCol : UiColors.TextMuted;
 
             var slotCenterX = barLeft + slotWidth * i + slotWidth * 0.5f;
             var iconY = barTop + Px(10f);
             var labelY = iconY + fontSize + Px(4f);
 
-            ImGui.PushFont(iconFont);
-            var iconStr = icon.ToIconString();
-            var iconSize = ImGui.CalcTextSize(iconStr);
-            drawList.AddText(ImGui.GetFont(), fontSize,
-                new Vector2(slotCenterX - iconSize.X * 0.5f, iconY),
-                color, iconStr);
-            ImGui.PopFont();
-
-            if (target.HasValue && target.Value == Screen.ChatList)
+            if (target == Screen.MyProfile)
             {
-                var total = _notifications.TotalBadge;
-                if (total > 0)
-                {
-                    var badgeR = Px(7f);
-                    var badgeCenter = new Vector2(slotCenterX + iconSize.X * 0.5f + Px(1f), iconY - Px(1f));
-                    drawList.AddCircleFilled(badgeCenter, badgeR, UiColors.UnreadBadge);
-                    var badgeLabel = total > 9 ? "9+" : total.ToString();
-                    var badgeFsz = fontSize * 0.68f;
-                    var badgeTsz = ImGui.CalcTextSize(badgeLabel) * (badgeFsz / fontSize);
-                    drawList.AddText(ImGui.GetFont(), badgeFsz,
-                        badgeCenter - badgeTsz * 0.5f, 0xFFFFFFFF, badgeLabel);
-                }
+                DrawProfileNavButton(drawList, slotCenterX, iconY, isActive, icon, color);
             }
-
-            var labelSize = ImGui.CalcTextSize(label);
-            drawList.AddText(new Vector2(slotCenterX - labelSize.X * 0.5f, labelY), color, label);
-
-            if (isActive)
+            else
             {
-                var dotY = labelY + fontSize + Px(3f);
-                drawList.AddCircleFilled(new Vector2(slotCenterX, dotY), Px(2.5f), accentCol);
+                ImGui.PushFont(iconFont);
+                var iconStr = icon.ToIconString();
+                var iconSize = ImGui.CalcTextSize(iconStr);
+                drawList.AddText(ImGui.GetFont(), fontSize,
+                    new Vector2(slotCenterX - iconSize.X * 0.5f, iconY),
+                    color, iconStr);
+                ImGui.PopFont();
+
+                if (target.HasValue && target.Value == Screen.ChatList)
+                {
+                    var total = _notifications.TotalBadge;
+                    if (total > 0)
+                    {
+                        var badgeR = Px(7f);
+                        var badgeCenter = new Vector2(slotCenterX + iconSize.X * 0.5f + Px(1f), iconY - Px(1f));
+                        drawList.AddCircleFilled(badgeCenter, badgeR, UiColors.UnreadBadge);
+                        var badgeLabel = total > 9 ? "9+" : total.ToString();
+                        var badgeFsz = fontSize * 0.68f;
+                        var badgeTsz = ImGui.CalcTextSize(badgeLabel) * (badgeFsz / fontSize);
+                        drawList.AddText(ImGui.GetFont(), badgeFsz,
+                            badgeCenter - badgeTsz * 0.5f, 0xFFFFFFFF, badgeLabel);
+                    }
+                }
+
+                var labelSize = ImGui.CalcTextSize(label);
+                drawList.AddText(new Vector2(slotCenterX - labelSize.X * 0.5f, labelY), color, label);
+
+                if (isActive)
+                {
+                    var dotY = labelY + fontSize + Px(3f);
+                    drawList.AddCircleFilled(new Vector2(slotCenterX, dotY), Px(2.5f), accentCol);
+                }
             }
 
             ImGui.SetCursorScreenPos(new Vector2(barLeft + slotWidth * i, barTop));
@@ -359,6 +375,37 @@ public class MainPluginWindow : Window, IDisposable
                     }
                 }
             }
+        }
+    }
+
+    /// <summary>Draws the Profile nav slot as the user's circular avatar, falling back to the user icon while it loads.</summary>
+    private void DrawProfileNavButton(ImDrawListPtr drawList, float centerX, float iconY,
+                                      bool isActive, FontAwesomeIcon fallbackIcon, uint iconColor)
+    {
+        var fontSize = ImGui.GetFontSize();
+        var radius = fontSize + Px(2f);
+        var center = new Vector2(centerX, iconY + fontSize + Px(2f));
+
+        var wrap = _ownAvatar.Texture?.GetWrapOrDefault();
+        if (wrap != null)
+        {
+            var tl = center - new Vector2(radius, radius);
+            var br = center + new Vector2(radius, radius);
+            drawList.AddImageRounded(wrap.Handle, tl, br,
+                Vector2.Zero, Vector2.One, 0xFFFFFFFF, radius, ImDrawFlags.RoundCornersAll);
+        }
+        else
+        {
+            ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
+            var iconStr = fallbackIcon.ToIconString();
+            var iconSize = ImGui.CalcTextSize(iconStr);
+            drawList.AddText(ImGui.GetFont(), fontSize, center - iconSize * 0.5f, iconColor, iconStr);
+            ImGui.PopFont();
+        }
+
+        if (isActive)
+        {
+            drawList.AddCircle(center, radius, ThemeService.Current.AccentU32, 0, Px(2f));
         }
     }
 

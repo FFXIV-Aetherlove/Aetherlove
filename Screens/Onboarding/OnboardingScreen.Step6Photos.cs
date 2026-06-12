@@ -4,6 +4,7 @@ using System.Numerics;
 using System.Threading.Tasks;
 using AetherLove.Services;
 using AetherLove.Services.Localization;
+using AetherLove.UI;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Textures;
 
@@ -131,10 +132,10 @@ public partial class OnboardingScreen
             ImGui.SetCursorPos(new Vector2(slotsX + i * (SlotW + SlotGap), slotsY));
             var sp = ImGui.GetCursorScreenPos();
 
-            drawList.AddRectFilled(sp, sp + new Vector2(SlotW, SlotH), 0x33000000, Px(4f));
+            drawList.AddRectFilled(sp, sp + new Vector2(SlotW, SlotH), UiColors.PhotoSlotFill, Px(4f));
             var borderColor = i == _activePhotoSlot ? t.AccentU32
-                : slot.Confirmed ? 0xFF44AA44
-                : isMain         ? 0xFF997733
+                : slot.Confirmed ? UiColors.PhotoSlotStoredBorder
+                : isMain ? UiColors.PhotoSlotMainBorder
                 : 0xFF555555;
             drawList.AddRect(sp, sp + new Vector2(SlotW, SlotH), borderColor, Px(4f), ImDrawFlags.None, Px(2f));
 
@@ -156,7 +157,7 @@ public partial class OnboardingScreen
                 var phSz = ImGui.CalcTextSize(ph);
                 drawList.AddText(
                     sp + new Vector2((SlotW - phSz.X) * 0.5f, (SlotH - phSz.Y) * 0.5f),
-                    isMain ? 0xFFBBAA44 : 0xFF888888, ph);
+                    isMain ? UiColors.PhotoSlotMainLabel : UiColors.TextMuted, ph);
             }
 
             if (slot.Confirmed)
@@ -186,7 +187,7 @@ public partial class OnboardingScreen
 
         if (_activePhotoSlot < 0)
         {
-            ImGui.TextColored(new Vector4(0.52f, 0.52f, 0.52f, 0.85f),
+            ImGui.TextColored(UiColors.Hint,
                 Loc.T("onboarding.photos_tap_slot"));
             return;
         }
@@ -203,7 +204,7 @@ public partial class OnboardingScreen
             if (mainSlot)
             {
                 ImGui.PushTextWrapPos(0f);
-                ImGui.TextColored(new Vector4(0.95f, 0.45f, 0.45f, 1f),
+                ImGui.TextColored(UiColors.Danger,
                     Loc.T("onboarding.photos_main_sfw_warning"));
                 ImGui.PopTextWrapPos();
             }
@@ -228,13 +229,13 @@ public partial class OnboardingScreen
                 }
                 ImGui.Spacing();
                 ImGui.PushTextWrapPos(0f);
-                ImGui.TextColored(new Vector4(0.95f, 0.45f, 0.45f, 1f),
+                ImGui.TextColored(UiColors.Danger,
                     Loc.T("onboarding.photos_mismatch_warning"));
                 ImGui.PopTextWrapPos();
             }
             ImGui.Spacing();
 
-            ImGui.TextColored(new Vector4(0.35f, 0.85f, 0.45f, 1f),
+            ImGui.TextColored(UiColors.Success,
                 active.FromServer ? Loc.T("onboarding.photos_previously_uploaded") : Loc.T("onboarding.photos_confirmed"));
             ImGui.SameLine(0f, Px(20f));
             if (ImGui.Button($"{Loc.T("onboarding.photos_remove")}##rm{_activePhotoSlot}", Px(80f, 24f)))
@@ -276,15 +277,15 @@ public partial class OnboardingScreen
             if (active.Path.Length > 0)
             {
                 ImGui.SameLine();
-                ImGui.TextColored(new Vector4(0.55f, 0.85f, 0.55f, 1f), Path.GetFileName(active.Path));
+                ImGui.TextColored(UiColors.SuccessSoft, Path.GetFileName(active.Path));
                 ImGui.Spacing();
-                ImGui.TextColored(new Vector4(0.52f, 0.52f, 0.52f, 0.85f),
+                ImGui.TextColored(UiColors.Hint,
                     Loc.T("onboarding.photos_crop_hint"));
             }
             else
             {
                 ImGui.Spacing();
-                ImGui.TextColored(new Vector4(0.52f, 0.52f, 0.52f, 0.85f),
+                ImGui.TextColored(UiColors.Hint,
                     mainSlot ? Loc.T("onboarding.photos_required") : Loc.T("onboarding.photos_optional"));
             }
         }

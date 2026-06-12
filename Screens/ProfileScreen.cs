@@ -75,7 +75,7 @@ public class ProfileScreen
     private static float ChipPadY => Px(6f);
 
     private const uint TextPrimary = 0xFFEEEEEE;
-    private const uint TextSecondary = 0xFF888888;
+    private const uint TextSecondary = UiColors.TextMuted;
     private const uint GraphInactive = 0xFF2D2D2D;
 
     public ProfileScreen(ScreenRouter router, AetherLoveHubClient hub)
@@ -273,7 +273,7 @@ public class ProfileScreen
                 ImGui.PushTextWrapPos(0f);
                 ImGui.TextColored(
                     _loadError is not null
-                        ? new Vector4(0.95f, 0.45f, 0.45f, 1f)
+                        ? UiColors.Danger
                         : new Vector4(0.5f, 0.5f, 0.5f, 1f),
                     msg);
                 ImGui.PopTextWrapPos();
@@ -1157,25 +1157,24 @@ public class ProfileScreen
     private void DrawReportFormView(ThemeDefinition t)
     {
         var availW = ImGui.GetContentRegionAvail().X;
-        var warnYellow = new Vector4(0.95f, 0.65f, 0.14f, 1f);
 
         using (UiFonts.H3?.Push())
         {
             var Title = Loc.T("profile.report_profile");
             var titleSz = ImGui.CalcTextSize(Title);
             ImGui.SetCursorPosX((availW - titleSz.X) * 0.5f);
-            ImGui.TextColored(warnYellow, Title);
+            ImGui.TextColored(UiColors.Amber, Title);
         }
 
         ImGui.Spacing();
         ImGui.PushStyleColor(ImGuiCol.Separator,
-            new Vector4(warnYellow.X, warnYellow.Y, warnYellow.Z, 0.35f));
+            new Vector4(UiColors.Amber.X, UiColors.Amber.Y, UiColors.Amber.Z, 0.35f));
         ImGui.Separator();
         ImGui.PopStyleColor();
         ImGui.Spacing();
 
         ImGui.PushTextWrapPos(0f);
-        ImGui.TextColored(warnYellow, Loc.T("profile.report_warning"));
+        ImGui.TextColored(UiColors.Amber, Loc.T("profile.report_warning"));
         ImGui.PopTextWrapPos();
         ImGui.Spacing();
         ImGui.Spacing();
@@ -1200,7 +1199,7 @@ public class ProfileScreen
         if (_reportError is not null)
         {
             ImGui.PushTextWrapPos(0f);
-            ImGui.TextColored(new Vector4(0.95f, 0.45f, 0.45f, 1f), _reportError);
+            ImGui.TextColored(UiColors.Danger, _reportError);
             ImGui.PopTextWrapPos();
             ImGui.Spacing();
         }
@@ -1255,14 +1254,13 @@ public class ProfileScreen
     private void DrawReportSuccessView()
     {
         var availW = ImGui.GetContentRegionAvail().X;
-        var okGreen = new Vector4(0.35f, 0.85f, 0.45f, 1f);
 
         ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIconFixedWidth);
         ImGui.SetWindowFontScale(2.2f * UiScale.S);
         var icon = FontAwesomeIcon.CheckCircle.ToIconString();
         var iconSz = ImGui.CalcTextSize(icon);
         ImGui.SetCursorPosX((availW - iconSz.X) * 0.5f);
-        ImGui.TextColored(okGreen, icon);
+        ImGui.TextColored(UiColors.Success, icon);
         ImGui.SetWindowFontScale(1.0f);
         ImGui.PopFont();
         ImGui.Spacing();
@@ -1272,17 +1270,17 @@ public class ProfileScreen
             var Title = Loc.T("profile.report_submitted");
             var titleSz = ImGui.CalcTextSize(Title);
             ImGui.SetCursorPosX((availW - titleSz.X) * 0.5f);
-            ImGui.TextColored(okGreen, Title);
+            ImGui.TextColored(UiColors.Success, Title);
         }
         ImGui.Spacing();
 
-        ImGui.PushStyleColor(ImGuiCol.Separator, new Vector4(okGreen.X, okGreen.Y, okGreen.Z, 0.35f));
+        ImGui.PushStyleColor(ImGuiCol.Separator, UiColors.Success with { W = 0.35f });
         ImGui.Separator();
         ImGui.PopStyleColor();
         ImGui.Spacing();
 
         ImGui.PushTextWrapPos(0f);
-        ImGui.TextColored(new Vector4(0.85f, 0.85f, 0.85f, 1f),
+        ImGui.TextColored(UiColors.Body,
             Loc.T("profile.report_thanks"));
         ImGui.PopTextWrapPos();
         ImGui.Spacing();
@@ -1375,7 +1373,7 @@ public class ProfileScreen
     private static void InfoRow(string label, string? value)
     {
         ImGui.SetCursorPosX(PadX);
-        ImGui.TextColored(new Vector4(0.55f, 0.55f, 0.55f, 1f), label);
+        ImGui.TextColored(UiColors.Muted, label);
         ImGui.SameLine(Px(145f));
         ImGui.TextColored(new Vector4(0.92f, 0.92f, 0.92f, 1f), value ?? "");
     }

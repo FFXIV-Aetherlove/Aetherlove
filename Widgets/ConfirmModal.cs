@@ -24,7 +24,7 @@ public class ConfirmModal
 
         ModalUi.Header(availW, title, t.AccentLight);
 
-        ImGui.TextColored(ModalUi.Body, body);
+        ImGui.TextColored(UiColors.Body, body);
         ImGui.Spacing();
         ImGui.Spacing();
 

@@ -256,16 +256,7 @@ public class SettingsScreen
 
             ImGui.Spacing();
             ImGui.SetCursorPosX(Px(PadX));
-            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.345f, 0.396f, 0.949f, 1f));
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.42f, 0.47f, 1.0f, 1f));
-            ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.28f, 0.32f, 0.80f, 1f));
-            ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
-            if (ImGui.Button("Discord", new Vector2(winW - Px(PadX) * 2f, Px(30f))))
-            {
-                OpenDiscord();
-            }
-            ImGui.PopStyleVar();
-            ImGui.PopStyleColor(3);
+            DrawDiscordButton("Discord", new Vector2(winW - Px(PadX) * 2f, Px(30f)));
 
             ImGui.Spacing();
             Divider(dl, winW);
@@ -295,20 +286,6 @@ public class SettingsScreen
 
             ImGui.Spacing();
             ImGui.Spacing();
-        }
-    }
-
-
-    private static void OpenDiscord()
-    {
-        try
-        {
-            System.Diagnostics.Process.Start(
-                new System.Diagnostics.ProcessStartInfo("https://discord.gg/SkyQmpxWhB") { UseShellExecute = true });
-        }
-        catch (Exception ex)
-        {
-            Plugin.Log.Warning(ex, "[Settings] Failed to open Discord invite.");
         }
     }
 
@@ -344,7 +321,7 @@ public class SettingsScreen
                 ImGui.SetCursorPosX(Px(PadX));
                 var p = ImGui.GetCursorScreenPos();
                 var endX = p.X + winW - Px(PadX) * 2f;
-                dl.AddLine(p, new Vector2(endX, p.Y), 0x88FF3333u, 1f);
+                dl.AddLine(p, new Vector2(endX, p.Y), UiColors.DangerDivider, 1f);
                 ImGui.SetCursorPosY(ImGui.GetCursorPosY() + Px(6f));
                 ImGui.Spacing();
             }
@@ -405,7 +382,7 @@ public class SettingsScreen
                 ImGui.Spacing();
                 ImGui.SetCursorPosX(Px(PadX));
                 ImGui.PushTextWrapPos(winW - Px(PadX));
-                ImGui.TextColored(new Vector4(0.95f, 0.45f, 0.45f, 1f),
+                ImGui.TextColored(UiColors.Danger,
                     Loc.T("settings.delete_previous_failed", _deleteError));
                 ImGui.PopTextWrapPos();
             }
@@ -466,7 +443,7 @@ public class SettingsScreen
             ImGui.Spacing();
             ImGui.SetCursorPosX(Px(PadX));
             ImGui.PushTextWrapPos(winW - Px(PadX));
-            ImGui.TextColored(new Vector4(0.85f, 0.85f, 0.85f, 1f),
+            ImGui.TextColored(UiColors.Body,
                 Loc.T("settings.deleted_body"));
             ImGui.PopTextWrapPos();
             ImGui.Spacing();
@@ -612,7 +589,7 @@ public class SettingsScreen
 
         ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
         var iconStr = FontAwesomeIcon.QuestionCircle.ToIconString();
-        ImGui.TextColored(new Vector4(0.55f, 0.55f, 0.55f, 1f), iconStr);
+        ImGui.TextColored(UiColors.Muted, iconStr);
         ImGui.PopFont();
         if (ImGui.IsItemHovered())
         {
@@ -668,7 +645,7 @@ public class SettingsScreen
         {
             ImGui.SetCursorPosX(Px(PadX));
             ImGui.PushTextWrapPos(winW - Px(PadX));
-            ImGui.TextColored(new Vector4(0.95f, 0.45f, 0.45f, 1f), _nsfwError);
+            ImGui.TextColored(UiColors.Danger, _nsfwError);
             ImGui.PopTextWrapPos();
         }
     }
@@ -676,7 +653,7 @@ public class SettingsScreen
     private static void HelpMarker(string text)
     {
         ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
-        ImGui.TextColored(new Vector4(0.55f, 0.55f, 0.55f, 1f), FontAwesomeIcon.QuestionCircle.ToIconString());
+        ImGui.TextColored(UiColors.Muted, FontAwesomeIcon.QuestionCircle.ToIconString());
         ImGui.PopFont();
         if (ImGui.IsItemHovered())
         {
@@ -972,7 +949,7 @@ public class SettingsScreen
                 ImGui.Spacing();
                 ImGui.SetCursorPosX(Px(PadX));
                 ImGui.PushTextWrapPos(winW - Px(PadX));
-                ImGui.TextColored(new Vector4(0.35f, 0.85f, 0.45f, 1f),
+                ImGui.TextColored(UiColors.Success,
                     Loc.T("settings.feedback_thanks"));
                 ImGui.PopTextWrapPos();
                 ImGui.Spacing();
@@ -1029,7 +1006,7 @@ public class SettingsScreen
             {
                 ImGui.SetCursorPosX(Px(PadX));
                 ImGui.PushTextWrapPos(winW - Px(PadX));
-                ImGui.TextColored(new Vector4(0.95f, 0.45f, 0.45f, 1f), _feedbackError);
+                ImGui.TextColored(UiColors.Danger, _feedbackError);
                 ImGui.PopTextWrapPos();
                 ImGui.Spacing();
             }

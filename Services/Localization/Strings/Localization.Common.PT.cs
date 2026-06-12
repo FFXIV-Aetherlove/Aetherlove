@@ -85,7 +85,6 @@ internal static class CommonPt
         // Bottom navigation bar
         ["common.nav_swipe"] = "Swipe",
         ["common.nav_matches"] = "Matches",
-        ["common.nav_profile"] = "Perfil",
         ["common.nav_settings"] = "Config.",
         ["common.nav_minimize"] = "Recolher",
 
