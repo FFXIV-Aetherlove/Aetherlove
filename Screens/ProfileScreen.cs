@@ -28,6 +28,7 @@ public class ProfileScreen
 {
     private readonly ScreenRouter _router;
     private readonly AetherLoveHubClient _hub;
+    private readonly FlairCatalog _flairCatalog;
 
     private ProfileDetailDto? _profile;
     private string _photoSubtitle = string.Empty;
@@ -78,10 +79,11 @@ public class ProfileScreen
     private const uint TextSecondary = UiColors.TextMuted;
     private const uint GraphInactive = 0xFF2D2D2D;
 
-    public ProfileScreen(ScreenRouter router, AetherLoveHubClient hub)
+    public ProfileScreen(ScreenRouter router, AetherLoveHubClient hub, FlairCatalog flairCatalog)
     {
         _router = router;
         _hub = hub;
+        _flairCatalog = flairCatalog;
     }
 
     public void SetProfile(Guid profileId, ProfileSource source)
@@ -238,7 +240,7 @@ public class ProfileScreen
             try
             {
                 var path = Path.Combine(cacheDir,
-                    $"{dto.ProfileId}_{photo.Order}.webp");
+                    $"{dto.ProfileId}_{photo.Order}{ImageFormat.ExtensionFor(photo.WebpBytes)}");
                 File.WriteAllBytes(path, photo.WebpBytes);
                 _photoTextures[photo.Order] = Plugin.TextureProvider.GetFromFile(path);
             }
@@ -322,7 +324,7 @@ public class ProfileScreen
                 DrawFavoriteJob(winSize.X, dl);
                 DrawFavoriteLocation(winSize.X, dl);
                 DrawFavoriteExpansion(winSize.X, dl);
-                DrawSpotify(winSize.X, dl);
+                DrawMusicLinks(winSize.X, dl);
                 DrawFavoriteMovie(winSize.X, dl);
                 DrawFavoriteAnime(winSize.X, dl);
                 DrawFavoriteFFCharacter(winSize.X, dl);
@@ -458,6 +460,23 @@ public class ProfileScreen
                     new Vector2(flagX, flagY),
                     new Vector2(flagX + FlagW, flagY + FlagH));
                 flagX += FlagW + FlagGap;
+            }
+        }
+
+        if (_profile.FlairIds is { Length: > 0 })
+        {
+            var flairLang = FlairCatalog.ResolveLanguage(Plugin.Configuration.PluginLanguage);
+            var flairY = subY + subFontSz + Px(6f);
+            var flairX = photoTL.X + PadX;
+            foreach (var fid in _profile.FlairIds)
+            {
+                var f = _flairCatalog.Get(fid);
+                if (f is null)
+                {
+                    continue;
+                }
+                flairX += DrawFlairPill(dl, new Vector2(flairX, flairY),
+                    FlairCatalog.Text(f, flairLang), FlairCatalog.Description(f, flairLang), f.BackgroundColor) + Px(5f);
             }
         }
 
@@ -830,30 +849,57 @@ public class ProfileScreen
         SpaceDivide(dl, winW);
     }
 
-    private void DrawSpotify(float winW, ImDrawListPtr dl)
+    private void DrawMusicLinks(float winW, ImDrawListPtr dl)
     {
-        if (string.IsNullOrEmpty(_profile!.SpotifyTrackId))
+        var p = _profile!;
+        var hasAny = !string.IsNullOrEmpty(p.SpotifyTrackId)
+            || !string.IsNullOrEmpty(p.SoundCloudUrl)
+            || !string.IsNullOrEmpty(p.AppleMusicUrl)
+            || !string.IsNullOrEmpty(p.YouTubeMusicUrl);
+        if (!hasAny)
         {
             return;
         }
 
-        SectionLabel(Loc.T("profile.favourite_spotify_song"));
+        SectionLabel(Loc.T("profile.favourite_song"));
 
-        var trackUrl = _profile.SpotifyTrackId.StartsWith("http", StringComparison.OrdinalIgnoreCase)
-            ? _profile.SpotifyTrackId
-            : SpotifyTrack.UrlPrefix + _profile.SpotifyTrackId;
+        // Dalamud's FontAwesome has no brand glyphs, so every pill uses the generic music note.
+        DrawMusicPill(winW, dl, "sp", p.SpotifyTrackId, p.SpotifyTrackName,
+            UiColors.SpotifyGreen, UiColors.SpotifyGreenHover, FontAwesomeIcon.Music, isSpotifyId: true);
+        DrawMusicPill(winW, dl, "sc", p.SoundCloudUrl, p.SoundCloudName,
+            UiColors.SoundCloudOrange, UiColors.SoundCloudOrangeHover, FontAwesomeIcon.Music, isSpotifyId: false);
+        DrawMusicPill(winW, dl, "am", p.AppleMusicUrl, p.AppleMusicName,
+            UiColors.AppleMusicPink, UiColors.AppleMusicPinkHover, FontAwesomeIcon.Music, isSpotifyId: false);
+        DrawMusicPill(winW, dl, "yt", p.YouTubeMusicUrl, p.YouTubeMusicName,
+            UiColors.YouTubeRed, UiColors.YouTubeRedHover, FontAwesomeIcon.Music, isSpotifyId: false);
 
-        var fullLabel = !string.IsNullOrEmpty(_profile.SpotifyTrackName)
-            ? _profile.SpotifyTrackName
-            : (_profile.SpotifyTrackId.Length > 24
-                ? _profile.SpotifyTrackId[..24] + "…"
-                : _profile.SpotifyTrackId);
+        SpaceDivide(dl, winW);
+    }
+
+    /// <summary>Draws one clickable brand-coloured "favourite song" pill; no-ops when the ref is empty.
+    /// Spotify stores a bare track id (rebuilt into a URL); the other providers store a full URL.</summary>
+    private void DrawMusicPill(float winW, ImDrawListPtr dl, string idSuffix, string? rawRef, string? name,
+        uint baseCol, uint hoverCol, FontAwesomeIcon icon, bool isSpotifyId)
+    {
+        if (string.IsNullOrEmpty(rawRef))
+        {
+            return;
+        }
+
+        const string spotifyTrackPrefix = "https://open.spotify.com/track/";
+        var url = rawRef.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+            ? rawRef
+            : (isSpotifyId ? spotifyTrackPrefix + rawRef : rawRef);
+
+        var fullLabel = !string.IsNullOrEmpty(name)
+            ? name
+            : (rawRef.Length > 24 ? rawRef[..24] + "…" : rawRef);
 
         ImGui.SetCursorPosX(PadX);
         var pillTL = ImGui.GetCursorScreenPos();
 
         ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
-        var iconStr = FontAwesomeIcon.Music.ToIconString();
+        var iconStr = icon.ToIconString();
         var iconW = ImGui.CalcTextSize(iconStr).X;
         ImGui.PopFont();
 
@@ -867,11 +913,11 @@ public class ProfileScreen
         var pillH = textSz.Y + ChipPadY * 2f;
         var pillBR = pillTL + new Vector2(pillW, pillH);
 
-        ImGui.InvisibleButton("##spotify", new Vector2(pillW, pillH));
+        ImGui.InvisibleButton($"##music_{idSuffix}", new Vector2(pillW, pillH));
         var hovered = ImGui.IsItemHovered();
         var clicked = ImGui.IsItemClicked();
 
-        var pillCol = hovered ? UiColors.SpotifyGreenHover : UiColors.SpotifyGreen;
+        var pillCol = hovered ? hoverCol : baseCol;
         dl.AddRectFilled(pillTL, pillBR, pillCol, pillH * 0.5f);
 
         ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
@@ -887,7 +933,7 @@ public class ProfileScreen
             ImGui.PushTextWrapPos(Px(300f));
             ImGui.TextUnformatted(fullLabel);
             ImGui.PopTextWrapPos();
-            ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), Loc.T("profile.spotify_open_tooltip"));
+            ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), Loc.T("music.open_tooltip"));
             ImGui.EndTooltip();
         }
 
@@ -896,16 +942,16 @@ public class ProfileScreen
             try
             {
                 System.Diagnostics.Process.Start(
-                    new System.Diagnostics.ProcessStartInfo(trackUrl)
+                    new System.Diagnostics.ProcessStartInfo(url)
                     { UseShellExecute = true });
             }
             catch (Exception ex)
             {
-                Plugin.Log.Warning(ex, "[ProfileScreen] Failed to open Spotify URL.");
+                Plugin.Log.Warning(ex, "[ProfileScreen] Failed to open music URL.");
             }
         }
 
-        SpaceDivide(dl, winW);
+        ImGui.Spacing();
     }
 
     /// <summary>Trims text with a trailing ellipsis so it fits within <paramref name="maxWidth"/> px at the current font.</summary>

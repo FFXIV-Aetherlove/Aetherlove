@@ -16,7 +16,8 @@ public sealed record DeckCardDto(
     LookingFor LookingForMask,
     ContentInterest ContentInterestMask,
     byte[] AvatarWebp,
-    byte[] PortraitWebp);
+    byte[] PortraitWebp,
+    Guid[] FlairIds);
 
 /// <summary>One slot's worth of candidates plus the next-slot timestamp.</summary>
 [MessagePackObject(keyAsPropertyName: true)]

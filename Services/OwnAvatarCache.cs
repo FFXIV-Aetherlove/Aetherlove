@@ -84,7 +84,7 @@ public sealed class OwnAvatarCache : IDisposable
             {
                 return;
             }
-            var newest = Directory.EnumerateFiles(CacheDir, "self_*.webp")
+            var newest = Directory.EnumerateFiles(CacheDir, "self_*")
                 .OrderByDescending(File.GetLastWriteTimeUtc)
                 .FirstOrDefault();
             if (newest is not null)

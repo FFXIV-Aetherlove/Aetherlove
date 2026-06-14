@@ -78,6 +78,23 @@ public sealed class SessionBootstrapper
         _lastConnection = updated;
     }
 
+    /// <summary>Re-fetches the connection snapshot (warnings, new-match count, lifecycle/ban state) after a
+    /// (re)connect, back-filling a snapshot the startup bootstrap missed on a flaky link. Best-effort: a
+    /// failed fetch leaves the previous snapshot in place. Refreshes the cache only — it does not re-route.</summary>
+    public async Task RefreshConnectionInfoAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var status = await _hub.GetConnectionInfoAsync(ct).ConfigureAwait(false);
+            _lastConnection = status;
+            _notifications.NewMatches = status.NewMatchCount;
+        }
+        catch (Exception ex)
+        {
+            _log.Warning(ex, "[SessionBootstrapper] Connection-info refresh failed.");
+        }
+    }
+
     /// <summary>True when the server has a key bundle but this machine doesn't have the unwrapped private key.</summary>
     public bool NeedsPassphraseUnlock
     {

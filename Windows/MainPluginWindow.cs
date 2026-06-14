@@ -491,9 +491,9 @@ public class MainPluginWindow : Window, IDisposable
     {
         var winPos = ImGui.GetWindowPos();
         var winSize = ImGui.GetWindowSize();
-        var hitH = Px(43f);
-        var hitW = winSize.X * 0.40f;
-        var hitTL = winPos + new Vector2((winSize.X - hitW) * 0.5f, 0f);
+        var hitH = Px(54f);
+        var hitW = winSize.X / 6f * 0.8f;
+        var hitTL = winPos + new Vector2((winSize.X - hitW) * 0.5f, winSize.Y - hitH);
 
         ImGui.SetCursorScreenPos(hitTL);
         ImGui.InvisibleButton("##fullClose", new Vector2(hitW, hitH));

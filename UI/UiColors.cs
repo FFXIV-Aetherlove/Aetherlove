@@ -71,6 +71,16 @@ internal static class UiColors
     internal const uint SpotifyGreen = 0xFF1DB954u;
     internal const uint SpotifyGreenHover = 0xFF2EE86Bu;
 
+    /// <summary>SoundCloud orange (#FF5500).</summary>
+    internal const uint SoundCloudOrange = 0xFF0055FFu;
+    internal const uint SoundCloudOrangeHover = 0xFF367AFFu;
+    /// <summary>Apple Music pink-red (#FA2D48).</summary>
+    internal const uint AppleMusicPink = 0xFF482DFAu;
+    internal const uint AppleMusicPinkHover = 0xFF725AFFu;
+    /// <summary>YouTube red (#FF0000).</summary>
+    internal const uint YouTubeRed = 0xFF0000FFu;
+    internal const uint YouTubeRedHover = 0xFF4D4DFFu;
+
     /// <summary>Translucent fill for a caution/notice callout box — amber/orange at ~25% alpha.</summary>
     internal const uint WarningBoxFill = 0x402080FFu;
 

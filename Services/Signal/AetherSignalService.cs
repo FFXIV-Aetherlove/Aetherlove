@@ -130,6 +130,7 @@ public sealed class AetherSignalService : IAsyncDisposable
             CancelOfflineDebounce();
             RestoreOnline();
             InvalidateProfileCaches();
+            RefreshConnectionInfo();
             _log.Information("[AetherSignalService] Connected to AetherLove hub.");
         }
         catch (OperationCanceledException)
@@ -201,7 +202,7 @@ public sealed class AetherSignalService : IAsyncDisposable
         // value to 1, so clients from before versioning keep working until the server's version moves on.
         var url = new UriBuilder(new Uri(new Uri(Plugin.ServerBaseUrl), HubPath))
         {
-            Query = $"apiVersion={AetherLove.Shared.ApiVersion.Current}",
+            Query = $"apiVersion={AetherLove.Shared.ApiVersion.Current}&acceptsWebp={(Dalamud.Utility.Util.IsWine() ? "false" : "true")}",
         }.Uri;
 
         var hub = new HubConnectionBuilder()
@@ -262,6 +263,7 @@ public sealed class AetherSignalService : IAsyncDisposable
             CancelOfflineDebounce();
             RestoreOnline();
             InvalidateProfileCaches();
+            RefreshConnectionInfo();
             _log.Information($"[AetherSignalService] Hub reconnected (connectionId={id}).");
             return Task.CompletedTask;
         };
@@ -350,6 +352,16 @@ public sealed class AetherSignalService : IAsyncDisposable
     {
         _services.GetRequiredService<ProfileScreen>().InvalidateMyProfileCache();
         _services.GetRequiredService<MyProfileScreen>().InvalidateEditCache();
+    }
+
+    /// <summary>Fire-and-forget re-fetch of the connection snapshot so warnings / match count / ban state
+    /// self-heal after a (re)connect — the startup bootstrap fetches it only once, which a flaky link can
+    /// miss. Fire-and-forget (not awaited) because the connect paths hold <c>_gate</c> and the fetch
+    /// re-enters <c>EnsureConnectedAsync</c>.</summary>
+    private void RefreshConnectionInfo()
+    {
+        _ = _services.GetRequiredService<SessionBootstrapper>().RefreshConnectionInfoAsync();
+        _ = _services.GetRequiredService<FlairCatalog>().RefreshAsync();
     }
 
     private void AppendWarningToCachedSnapshot(WarningDto warning)

@@ -6,7 +6,7 @@ using Dalamud.Interface.Textures;
 namespace AetherLove.Services;
 
 /// <summary>
-/// Writes avatar bytes to disk under a content-hashed filename (<c>{key}_{hash}.webp</c>) and returns the
+/// Writes avatar bytes to disk under a content-hashed filename (<c>{key}_{hash}.{ext}</c>) and returns the
 /// texture. The hash makes <c>GetFromFile</c> reload when the avatar changes — overwriting one fixed path
 /// would keep serving the texture it already cached for that path. Older copies for the same key are swept.
 /// </summary>
@@ -21,7 +21,7 @@ public static class AvatarDiskCache
         try
         {
             Directory.CreateDirectory(cacheDir);
-            var path = Path.Combine(cacheDir, $"{key}_{Convert.ToHexString(SHA256.HashData(bytes), 0, 6)}.webp");
+            var path = Path.Combine(cacheDir, $"{key}_{Convert.ToHexString(SHA256.HashData(bytes), 0, 6)}{ImageFormat.ExtensionFor(bytes)}");
             if (!File.Exists(path))
             {
                 File.WriteAllBytes(path, bytes);
@@ -39,7 +39,7 @@ public static class AvatarDiskCache
 
     private static void SweepStale(string cacheDir, string key, string keep)
     {
-        foreach (var file in Directory.EnumerateFiles(cacheDir, $"{key}*.webp"))
+        foreach (var file in Directory.EnumerateFiles(cacheDir, $"{key}_*"))
         {
             if (string.Equals(file, keep, StringComparison.OrdinalIgnoreCase))
             {

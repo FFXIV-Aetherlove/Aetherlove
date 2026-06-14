@@ -118,6 +118,7 @@ public sealed class Plugin : IDalamudPlugin
         services.AddSingleton<SessionBootstrapper>();
         services.AddSingleton<PendingMatchContext>();
         services.AddSingleton<OwnAvatarCache>();
+        services.AddSingleton<FlairCatalog>();
 
         services.AddSingleton<SplashScreen>();
         services.AddSingleton<OnboardingScreen>();

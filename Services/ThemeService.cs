@@ -22,7 +22,7 @@ public static class ThemeService
             [AppTheme.CrystalVoid] = new ThemeDefinition
             {
                 Name = "Crystal Void",
-                BackgroundImageFile = "phone_bg_purple.png",
+                BackgroundImageFile = "phone_bg_purple_v2.png",
                 Accent = new Vector4(0.73f, 0.42f, 0.79f, 1f),
                 AccentLight = new Vector4(0.85f, 0.56f, 0.90f, 1f),
                 AccentDark = new Vector4(0.48f, 0.25f, 0.63f, 1f),
@@ -35,7 +35,7 @@ public static class ThemeService
             [AppTheme.VanillaSunrise] = new ThemeDefinition
             {
                 Name = "Vanilla Sunrise",
-                BackgroundImageFile = "phone_bg_yellow.png",
+                BackgroundImageFile = "phone_bg_yellow_v2.png",
                 Accent = new Vector4(1.00f, 0.72f, 0.30f, 1f),
                 AccentLight = new Vector4(1.00f, 0.85f, 0.50f, 1f),
                 AccentDark = new Vector4(0.72f, 0.44f, 0.06f, 1f),
@@ -48,7 +48,7 @@ public static class ThemeService
             [AppTheme.AllaganPassion] = new ThemeDefinition
             {
                 Name = "Allagan Passion",
-                BackgroundImageFile = "phone_bg_allagan.png",
+                BackgroundImageFile = "phone_bg_allagan_v2.png",
                 Accent = new Vector4(0.95f, 0.28f, 0.40f, 1f),
                 AccentLight = new Vector4(1.00f, 0.48f, 0.58f, 1f),
                 AccentDark = new Vector4(0.60f, 0.10f, 0.20f, 1f),

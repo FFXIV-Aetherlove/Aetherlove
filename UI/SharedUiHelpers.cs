@@ -26,6 +26,41 @@ internal static class SharedUiHelpers
         }
     }
 
+    /// <summary>Draws one "favourite song" input row: a link box plus the server-resolved name preview (or a
+    /// "fetching" / "saved link" status). The displayed name is curated server-side — never user-typed.</summary>
+    internal static void DrawMusicLinkField(MusicLinkField field, string label, string tip, float width)
+    {
+        ImGui.Text(label);
+        ImGui.SameLine();
+        HelpTooltip(tip);
+        ImGui.SetNextItemWidth(width);
+        if (ImGui.InputText($"##music_{field.Provider}", ref field.Input, 256))
+        {
+            field.OnInputChanged();
+        }
+
+        if (field.Fetching)
+        {
+            ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.T("music.fetching"));
+        }
+        else if (field.Invalid)
+        {
+            ImGui.PushTextWrapPos(0f);
+            ImGui.TextColored(UiColors.Danger, Loc.T("music.invalid"));
+            ImGui.PopTextWrapPos();
+        }
+        else if (field.ResolvedName.Length > 0)
+        {
+            ImGui.PushTextWrapPos(0f);
+            ImGui.TextColored(UiColors.Success, $"  {field.ResolvedName}");
+            ImGui.PopTextWrapPos();
+        }
+        else if (field.ResolvedRef.Length > 0)
+        {
+            ImGui.TextColored(UiColors.Hint, Loc.T("music.saved"));
+        }
+    }
+
     /// <summary>Pushes the theme's button colours; pair with <see cref="PopThemeButton"/>.</summary>
     internal static void PushThemeButton(ThemeDefinition t)
     {
@@ -318,6 +353,56 @@ internal static class SharedUiHelpers
         }
 
         ImGui.SetCursorPosY(startY + pillH + Px(4f));
+    }
+
+    /// <summary>Draws a flair pill (a capsule of <paramref name="bgHex"/> with contrasting text) at screen
+    /// position <paramref name="pos"/> via the draw list and returns its width. Shows <paramref name="description"/>
+    /// as a tooltip while hovered (non-rotated screens only).</summary>
+    internal static float DrawFlairPill(ImDrawListPtr dl, Vector2 pos, string text, string description, string bgHex, float alpha = 1f)
+    {
+        var padX = Px(7f);
+        var h = ImGui.GetTextLineHeight() + Px(4f);
+        var textSz = ImGui.CalcTextSize(text);
+        var w = textSz.X + padX * 2f;
+        var br = pos + new Vector2(w, h);
+        dl.AddRectFilled(pos, br, HexToAbgr(bgHex, alpha), h * 0.5f);
+        dl.AddText(new Vector2(pos.X + padX, pos.Y + (h - textSz.Y) * 0.5f), ContrastText(bgHex, alpha), text);
+        if (!string.IsNullOrEmpty(description) && ImGui.IsMouseHoveringRect(pos, br))
+        {
+            ImGui.SetTooltip(description);
+        }
+        return w;
+    }
+
+    /// <summary>"#RRGGBB" → ImGui packed colour (0xAABBGGRR) at the given alpha (0–1).</summary>
+    internal static uint HexToAbgr(string bgHex, float alpha = 1f)
+    {
+        var (r, g, b) = ParseHex(bgHex);
+        var a = (uint)Math.Clamp((int)(alpha * 255f), 0, 255);
+        return (a << 24) | ((uint)b << 16) | ((uint)g << 8) | (uint)r;
+    }
+
+    /// <summary>White or near-black text colour for legibility on <paramref name="bgHex"/>, at the given alpha.</summary>
+    internal static uint ContrastText(string bgHex, float alpha = 1f)
+    {
+        var (r, g, b) = ParseHex(bgHex);
+        var a = (uint)Math.Clamp((int)(alpha * 255f), 0, 255);
+        var lum = (0.299f * r + 0.587f * g + 0.114f * b) / 255f;
+        return (a << 24) | (lum > 0.6f ? 0x00222222u : 0x00FFFFFFu);
+    }
+
+    private static (int r, int g, int b) ParseHex(string hex)
+    {
+        var s = (hex ?? string.Empty).TrimStart('#');
+        const System.Globalization.NumberStyles Hex = System.Globalization.NumberStyles.HexNumber;
+        if (s.Length >= 6
+            && int.TryParse(s.AsSpan(0, 2), Hex, null, out var r)
+            && int.TryParse(s.AsSpan(2, 2), Hex, null, out var g)
+            && int.TryParse(s.AsSpan(4, 2), Hex, null, out var b))
+        {
+            return (r, g, b);
+        }
+        return (88, 101, 242);
     }
 
     /// <summary>Reads an image file and packs it (with its crop rectangle) into an upload DTO.</summary>

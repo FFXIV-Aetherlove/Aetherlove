@@ -5,6 +5,7 @@ using System.Numerics;
 using System.Threading.Tasks;
 using AetherLove.Services;
 using AetherLove.Services.Localization;
+using AetherLove.Shared.Profile.Enums;
 using AetherLove.UI;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility.Raii;
@@ -36,10 +37,16 @@ public partial class OnboardingScreen
     private (uint Id, string Name)[] _locations     = [];
     private string[]                 _locationNames = [];
 
-    private string _spotifyInput     = "";
-    private string _spotifyTrackId   = "";
-    private string _spotifyTrackName = "";
-    private bool   _spotifyFetching;
+    private MusicLinkField[]? _musicFields;
+
+    /// <summary>Spotify, SoundCloud, Apple Music, YouTube Music — in that order.</summary>
+    private MusicLinkField[] MusicFields => _musicFields ??=
+    [
+        new MusicLinkField(MusicProvider.Spotify, _hubClient.ResolveMusicLinkAsync),
+        new MusicLinkField(MusicProvider.SoundCloud, _hubClient.ResolveMusicLinkAsync),
+        new MusicLinkField(MusicProvider.AppleMusic, _hubClient.ResolveMusicLinkAsync),
+        new MusicLinkField(MusicProvider.YouTubeMusic, _hubClient.ResolveMusicLinkAsync),
+    ];
 
     private string _favoriteMovie       = "";
     private string _favoriteAnime       = "";
@@ -87,25 +94,17 @@ public partial class OnboardingScreen
         ImGui.Combo("##exp", ref _expansionIdx, Expansions, Expansions.Length);
         ImGui.Spacing();
 
-        ImGui.Text(Loc.T("onboarding.opt_fav_spotify"));
-        ImGui.SameLine(); HelpTooltip(Loc.T("onboarding.opt_fav_spotify_tip"));
+        ImGui.TextColored(t.AccentLight, Loc.T("onboarding.opt_music_heading"));
+        ImGui.SameLine(); HelpTooltip(Loc.T("onboarding.opt_music_tip"));
         ImGui.Spacing();
-        ImGui.TextColored(UiColors.Hint, SpotifyTrack.DisplayPrefix);
-        ImGui.SameLine(0f, 0f);
-        ImGui.SetNextItemWidth(Px(160f));
-        if (ImGui.InputText("##spotify", ref _spotifyInput, 256))
-            ProcessSpotifyInput();
-
-        if (_spotifyFetching)
-            ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.T("onboarding.opt_spotify_fetching"));
-        else if (_spotifyTrackName.Length > 0)
-        {
-            ImGui.PushTextWrapPos(0f);
-            ImGui.TextColored(UiColors.Success, $"  {_spotifyTrackName}");
-            ImGui.PopTextWrapPos();
-        }
-        else if (_spotifyTrackId.Length > 0)
-            ImGui.TextColored(UiColors.Hint, Loc.T("onboarding.opt_spotify_track_id", _spotifyTrackId));
+        var musicW = Math.Min(w, Px(280f));
+        DrawMusicLinkField(MusicFields[0], Loc.T("onboarding.opt_fav_spotify"), Loc.T("onboarding.opt_fav_spotify_tip"), musicW);
+        ImGui.Spacing();
+        DrawMusicLinkField(MusicFields[1], Loc.T("onboarding.opt_fav_soundcloud"), Loc.T("onboarding.opt_music_tip"), musicW);
+        ImGui.Spacing();
+        DrawMusicLinkField(MusicFields[2], Loc.T("onboarding.opt_fav_apple"), Loc.T("onboarding.opt_music_tip"), musicW);
+        ImGui.Spacing();
+        DrawMusicLinkField(MusicFields[3], Loc.T("onboarding.opt_fav_youtube"), Loc.T("onboarding.opt_music_tip"), musicW);
         ImGui.Spacing();
 
         ImGui.Text(Loc.T("onboarding.opt_fav_movie"));
@@ -187,35 +186,4 @@ public partial class OnboardingScreen
     }
 
 
-    private void ProcessSpotifyInput()
-    {
-        if (!SpotifyTrack.TryParseId(_spotifyInput, out var trackId))
-        {
-            _spotifyTrackId = ""; _spotifyTrackName = "";
-            return;
-        }
-        _spotifyInput = trackId; // collapse a pasted URL down to the bare id in the box
-
-        if (trackId == _spotifyTrackId) return;
-        _spotifyTrackId   = trackId;
-        _spotifyTrackName = "";
-        _spotifyFetching  = true;
-        _ = FetchSpotifyTitleAsync(trackId);
-    }
-
-    private async Task FetchSpotifyTitleAsync(string trackId)
-    {
-        try
-        {
-            _spotifyTrackName = await SpotifyTrack.FetchTrackLabelAsync(trackId).ConfigureAwait(false) ?? string.Empty;
-        }
-        catch
-        {
-            _spotifyTrackName = Loc.T("onboarding.opt_spotify_fetch_failed");
-        }
-        finally
-        {
-            _spotifyFetching = false;
-        }
-    }
 }

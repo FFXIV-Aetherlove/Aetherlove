@@ -58,10 +58,17 @@ public partial class MyProfileScreen
 
     private int _jobComboIdx;
     private int _expansionIdx;
-    private string _spotifyInput = "";
-    private string _spotifyTrackId = "";
-    private string _spotifyTrackName = "";
-    private bool _spotifyFetching;
+    private MusicLinkField[]? _musicFields;
+
+    /// <summary>Spotify, SoundCloud, Apple Music, YouTube Music — in that order.</summary>
+    private MusicLinkField[] MusicFields => _musicFields ??=
+    [
+        new MusicLinkField(MusicProvider.Spotify, _hubClient.ResolveMusicLinkAsync),
+        new MusicLinkField(MusicProvider.SoundCloud, _hubClient.ResolveMusicLinkAsync),
+        new MusicLinkField(MusicProvider.AppleMusic, _hubClient.ResolveMusicLinkAsync),
+        new MusicLinkField(MusicProvider.YouTubeMusic, _hubClient.ResolveMusicLinkAsync),
+    ];
+
     private string _favoriteMovie = "";
     private string _favoriteAnime = "";
     private string _favoriteFFCharacter = "";
@@ -237,9 +244,10 @@ public partial class MyProfileScreen
             (a, m) => ((short)a & (short)m) != 0, _syncToolsSelected);
 
         _nsfwOptIn = b.NsfwEnabled;
-        _spotifyInput = b.SpotifyTrackId ?? string.Empty;
-        _spotifyTrackId = b.SpotifyTrackId ?? string.Empty;
-        _spotifyTrackName = b.SpotifyTrackName ?? string.Empty;
+        MusicFields[0].Hydrate(b.SpotifyTrackId, b.SpotifyTrackName);
+        MusicFields[1].Hydrate(b.SoundCloudUrl, b.SoundCloudName);
+        MusicFields[2].Hydrate(b.AppleMusicUrl, b.AppleMusicName);
+        MusicFields[3].Hydrate(b.YouTubeMusicUrl, b.YouTubeMusicName);
         _favoriteMovie = b.FavoriteMovie ?? string.Empty;
         _favoriteAnime = b.FavoriteAnime ?? string.Empty;
         _favoriteFFCharacter = b.FavoriteFFCharacter ?? string.Empty;
@@ -303,7 +311,7 @@ public partial class MyProfileScreen
         {
             try
             {
-                var path = Path.Combine(cacheDir, $"slot_{photo.Order}.webp");
+                var path = Path.Combine(cacheDir, $"slot_{photo.Order}{ImageFormat.ExtensionFor(photo.WebpBytes)}");
                 File.WriteAllBytes(path, photo.WebpBytes);
                 var tex = Plugin.TextureProvider.GetFromFile(path);
 
@@ -401,8 +409,14 @@ public partial class MyProfileScreen
         FavoriteExpansion: _expansionIdx >= 0 && _expansionIdx < ExpansionValues.Length
             ? ExpansionValues[_expansionIdx]
             : Expansion.None,
-        SpotifyTrackId: _spotifyTrackId,
-        SpotifyTrackName: _spotifyTrackName,
+        SpotifyTrackId: MusicFields[0].Input,
+        SpotifyTrackName: MusicFields[0].ResolvedName,
+        SoundCloudUrl: MusicFields[1].Input,
+        SoundCloudName: MusicFields[1].ResolvedName,
+        AppleMusicUrl: MusicFields[2].Input,
+        AppleMusicName: MusicFields[2].ResolvedName,
+        YouTubeMusicUrl: MusicFields[3].Input,
+        YouTubeMusicName: MusicFields[3].ResolvedName,
         FavoriteMovie: _favoriteMovie,
         FavoriteAnime: _favoriteAnime,
         FavoriteFFCharacter: _favoriteFFCharacter,
@@ -416,43 +430,6 @@ public partial class MyProfileScreen
         WantedGenderMask: MaskOr(GenderValues, _filterGenders, (a, b) => (Gender)((short)a | (short)b)),
         WantedRegionMask: MaskOr(RegionValues, _filterRegions, (a, b) => (Region)((short)a | (short)b)),
         WantedLanguageMask: MaskOr(LanguageValues, _filterLanguages, (a, b) => (Language)((short)a | (short)b)));
-
-    /// <summary>Parses a pasted Spotify URL/id and kicks off the title fetch (mirrors onboarding).</summary>
-    private void ProcessSpotifyInput()
-    {
-        if (!SpotifyTrack.TryParseId(_spotifyInput, out var trackId))
-        {
-            _spotifyTrackId = ""; _spotifyTrackName = "";
-            return;
-        }
-        _spotifyInput = trackId; // collapse a pasted URL down to the bare id in the box
-
-        if (trackId == _spotifyTrackId)
-        {
-            return;
-        }
-        _spotifyTrackId = trackId;
-        _spotifyTrackName = "";
-        _spotifyFetching = true;
-        _ = FetchSpotifyTitleAsync(trackId);
-    }
-
-    private async Task FetchSpotifyTitleAsync(string trackId)
-    {
-        try
-        {
-            _spotifyTrackName = await SpotifyTrack.FetchTrackLabelAsync(trackId).ConfigureAwait(false) ?? string.Empty;
-        }
-        catch
-        {
-            _spotifyTrackName = Loc.T("onboarding.opt_spotify_fetch_failed");
-        }
-        finally
-        {
-            _spotifyFetching = false;
-        }
-    }
-
 
     public void Draw()
     {
@@ -820,29 +797,16 @@ public partial class MyProfileScreen
         ImGui.Combo("##edExp", ref _expansionIdx, Expansions, Expansions.Length);
         ImGui.Spacing();
 
-        ImGui.Text(Loc.T("profile.favourite_spotify"));
-        ImGui.SameLine(); HelpTooltip(Loc.T("profile.spotify_tooltip"));
-        ImGui.TextColored(muted, SpotifyTrack.DisplayPrefix);
-        ImGui.SameLine(0f, Px(0f));
-        ImGui.SetNextItemWidth(Px(160f));
-        if (ImGui.InputText("##edSpotify", ref _spotifyInput, 256))
-        {
-            ProcessSpotifyInput();
-        }
-        if (_spotifyFetching)
-        {
-            ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.T("onboarding.opt_spotify_fetching"));
-        }
-        else if (_spotifyTrackName.Length > 0)
-        {
-            ImGui.PushTextWrapPos(0f);
-            ImGui.TextColored(UiColors.Success, $"  {_spotifyTrackName}");
-            ImGui.PopTextWrapPos();
-        }
-        else if (_spotifyTrackId.Length > 0)
-        {
-            ImGui.TextColored(muted, Loc.T("profile.track_id", _spotifyTrackId));
-        }
+        ImGui.TextColored(ThemeService.Current.AccentLight, Loc.T("onboarding.opt_music_heading"));
+        ImGui.SameLine(); HelpTooltip(Loc.T("onboarding.opt_music_tip"));
+        var musicW = Math.Min(w - Px(8f), Px(280f));
+        DrawMusicLinkField(MusicFields[0], Loc.T("onboarding.opt_fav_spotify"), Loc.T("onboarding.opt_fav_spotify_tip"), musicW);
+        ImGui.Spacing();
+        DrawMusicLinkField(MusicFields[1], Loc.T("onboarding.opt_fav_soundcloud"), Loc.T("onboarding.opt_music_tip"), musicW);
+        ImGui.Spacing();
+        DrawMusicLinkField(MusicFields[2], Loc.T("onboarding.opt_fav_apple"), Loc.T("onboarding.opt_music_tip"), musicW);
+        ImGui.Spacing();
+        DrawMusicLinkField(MusicFields[3], Loc.T("onboarding.opt_fav_youtube"), Loc.T("onboarding.opt_music_tip"), musicW);
         ImGui.Spacing();
 
         ImGui.Text(Loc.T("profile.favourite_movie"));

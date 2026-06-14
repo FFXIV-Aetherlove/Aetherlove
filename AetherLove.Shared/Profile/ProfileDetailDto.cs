@@ -37,6 +37,12 @@ public sealed record ProfileDetailDto(
     string FavoriteLocationName,
     string SpotifyTrackId,
     string SpotifyTrackName,
+    string SoundCloudUrl,
+    string SoundCloudName,
+    string AppleMusicUrl,
+    string AppleMusicName,
+    string YouTubeMusicUrl,
+    string YouTubeMusicName,
     string FavoriteMovie,
     string FavoriteAnime,
     string FavoriteFFCharacter,
@@ -46,4 +52,5 @@ public sealed record ProfileDetailDto(
 
     SyncTool SyncTool,
 
-    ProfilePhotoDto[] Photos);
+    ProfilePhotoDto[] Photos,
+    Guid[] FlairIds);

@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using AetherLove.Services;
 using AetherLove.Services.Signal;
 using AetherLove.Shared.Feedback;
+using AetherLove.Shared.Flairs;
 using AetherLove.Shared.Matching;
 using AetherLove.Shared.Messaging;
 using AetherLove.Shared.Moderation;
@@ -55,6 +56,10 @@ public sealed class AetherLoveHubClient
 
     public async Task SaveFiltersAsync(FiltersDto dto, CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync("SaveFiltersAsync", dto, ct).ConfigureAwait(false);
+
+    /// <summary>Live preview: server validates a pasted music link and returns the curated name (null if invalid).</summary>
+    public async Task<MusicLinkDto?> ResolveMusicLinkAsync(MusicProvider provider, string rawInput, CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<MusicLinkDto?>("ResolveMusicLinkAsync", provider, rawInput, ct).ConfigureAwait(false);
 
     public async Task SetProfileNsfwAsync(bool enabled, CancellationToken ct = default)
     {
@@ -136,6 +141,9 @@ public sealed class AetherLoveHubClient
 
     public async Task<ProfileDetailDto> GetMyProfileDetailAsync(CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync<ProfileDetailDto>("GetMyProfileDetailAsync", ct).ConfigureAwait(false);
+
+    public async Task<FlairDto[]> GetFlairCatalogAsync(CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<FlairDto[]>("GetFlairCatalogAsync", ct).ConfigureAwait(false);
 
     public async Task<Guid> ReportUserAsync(ReportUserRequest req, CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync<Guid>("ReportUserAsync", req, ct).ConfigureAwait(false);

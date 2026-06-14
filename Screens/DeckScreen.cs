@@ -28,6 +28,7 @@ public class DeckScreen : IDisposable
     private readonly NotificationCenter _notifications;
     private readonly OwnAvatarCache _ownAvatar;
     private readonly PulseService _pulse;
+    private readonly FlairCatalog _flairCatalog;
 
     private readonly List<DeckCardDto> _cards = new();
     private readonly HashSet<Guid> _processedThisPeriod = new();
@@ -77,7 +78,8 @@ public class DeckScreen : IDisposable
         PendingMatchContext pendingMatch,
         NotificationCenter notifications,
         OwnAvatarCache ownAvatar,
-        PulseService pulse)
+        PulseService pulse,
+        FlairCatalog flairCatalog)
     {
         _router = router;
         _profileScreen = profileScreen;
@@ -86,6 +88,7 @@ public class DeckScreen : IDisposable
         _notifications = notifications;
         _ownAvatar = ownAvatar;
         _pulse = pulse;
+        _flairCatalog = flairCatalog;
         _notifications.DeckRefreshRequested += OnDeckRefreshRequested;
     }
 
@@ -246,7 +249,7 @@ public class DeckScreen : IDisposable
         {
             try
             {
-                var path = Path.Combine(cacheDir, $"{c.ProfileId}.webp");
+                var path = Path.Combine(cacheDir, $"{c.ProfileId}{ImageFormat.ExtensionFor(c.PortraitWebp)}");
                 File.WriteAllBytes(path, c.PortraitWebp);
                 _portraitTextures[c.ProfileId] = Plugin.TextureProvider.GetFromFile(path);
             }
@@ -710,6 +713,33 @@ public class DeckScreen : IDisposable
             if (!string.IsNullOrEmpty(regionLabel))
             {
                 AddInfoSegment(regionLabel, infoFontPtr, MainW(regionLabel));
+            }
+
+            // Flair pills, appended after the info line, rotation-aware (square corners; hover lives on the
+            // profile-detail view since the card animates).
+            if (profile.FlairIds is { Length: > 0 })
+            {
+                var flairLang = FlairCatalog.ResolveLanguage(Plugin.Configuration.PluginLanguage);
+                var fPadX = Px(4f);
+                var fPadY = Px(2f);
+                foreach (var fid in profile.FlairIds)
+                {
+                    var f = _flairCatalog.Get(fid);
+                    if (f is null)
+                    {
+                        continue;
+                    }
+                    var label = FlairCatalog.Text(f, flairLang);
+                    var pw = MainW(label) + fPadX * 2f;
+                    var ph = raceFont + fPadY * 2f;
+                    var ftl = new Vector2(infoX, raceLineY - fPadY);
+                    drawList.AddQuadFilled(
+                        Rot(ftl), Rot(ftl + new Vector2(pw, 0f)), Rot(ftl + new Vector2(pw, ph)), Rot(ftl + new Vector2(0f, ph)),
+                        HexToAbgr(f.BackgroundColor, alpha));
+                    AddRotatedText(new Vector2(infoX + fPadX, raceLineY), ContrastText(f.BackgroundColor, alpha),
+                        label, 0f, infoFontPtr, raceFont);
+                    infoX += pw + Px(5f);
+                }
             }
 
             drawList.PopClipRect();

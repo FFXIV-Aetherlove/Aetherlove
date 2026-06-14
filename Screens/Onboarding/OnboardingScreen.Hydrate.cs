@@ -41,8 +41,10 @@ public partial class OnboardingScreen
             (a, m) => ((short)a & (short)m) != 0, _syncToolsSelected);
 
         _nsfwOptIn         = b.NsfwEnabled;
-        _spotifyTrackId    = b.SpotifyTrackId ?? string.Empty;
-        _spotifyTrackName  = b.SpotifyTrackName ?? string.Empty;
+        MusicFields[0].Hydrate(b.SpotifyTrackId, b.SpotifyTrackName);
+        MusicFields[1].Hydrate(b.SoundCloudUrl, b.SoundCloudName);
+        MusicFields[2].Hydrate(b.AppleMusicUrl, b.AppleMusicName);
+        MusicFields[3].Hydrate(b.YouTubeMusicUrl, b.YouTubeMusicName);
         _favoriteMovie     = b.FavoriteMovie ?? string.Empty;
         _favoriteAnime     = b.FavoriteAnime ?? string.Empty;
         _favoriteFFCharacter = b.FavoriteFFCharacter ?? string.Empty;
@@ -81,7 +83,7 @@ public partial class OnboardingScreen
         {
             try
             {
-                var path = Path.Combine(cacheDir, $"slot_{photo.Order}.webp");
+                var path = Path.Combine(cacheDir, $"slot_{photo.Order}{AetherLove.Services.ImageFormat.ExtensionFor(photo.WebpBytes)}");
                 File.WriteAllBytes(path, photo.WebpBytes);
 
                 if (photo.Order == 0)
