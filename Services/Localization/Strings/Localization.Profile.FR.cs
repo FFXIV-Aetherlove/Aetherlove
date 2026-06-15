@@ -10,6 +10,7 @@ internal static class ProfileFr
 
         ["profile.about"] = "À propos",
         ["profile.looking_for"] = "Recherche",
+        ["profile.content_interests"] = "Préférences de contenu",
         ["profile.info"] = "Infos",
         ["profile.gender"] = "Sexe",
         ["profile.languages"] = "Langues",

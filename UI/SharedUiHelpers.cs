@@ -358,9 +358,17 @@ internal static class SharedUiHelpers
     /// <summary>Draws a flair pill (a capsule of <paramref name="bgHex"/> with contrasting text) at screen
     /// position <paramref name="pos"/> via the draw list and returns its width. Shows <paramref name="description"/>
     /// as a tooltip while hovered (non-rotated screens only).</summary>
+    private const float FlairPillPadX = 7f;
+
+    /// <summary>Width a flair pill occupies for <paramref name="text"/> in the current font.</summary>
+    internal static float FlairPillWidth(string text)
+    {
+        return ImGui.CalcTextSize(text).X + Px(FlairPillPadX) * 2f;
+    }
+
     internal static float DrawFlairPill(ImDrawListPtr dl, Vector2 pos, string text, string description, string bgHex, float alpha = 1f)
     {
-        var padX = Px(7f);
+        var padX = Px(FlairPillPadX);
         var h = ImGui.GetTextLineHeight() + Px(4f);
         var textSz = ImGui.CalcTextSize(text);
         var w = textSz.X + padX * 2f;

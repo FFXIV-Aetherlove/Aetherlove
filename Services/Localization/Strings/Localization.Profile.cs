@@ -11,6 +11,7 @@ internal static class ProfileEn
         // ProfileScreen — sections
         ["profile.about"] = "About",
         ["profile.looking_for"] = "Looking for",
+        ["profile.content_interests"] = "Content Preferences",
         ["profile.info"] = "Info",
         ["profile.gender"] = "Gender",
         ["profile.languages"] = "Languages",

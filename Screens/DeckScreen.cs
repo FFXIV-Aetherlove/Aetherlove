@@ -49,6 +49,8 @@ public class DeckScreen : IDisposable
     private bool _logoLoaded;
     private const string LogoFileName = "logo_mini.png";
 
+    private readonly CooldownScene _cooldownScene = new();
+
     // Loader sticks for at least MinLoaderDuration so a fast fetch doesn't flash the cooldown screen.
     private DateTimeOffset _loaderShownAt;
     private static readonly TimeSpan MinLoaderDuration = TimeSpan.FromSeconds(1);
@@ -67,6 +69,9 @@ public class DeckScreen : IDisposable
     private float _snapDragY;
     private float _snapProgress;
     private const float SnapSpeed = 4f;
+
+    private float _nopeHover;
+    private float _likeHover;
 
     private const float CardHeight = 560f;
     private const float SwipeThreshold = 100f;
@@ -99,6 +104,7 @@ public class DeckScreen : IDisposable
         _dragX = _dragY = 0;
         _isThrowingCard = _isSnappingBack = false;
         _throwProgress = _snapProgress = 0f;
+        _cooldownScene.Reset();
 
         _cts.Cancel();
         _cts.Dispose();
@@ -353,55 +359,11 @@ public class DeckScreen : IDisposable
         ImGui.PopTextWrapPos();
     }
 
-    /// <summary>Cooldown screen shown once the slot's deck is exhausted.</summary>
+    /// <summary>Cooldown view shown once the slot's deck is exhausted: the night-sky pegasus scene with the
+    /// live countdown to the next batch.</summary>
     private void DrawCooldown(Vector2 windowPos, Vector2 windowSize)
     {
-        EnsureLogo();
-        var dl = ImGui.GetWindowDrawList();
-        var t = ThemeService.Current;
-        var centerX = windowPos.X + windowSize.X * 0.5f;
-        var textW = windowSize.X - Px(56f);
-        var curY = windowPos.Y + windowSize.Y * 0.13f;
-
-        var iconFontHandle = Plugin.PluginInterface.UiBuilder.FontIcon;
-        var baseFontSize = ImGui.GetFontSize();
-
-        var logoWrap = _logoTex?.GetWrapOrDefault();
-        const float LogoSz = 74f;
-        if (logoWrap != null)
-        {
-            dl.AddImage(logoWrap.Handle,
-                new Vector2(centerX - Px(LogoSz) * 0.5f, curY),
-                new Vector2(centerX + Px(LogoSz) * 0.5f, curY + Px(LogoSz)));
-        }
-        curY += Px(LogoSz) + Px(14f);
-
-        ImGui.PushFont(iconFontHandle);
-        var swatch = FontAwesomeIcon.LayerGroup.ToIconString();
-        var swatchSize = baseFontSize * 1.7f;
-        var swatchW = ImGui.CalcTextSize(swatch).X * (swatchSize / baseFontSize);
-        var swatchH = ImGui.CalcTextSize(swatch).Y * (swatchSize / baseFontSize);
-        var iconFont = ImGui.GetFont();
-        ImGui.PopFont();
-        dl.AddText(iconFont, swatchSize, new Vector2(centerX - swatchW * 0.5f, curY), t.AccentU32, swatch);
-        curY += swatchH + Px(14f);
-
-        using (UiFonts.H3?.Push())
-        {
-            string Head = Loc.T("deck.cooldown_heading");
-            var headSz = ImGui.CalcTextSize(Head);
-            ImGui.SetCursorScreenPos(new Vector2(centerX - headSz.X * 0.5f, curY));
-            ImGui.TextColored(t.AccentLight, Head);
-        }
-        curY = ImGui.GetCursorScreenPos().Y + Px(10f);
-
-        string Body = Loc.T("deck.cooldown_body");
-        ImGui.SetCursorScreenPos(new Vector2(centerX - textW * 0.5f, curY));
-        ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + textW);
-        ImGui.TextColored(new Vector4(0.80f, 0.80f, 0.80f, 1f), Body);
-        ImGui.PopTextWrapPos();
-        curY = ImGui.GetCursorScreenPos().Y + Px(20f);
-
+        string? timer = null;
         if (_nextPullAtUtc.HasValue)
         {
             var remaining = _nextPullAtUtc.Value - DateTimeOffset.UtcNow;
@@ -409,40 +371,13 @@ public class DeckScreen : IDisposable
             {
                 remaining = TimeSpan.Zero;
             }
-            var cd = remaining.TotalSeconds < 1
+            timer = remaining.TotalSeconds < 1
                 ? Loc.T("deck.new_matches_ready")
                 : $"{(int)remaining.TotalHours}h {remaining.Minutes:D2}m {remaining.Seconds:D2}s";
-
-            using (UiFonts.H3?.Push())
-            {
-                var lineFont = ImGui.GetFont();
-                var LineSize = ImGui.GetFontSize();
-                ImGui.PushFont(iconFontHandle);
-                var clock = FontAwesomeIcon.Clock.ToIconString();
-                var clockBase = ImGui.CalcTextSize(clock);
-                ImGui.PopFont();
-                var clockW = clockBase.X * (LineSize / baseFontSize);
-                var cdW = ImGui.CalcTextSize(cd).X;
-                var Gap = Px(8f);
-                var lineX = centerX - (clockW + Gap + cdW) * 0.5f;
-                var lineH = LineSize;
-                var accentLight = ImGui.ColorConvertFloat4ToU32(t.AccentLight);
-
-                dl.AddText(iconFont, LineSize, new Vector2(lineX, curY + (lineH - clockBase.Y * (LineSize / baseFontSize)) * 0.5f),
-                    accentLight, clock);
-                dl.AddText(lineFont, LineSize, new Vector2(lineX + clockW + Gap, curY), accentLight, cd);
-                curY += lineH + Px(18f);
-            }
         }
 
-        if (_refreshError is not null)
-        {
-            ImGui.SetCursorScreenPos(new Vector2(centerX - textW * 0.5f, curY));
-            ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + textW);
-            ImGui.TextColored(new Vector4(0.95f, 0.55f, 0.55f, 1f),
-                Loc.T("deck.server_error", _refreshError));
-            ImGui.PopTextWrapPos();
-        }
+        var error = _refreshError is not null ? Loc.T("deck.server_error", _refreshError) : null;
+        _cooldownScene.Draw(windowPos, windowSize, timer, error);
     }
 
     public void Dispose()
@@ -675,6 +610,19 @@ public class DeckScreen : IDisposable
                 }
             }
 
+            void AddRotatedRectFilled(Vector2 tl, Vector2 size, uint col, float rounding)
+            {
+                var vtxStart = drawList.VtxBuffer.Size;
+                drawList.AddRectFilled(tl, tl + size, col, rounding);
+                var vtxEnd = drawList.VtxBuffer.Size;
+                for (int vi = vtxStart; vi < vtxEnd; vi++)
+                {
+                    var vtx = drawList.VtxBuffer[vi];
+                    vtx.Pos = Rot(vtx.Pos);
+                    drawList.VtxBuffer[vi] = vtx;
+                }
+            }
+
             AddRotatedText(new Vector2(cardTopLeft.X + Px(14f), nameLineY),
                            alphaU32 | 0x00FFFFFF, profile.DisplayName, wrapWidth, nameFontPtr, nameFont);
 
@@ -715,13 +663,17 @@ public class DeckScreen : IDisposable
                 AddInfoSegment(regionLabel, infoFontPtr, MainW(regionLabel));
             }
 
-            // Flair pills, appended after the info line, rotation-aware (square corners; hover lives on the
-            // profile-detail view since the card animates).
+            // Flair pills, right-aligned on the name line (rotation-aware, rounded), laid out right-to-left so
+            // multiple stack toward the name. Hover lives on the profile-detail view since the card animates.
             if (profile.FlairIds is { Length: > 0 })
             {
                 var flairLang = FlairCatalog.ResolveLanguage(Plugin.Configuration.PluginLanguage);
-                var fPadX = Px(4f);
+                var fPadX = Px(6f);
                 var fPadY = Px(2f);
+                var ph = raceFont + fPadY * 2f;
+                // Nudge down so the pill sits flush with the name baseline, not the line's vertical centre.
+                var flairTextY = nameLineY + (nameFont - raceFont) * 0.5f + Px(4f);
+                var flairRight = cardTopLeft.X + scaledWidth - Px(14f);
                 foreach (var fid in profile.FlairIds)
                 {
                     var f = _flairCatalog.Get(fid);
@@ -731,14 +683,12 @@ public class DeckScreen : IDisposable
                     }
                     var label = FlairCatalog.Text(f, flairLang);
                     var pw = MainW(label) + fPadX * 2f;
-                    var ph = raceFont + fPadY * 2f;
-                    var ftl = new Vector2(infoX, raceLineY - fPadY);
-                    drawList.AddQuadFilled(
-                        Rot(ftl), Rot(ftl + new Vector2(pw, 0f)), Rot(ftl + new Vector2(pw, ph)), Rot(ftl + new Vector2(0f, ph)),
-                        HexToAbgr(f.BackgroundColor, alpha));
-                    AddRotatedText(new Vector2(infoX + fPadX, raceLineY), ContrastText(f.BackgroundColor, alpha),
+                    var flairX = flairRight - pw;
+                    AddRotatedRectFilled(new Vector2(flairX, flairTextY - fPadY), new Vector2(pw, ph),
+                        HexToAbgr(f.BackgroundColor, alpha), ph * 0.5f);
+                    AddRotatedText(new Vector2(flairX + fPadX, flairTextY), ContrastText(f.BackgroundColor, alpha),
                         label, 0f, infoFontPtr, raceFont);
-                    infoX += pw + Px(5f);
+                    flairRight = flairX - Px(5f);
                 }
             }
 
@@ -786,7 +736,7 @@ public class DeckScreen : IDisposable
                 else if (_dragX < -Px(30))
                 {
                     var nopeAlpha = Math.Clamp(-_dragX / Px(SwipeThreshold), 0f, 1f);
-                    var nopeColor = ((uint)(nopeAlpha * 200) << 24) | 0x00E57373;
+                    var nopeColor = ((uint)(nopeAlpha * 200) << 24) | 0x007373E5;
                     var p = Px(5, 5);
                     drawList.AddQuad(
                         Rot(cardTopLeft + p),
@@ -850,55 +800,76 @@ public class DeckScreen : IDisposable
         }
     }
 
+    private static readonly Vector4 NopeTop = new(1.00f, 0.45f, 0.45f, 1f);
+    private static readonly Vector4 NopeBottom = new(0.90f, 0.24f, 0.30f, 1f);
+    private static readonly Vector4 LikeTop = new(0.42f, 0.88f, 0.56f, 1f);
+    private static readonly Vector4 LikeBottom = new(0.18f, 0.72f, 0.42f, 1f);
+
     private void DrawActionButtons(float centerX, float topY)
     {
-        var buttonSize = Px(64, 64);
-        const float Spacing = 50f;
+        var radius = Px(30f);
+        var gap = Px(46f);
+        var cy = topY + radius - Px(8f);
 
-        ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(32f));
-        ImGui.SetWindowFontScale(1.5f * UiScale.S);
-        ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
-
-        ImGui.SetCursorScreenPos(new Vector2(centerX - buttonSize.X - Px(Spacing) * 0.5f, topY));
-        ImGui.PushStyleColor(ImGuiCol.Button, ImGui.ColorConvertFloat4ToU32(new Vector4(0.18f, 0.18f, 0.18f, 1f)));
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, ImGui.ColorConvertFloat4ToU32(new Vector4(0.85f, 0.25f, 0.25f, 1f)));
-        ImGui.PushStyleColor(ImGuiCol.Text, ImGui.ColorConvertFloat4ToU32(new Vector4(0.9f, 0.25f, 0.25f, 1f)));
-        if (ImGui.Button(FontAwesomeIcon.Times.ToIconString(), buttonSize))
+        if (DrawActionButton("##deckNope", new Vector2(centerX - gap * 0.5f - radius, cy), radius,
+                FontAwesomeIcon.Times, NopeTop, NopeBottom, ref _nopeHover))
         {
             StartThrow(false);
         }
-        if (ImGui.IsItemHovered())
-        {
-            var tl = ImGui.GetItemRectMin();
-            var iconStr = FontAwesomeIcon.Times.ToIconString();
-            var iconSz = ImGui.CalcTextSize(iconStr);
-            ImGui.GetWindowDrawList().AddText(ImGui.GetFont(), ImGui.GetFontSize(),
-                tl + (buttonSize - iconSz) * 0.5f, 0xFFFFFFFF, iconStr);
-        }
-        ImGui.PopStyleColor(3);
-
-        ImGui.SetCursorScreenPos(new Vector2(centerX + Px(Spacing) * 0.5f, topY));
-        ImGui.PushStyleColor(ImGuiCol.Button, ImGui.ColorConvertFloat4ToU32(new Vector4(0.18f, 0.18f, 0.18f, 1f)));
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, ImGui.ColorConvertFloat4ToU32(new Vector4(0.2f, 0.75f, 0.4f, 1f)));
-        ImGui.PushStyleColor(ImGuiCol.Text, ImGui.ColorConvertFloat4ToU32(new Vector4(0.25f, 0.85f, 0.45f, 1f)));
-        if (ImGui.Button(FontAwesomeIcon.Heart.ToIconString(), buttonSize))
+        if (DrawActionButton("##deckLike", new Vector2(centerX + gap * 0.5f + radius, cy), radius,
+                FontAwesomeIcon.Heart, LikeTop, LikeBottom, ref _likeHover))
         {
             StartThrow(true);
         }
-        if (ImGui.IsItemHovered())
-        {
-            var tl = ImGui.GetItemRectMin();
-            var iconStr = FontAwesomeIcon.Heart.ToIconString();
-            var iconSz = ImGui.CalcTextSize(iconStr);
-            ImGui.GetWindowDrawList().AddText(ImGui.GetFont(), ImGui.GetFontSize(),
-                tl + (buttonSize - iconSz) * 0.5f, 0xFFFFFFFF, iconStr);
-        }
-        ImGui.PopStyleColor(3);
-
-        ImGui.PopFont();
-        ImGui.SetWindowFontScale(1f);
-        ImGui.PopStyleVar();
     }
+
+    /// <summary>A vibrant, colour-filled round swipe action button drawn on the draw list — gloss, rim,
+    /// drop shadow and an eased hover-pop that a plain ImGui button can't give.</summary>
+    private bool DrawActionButton(string id, Vector2 center, float radius, FontAwesomeIcon icon,
+        Vector4 colTop, Vector4 colBottom, ref float hover)
+    {
+        const uint shadowCol = 0x44000000u;
+        const uint sheenCol = 0x26FFFFFFu;
+
+        var dl = ImGui.GetWindowDrawList();
+        ImGui.SetCursorScreenPos(center - new Vector2(radius, radius));
+        var clicked = ImGui.InvisibleButton(id, new Vector2(radius * 2f, radius * 2f));
+        var hovered = ImGui.IsItemHovered();
+        var held = ImGui.IsItemActive();
+
+        var dt = (float)ImGui.GetIO().DeltaTime;
+        AnimationHelper.ClampedProgress(ref hover, dt, 7f, hovered);
+        var r = radius * (1f + 0.10f * hover) * (held ? 0.93f : 1f);
+
+        var top = Vector4.Lerp(colTop, Vector4.Min(colTop * 1.16f, Vector4.One), hover);
+        var bot = Vector4.Lerp(colBottom, colTop, 0.12f + 0.22f * hover);
+
+        dl.AddCircleFilled(center + new Vector2(0f, Px(3f)), r, shadowCol, 48);
+        if (hover > 0.01f)
+        {
+            dl.AddCircleFilled(center, r + Px(6f) * hover, ToU32(colTop, 0.22f * hover), 56);
+        }
+        dl.AddCircleFilled(center, r, ToU32(bot), 56);
+        dl.AddCircleFilled(center - new Vector2(0f, r * 0.16f), r * 0.88f, ToU32(top), 56);
+        dl.AddCircleFilled(center - new Vector2(r * 0.30f, r * 0.40f), r * 0.26f, sheenCol, 24);
+        dl.AddCircle(center, r, ToU32(top, 0.85f), 56, Px(1.6f));
+
+        ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
+        var iconFont = ImGui.GetFont();
+        var iconStr = icon.ToIconString();
+        var baseSz = ImGui.CalcTextSize(iconStr);
+        var baseFont = ImGui.GetFontSize();
+        ImGui.PopFont();
+        var iconPx = r * 0.9f;
+        var iconDim = baseSz * (iconPx / baseFont);
+        dl.AddText(iconFont, iconPx, center - iconDim * 0.5f, 0xFFFFFFFFu, iconStr);
+
+        return clicked;
+    }
+
+    private static uint ToU32(Vector4 c) => ImGui.ColorConvertFloat4ToU32(c);
+
+    private static uint ToU32(Vector4 c, float a) => ImGui.ColorConvertFloat4ToU32(new Vector4(c.X, c.Y, c.Z, a));
 
     private void StartThrow(bool right)
     {

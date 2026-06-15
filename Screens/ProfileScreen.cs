@@ -283,8 +283,7 @@ public class ProfileScreen
 
             if (_source != ProfileSource.Self)
             {
-                DrawBackPill(ImGui.GetWindowPos() + Px(10f, 10f),
-                             ImGui.GetForegroundDrawList());
+                DrawBackPill(ImGui.GetWindowPos() + Px(10f, 10f));
             }
             return;
         }
@@ -299,19 +298,12 @@ public class ProfileScreen
         ImGui.PushStyleColor(ImGuiCol.ChildBg, new Vector4(0.102f, 0.102f, 0.102f, 1f));
         PushScrollbarStyle();
 
+        var scrollViewportTL = ImGui.GetCursorScreenPos();
         using (var scroll = ImRaii.Child("##profileScroll", Vector2.Zero, false, ImGuiWindowFlags.None))
         {
             if (scroll.Success)
             {
-                var scrollViewportTL = ImGui.GetWindowPos();
                 var dl = ImGui.GetWindowDrawList();
-
-                // Submit the sticky back-pill's hit-area first so it owns the top-left corner at every scroll
-                // offset. Submitted last, a scrolled-in section button underneath consumes the click (ImGui
-                // hands overlaps to the earlier item). Restore the cursor so it doesn't shift content down.
-                var contentStart = ImGui.GetCursorScreenPos();
-                DrawBackPill(scrollViewportTL + Px(10f, 10f), ImGui.GetForegroundDrawList());
-                ImGui.SetCursorScreenPos(contentStart);
 
                 DrawImageScroller(photoCount, winSize.X, dl);
 
@@ -321,6 +313,7 @@ public class ProfileScreen
                 DrawAbout(winSize.X, dl);
                 DrawLookingFor(winSize.X, dl);
                 DrawInfoSection(winSize.X, dl);
+                DrawContentInterests(winSize.X, dl);
                 DrawFavoriteJob(winSize.X, dl);
                 DrawFavoriteLocation(winSize.X, dl);
                 DrawFavoriteExpansion(winSize.X, dl);
@@ -350,6 +343,8 @@ public class ProfileScreen
 
         PopScrollbarStyle();
         ImGui.PopStyleColor(1);
+
+        DrawBackPill(scrollViewportTL + Px(10f, 10f));
 
         if (_source != ProfileSource.Self)
         {
@@ -466,8 +461,10 @@ public class ProfileScreen
         if (_profile.FlairIds is { Length: > 0 })
         {
             var flairLang = FlairCatalog.ResolveLanguage(Plugin.Configuration.PluginLanguage);
-            var flairY = subY + subFontSz + Px(6f);
-            var flairX = photoTL.X + PadX;
+            // Right-aligned on the name line, laid out right-to-left so multiple pills stack toward the name.
+            var pillH = ImGui.GetTextLineHeight() + Px(4f);
+            var flairY = nameY + (nameFontSz - pillH) * 0.5f + Px(4f);
+            var flairRight = photoTL.X + winW - PadX;
             foreach (var fid in _profile.FlairIds)
             {
                 var f = _flairCatalog.Get(fid);
@@ -475,8 +472,11 @@ public class ProfileScreen
                 {
                     continue;
                 }
-                flairX += DrawFlairPill(dl, new Vector2(flairX, flairY),
-                    FlairCatalog.Text(f, flairLang), FlairCatalog.Description(f, flairLang), f.BackgroundColor) + Px(5f);
+                var label = FlairCatalog.Text(f, flairLang);
+                var pw = FlairPillWidth(label);
+                DrawFlairPill(dl, new Vector2(flairRight - pw, flairY),
+                    label, FlairCatalog.Description(f, flairLang), f.BackgroundColor);
+                flairRight -= pw + Px(5f);
             }
         }
 
@@ -771,6 +771,21 @@ public class ProfileScreen
         SpaceDivide(dl, winW);
     }
 
+    private void DrawContentInterests(float winW, ImDrawListPtr dl)
+    {
+        var chips = ContentInterestLabelsFromMask(_profile!.ContentInterestMask);
+        if (chips.Length == 0)
+        {
+            return;
+        }
+        SectionLabel(Loc.T("profile.content_interests"));
+        var th = ThemeService.Current;
+        DrawGradientChips(chips, winW, dl,
+            th.SecondaryFillStart, th.SecondaryFillEnd,
+            th.SecondaryStart, th.SecondaryEnd);
+        SpaceDivide(dl, winW);
+    }
+
     private void DrawInfoSection(float winW, ImDrawListPtr dl)
     {
         var gender = GenderLabel(_profile!.Gender);
@@ -792,7 +807,7 @@ public class ProfileScreen
         }
         if (hasLangs)
         {
-            InfoRow(Loc.T("profile.languages"), string.Join(", ", langs));
+            InfoRow(Loc.T("profile.languages"), string.Join(", ", langs), winW - PadX);
         }
         if (hasTz)
         {
@@ -1068,7 +1083,11 @@ public class ProfileScreen
     }
 
 
-    private void DrawBackPill(Vector2 pos, ImDrawListPtr dl)
+    /// <summary>Sticky "back" pill in the profile's top-left corner. Drawn in its own overlay child window
+    /// (not the foreground draw list) so it sits above the scrolled profile content and stays clickable —
+    /// a hit-area submitted into the scroll list loses the click to sections scrolling under it, and a
+    /// foreground pill would float over unrelated Dalamud windows.</summary>
+    private void DrawBackPill(Vector2 pos)
     {
         if (_source == ProfileSource.Self)
         {
@@ -1096,6 +1115,18 @@ public class ProfileScreen
         var pillW = PadX + backSz.X + IconGap + deckSz.X + PadX;
         var pillH = MathF.Max(backSz.Y, deckSz.Y) + PadY * 2f;
         var pillBR = pos + new Vector2(pillW, pillH);
+
+        ImGui.SetCursorScreenPos(pos);
+        using var pad = ImRaii.PushStyle(ImGuiStyleVar.WindowPadding, Vector2.Zero);
+        using var overlay = ImRaii.Child("##backPillOverlay", new Vector2(pillW, pillH), false,
+            ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoScrollbar
+            | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoNav);
+        if (!overlay.Success)
+        {
+            return;
+        }
+
+        var dl = ImGui.GetWindowDrawList();
 
         ImGui.SetCursorScreenPos(pos);
         ImGui.InvisibleButton("##backPill", new Vector2(pillW, pillH));
@@ -1416,12 +1447,20 @@ public class ProfileScreen
         ImGui.Spacing();
     }
 
-    private static void InfoRow(string label, string? value)
+    private static void InfoRow(string label, string? value, float wrapX = 0f)
     {
         ImGui.SetCursorPosX(PadX);
         ImGui.TextColored(UiColors.Muted, label);
         ImGui.SameLine(Px(145f));
+        if (wrapX > 0f)
+        {
+            ImGui.PushTextWrapPos(wrapX);
+        }
         ImGui.TextColored(new Vector4(0.92f, 0.92f, 0.92f, 1f), value ?? "");
+        if (wrapX > 0f)
+        {
+            ImGui.PopTextWrapPos();
+        }
     }
 
     private static void IconTextRow(FontAwesomeIcon icon, string text, uint iconColor,
@@ -1464,13 +1503,30 @@ public class ProfileScreen
 
     private static void DrawChips(string[] tags, float windowW, ImDrawListPtr dl)
     {
+        const float fillAccentDrift = 0.22f;
+        var th = ThemeService.Current;
+        DrawGradientChips(tags, windowW, dl,
+            th.ChipFill, Vector4.Lerp(th.ChipFill, th.Accent, fillAccentDrift),
+            th.Accent, th.AccentLight);
+    }
+
+    /// <summary>Chips whose fill and border lerp across the set, from (fillStart, borderStart) to
+    /// (fillEnd, borderEnd). A single chip uses the start colours, so one-item rows look unchanged.</summary>
+    private static void DrawGradientChips(string[] tags, float windowW, ImDrawListPtr dl,
+        Vector4 fillStart, Vector4 fillEnd, Vector4 borderStart, Vector4 borderEnd)
+    {
         var curX = PadX;
         var curY = ImGui.GetCursorPosY();
         var chipH = ImGui.CalcTextSize("A").Y + ChipPadY * 2f;
         var maxX = windowW - PadX;
 
-        foreach (var tag in tags)
+        for (var i = 0; i < tags.Length; i++)
         {
+            var tag = tags[i];
+            var t = tags.Length > 1 ? i / (float)(tags.Length - 1) : 0f;
+            var fill = ImGui.ColorConvertFloat4ToU32(Vector4.Lerp(fillStart, fillEnd, t));
+            var border = ImGui.ColorConvertFloat4ToU32(Vector4.Lerp(borderStart, borderEnd, t));
+
             var chipW = ImGui.CalcTextSize(tag).X + ChipPadX * 2f;
             if (curX + chipW > maxX && curX > PadX)
             {
@@ -1482,11 +1538,11 @@ public class ProfileScreen
             var scrTL = ImGui.GetCursorScreenPos();
             var scrBR = scrTL + new Vector2(chipW, chipH);
 
-            dl.AddRectFilled(scrTL, scrBR, ThemeService.Current.ChipFillU32, chipH * 0.5f);
-            dl.AddRect(scrTL, scrBR, ThemeService.Current.ChipBorderU32, chipH * 0.5f, ImDrawFlags.None, 1.5f);
+            dl.AddRectFilled(scrTL, scrBR, fill, chipH * 0.5f);
+            dl.AddRect(scrTL, scrBR, border, chipH * 0.5f, ImDrawFlags.None, 1.5f);
             dl.AddText(scrTL + new Vector2(ChipPadX, ChipPadY), 0xFFFFFFFF, tag);
 
-            ImGui.InvisibleButton($"##chip_{tag}", new Vector2(chipW, chipH));
+            ImGui.InvisibleButton($"##gchip_{tag}", new Vector2(chipW, chipH));
             curX += chipW + Px(8f);
         }
 
@@ -1603,6 +1659,19 @@ public class ProfileScreen
             if (mask.HasFlag(LookingForValues[i]))
             {
                 result.Add(LookingForLabels[i]);
+            }
+        }
+        return result.ToArray();
+    }
+
+    private static string[] ContentInterestLabelsFromMask(ContentInterest mask)
+    {
+        var result = new List<string>();
+        for (var i = 0; i < ContentInterestValues.Length; i++)
+        {
+            if (mask.HasFlag(ContentInterestValues[i]))
+            {
+                result.Add(ContentLabels[i]);
             }
         }
         return result.ToArray();

@@ -9,6 +9,7 @@ internal static class ProfileRu
 
         ["profile.about"] = "О себе",
         ["profile.looking_for"] = "Ищу",
+        ["profile.content_interests"] = "Предпочтения по контенту",
         ["profile.info"] = "Сведения",
         ["profile.gender"] = "Пол",
         ["profile.languages"] = "Языки",

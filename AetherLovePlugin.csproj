@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
-    <Version>0.9.38.0</Version>
+    <Version>0.9.40.0</Version>
     <Authors>Astraea, Nihal</Authors>
     <Company>Astraea</Company>
     <Copyright>Copyright © 2026 Astraea</Copyright>

@@ -9,6 +9,7 @@ internal static class ProfileEs
 
         ["profile.about"] = "Sobre mí",
         ["profile.looking_for"] = "Busco",
+        ["profile.content_interests"] = "Preferencias de contenido",
         ["profile.info"] = "Información",
         ["profile.gender"] = "Género",
         ["profile.languages"] = "Idiomas",

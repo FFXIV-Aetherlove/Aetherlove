@@ -14,6 +14,10 @@ public sealed class ThemeDefinition
     public required Vector4 AccentDark { get; init; }
     public required Vector4 ChipFill { get; init; }
 
+    /// <summary>Secondary gradient endpoints (e.g. purple→pink) used for content-preference chips.</summary>
+    public required Vector4 SecondaryStart { get; init; }
+    public required Vector4 SecondaryEnd { get; init; }
+
     public required Vector4 ButtonNormal { get; init; }
     public required Vector4 ButtonHovered { get; init; }
     public required Vector4 ButtonActive { get; init; }
@@ -24,6 +28,9 @@ public sealed class ThemeDefinition
     public uint AccentDarkU32 => ToU32(AccentDark);
     public uint ChipFillU32 => ToU32(ChipFill);
     public uint ChipBorderU32 => AccentU32;
+
+    public Vector4 SecondaryFillStart => Dark(SecondaryStart);
+    public Vector4 SecondaryFillEnd => Dark(SecondaryEnd);
 
     public uint AccentWithAlpha(float a) => WithAlpha(Accent, a);
     public uint AccentLightWithAlpha(float a) => WithAlpha(AccentLight, a);
@@ -49,4 +56,7 @@ public sealed class ThemeDefinition
         ((uint)MathF.Round(Math.Clamp(c.Z, 0f, 1f) * 255f) << 16) |
         ((uint)MathF.Round(Math.Clamp(c.Y, 0f, 1f) * 255f) << 8) |
         ((uint)MathF.Round(Math.Clamp(c.X, 0f, 1f) * 255f));
+
+    /// <summary>Dark, legible chip-fill tint for a bright secondary colour (keeps white text readable).</summary>
+    private static Vector4 Dark(Vector4 c) => new(c.X * 0.22f, c.Y * 0.22f, c.Z * 0.22f, 1f);
 }

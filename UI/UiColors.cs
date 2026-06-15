@@ -61,6 +61,9 @@ internal static class UiColors
     /// <summary>Neutral grey filled into an avatar circle/rect while its texture is still decoding.</summary>
     internal const uint AvatarFallback = 0xFF555555u;
 
+    /// <summary>Soft grey 1px ring that contains the bottom-nav avatar against the dark background.</summary>
+    internal const uint AvatarRing = 0x66FFFFFFu;
+
     /// <summary>Unread / notification badge dot (red).</summary>
     internal const uint UnreadBadge = 0xFF2020E0u;
 

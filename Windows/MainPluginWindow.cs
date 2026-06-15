@@ -305,6 +305,9 @@ public class MainPluginWindow : Window, IDisposable
         var iconFont = Plugin.PluginInterface.UiBuilder.FontIcon;
         var fontSize = ImGui.GetFontSize();
         var accentCol = ThemeService.Current.AccentU32;
+        var gradA = ThemeService.Current.SecondaryStart;
+        var gradB = ThemeService.Current.SecondaryEnd;
+        var gradPhase = (float)ImGui.GetTime() * 1.6f;
 
         for (int i = 0; i < items.Length; i++)
         {
@@ -325,9 +328,14 @@ public class MainPluginWindow : Window, IDisposable
                 ImGui.PushFont(iconFont);
                 var iconStr = icon.ToIconString();
                 var iconSize = ImGui.CalcTextSize(iconStr);
+                var iconVtx = drawList.VtxBuffer.Size;
                 drawList.AddText(ImGui.GetFont(), fontSize,
                     new Vector2(slotCenterX - iconSize.X * 0.5f, iconY),
                     color, iconStr);
+                if (isActive && !AccessibilityService.ReduceMotion)
+                {
+                    GradientText(drawList, iconVtx, gradA, gradB, gradPhase);
+                }
                 ImGui.PopFont();
 
                 if (target.HasValue && target.Value == Screen.ChatList)
@@ -347,10 +355,15 @@ public class MainPluginWindow : Window, IDisposable
                 }
 
                 var labelSize = ImGui.CalcTextSize(label);
+                var labelVtx = drawList.VtxBuffer.Size;
                 drawList.AddText(new Vector2(slotCenterX - labelSize.X * 0.5f, labelY), color, label);
 
                 if (isActive)
                 {
+                    if (!AccessibilityService.ReduceMotion)
+                    {
+                        GradientText(drawList, labelVtx, gradA, gradB, gradPhase);
+                    }
                     var dotY = labelY + fontSize + Px(3f);
                     drawList.AddCircleFilled(new Vector2(slotCenterX, dotY), Px(2.5f), accentCol);
                 }
@@ -383,8 +396,11 @@ public class MainPluginWindow : Window, IDisposable
                                       bool isActive, FontAwesomeIcon fallbackIcon, uint iconColor)
     {
         var fontSize = ImGui.GetFontSize();
-        var radius = fontSize + Px(2f);
-        var center = new Vector2(centerX, iconY + fontSize + Px(2f));
+        var baseRadius = fontSize + Px(2f);
+        // Enlarged centre avatar that grows up and out from a fixed bottom edge (a FAB-style button).
+        const float avatarScale = 1.44f;
+        var radius = baseRadius * avatarScale;
+        var center = new Vector2(centerX, iconY + baseRadius * 2f - radius);
 
         var wrap = _ownAvatar.Texture?.GetWrapOrDefault();
         if (wrap != null)
@@ -403,9 +419,54 @@ public class MainPluginWindow : Window, IDisposable
             ImGui.PopFont();
         }
 
+        // Permanent soft-grey ring so the avatar reads against the dark background.
+        drawList.AddCircle(center, radius, UiColors.AvatarRing, 64, Px(1f));
+
         if (isActive)
         {
-            drawList.AddCircle(center, radius, ThemeService.Current.AccentU32, 0, Px(2f));
+            var th = ThemeService.Current;
+            if (AccessibilityService.ReduceMotion)
+            {
+                drawList.AddCircle(center, radius, th.AccentU32, 64, Px(2f));
+            }
+            else
+            {
+                DrawGradientRing(drawList, center, radius, Px(2.5f), th.SecondaryStart, th.SecondaryEnd);
+            }
+        }
+    }
+
+    /// <summary>Strokes a circular ring whose colour sweeps between the two colours around the
+    /// circumference and slowly rotates over time — the selected bottom-nav avatar's accent border.</summary>
+    private static void DrawGradientRing(ImDrawListPtr dl, Vector2 center, float radius, float thickness,
+        Vector4 colorA, Vector4 colorB)
+    {
+        const int segments = 96;
+        var phase = (float)ImGui.GetTime() * 1.6f;
+        var prev = center + new Vector2(radius, 0f);
+        for (int i = 1; i <= segments; i++)
+        {
+            var ang = i / (float)segments * MathF.Tau;
+            var pt = center + new Vector2(MathF.Cos(ang), MathF.Sin(ang)) * radius;
+            var blend = 0.5f + 0.5f * MathF.Sin((i - 0.5f) / segments * MathF.Tau - phase);
+            var col = ImGui.ColorConvertFloat4ToU32(Vector4.Lerp(colorA, colorB, blend));
+            dl.AddLine(prev, pt, col, thickness);
+            prev = pt;
+        }
+    }
+
+    /// <summary>Recolours the text vertices added since <paramref name="vtxStart"/> with a horizontal
+    /// accent gradient anchored to screen-x and scrolled by <paramref name="phase"/> — the animated
+    /// sheen on the selected nav button's icon and label.</summary>
+    private static void GradientText(ImDrawListPtr dl, int vtxStart, Vector4 a, Vector4 b, float phase)
+    {
+        var k = MathF.Tau / Px(70f);
+        for (int v = vtxStart; v < dl.VtxBuffer.Size; v++)
+        {
+            var vert = dl.VtxBuffer[v];
+            var blend = 0.5f + 0.5f * MathF.Sin(vert.Pos.X * k - phase);
+            vert.Col = ImGui.ColorConvertFloat4ToU32(Vector4.Lerp(a, b, blend));
+            dl.VtxBuffer[v] = vert;
         }
     }
 
