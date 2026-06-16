@@ -7,6 +7,7 @@ using AetherLove.Navigation;
 using AetherLove.Screens;
 using AetherLove.Services.Auth;
 using AetherLove.Services.Hub;
+using AetherLove.Windows;
 using AetherLove.Shared.Matching;
 using AetherLove.Shared.Messaging;
 using AetherLove.Shared.Moderation;
@@ -321,20 +322,31 @@ public sealed class AetherSignalService : IAsyncDisposable
         {
             _log.Information($"[AetherSignalService] WarningIssued push: {payload.Warning.Id}.");
             AppendWarningToCachedSnapshot(payload.Warning);
-            _router.Navigate(Screen.WarningsAcknowledge);
 
-            _ = Task.Run(async () =>
+            // Phone open: show it now (and auto-ack, as before). Minimised/closed: badge and buzz the mini
+            // phone, and defer the acknowledge screen and the seen-mark until the user opens the phone — so a
+            // warning that lands while minimised isn't silently swallowed.
+            if (_services.GetRequiredService<MainPluginWindow>().IsOpen)
             {
-                try
+                _router.Navigate(Screen.WarningsAcknowledge);
+
+                _ = Task.Run(async () =>
                 {
-                    await hub.InvokeAsync("MarkWarningsSeenAsync", new[] { payload.Warning.Id })
-                        .ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    _log.Warning(ex, "[AetherSignalService] MarkWarningsSeenAsync (auto-ack) failed.");
-                }
-            });
+                    try
+                    {
+                        await hub.InvokeAsync("MarkWarningsSeenAsync", new[] { payload.Warning.Id })
+                            .ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        _log.Warning(ex, "[AetherSignalService] MarkWarningsSeenAsync (auto-ack) failed.");
+                    }
+                });
+            }
+            else
+            {
+                _notifications.RaisePendingWarning();
+            }
         });
 
         hub.On<AccountBannedPushDto>("AccountBanned", payload =>

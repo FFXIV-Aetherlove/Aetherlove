@@ -9,6 +9,7 @@ internal static class ProfileFr
         ["profile.none_loaded"] = "Aucun profil chargé.",
 
         ["profile.about"] = "À propos",
+        ["profile.flairs"] = "Badges",
         ["profile.looking_for"] = "Recherche",
         ["profile.content_interests"] = "Préférences de contenu",
         ["profile.info"] = "Infos",

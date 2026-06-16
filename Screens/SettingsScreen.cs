@@ -823,18 +823,10 @@ public class SettingsScreen
             ? Loc.T("settings.warnings_button_unseen", unseen, total)
             : Loc.T("settings.warnings_button", total);
 
-        if (unseen > 0)
-        {
-            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.35f, 0.28f, 0.10f, 1f));
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.52f, 0.42f, 0.16f, 1f));
-            ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.28f, 0.22f, 0.08f, 1f));
-        }
-        else
-        {
-            ImGui.PushStyleColor(ImGuiCol.Button, t.ButtonNormal);
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, t.ButtonHovered);
-            ImGui.PushStyleColor(ImGuiCol.ButtonActive, t.ButtonActive);
-        }
+        // The "view warnings" button is always the warning orange, independent of the active theme.
+        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.35f, 0.28f, 0.10f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.52f, 0.42f, 0.16f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.28f, 0.22f, 0.08f, 1f));
         ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
         if (ImGui.Button(label, new Vector2(btnW, Px(32f))))
         {

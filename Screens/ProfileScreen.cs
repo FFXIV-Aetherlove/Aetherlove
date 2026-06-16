@@ -54,6 +54,8 @@ public class ProfileScreen
     private bool _autoEnabled = true;
 
     private float _backPillPulseTimer;
+    private int _scrollGen;
+    private string _scrollChildId = "##profileScroll";
 
     // Report flow state.
     private bool _reportPendingOpen;
@@ -255,6 +257,9 @@ public class ProfileScreen
     public void OnShow()
     {
         _backPillPulseTimer = 0f;
+        // A fresh child id per open makes ImGui treat the scroll region as a brand-new window that begins at
+        // the top, so the prior profile's retained scroll never carries over — and there's no late-frame snap.
+        _scrollChildId = "##profileScroll" + (++_scrollGen);
     }
 
     public void Draw()
@@ -299,7 +304,7 @@ public class ProfileScreen
         PushScrollbarStyle();
 
         var scrollViewportTL = ImGui.GetCursorScreenPos();
-        using (var scroll = ImRaii.Child("##profileScroll", Vector2.Zero, false, ImGuiWindowFlags.None))
+        using (var scroll = ImRaii.Child(_scrollChildId, Vector2.Zero, false, ImGuiWindowFlags.None))
         {
             if (scroll.Success)
             {
@@ -310,6 +315,7 @@ public class ProfileScreen
                 ImGui.Spacing();
                 ImGui.Spacing();
 
+                DrawFlairs(winSize.X, dl);
                 DrawAbout(winSize.X, dl);
                 DrawLookingFor(winSize.X, dl);
                 DrawInfoSection(winSize.X, dl);
@@ -455,28 +461,6 @@ public class ProfileScreen
                     new Vector2(flagX, flagY),
                     new Vector2(flagX + FlagW, flagY + FlagH));
                 flagX += FlagW + FlagGap;
-            }
-        }
-
-        if (_profile.FlairIds is { Length: > 0 })
-        {
-            var flairLang = FlairCatalog.ResolveLanguage(Plugin.Configuration.PluginLanguage);
-            // Right-aligned on the name line, laid out right-to-left so multiple pills stack toward the name.
-            var pillH = ImGui.GetTextLineHeight() + Px(4f);
-            var flairY = nameY + (nameFontSz - pillH) * 0.5f + Px(4f);
-            var flairRight = photoTL.X + winW - PadX;
-            foreach (var fid in _profile.FlairIds)
-            {
-                var f = _flairCatalog.Get(fid);
-                if (f is null)
-                {
-                    continue;
-                }
-                var label = FlairCatalog.Text(f, flairLang);
-                var pw = FlairPillWidth(label);
-                DrawFlairPill(dl, new Vector2(flairRight - pw, flairY),
-                    label, FlairCatalog.Description(f, flairLang), f.BackgroundColor);
-                flairRight -= pw + Px(5f);
             }
         }
 
@@ -737,6 +721,58 @@ public class ProfileScreen
         StartTransition((_photoIndex + dir + photoCount) % photoCount);
     }
 
+
+    /// <summary>"Flairs" section (between the photos and About): the profile's flair pills, each showing its
+    /// description on hover. Renders nothing when the profile has no resolvable flairs.</summary>
+    private void DrawFlairs(float winW, ImDrawListPtr dl)
+    {
+        if (_profile!.FlairIds is not { Length: > 0 })
+        {
+            return;
+        }
+        var flairLang = FlairCatalog.ResolveLanguage(Plugin.Configuration.PluginLanguage);
+
+        var anyResolved = false;
+        foreach (var fid in _profile.FlairIds)
+        {
+            if (_flairCatalog.Get(fid) is not null)
+            {
+                anyResolved = true;
+                break;
+            }
+        }
+        if (!anyResolved)
+        {
+            return;
+        }
+
+        SectionLabel(Loc.T("profile.flairs"));
+        var curX = PadX;
+        var curY = ImGui.GetCursorPosY();
+        var pillH = ImGui.GetTextLineHeight() + Px(4f);
+        var maxX = winW - PadX;
+        foreach (var fid in _profile.FlairIds)
+        {
+            var f = _flairCatalog.Get(fid);
+            if (f is null)
+            {
+                continue;
+            }
+            var label = FlairCatalog.Text(f, flairLang);
+            var pillW = FlairPillWidth(label);
+            if (curX + pillW > maxX && curX > PadX)
+            {
+                curX = PadX;
+                curY += pillH + Px(6f);
+            }
+            ImGui.SetCursorPos(new Vector2(curX, curY));
+            DrawFlairPill(dl, ImGui.GetCursorScreenPos(), label,
+                FlairCatalog.Description(f, flairLang), f.BackgroundColor);
+            curX += pillW + Px(8f);
+        }
+        ImGui.SetCursorPosY(curY + pillH + Px(4f));
+        SpaceDivide(dl, winW);
+    }
 
     private void DrawAbout(float winW, ImDrawListPtr dl)
     {

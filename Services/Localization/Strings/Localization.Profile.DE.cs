@@ -11,6 +11,7 @@ internal static class ProfileDe
 
         // ProfileScreen — sections
         ["profile.about"] = "Über",
+        ["profile.flairs"] = "Abzeichen",
         ["profile.looking_for"] = "Sucht nach",
         ["profile.content_interests"] = "Bevorzugte Inhalte",
         ["profile.info"] = "Info",

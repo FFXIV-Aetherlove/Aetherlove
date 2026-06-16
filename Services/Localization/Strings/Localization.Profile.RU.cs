@@ -8,6 +8,7 @@ internal static class ProfileRu
         ["profile.none_loaded"] = "Профиль не загружен.",
 
         ["profile.about"] = "О себе",
+        ["profile.flairs"] = "Значки",
         ["profile.looking_for"] = "Ищу",
         ["profile.content_interests"] = "Предпочтения по контенту",
         ["profile.info"] = "Сведения",

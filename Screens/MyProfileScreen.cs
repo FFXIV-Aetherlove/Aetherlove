@@ -311,9 +311,10 @@ public partial class MyProfileScreen
         {
             try
             {
-                var path = Path.Combine(cacheDir, $"slot_{photo.Order}{ImageFormat.ExtensionFor(photo.WebpBytes)}");
-                File.WriteAllBytes(path, photo.WebpBytes);
-                var tex = Plugin.TextureProvider.GetFromFile(path);
+                // Content-hashed filename so GetFromFile reloads when a slot's image changes — a fixed
+                // per-slot path keeps serving the texture Dalamud already cached for it (which left the
+                // avatar preview showing the old image after a replace+save).
+                var tex = AvatarDiskCache.Store(cacheDir, $"slot_{photo.Order}", photo.WebpBytes);
 
                 switch (photo.Order)
                 {

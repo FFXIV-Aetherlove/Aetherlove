@@ -663,17 +663,11 @@ public class DeckScreen : IDisposable
                 AddInfoSegment(regionLabel, infoFontPtr, MainW(regionLabel));
             }
 
-            // Flair pills, right-aligned on the name line (rotation-aware, rounded), laid out right-to-left so
-            // multiple stack toward the name. Hover lives on the profile-detail view since the card animates.
+            // A single flair pill on the "view profile" pill's line, mirrored to the card's right edge. The
+            // top card at rest shows the flair's description on hover.
             if (profile.FlairIds is { Length: > 0 })
             {
                 var flairLang = FlairCatalog.ResolveLanguage(Plugin.Configuration.PluginLanguage);
-                var fPadX = Px(6f);
-                var fPadY = Px(2f);
-                var ph = raceFont + fPadY * 2f;
-                // Nudge down so the pill sits flush with the name baseline, not the line's vertical centre.
-                var flairTextY = nameLineY + (nameFont - raceFont) * 0.5f + Px(4f);
-                var flairRight = cardTopLeft.X + scaledWidth - Px(14f);
                 foreach (var fid in profile.FlairIds)
                 {
                     var f = _flairCatalog.Get(fid);
@@ -682,13 +676,18 @@ public class DeckScreen : IDisposable
                         continue;
                     }
                     var label = FlairCatalog.Text(f, flairLang);
-                    var pw = MainW(label) + fPadX * 2f;
-                    var flairX = flairRight - pw;
-                    AddRotatedRectFilled(new Vector2(flairX, flairTextY - fPadY), new Vector2(pw, ph),
-                        HexToAbgr(f.BackgroundColor, alpha), ph * 0.5f);
-                    AddRotatedText(new Vector2(flairX + fPadX, flairTextY), ContrastText(f.BackgroundColor, alpha),
-                        label, 0f, infoFontPtr, raceFont);
-                    flairRight = flairX - Px(5f);
+                    var flairTextSz = ImGui.CalcTextSize(label);
+                    var flairW = flairTextSz.X + Px(PillPadX) * 2f;
+                    var flairTL = new Vector2(cardTopLeft.X + scaledWidth - Px(14f) - flairW, pillTopY);
+                    AddRotatedRectFilled(flairTL, new Vector2(flairW, pillH), HexToAbgr(f.BackgroundColor, alpha), pillH * 0.5f);
+                    AddRotatedText(new Vector2(flairTL.X + Px(PillPadX), pillTopY + (pillH - flairTextSz.Y) * 0.5f),
+                        ContrastText(f.BackgroundColor, alpha), label, 0f, font, fontSize);
+                    if (isTopCard && MathF.Abs(rotation) < 0.01f
+                        && ImGui.IsMouseHoveringRect(flairTL, flairTL + new Vector2(flairW, pillH)))
+                    {
+                        ImGui.SetTooltip(FlairCatalog.Description(f, flairLang));
+                    }
+                    break;
                 }
             }
 

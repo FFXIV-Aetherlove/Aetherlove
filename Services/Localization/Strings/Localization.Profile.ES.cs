@@ -8,6 +8,7 @@ internal static class ProfileEs
         ["profile.none_loaded"] = "Ningún perfil cargado.",
 
         ["profile.about"] = "Sobre mí",
+        ["profile.flairs"] = "Distintivos",
         ["profile.looking_for"] = "Busco",
         ["profile.content_interests"] = "Preferencias de contenido",
         ["profile.info"] = "Información",

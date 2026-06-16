@@ -104,6 +104,14 @@ public class MainPluginWindow : Window, IDisposable
     public override void OnOpen()
     {
         _ownAvatar.Refresh(onlyIfCold: true);
+
+        // A warning that arrived while minimised was deferred; surface it now that the phone is open. Runs
+        // before this frame's navigation is processed, so it wins over the open path's target (e.g. chat).
+        if (_notifications.HasPendingWarning)
+        {
+            _notifications.ClearPendingWarning();
+            _router.Navigate(Screen.WarningsAcknowledge);
+        }
     }
 
     public void OpenToChat()

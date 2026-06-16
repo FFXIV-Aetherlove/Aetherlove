@@ -51,6 +51,11 @@ public class ChatScreen
     // (day divider + bubble + timestamp + gap) — exact once drawn, estimated until then.
     private readonly Dictionary<Guid, float> _msgContentH = new();
     private readonly Dictionary<Guid, float> _msgRowH = new();
+
+    /// <summary>Live-arrival entrance progress (0→1) per message id; present only while a freshly received
+    /// message is sliding and fading into place.</summary>
+    private readonly Dictionary<Guid, float> _entryAnim = new();
+    private const float EntranceDuration = 0.3f;
     private float _msgCacheWidth = -1f;
     private float _msgCacheLineH = -1f;
     private Guid _peerId;
@@ -125,6 +130,7 @@ public class ChatScreen
         lock (_messagesLock)
         {
             _messages.Clear();
+            _entryAnim.Clear();
         }
         _msgContentH.Clear();
         _msgRowH.Clear();
@@ -279,6 +285,7 @@ public class ChatScreen
             lock (_messagesLock)
             {
                 _messages.Add(new DisplayedMessage(p.MessageId, text, false, p.CreatedAtUtc, null));
+                _entryAnim[p.MessageId] = 0f;
             }
             _scrollToBottom = 1f;
             _ = _hub.MarkConversationReadAsync(_peerId, CancellationToken.None);
@@ -726,6 +733,13 @@ public class ChatScreen
         var drawList = ImGui.GetWindowDrawList();
         var cursorPos = ImGui.GetCursorScreenPos();
 
+        var (entryDy, entryAlpha) = MessageEntrance(msg.Id);
+        var fading = entryAlpha < 0.999f;
+        if (fading)
+        {
+            ImGui.PushStyleVar(ImGuiStyleVar.Alpha, entryAlpha * ImGui.GetStyle().Alpha);
+        }
+
         uint bubbleColor;
         float bubbleLeft;
         if (msg.IsOwn)
@@ -737,6 +751,12 @@ public class ChatScreen
         {
             bubbleColor = 0xFF3A3A3A;
             bubbleLeft = cursorPos.X + Px(10);
+        }
+
+        if (fading)
+        {
+            var bakedAlpha = (uint)(((bubbleColor >> 24) & 0xFFu) * entryAlpha);
+            bubbleColor = (bubbleColor & 0x00FFFFFFu) | (bakedAlpha << 24);
         }
 
         var innerW = maxBubW - padding.X * 2f;
@@ -751,7 +771,7 @@ public class ChatScreen
         var innerH = MathF.Max(contentH, ImGui.GetTextLineHeight());
         var bubbleH = innerH + padding.Y * 2f;
 
-        var bubbleTL = new Vector2(bubbleLeft, cursorPos.Y);
+        var bubbleTL = new Vector2(bubbleLeft, cursorPos.Y + entryDy);
         drawList.AddRectFilled(bubbleTL, bubbleTL + new Vector2(maxBubW, bubbleH), bubbleColor,
             Px(10f), BubbleCorners(msg.IsOwn, isGroupStart, isGroupEnd));
 
@@ -779,7 +799,7 @@ public class ChatScreen
             var timeStr = local.ToString("HH:mm") + seenSuffix;
             var timeSize = ImGui.CalcTextSize(timeStr);
             var timeX = msg.IsOwn ? bubbleTL.X + maxBubW - timeSize.X : bubbleTL.X;
-            ImGui.SetCursorScreenPos(new Vector2(timeX, cursorPos.Y + bubbleH + Px(2f)));
+            ImGui.SetCursorScreenPos(new Vector2(timeX, cursorPos.Y + entryDy + bubbleH + Px(2f)));
             ImGui.TextColored(new Vector4(0.75f, 0.75f, 0.75f, 0.40f), timeStr);
             ImGui.SetCursorScreenPos(cursorPos + new Vector2(0, bubbleH + timeSize.Y + Px(8f)));
         }
@@ -788,6 +808,44 @@ public class ChatScreen
             // Tight gap to the next bubble in the same group; no timestamp.
             ImGui.SetCursorScreenPos(cursorPos + new Vector2(0, bubbleH + Px(2f)));
         }
+
+        if (fading)
+        {
+            ImGui.PopStyleVar();
+        }
+    }
+
+    /// <summary>Slide-up + fade-in for a just-arrived message. Returns the vertical draw offset and alpha for
+    /// this frame; (0, 1) once the entrance finishes or for messages that were already present.</summary>
+    private (float dy, float alpha) MessageEntrance(Guid id)
+    {
+        if (AccessibilityService.ReduceMotion)
+        {
+            lock (_messagesLock)
+            {
+                _entryAnim.Remove(id);
+            }
+            return (0f, 1f);
+        }
+
+        float p;
+        lock (_messagesLock)
+        {
+            if (!_entryAnim.TryGetValue(id, out p))
+            {
+                return (0f, 1f);
+            }
+            p += ImGui.GetIO().DeltaTime / EntranceDuration;
+            if (p >= 1f)
+            {
+                _entryAnim.Remove(id);
+                return (0f, 1f);
+            }
+            _entryAnim[id] = p;
+        }
+
+        var eased = 1f - MathF.Pow(1f - p, 3f);
+        return (Px(16f) * (1f - eased), eased);
     }
 
     /// <summary>Height estimate for an undrawn row (to reserve off-screen space), replaced by the exact
@@ -927,6 +985,7 @@ public class ChatScreen
         lock (_messagesLock)
         {
             _messages.Add(new DisplayedMessage(tempId, text, true, nowLocal, null));
+            _entryAnim[tempId] = 0f;
         }
 
         _ = Task.Run(async () =>
@@ -943,6 +1002,10 @@ public class ChatScreen
                         if (_messages[i].Id == tempId)
                         {
                             _messages[i] = _messages[i] with { Id = response.MessageId, SentAt = response.CreatedAtUtc };
+                            if (_entryAnim.Remove(tempId, out var entryP))
+                            {
+                                _entryAnim[response.MessageId] = entryP;
+                            }
                             break;
                         }
                     }
@@ -954,6 +1017,7 @@ public class ChatScreen
                 lock (_messagesLock)
                 {
                     _messages.RemoveAll(m => m.Id == tempId);
+                    _entryAnim.Remove(tempId);
                 }
             }
         });

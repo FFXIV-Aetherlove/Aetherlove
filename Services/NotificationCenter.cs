@@ -21,4 +21,19 @@ public sealed class NotificationCenter
     public event Action? DeckRefreshRequested;
 
     public void NotifyDeckRefreshRequested() => DeckRefreshRequested?.Invoke();
+
+    /// <summary>True from when a moderation warning arrives while the phone is minimised/closed until the
+    /// user next opens the phone (which routes them to the acknowledge screen).</summary>
+    public bool HasPendingWarning { get; private set; }
+
+    /// <summary>Raised when a warning arrives while the phone isn't open, so the mini phone can react.</summary>
+    public event Action? PendingWarningRaised;
+
+    public void RaisePendingWarning()
+    {
+        HasPendingWarning = true;
+        PendingWarningRaised?.Invoke();
+    }
+
+    public void ClearPendingWarning() => HasPendingWarning = false;
 }

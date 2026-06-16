@@ -10,6 +10,7 @@ internal static class ProfilePt
 
         // ProfileScreen — sections
         ["profile.about"] = "Sobre",
+        ["profile.flairs"] = "Emblemas",
         ["profile.looking_for"] = "Procurando por",
         ["profile.content_interests"] = "Preferências de conteúdo",
         ["profile.info"] = "Informações",

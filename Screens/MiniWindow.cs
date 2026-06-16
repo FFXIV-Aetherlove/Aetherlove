@@ -61,6 +61,7 @@ public sealed class MiniWindow : Window, IDisposable
         IsOpen = false;
 
         _notifications.UnreadChatMessageArrived += OnUnreadChatMessageArrived;
+        _notifications.PendingWarningRaised += OnPendingWarningRaised;
     }
 
     private void OnUnreadChatMessageArrived()
@@ -72,6 +73,16 @@ public sealed class MiniWindow : Window, IDisposable
         }
         _shakeRemaining = ShakeTotalSeconds;
         // Anchor is sampled in Draw() on the first shake frame — no valid window pos yet here.
+        _shakeAnchorPos = Vector2.Zero;
+    }
+
+    private void OnPendingWarningRaised()
+    {
+        if (!IsOpen)
+        {
+            return;
+        }
+        _shakeRemaining = ShakeTotalSeconds;
         _shakeAnchorPos = Vector2.Zero;
     }
 
@@ -130,13 +141,18 @@ public sealed class MiniWindow : Window, IDisposable
             ImGui.SetTooltip("Open AetherLove");
         }
 
-        var badgeCount = _notifications.TotalBadge;
-        if (badgeCount > 0)
+        var DotR = Px(9f);
+        var dotCenter = pos + new Vector2(size.X - DotR - Px(3f), DotR + Px(3f));
+        if (_notifications.HasPendingWarning)
         {
-            var DotR = Px(9f);
-            var dotCenter = pos + new Vector2(size.X - DotR - Px(3f), DotR + Px(3f));
+            dl.AddCircleFilled(dotCenter, DotR, ImGui.ColorConvertFloat4ToU32(UiColors.Amber));
+            var warnSz = ImGui.CalcTextSize("!");
+            dl.AddText(dotCenter - warnSz * 0.5f, 0xFF111111u, "!");
+        }
+        else if (_notifications.TotalBadge > 0)
+        {
+            var badgeCount = _notifications.TotalBadge;
             dl.AddCircleFilled(dotCenter, DotR, UiColors.UnreadBadge);
-
             var badgeLabel = badgeCount > 9 ? "9+" : badgeCount.ToString();
             var badgeSz = ImGui.CalcTextSize(badgeLabel);
             dl.AddText(dotCenter - badgeSz * 0.5f, 0xFFFFFFFF, badgeLabel);
@@ -278,6 +294,7 @@ public sealed class MiniWindow : Window, IDisposable
     public void Dispose()
     {
         _notifications.UnreadChatMessageArrived -= OnUnreadChatMessageArrived;
+        _notifications.PendingWarningRaised -= OnPendingWarningRaised;
         _shell.Dispose();
     }
 }
