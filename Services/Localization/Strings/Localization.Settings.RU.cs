@@ -39,7 +39,7 @@ internal static class SettingsRu
         ["settings.enable_notification_sounds"] = "Включить звуки уведомлений",
         ["settings.enable_notification_sounds_tooltip"] = "Звуки уведомлений будут воспроизводиться, только если звук игры и звук спецэффектов не отключены. Громкость регулируется через громкость Windows.",
         ["settings.announce_messages_chat"] = "Объявлять о новых сообщениях в игровом чате",
-        ["settings.announce_matches_chat"] = "Объявлять о новых совпадениях в игровом чате",
+        ["settings.announce_matches_chat"] = "Объявлять о новых парах в игровом чате",
         ["settings.popup_messages"] = "Показывать всплывающее окно для новых сообщений",
         ["settings.popup_matches"] = "Показывать всплывающее окно для новых совпадений",
         ["settings.auto_open_minimized"] = "Открывать свёрнутым автоматически при входе в игру",

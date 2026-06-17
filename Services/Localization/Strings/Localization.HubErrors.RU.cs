@@ -6,7 +6,7 @@ internal static class HubErrorsRu
     {
         ["huberror.generic"] = "Произошла непредвиденная ошибка сервера.",
         ["huberror.generic_detail"] = "Произошла ошибка: {0}",
-        ["huberror.invalid_request"] = "Сервер отклонил запрос. Если это повторяется, обновите плагин.",
+        ["huberror.invalid_request"] = "Сервер отклонил запрос. Если это повторяется, проверьте наличие обновления плагина.",
         ["huberror.unauthenticated"] = "Ваша сессия больше недействительна. Пожалуйста, войдите снова.",
         ["huberror.banned"] = "Ваш аккаунт заблокирован.",
         ["huberror.rate_limited"] = "Вы делаете это слишком часто. Попробуйте снова чуть позже.",
@@ -18,9 +18,9 @@ internal static class HubErrorsRu
         ["huberror.key_bundle_exists"] = "Ключи шифрования для этого аккаунта уже настроены.",
         ["huberror.message_too_large"] = "Это сообщение слишком длинное для отправки.",
         ["huberror.bio_too_long"] = "Ваша анкета превышает лимит в {0} символов.",
-        ["huberror.lalafell_erp"] = "Ролевые игры для взрослых недоступны для персонажей лалафелей.",
-        ["huberror.lalafell_nsfw"] = "Функции NSFW недоступны для персонажей лалафелей.",
-        ["huberror.lalafell_nsfw_photo"] = "Фотографии NSFW недоступны для персонажей лалафелей.",
+        ["huberror.lalafell_erp"] = "Ролевые игры для взрослых недоступны для персонажей-лалафелей.",
+        ["huberror.lalafell_nsfw"] = "Функции NSFW недоступны для персонажей-лалафелей.",
+        ["huberror.lalafell_nsfw_photo"] = "Фотографии NSFW недоступны для персонажей-лалафелей.",
         ["huberror.nsfw_disable_blocked"] = "Удалите фотографии NSFW и отключите ролевые игры 18+, прежде чем отключать NSFW.",
         ["huberror.img_too_large"] = "Изображение слишком большое ({0} МБ). Максимум — {1} МБ.",
         ["huberror.img_dimensions_too_large"] = "Изображение слишком большое ({0}×{1}). Длинная сторона может быть не более {2}px.",
@@ -31,7 +31,7 @@ internal static class HubErrorsRu
         ["huberror.report_reason_required"] = "Пожалуйста, опишите проблему.",
         ["huberror.report_reason_too_long"] = "Причина слишком длинная (максимум {0} символов).",
         ["huberror.report_target_gone"] = "Этот профиль больше не существует.",
-        ["huberror.report_duplicate"] = "Вы уже недавно жаловались на этого пользователя. Наша команда рассматривает жалобу.",
+        ["huberror.report_duplicate"] = "Вы уже недавно жаловались на этого пользователя. Команда модераторов сейчас в процессе ее расмотра.",
         ["huberror.feedback_required"] = "Пожалуйста, введите сообщение перед отправкой.",
     };
 }

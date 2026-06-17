@@ -41,7 +41,7 @@ internal static class DeckRu
         ["deck.match_start_chatting"] = "Начать общение",
         ["deck.match_keep_swiping"] = "Продолжить листать",
         ["deck.no_pool_heading"] = "Новых совпадений по вашим предпочтениям нет",
-        ["deck.no_pool_body"] = "В период бета-тестирования это ожидаемо",
+        ["deck.no_pool_body"] = "В период бета-тестирования - это обыденная вещь.",
         ["deck.no_pool_footer"] = "Попробуйте позже! <3",
     };
 }

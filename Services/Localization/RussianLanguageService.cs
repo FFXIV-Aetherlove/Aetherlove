@@ -13,13 +13,13 @@ public sealed class RussianLanguageService : ILanguageService
     public string WelcomeBody1 => "AetherLove — это плагин социальных знакомств для Final Fantasy XIV. Место, где можно найти своих людей: надёжного партнёра по игре, товарища для ролевых сессий или что-то большее.";
     public string WelcomeBody2 => "Просматривайте профили других искателей приключений, проявляйте интерес свайпом и, когда чувство окажется взаимным, начните приватный разговор — не покидая Эорзею.";
     public string WelcomePrivacyHeading => "Ваша конфиденциальность:";
-    public string WelcomePrivacyBody => "Все чаты и личные переписки защищены сквозным шифрованием — владельцы AetherLove не могут читать ваши личные сообщения.";
+    public string WelcomePrivacyBody => "Все чаты и личные переписки защищены сквозным шифрованием — администрация AetherLove не имеет доступа к вашим личным сообщениям.";
     public string WelcomeFeatureDiscoverTitle => "Открывать";
     public string WelcomeFeatureDiscoverBody => "Просматривайте красиво оформленные карточки профилей.";
     public string WelcomeFeatureConnectTitle => "Знакомиться";
     public string WelcomeFeatureConnectBody => "Находите игроков с общими интересами.";
     public string WelcomeFeatureChatTitle => "Общаться";
-    public string WelcomeFeatureChatBody => "Пишите своим совпадениям прямо в плагине.";
+    public string WelcomeFeatureChatBody => "Пишите своим парам прямо в плагине.";
     public string WelcomePluginLanguageLabel => "Язык плагина";
     public string WelcomePluginLanguageTooltip => "Выберите язык интерфейса AetherLove.\nИзменить его можно позже в настройках.";
     public string WelcomeFooter => "Настройка займёт около 3 минут. Нажмите «Далее», чтобы узнать, как это работает.";

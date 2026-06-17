@@ -90,7 +90,7 @@ internal static class ProfileRu
         ["profile.region"] = "Регион",
         ["profile.languages_hint"] = "Выберите все языки, на которых вам комфортно общаться.",
         ["profile.content_hint"] = "Выберите всё подходящее.",
-        ["profile.looking_for_hint"] = "Честность помогает находить лучшие совпадения.",
+        ["profile.looking_for_hint"] = "Честность помогает находить лучше пары.",
         ["profile.nsfw_lalafell"] = "Взрослые и NSFW-функции недоступны, пока вашего персонажа - лалафель. Подробнее см. в 'Условиях использования'.",
         ["profile.nsfw_explainer"] = "NSFW означает «Not Safe For Work»: контент, содержащий наготу или сексуальный подтекст. Включите, чтобы видеть NSFW-профили и находить пары с ними.",
         ["profile.nsfw_optin"] = "NSFW-профили: ДА",
@@ -113,7 +113,6 @@ internal static class ProfileRu
         ["profile.spoken_language"] = "Разговорный язык",
         ["profile.spoken_language_tooltip"] = "Если выбрано ничего, вам будет предложены анкеты всех доступных языков.",
 
-        ["profile.loading_photos"] = "Загрузка ваших фотографий…",
         ["profile.load_photos_failed"] = "Не удалось загрузить ваши фотографии: {0}",
         ["profile.profile_picture"] = "Фото профиля",
         ["profile.profile_picture_desc"] = "Ваше фото профиля показывается в списке чатов и на карточках анкет. Используйте квадратный крупный портрет вашего персонажа FFXIV.",

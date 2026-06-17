@@ -4,7 +4,7 @@ internal static class NotificationsRu
 {
     public static readonly System.Collections.Generic.Dictionary<string, string> Strings = new()
     {
-        ["notif.new_message"] = "У вас новое сообщение.",
+        ["notif.new_message"] = "Входящее сообщение.",
         ["notif.match_title"] = "Новая пара!",
         ["notif.matched_with_popup"] = "Ваша пара — {0}.",
         ["notif.matched_with_chat"] = "Ваша пара — {0}!",
