@@ -27,6 +27,7 @@ public sealed class SplashScreen : IDisposable
 
     private readonly ScreenRouter _router;
     private readonly SessionBootstrapper _bootstrap;
+    private readonly WebpCapabilityProbe _webpProbe;
     private ISharedImmediateTexture? _logoTexture;
     private AppTheme _loadedTheme;
     private float _elapsed;
@@ -35,10 +36,11 @@ public sealed class SplashScreen : IDisposable
     private volatile bool _playbackComplete;
     private bool _audioEnabled;
 
-    public SplashScreen(ScreenRouter router, SessionBootstrapper bootstrap)
+    public SplashScreen(ScreenRouter router, SessionBootstrapper bootstrap, WebpCapabilityProbe webpProbe)
     {
         _router = router;
         _bootstrap = bootstrap;
+        _webpProbe = webpProbe;
     }
 
     private static string LogoFileName => ThemeService.CurrentTheme switch
@@ -173,6 +175,7 @@ public sealed class SplashScreen : IDisposable
     public void Draw()
     {
         _elapsed += ImGui.GetIO().DeltaTime;
+        _webpProbe.Tick(ImGui.GetIO().DeltaTime);
 
         var avail = ImGui.GetContentRegionAvail();
 

@@ -3,6 +3,8 @@ using System.IO;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.Formats.Webp;
+using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 
 namespace AetherLove.Shared;
@@ -34,6 +36,17 @@ public static class PhotoTransform
 {
     public const int MaxDecodedDimension = 8192;
     public const int MinCropSide = 32;
+
+    /// <summary>A tiny lossy WebP (the same encoder the server serves photos with) the client decodes at
+    /// startup to test whether its local image decoder can actually handle WebP — so machines whose decoder
+    /// can't (Wine, or Windows without the WebP codec) get served JPEG instead of gray blocks.</summary>
+    public static byte[] CreateProbeWebp()
+    {
+        using var image = new Image<Rgba32>(8, 8, new Rgba32(120, 90, 200, 255));
+        using var ms = new MemoryStream();
+        image.Save(ms, new WebpEncoder { FileFormat = WebpFileFormatType.Lossy, Quality = 80 });
+        return ms.ToArray();
+    }
 
     public static (int Width, int Height) TargetDimensions(PhotoKind kind) => kind switch
     {

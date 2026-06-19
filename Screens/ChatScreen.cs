@@ -884,9 +884,22 @@ public class ChatScreen
         }
     };
 
+    /// <summary>Day-divider label in the selected plugin language. English keeps the ordinal style
+    /// ("Friday, 19th June 2026"); every other language uses its own long-date pattern, so the English
+    /// "th" suffix never leaks into e.g. French ("vendredi 19 juin 2026").</summary>
+    private static string BuildDayLabel(DateTime date)
+    {
+        var culture = LanguageProvider.CurrentCulture;
+        if (string.Equals(LanguageProvider.Current.LanguageName, "English", StringComparison.Ordinal))
+        {
+            return $"{date.ToString("dddd", culture)}, {Ordinal(date.Day)} {date.ToString("MMMM yyyy", culture)}";
+        }
+        return date.ToString("D", culture);
+    }
+
     private static void DrawDayDivider(DateTime date)
     {
-        var label = $"{date:dddd}, {Ordinal(date.Day)} {date:MMMM yyyy}";
+        var label = BuildDayLabel(date);
         var drawList = ImGui.GetWindowDrawList();
         var avail = ImGui.GetContentRegionAvail().X;
         var textSize = ImGui.CalcTextSize(label);

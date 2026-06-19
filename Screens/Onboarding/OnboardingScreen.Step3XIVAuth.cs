@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Numerics;
 using AetherLove.Navigation;
 using AetherLove.Services;
@@ -6,6 +7,7 @@ using AetherLove.Services.Auth;
 using AetherLove.Services.Localization;
 using AetherLove.UI;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Textures;
 
 namespace AetherLove.Screens;
 
@@ -15,6 +17,9 @@ public partial class OnboardingScreen
     private const double AuthCompletedHoldSeconds = 0.6;
 
     private bool _postAuthBootstrapStarted;
+
+    private ISharedImmediateTexture? _xivAuthLogo;
+    private bool _xivAuthLogoLoaded;
 
     private DateTime _welcomeBackShownAt = DateTime.MinValue;
     private const double WelcomeBackHoldSeconds = 1.8;
@@ -64,16 +69,55 @@ public partial class OnboardingScreen
         _postAuthBootstrapStarted = false;
         _welcomeBackShownAt = DateTime.MinValue;
 
+        var label = Loc.T("onboarding.auth_signin_with_xivauth");
         const float BtnW = 220f;
         ImGui.SetCursorPosX(centerX - Px(BtnW) * 0.5f);
         PushThemeButton(t);
-        if (ImGui.Button(Loc.T("onboarding.auth_signin_with_xivauth"), Px(BtnW, 36f)))
+        var clicked = ImGui.Button(label, Px(BtnW, 36f));
+        PopThemeButton();
+        DrawXivAuthButtonIcon(label);
+        if (clicked)
         {
             _authService.StartSignIn();
         }
-        PopThemeButton();
 
         DrawNoXivAuthSection(t, centerX);
+    }
+
+    /// <summary>Overlays the XIVAuth logo just left of the (centered) button label, scaled to the button height
+    /// while preserving the source 25×30 aspect ratio.</summary>
+    private void DrawXivAuthButtonIcon(string label)
+    {
+        EnsureXivAuthLogo();
+        var wrap = _xivAuthLogo?.GetWrapOrDefault();
+        if (wrap is null)
+        {
+            return;
+        }
+
+        var min = ImGui.GetItemRectMin();
+        var max = ImGui.GetItemRectMax();
+        var iconH = Px(20f);
+        var iconW = iconH * (25f / 30f);
+        var gap = Px(8f);
+        var iconX = MathF.Max(min.X + Px(10f), (min.X + max.X) * 0.5f - ImGui.CalcTextSize(label).X * 0.5f - gap - iconW);
+        var iconY = (min.Y + max.Y) * 0.5f - iconH * 0.5f;
+        ImGui.GetWindowDrawList().AddImage(wrap.Handle, new Vector2(iconX, iconY), new Vector2(iconX + iconW, iconY + iconH));
+    }
+
+    private void EnsureXivAuthLogo()
+    {
+        if (_xivAuthLogoLoaded)
+        {
+            return;
+        }
+        _xivAuthLogoLoaded = true;
+        var dir = Path.GetDirectoryName(Plugin.PluginInterface.AssemblyLocation.FullName) ?? "";
+        var path = Path.Combine(dir, "Media", "xivauth-logo.png");
+        if (File.Exists(path))
+        {
+            _xivAuthLogo = Plugin.TextureProvider.GetFromFile(path);
+        }
     }
 
     private void DrawNoXivAuthSection(ThemeDefinition t, float centerX)
@@ -97,14 +141,17 @@ public partial class OnboardingScreen
         ImGui.Spacing();
 
         const float BtnW = 240f;
+        var createLabel = Loc.T("onboarding.auth_create_account");
         ImGui.SetCursorPosX(centerX - Px(BtnW) * 0.5f);
-        if (ImGui.Button(Loc.T("onboarding.auth_create_account"), Px(BtnW, 32f)))
-        {
-            OpenXivAuthRegistration();
-        }
+        var createClicked = ImGui.Button(createLabel, Px(BtnW, 32f));
+        DrawXivAuthButtonIcon(createLabel);
         if (ImGui.IsItemHovered())
         {
             ImGui.SetTooltip(XivAuthRegisterUrl);
+        }
+        if (createClicked)
+        {
+            OpenXivAuthRegistration();
         }
     }
 

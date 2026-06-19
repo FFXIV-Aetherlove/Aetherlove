@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using AetherLove.Config;
 
 namespace AetherLove.Services.Localization;
@@ -26,6 +27,20 @@ public static class LanguageProvider
     public static ILanguageService English => Fallback;
 
     public static ILanguageService Current { get; private set; } = Fallback;
+
+    /// <summary>CultureInfo matching the selected plugin language, for locale-correct date/number formatting
+    /// (day and month names, ordinals, separators) instead of the player's OS culture.</summary>
+    public static CultureInfo CurrentCulture => CultureInfo.GetCultureInfo(IsoCode(Current.LanguageName));
+
+    private static string IsoCode(string languageName) => languageName switch
+    {
+        "Spanish" => "es",
+        "French" => "fr",
+        "Russian" => "ru",
+        "German" => "de",
+        "Portuguese" => "pt",
+        _ => "en",
+    };
 
     public static event Action? LanguageChanged;
 

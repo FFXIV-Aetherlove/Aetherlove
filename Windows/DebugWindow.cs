@@ -152,9 +152,16 @@ public sealed class DebugWindow : Window
         Row("Clock skew", Skew());
 
         Section("Image rendering test");
-        Row("Client requests", Dalamud.Utility.Util.IsWine() ? "JPEG (Wine has no WebP codec)" : "WebP");
+        Row("WebP decode (auto-detected)", WebpProbeText());
+        Row("Photos requested as", _signal.AcceptsWebp() ? "WebP" : "JPEG");
+        var forceJpeg = Plugin.Configuration.ForceJpegImages;
+        if (ImGui.Checkbox("Force JPEG photos (override auto-detect)", ref forceJpeg))
+        {
+            Plugin.Configuration.ForceJpegImages = forceJpeg;
+            Plugin.Configuration.Save();
+        }
         ImGui.PushTextWrapPos(0f);
-        ImGui.TextDisabled("Both formats are sent regardless of OS — compare which one renders below.");
+        ImGui.TextDisabled("Takes effect on the next reconnect (reopen AetherLove). Both formats are sent below regardless of OS — compare which one renders.");
         ImGui.PopTextWrapPos();
         DrawSamples(scale);
     }
@@ -226,6 +233,13 @@ public sealed class DebugWindow : Window
         ".jpg" => "JPEG",
         ".png" => "PNG",
         _ => "unknown",
+    };
+
+    private static string WebpProbeText() => Plugin.Configuration.WebpSupported switch
+    {
+        true => "Supported",
+        false => "Not supported — served JPEG",
+        null => "Not yet probed — defaulting to JPEG",
     };
 
     private string Server(string? value)
@@ -300,8 +314,9 @@ public sealed class DebugWindow : Window
         }
 
         sb.AppendLine();
-        var requested = Dalamud.Utility.Util.IsWine() ? "JPEG (Wine)" : "WebP";
-        sb.AppendLine($"Client image format: {requested}");
+        sb.AppendLine($"WebP decode (auto-detected): {WebpProbeText()}");
+        sb.AppendLine($"Force JPEG override: {(Plugin.Configuration.ForceJpegImages ? "On" : "Off")}");
+        sb.AppendLine($"Photos requested as: {(_signal.AcceptsWebp() ? "WebP" : "JPEG")}");
         sb.AppendLine($"JPEG sample render: {RenderStatus(server?.SampleJpeg, _jpegTex)}");
         sb.AppendLine($"WebP sample render: {RenderStatus(server?.SampleWebp, _webpTex)}");
 

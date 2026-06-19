@@ -48,6 +48,8 @@ public sealed class NewsScreen : IDisposable
     private volatile bool _entryMissing;
     private Guid? _pendingPreviewId;
     private bool _isPreview;
+    private bool _pendingLiveUnseen;
+    private bool _liveUnseen;
 
     public NewsScreen(ScreenRouter router, SessionBootstrapper bootstrap, AetherLoveHubClient hub)
     {
@@ -64,6 +66,11 @@ public sealed class NewsScreen : IDisposable
     /// <see cref="OnShow"/>. The preview shows any status, marks nothing seen, and returns to the deck.</summary>
     public void QueuePreview(Guid id) => _pendingPreviewId = id;
 
+    /// <summary>Queue the unseen flow as a live mid-session push (vs a startup gate): on completion it returns
+    /// to the deck instead of re-running the startup ladder, which mid-session would re-trigger a still-pending
+    /// gate (passphrase / onboarding) for an already-active user.</summary>
+    public void RequestLiveUnseenFlow() => _pendingLiveUnseen = true;
+
     public void OnShow()
     {
         _cts.Cancel();
@@ -79,6 +86,7 @@ public sealed class NewsScreen : IDisposable
         if (_pendingPreviewId is Guid previewId)
         {
             _pendingPreviewId = null;
+            _pendingLiveUnseen = false;
             StartPreview(previewId);
             return;
         }
@@ -88,10 +96,13 @@ public sealed class NewsScreen : IDisposable
 
         if (_listMode)
         {
+            _pendingLiveUnseen = false;
             StartLoadList();
         }
         else
         {
+            _liveUnseen = _pendingLiveUnseen;
+            _pendingLiveUnseen = false;
             StartUnseenFlow();
         }
     }
@@ -104,10 +115,22 @@ public sealed class NewsScreen : IDisposable
         _unseenIndex = 0;
         if (_unseenQueue.Count == 0)
         {
-            _router.Navigate(_bootstrap.ResolveNextStartupScreen());
+            FinishUnseenFlow();
             return;
         }
         LoadEntry(_unseenQueue[0]);
+    }
+
+    /// <summary>End of the unseen flow: a live (mid-session) push returns to the deck; a startup gate chains on
+    /// through the ladder (passphrase → the regular target).</summary>
+    private void FinishUnseenFlow()
+    {
+        if (_liveUnseen)
+        {
+            _router.Navigate(Screen.Deck);
+            return;
+        }
+        _router.Navigate(_bootstrap.ResolveNextStartupScreen());
     }
 
     private void StartPreview(Guid id)
@@ -212,8 +235,10 @@ public sealed class NewsScreen : IDisposable
     {
         if (_isPreview)
         {
-            // A staff preview never marks the item seen — just return to the regular flow.
-            _router.Navigate(_bootstrap.ResolveNextStartupScreen());
+            // A mid-session staff preview marks nothing seen and returns straight to the deck — never via the
+            // startup gate ladder, which would re-trigger a still-pending gate (passphrase / onboarding) for an
+            // already-active user.
+            _router.Navigate(Screen.Deck);
             return;
         }
 
@@ -233,7 +258,7 @@ public sealed class NewsScreen : IDisposable
         }
         else
         {
-            _router.Navigate(_bootstrap.ResolveNextStartupScreen());
+            FinishUnseenFlow();
         }
     }
 
@@ -280,7 +305,7 @@ public sealed class NewsScreen : IDisposable
         {
             ImGui.Spacing();
             ImGui.SetCursorPosX(PadX);
-            ImGui.TextColored(UiColors.Muted, day.Key.ToString("MMMM d, yyyy"));
+            ImGui.TextColored(UiColors.Muted, day.Key.ToString("D", LanguageProvider.CurrentCulture));
             ImGui.Spacing();
 
             foreach (var item in day.OrderByDescending(n => n.PublishedAtUtc))

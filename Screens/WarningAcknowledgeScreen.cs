@@ -27,6 +27,8 @@ public sealed class WarningAcknowledgeScreen
     private WarningDto[] _toAcknowledge = [];
     private volatile bool _submitting;
     private volatile string? _submitError;
+    private bool _pendingLive;
+    private bool _returnToDeck;
 
     public WarningAcknowledgeScreen(ScreenRouter router,
                                     SessionBootstrapper bootstrap,
@@ -37,8 +39,16 @@ public sealed class WarningAcknowledgeScreen
         _hub = hub;
     }
 
+    /// <summary>Marks the next showing as a live mid-session push (not a startup gate): on acknowledge it
+    /// returns to the deck instead of re-running the startup ladder, which mid-session can mis-route to the
+    /// passphrase / onboarding gates.</summary>
+    public void RequestLiveAcknowledge() => _pendingLive = true;
+
     public void OnShow()
     {
+        _returnToDeck = _pendingLive;
+        _pendingLive = false;
+
         var conn = _bootstrap.LastConnection;
         _toAcknowledge = conn?.Warnings.Where(w => !w.Seen).ToArray() ?? [];
         _submitting = false;
@@ -212,8 +222,17 @@ public sealed class WarningAcknowledgeScreen
 
     private void NavigateToTarget()
     {
-        // Warnings are flipped to Seen in the cached snapshot first, so the resolver advances past them to
-        // the next startup gate (passphrase → news → the regular target).
+        // A live (mid-session) warning returns to the deck — the user is already active, so re-running the
+        // startup ladder would wrongly route to the passphrase / onboarding gates. A startup warning instead
+        // chains on through the ladder (passphrase → news → the regular target); warnings are flipped to Seen
+        // in the cached snapshot first so the resolver advances past them.
+        if (_returnToDeck)
+        {
+            _returnToDeck = false;
+            _router.Navigate(Screen.Deck);
+            return;
+        }
+
         _router.Navigate(_bootstrap.ResolveNextStartupScreen());
     }
 }

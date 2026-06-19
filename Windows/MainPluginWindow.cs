@@ -119,11 +119,13 @@ public class MainPluginWindow : Window, IDisposable
         if (_notifications.HasPendingWarning)
         {
             _notifications.ClearPendingWarning();
+            _warningsAckScreen.RequestLiveAcknowledge();
             _router.Navigate(Screen.WarningsAcknowledge);
         }
         else if (_notifications.HasPendingNews)
         {
             _notifications.ClearPendingNews();
+            _newsScreen.RequestLiveUnseenFlow();
             _router.Navigate(Screen.News);
         }
     }

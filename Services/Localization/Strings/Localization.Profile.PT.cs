@@ -24,7 +24,7 @@ internal static class ProfilePt
         ["profile.favourite_song"] = "Música favorita",
         ["music.fetching"] = "Obtendo o nome da música…",
         ["music.saved"] = "Link salvo (nome pendente)",
-        ["music.invalid"] = "Não foi possível ler esse link — cole um link de música do Spotify, SoundCloud, Apple Music ou YouTube Music.",
+        ["music.invalid"] = "Não foi possível ler o link — cole um link de música do Spotify, SoundCloud, Apple Music ou YouTube Music.",
         ["music.open_tooltip"] = "Clique para abrir",
         ["profile.favourite_movie"] = "Filme favorito",
         ["profile.favourite_anime"] = "Anime favorito",
@@ -40,7 +40,7 @@ internal static class ProfilePt
 
         // ProfileScreen — Spotify / NSFW pill
         ["profile.spotify_open_tooltip"] = "Clique para abrir no Spotify",
-        ["profile.nsfw_reveal"] = "Clique para mostrar a imagem NSFW",
+        ["profile.nsfw_reveal"] = "Clique para ver a imagem NSFW",
 
         // ProfileScreen — back pill
         ["profile.back_to_chat"] = "Voltar ao chat",
@@ -56,7 +56,7 @@ internal static class ProfilePt
         ["profile.cancel"] = "Cancelar",
         ["profile.submit_report"] = "Enviar denúncia",
         ["profile.report_submitted"] = "Denúncia enviada",
-        ["profile.report_thanks"] = "Obrigado — nossos moderadores vão dar uma olhada. Você não verá este perfil de novo até puxar um novo do deck.",
+        ["profile.report_thanks"] = "Obrigado — os nossos moderadores vão verificar. Não vais ver este perfil de novo até puxar um novo do deck.",
         ["profile.closing"] = "Fechando…",
         ["profile.closing_in"] = "Fechando em {0} segundos",
         ["profile.close"] = "Fechar",
@@ -69,18 +69,18 @@ internal static class ProfilePt
         // MyProfileScreen — edit tab load / save
         ["profile.load_profile_failed"] = "Não foi possível carregar seu perfil: {0}",
         ["profile.retry"] = "Tentar de novo",
-        ["profile.save_failed"] = "Falha ao salvar: {0}",
-        ["profile.saving"] = "Salvando…",
-        ["profile.saved"] = "Salvo  ✓",
-        ["profile.save_changes"] = "Salvar Alterações",
+        ["profile.save_failed"] = "Falha ao guardar: {0}",
+        ["profile.saving"] = "Guardando…",
+        ["profile.saved"] = "Guardado  ✓",
+        ["profile.save_changes"] = "guardar Alterações",
 
         // MyProfileScreen — edit form section headings
         ["profile.heading_identity"] = "Identidade",
         ["profile.heading_character"] = "Personagem",
         ["profile.heading_location"] = "Localização",
         ["profile.heading_languages"] = "Idiomas que Eu Falo",
-        ["profile.heading_content"] = "Eu Curto os Seguintes Conteúdos",
-        ["profile.heading_looking_for"] = "Estou Procurando Por",
+        ["profile.heading_content"] = "Eu Gosto dos Seguintes Conteúdos",
+        ["profile.heading_looking_for"] = "Estou a Procura De",
         ["profile.heading_nsfw"] = "NSFW",
         ["profile.heading_optional"] = "Opcional",
         ["profile.heading_playtime"] = "Horário de Jogo",
@@ -93,9 +93,9 @@ internal static class ProfilePt
         ["profile.display_name_hint"] = "Primeiro nome ou apelido, sem espaços.",
         ["profile.about_me"] = "Sobre Mim",
         ["profile.char_count"] = "{0} / 500 caracteres",
-        ["profile.preview"] = "Prévia",
+        ["profile.preview"] = "pré-visualizar",
         ["profile.bio_placeholder"] = "Sua bio vai aparecer aqui…",
-        ["profile.race"] = "Race",
+        ["profile.race"] = "Raça",
         ["profile.region"] = "Região",
         ["profile.languages_hint"] = "Selecione todos os idiomas em que você se sente à vontade para conversar.",
         ["profile.content_hint"] = "Selecione tudo o que se aplica.",

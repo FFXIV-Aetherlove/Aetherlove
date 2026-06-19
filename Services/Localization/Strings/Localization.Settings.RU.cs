@@ -92,6 +92,7 @@ internal static class SettingsRu
         ["settings.contributors"] = "Участники",
         ["settings.contributors_thanks_title"] = "Спасибо",
         ["settings.contributors_intro"] = "AetherLove был бы невозможен без:",
+        ["settings.contributors_leads"] = "Руководители проекта: Astraea & Nihal",
         ["settings.contributors_council"] = "The Chon-Chon Council",
         ["settings.contributors_moderation"] = "Модерация: Su",
         ["settings.contributors_translators"] = "Переводчики: Tears, Mufami, Terashi, Su, Astraea",

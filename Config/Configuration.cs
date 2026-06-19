@@ -71,6 +71,13 @@ public class Configuration : IPluginConfiguration
     /// <summary>Mutes the lub-dub heartbeat that plays on the startup splash.</summary>
     public bool DisableStartupHeartbeatSound { get; set; } = false;
 
+    /// <summary>Per-machine WebP-decode capability, probed at startup. Null until first probed; null/false makes
+    /// the server transcode photos to JPEG (safe default — never gray blocks).</summary>
+    public bool? WebpSupported { get; set; } = null;
+
+    /// <summary>Debug-screen override: force the server to send JPEG photos regardless of the WebP probe.</summary>
+    public bool ForceJpegImages { get; set; } = false;
+
     /// <summary>Skip the "close AetherLove?" confirmation modal and close the windows immediately.</summary>
     public bool SkipCloseConfirmation { get; set; } = false;
 

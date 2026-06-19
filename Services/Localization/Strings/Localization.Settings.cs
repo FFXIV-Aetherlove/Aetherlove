@@ -102,6 +102,7 @@ internal static class SettingsEn
         ["settings.contributors"] = "Contributors",
         ["settings.contributors_thanks_title"] = "Thank you",
         ["settings.contributors_intro"] = "AetherLove could not be possible without:",
+        ["settings.contributors_leads"] = "Project leads: Astraea & Nihal",
         ["settings.contributors_council"] = "The Chon-Chon Council",
         ["settings.contributors_moderation"] = "Moderation: Su",
         ["settings.contributors_translators"] = "Translators: Tears, Mufami, Terashi, Su, Astraea",

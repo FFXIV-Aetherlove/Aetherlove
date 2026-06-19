@@ -198,13 +198,18 @@ public sealed class AetherSignalService : IAsyncDisposable
         _gate.Dispose();
     }
 
+    /// <summary>Whether this client wants WebP photos. Driven by the startup WebP-decode probe (persisted in
+    /// config) with a manual force-JPEG override — accurate even on native Windows that lacks the WebP codec,
+    /// where the old Wine guess was wrong. Null (not yet probed) defaults to JPEG, which always renders.</summary>
+    public bool AcceptsWebp() => !_config.ForceJpegImages && (_config.WebpSupported ?? false);
+
     private HubConnection BuildHubConnection()
     {
         // apiVersion rides the connection query string (like access_token). The server defaults a missing
         // value to 1, so clients from before versioning keep working until the server's version moves on.
         var url = new UriBuilder(new Uri(new Uri(Plugin.ServerBaseUrl), HubPath))
         {
-            Query = $"apiVersion={AetherLove.Shared.ApiVersion.Current}&acceptsWebp={(Dalamud.Utility.Util.IsWine() ? "false" : "true")}",
+            Query = $"apiVersion={AetherLove.Shared.ApiVersion.Current}&acceptsWebp={(AcceptsWebp() ? "true" : "false")}",
         }.Uri;
 
         var hub = new HubConnectionBuilder()
@@ -329,6 +334,7 @@ public sealed class AetherSignalService : IAsyncDisposable
             // warning that lands while minimised isn't silently swallowed.
             if (_services.GetRequiredService<MainPluginWindow>().IsOpen)
             {
+                _services.GetRequiredService<WarningAcknowledgeScreen>().RequestLiveAcknowledge();
                 _router.Navigate(Screen.WarningsAcknowledge);
 
                 _ = Task.Run(async () =>
@@ -359,6 +365,7 @@ public sealed class AetherSignalService : IAsyncDisposable
             // and defer the news screen until the user opens the phone.
             if (_services.GetRequiredService<MainPluginWindow>().IsOpen)
             {
+                _services.GetRequiredService<NewsScreen>().RequestLiveUnseenFlow();
                 _router.Navigate(Screen.News);
             }
             else

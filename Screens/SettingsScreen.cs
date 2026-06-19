@@ -1072,6 +1072,7 @@ public class SettingsScreen
 
             string[] credits =
             [
+                Loc.T("settings.contributors_leads"),
                 Loc.T("settings.contributors_council"),
                 Loc.T("settings.contributors_moderation"),
                 Loc.T("settings.contributors_translators"),
