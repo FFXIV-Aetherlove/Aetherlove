@@ -19,6 +19,10 @@ public sealed class ParsedMessage
 
     private static readonly Dictionary<string, ParsedMessage> Cache = new();
 
+    // Manual word-wrap breaks this many px before ImGui's PushTextWrapPos edge would, so the two wrap
+    // authorities can't disagree at a sub-pixel boundary and force a word to break mid-glyph at line end.
+    internal const float WrapSlack = 2f;
+
     public static ParsedMessage Parse(string text)
     {
         var key = text.Trim();
@@ -148,7 +152,7 @@ public sealed class ParsedMessage
                         }
                         var word = line.Substring(wordStart, i - wordStart);
                         var wordW = ImGui.CalcTextSize(word).X;
-                        if (x > 0f && width - x < wordW)
+                        if (x > 0f && width - x < wordW + WrapSlack)
                         {
                             Break();
                         }

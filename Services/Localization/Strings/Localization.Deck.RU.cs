@@ -40,8 +40,7 @@ internal static class DeckRu
         ["deck.match_fx_treasure_title"] = "СОКРОВИЩЕ НАЙДЕНО",
         ["deck.match_start_chatting"] = "Начать общение",
         ["deck.match_keep_swiping"] = "Продолжить листать",
-        ["deck.no_pool_heading"] = "Новых совпадений по вашим предпочтениям нет",
-        ["deck.no_pool_body"] = "В период бета-тестирования - это обыденная вещь.",
-        ["deck.no_pool_footer"] = "Попробуйте позже! <3",
+        ["deck.no_pool_heading"] = "Пары закончились",
+        ["deck.no_pool_body"] = "По вашим текущим критериям больше пар не найдено. Расширьте критерии и повторите попытку позже.",
     };
 }

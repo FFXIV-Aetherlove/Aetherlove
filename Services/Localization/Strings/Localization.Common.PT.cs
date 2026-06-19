@@ -95,6 +95,7 @@ internal static class CommonPt
         ["common.close_plugin_title"] = "Fechar AetherLove?",
         ["common.close_plugin_body"] = "Isso apenas oculta a janela. Você permanecerá conectado e continuará recebendo novos matches e mensagens enquanto o plugin estiver ativado.\n\nReabra a janela a qualquer momento digitando {0} no chat.",
         ["common.close_plugin_tip"] = "Dica: use o botão Minimizar na parte inferior para manter a pequena bolha flutuante visível com seu indicador de notificações.",
+        ["common.close_plugin_dont_ask"] = "Não mostrar este pop-up novamente",
         ["common.close"] = "Fechar",
 
         // Save-error modal
@@ -112,5 +113,17 @@ internal static class CommonPt
         // Image crop window
         ["common.loading_image"] = "Carregando imagem...",
         ["common.use_this_crop"] = "Usar este recorte",
+
+        // SFW-image gate modal (main avatar + first profile photo must be SFW)
+        ["common.sfw_gate_title"] = "Perfil + Avatar - APENAS SFW",
+        ["common.sfw_gate_subtitle"] = "O que NÃO é SFW:",
+        ["common.sfw_gate_b1"] = "Nudez total de qualquer gênero.",
+        ["common.sfw_gate_b2"] = "Mamilos visíveis de qualquer gênero.",
+        ["common.sfw_gate_b3"] = "Pelos pubianos ou áreas genitais visíveis.",
+        ["common.sfw_gate_b4"] = "Representações gráficas de sangue, lesões, ferimentos ou dano corporal.",
+        ["common.sfw_gate_b5"] = "Tatuagens, marcas, símbolos ou textos que sejam obscenos, discriminatórios, de incitação ao ódio ou que tenham como alvo indivíduos ou grupos com base em raça, etnia, nacionalidade, religião, gênero, orientação sexual ou outras características protegidas.",
+        ["common.sfw_gate_b6"] = "Gestos, poses ou referências visuais de cunho sexual que impliquem ou simulem atos sexuais, incluindo sexo oral, masturbação ou outra atividade sexual.",
+        ["common.sfw_gate_secondary"] = "Você ainda pode enviar material NSFW nas suas imagens de perfil secundárias.",
+        ["common.sfw_gate_ack"] = "Eu entendo as regras de SFW",
     };
 }

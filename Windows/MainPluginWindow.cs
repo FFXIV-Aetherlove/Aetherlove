@@ -35,6 +35,7 @@ public class MainPluginWindow : Window, IDisposable
     private readonly BannedScreen _bannedScreen;
     private readonly WarningAcknowledgeScreen _warningsAckScreen;
     private readonly PassphraseUnlockScreen _passphraseUnlockScreen;
+    private readonly NewsScreen _newsScreen;
     private readonly OfflineScreen _offlineScreen;
     private readonly OutdatedScreen _outdatedScreen;
     private readonly NotificationCenter _notifications;
@@ -64,6 +65,7 @@ public class MainPluginWindow : Window, IDisposable
         BannedScreen bannedScreen,
         WarningAcknowledgeScreen warningsAckScreen,
         PassphraseUnlockScreen passphraseUnlockScreen,
+        NewsScreen newsScreen,
         OfflineScreen offlineScreen,
         OutdatedScreen outdatedScreen,
         NotificationCenter notifications,
@@ -73,7 +75,8 @@ public class MainPluginWindow : Window, IDisposable
              ImGuiWindowFlags.NoResize
            | ImGuiWindowFlags.NoScrollbar
            | ImGuiWindowFlags.NoScrollWithMouse
-           | ImGuiWindowFlags.NoTitleBar)
+           | ImGuiWindowFlags.NoTitleBar
+           | ImGuiWindowFlags.NoDocking)
     {
         Size = UiScale.Design;
         SizeCondition = ImGuiCond.Always;
@@ -92,6 +95,7 @@ public class MainPluginWindow : Window, IDisposable
         _bannedScreen = bannedScreen;
         _warningsAckScreen = warningsAckScreen;
         _passphraseUnlockScreen = passphraseUnlockScreen;
+        _newsScreen = newsScreen;
         _offlineScreen = offlineScreen;
         _outdatedScreen = outdatedScreen;
         _notifications = notifications;
@@ -100,6 +104,11 @@ public class MainPluginWindow : Window, IDisposable
     }
 
     public void SetMiniWindow(MiniWindow mini) => _miniWindow = mini;
+
+    private bool _recenterRequested;
+
+    /// <summary>Queues a one-shot recenter on the next frame (ImGui isn't valid from the command thread).</summary>
+    public void RequestRecenter() => _recenterRequested = true;
 
     public override void OnOpen()
     {
@@ -111,6 +120,11 @@ public class MainPluginWindow : Window, IDisposable
         {
             _notifications.ClearPendingWarning();
             _router.Navigate(Screen.WarningsAcknowledge);
+        }
+        else if (_notifications.HasPendingNews)
+        {
+            _notifications.ClearPendingNews();
+            _router.Navigate(Screen.News);
         }
     }
 
@@ -133,6 +147,17 @@ public class MainPluginWindow : Window, IDisposable
         }
         IsOpen = true;
         _router.Navigate(Screen.Deck);
+    }
+
+    public void OpenToNews()
+    {
+        if (_miniWindow != null)
+        {
+            _miniWindow.IsOpen = false;
+        }
+        IsOpen = true;
+        _newsScreen.RequestListView();
+        _router.Navigate(Screen.News);
     }
 
     public void Dispose()
@@ -196,6 +221,17 @@ public class MainPluginWindow : Window, IDisposable
     public override void Draw()
     {
         using var bodyFont = UiFonts.Body?.Push();
+
+        if (_recenterRequested)
+        {
+            _recenterRequested = false;
+            var vp = ImGui.GetMainViewport();
+            ImGui.SetWindowPos(vp.Pos + (vp.Size - ImGui.GetWindowSize()) * 0.5f);
+        }
+
+        // Pin the modal host over the phone so its dim backdrop follows us onto whatever viewport/monitor
+        // the window is on (Dalamud's "Enable multiple screens").
+        ModalHost.Instance?.SetAnchor(ImGui.GetWindowPos(), ImGui.GetWindowSize());
 
         _phoneShell.DrawBackground(ImGui.GetWindowPos(), ImGui.GetWindowSize());
 
@@ -261,6 +297,9 @@ public class MainPluginWindow : Window, IDisposable
                 break;
             case Screen.PassphraseUnlock:
                 _passphraseUnlockScreen.Draw();
+                break;
+            case Screen.News:
+                _newsScreen.Draw();
                 break;
             case Screen.Offline:
                 _offlineScreen.Draw();
@@ -528,6 +567,9 @@ public class MainPluginWindow : Window, IDisposable
             case Screen.PassphraseUnlock:
                 _passphraseUnlockScreen.OnShow();
                 break;
+            case Screen.News:
+                _newsScreen.OnShow();
+                break;
             case Screen.Offline:
                 _offlineScreen.OnShow();
                 break;
@@ -572,8 +614,20 @@ public class MainPluginWindow : Window, IDisposable
         }
         if (ImGui.IsItemClicked(ImGuiMouseButton.Left))
         {
-            ModalHost.Instance?.Open(380f, DrawCloseConfirmBody);
+            RequestClose();
         }
+    }
+
+    /// <summary>Closes AetherLove, first asking for confirmation unless the user has opted out. Shared by
+    /// the full window's close affordance and the minimised bubble's power button.</summary>
+    public void RequestClose()
+    {
+        if (Plugin.Configuration.SkipCloseConfirmation)
+        {
+            PerformClose();
+            return;
+        }
+        ModalHost.Instance?.Open(380f, DrawCloseConfirmBody);
     }
 
     private void DrawCloseConfirmBody(float availW)
@@ -600,6 +654,15 @@ public class MainPluginWindow : Window, IDisposable
         ImGui.Spacing();
         ImGui.TextColored(new Vector4(0.65f, 0.65f, 0.65f, 1f),
             Loc.T("common.close_plugin_tip"));
+        ImGui.Spacing();
+        ImGui.Spacing();
+
+        var dontAsk = Plugin.Configuration.SkipCloseConfirmation;
+        if (ImGui.Checkbox(Loc.T("common.close_plugin_dont_ask"), ref dontAsk))
+        {
+            Plugin.Configuration.SkipCloseConfirmation = dontAsk;
+            Plugin.Configuration.Save();
+        }
         ImGui.Spacing();
         ImGui.Spacing();
 

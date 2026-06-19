@@ -50,7 +50,8 @@ public sealed class MiniWindow : Window, IDisposable
       | ImGuiWindowFlags.NoScrollbar
       | ImGuiWindowFlags.NoScrollWithMouse
       | ImGuiWindowFlags.NoTitleBar
-      | ImGuiWindowFlags.NoMove)
+      | ImGuiWindowFlags.NoMove
+      | ImGuiWindowFlags.NoDocking)
     {
         _main = main;
         _notifications = notifications;
@@ -63,6 +64,11 @@ public sealed class MiniWindow : Window, IDisposable
         _notifications.UnreadChatMessageArrived += OnUnreadChatMessageArrived;
         _notifications.PendingWarningRaised += OnPendingWarningRaised;
     }
+
+    private bool _recenterRequested;
+
+    /// <summary>Queues a one-shot recenter on the next frame (ImGui isn't valid from the command thread).</summary>
+    public void RequestRecenter() => _recenterRequested = true;
 
     private void OnUnreadChatMessageArrived()
     {
@@ -108,6 +114,13 @@ public sealed class MiniWindow : Window, IDisposable
     public override void Draw()
     {
         using var bodyFont = UiFonts.Body?.Push();
+
+        if (_recenterRequested)
+        {
+            _recenterRequested = false;
+            var vp = ImGui.GetMainViewport();
+            ImGui.SetWindowPos(vp.Pos + (vp.Size - ImGui.GetWindowSize()) * 0.5f);
+        }
 
         ApplyShake();
 
@@ -182,10 +195,9 @@ public sealed class MiniWindow : Window, IDisposable
 
         if (iconClicked)
         {
-            // Hide both windows; the plugin stays connected so notifications keep arriving.
-            _main.IsOpen = false;
-            IsOpen = false;
+            // Confirm via the shared close modal (or close immediately if the user opted out).
             _mouseDownOnWindow = false;
+            _main.RequestClose();
             return;
         }
 

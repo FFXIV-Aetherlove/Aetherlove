@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using AetherLove.Changelog;
@@ -23,6 +24,9 @@ public sealed class AetherLoveBootstrap : IHostedService
 {
     public const string CommandName = "/aetherlove";
 
+    /// <summary>Short alias for <see cref="CommandName"/>.</summary>
+    public const string AliasCommandName = "/love";
+
     private readonly IPluginLog _log;
     private readonly IDalamudPluginInterface _pluginInterface;
     private readonly ICommandManager _commandManager;
@@ -31,6 +35,7 @@ public sealed class AetherLoveBootstrap : IHostedService
     private readonly MainPluginWindow _mainWindow;
     private readonly MiniWindow _miniWindow;
     private readonly ChangelogWindow _changelogWindow;
+    private readonly DebugWindow _debugWindow;
     private readonly Widgets.ModalHost _modalHost = new();
     private readonly ScreenRouter _router;
     private readonly Configuration _config;
@@ -57,6 +62,7 @@ public sealed class AetherLoveBootstrap : IHostedService
         MainPluginWindow mainWindow,
         MiniWindow miniWindow,
         ChangelogWindow changelogWindow,
+        DebugWindow debugWindow,
         ScreenRouter router,
         Configuration config,
         SessionBootstrapper bootstrap,
@@ -71,6 +77,7 @@ public sealed class AetherLoveBootstrap : IHostedService
         _mainWindow = mainWindow;
         _miniWindow = miniWindow;
         _changelogWindow = changelogWindow;
+        _debugWindow = debugWindow;
         _router = router;
         _config = config;
         _bootstrap = bootstrap;
@@ -88,11 +95,16 @@ public sealed class AetherLoveBootstrap : IHostedService
         _windowSystem.AddWindow(_mainWindow);
         _windowSystem.AddWindow(_miniWindow);
         _windowSystem.AddWindow(_changelogWindow);
+        _windowSystem.AddWindow(_debugWindow);
         _windowSystem.AddWindow(_modalHost);
 
         _commandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
-            HelpMessage = "Open AetherLove."
+            HelpMessage = "Open AetherLove. Subcommands: \"resetscreen\" (recenter the window), \"debug\" (diagnostics)."
+        });
+        _commandManager.AddHandler(AliasCommandName, new CommandInfo(OnCommand)
+        {
+            HelpMessage = "Alias for /aetherlove."
         });
 
         _pluginInterface.UiBuilder.Draw += _windowSystem.Draw;
@@ -150,6 +162,7 @@ public sealed class AetherLoveBootstrap : IHostedService
         Plugin.Framework.Update -= OnFrameworkUpdate;
 
         _commandManager.RemoveHandler(CommandName);
+        _commandManager.RemoveHandler(AliasCommandName);
 
         _pulse.Stop();
 
@@ -165,7 +178,6 @@ public sealed class AetherLoveBootstrap : IHostedService
     /// command doesn't reload the current screen.</summary>
     private void OpenIfClosed()
     {
-        _pulse.MarkActivity();
         if (_mainWindow.IsOpen || _miniWindow.IsOpen)
         {
             return;
@@ -292,6 +304,33 @@ public sealed class AetherLoveBootstrap : IHostedService
 
     private void OnCommand(string command, string args)
     {
+        var sub = args.Trim();
+        if (sub.Equals("resetscreen", StringComparison.OrdinalIgnoreCase))
+        {
+            ResetScreen();
+            return;
+        }
+        if (sub.Equals("debug", StringComparison.OrdinalIgnoreCase))
+        {
+            _debugWindow.IsOpen = true;
+            return;
+        }
         OpenIfClosed();
+    }
+
+    /// <summary>Recenters the currently-shown window (full phone or minimised bubble) on the game screen,
+    /// recovering one that was dragged off-screen. Opens the full window first if neither is showing.</summary>
+    private void ResetScreen()
+    {
+        if (_miniWindow.IsOpen)
+        {
+            _miniWindow.RequestRecenter();
+            return;
+        }
+        if (!_mainWindow.IsOpen)
+        {
+            OpenIfClosed();
+        }
+        _mainWindow.RequestRecenter();
     }
 }

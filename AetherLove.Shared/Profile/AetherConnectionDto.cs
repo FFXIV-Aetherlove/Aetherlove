@@ -1,4 +1,5 @@
 using System;
+using AetherLove.Shared.News;
 using MessagePack;
 
 namespace AetherLove.Shared.Profile;
@@ -30,4 +31,5 @@ public sealed record AetherConnectionDto(
     string? ModerationNotes,
     WarningDto[] Warnings,
     int NewMatchCount,
-    bool HasKeyBundle);
+    bool HasKeyBundle,
+    NewsSummaryDto[] UnseenNews);

@@ -71,6 +71,9 @@ public class Configuration : IPluginConfiguration
     /// <summary>Mutes the lub-dub heartbeat that plays on the startup splash.</summary>
     public bool DisableStartupHeartbeatSound { get; set; } = false;
 
+    /// <summary>Skip the "close AetherLove?" confirmation modal and close the windows immediately.</summary>
+    public bool SkipCloseConfirmation { get; set; } = false;
+
     /// <summary>Master switch over every notification; when off the options below are ignored.</summary>
     public bool EnableNotifications { get; set; } = true;
 

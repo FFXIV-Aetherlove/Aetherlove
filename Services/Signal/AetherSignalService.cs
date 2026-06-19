@@ -11,6 +11,7 @@ using AetherLove.Windows;
 using AetherLove.Shared.Matching;
 using AetherLove.Shared.Messaging;
 using AetherLove.Shared.Moderation;
+using AetherLove.Shared.News;
 using AetherLove.Shared.Profile;
 using Dalamud.Plugin.Services;
 using MessagePack;
@@ -346,6 +347,40 @@ public sealed class AetherSignalService : IAsyncDisposable
             else
             {
                 _notifications.RaisePendingWarning();
+            }
+        });
+
+        hub.On<NewsPublishedPushDto>("NewsPublished", payload =>
+        {
+            _log.Information($"[AetherSignalService] NewsPublished push: {payload.Summary.Id}.");
+            _services.GetRequiredService<SessionBootstrapper>().AppendNewsToSnapshot(payload.Summary);
+
+            // Phone open: interrupt and show it now. Minimised/closed: badge + a chat-line notification,
+            // and defer the news screen until the user opens the phone.
+            if (_services.GetRequiredService<MainPluginWindow>().IsOpen)
+            {
+                _router.Navigate(Screen.News);
+            }
+            else
+            {
+                _notifications.RaisePendingNews();
+                _notifier.NotifyNews(payload.Summary.Title);
+            }
+        });
+
+        hub.On<NewsTestPushDto>("NewsTestPush", payload =>
+        {
+            _log.Information($"[AetherSignalService] NewsTestPush (staff preview): {payload.Summary.Id}.");
+            _services.GetRequiredService<NewsScreen>().QueuePreview(payload.Summary.Id);
+
+            if (_services.GetRequiredService<MainPluginWindow>().IsOpen)
+            {
+                _router.Navigate(Screen.News);
+            }
+            else
+            {
+                _notifications.RaisePendingNews();
+                _notifier.NotifyNews(payload.Summary.Title);
             }
         });
 

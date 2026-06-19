@@ -40,8 +40,7 @@ internal static class DeckPt
         ["deck.match_fx_treasure_title"] = "TESOURO ENCONTRADO",
         ["deck.match_start_chatting"] = "Começar a Conversar",
         ["deck.match_keep_swiping"] = "Continuar Deslizando",
-        ["deck.no_pool_heading"] = "Sem novos matches para você com base nas suas preferências",
-        ["deck.no_pool_body"] = "Durante o beta, isso é esperado",
-        ["deck.no_pool_footer"] = "Tente novamente mais tarde! <3",
+        ["deck.no_pool_heading"] = "Sem mais matches",
+        ["deck.no_pool_body"] = "Não foram encontrados mais matches para você com os seus critérios atuais. Amplie seus critérios e tente novamente mais tarde.",
     };
 }

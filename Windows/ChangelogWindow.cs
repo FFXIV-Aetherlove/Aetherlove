@@ -14,7 +14,8 @@ namespace AetherLove.Windows;
 /// independent of the phone-shell UI.</summary>
 public sealed class ChangelogWindow : Window
 {
-    public ChangelogWindow() : base($"{Loc.T("common.changelog_window_title")}##Changelog")
+    public ChangelogWindow() : base($"{Loc.T("common.changelog_window_title")}##Changelog",
+        ImGuiWindowFlags.NoDocking)
     {
         Size = new Vector2(520, 560);
         SizeCondition = ImGuiCond.FirstUseEver;

@@ -14,6 +14,8 @@ internal static class SettingsEn
         ["settings.section_general"] = "General",
         ["settings.section_notifications"] = "Notifications",
         ["settings.section_moderation"] = "Moderation",
+        ["settings.section_other"] = "Other",
+        ["settings.section_danger_zone"] = "Danger zone",
 
         // Phone size picker (AppearancePicker)
         ["settings.phone_size_small"] = "Small",
@@ -23,10 +25,12 @@ internal static class SettingsEn
 
         // General
         ["settings.disable_startup_heartbeat"] = "Disable startup heartbeat sound",
+        ["settings.confirm_before_close"] = "Confirm before closing AetherLove",
 
         // Buttons
         ["settings.view_changelog"] = "View changelog",
         ["settings.send_feedback"] = "Send feedback",
+        ["settings.terms_of_service"] = "Terms of Service",
         ["settings.delete_account"] = "Delete Account",
         ["settings.create_new_profile"] = "Create a new profile",
         ["settings.cancel"] = "Cancel",
@@ -49,7 +53,7 @@ internal static class SettingsEn
         ["settings.popup_messages"] = "Show a popup for new messages",
         ["settings.popup_matches"] = "Show a popup for new matches",
         ["settings.auto_open_minimized"] = "Open minimized automatically when you log in",
-        ["settings.pulse_optout"] = "Occasional in-game messages",
+        ["settings.pulse_optout"] = "Receive amazing messages from the Aethernet team to remind you to swipe",
         ["settings.pulse_optout_tooltip"] = "Every so often, AetherLove may drop a playful line into your game chat. Turn this off to stop them.",
         ["settings.combat_behavior"] = "When entering combat",
         ["settings.combat_behavior_hide"] = "Hide AetherLove",
@@ -94,5 +98,16 @@ internal static class SettingsEn
         ["settings.submit"] = "Submit",
         ["settings.feedback_rate_limited"] = "You can only send feedback {0} times per hour. Please try again later.",
         ["settings.feedback_send_failed"] = "Couldn't send your feedback. Please try again.",
+
+        ["settings.contributors"] = "Contributors",
+        ["settings.contributors_thanks_title"] = "Thank you",
+        ["settings.contributors_intro"] = "AetherLove could not be possible without:",
+        ["settings.contributors_council"] = "The Chon-Chon Council",
+        ["settings.contributors_moderation"] = "Moderation: Su",
+        ["settings.contributors_translators"] = "Translators: Tears, Mufami, Terashi, Su, Astraea",
+        ["settings.contributors_xivauth"] = "XIVAuth by KazWolfe",
+        ["settings.contributors_punish"] = "Puni.sh",
+        ["settings.contributors_dalamud"] = "The Dalamud project",
+        ["settings.contributors_testers"] = "All the wonderful beta testers across Eorzea.",
     };
 }

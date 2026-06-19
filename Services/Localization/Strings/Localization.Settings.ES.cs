@@ -13,6 +13,8 @@ internal static class SettingsEs
         ["settings.section_general"] = "General",
         ["settings.section_notifications"] = "Notificaciones",
         ["settings.section_moderation"] = "Moderación",
+        ["settings.section_other"] = "Otros",
+        ["settings.section_danger_zone"] = "Zona de peligro",
 
         ["settings.phone_size_small"] = "Pequeño",
         ["settings.phone_size_medium"] = "Mediano",
@@ -20,9 +22,11 @@ internal static class SettingsEs
         ["settings.phone_size_caption"] = "Escala todo el teléfono. Los tamaños mayores son ideales para pantallas de alta resolución; puede que Grande no quepa en una pantalla de 1080p.",
 
         ["settings.disable_startup_heartbeat"] = "Desactivar el sonido de latido al iniciar",
+        ["settings.confirm_before_close"] = "Confirmar antes de cerrar AetherLove",
 
         ["settings.view_changelog"] = "Ver registro de cambios",
         ["settings.send_feedback"] = "Enviar comentarios",
+        ["settings.terms_of_service"] = "Términos del servicio",
         ["settings.delete_account"] = "Eliminar cuenta",
         ["settings.create_new_profile"] = "Crear un perfil nuevo",
         ["settings.cancel"] = "Cancelar",
@@ -43,7 +47,7 @@ internal static class SettingsEs
         ["settings.popup_messages"] = "Mostrar un pop-up para mensajes nuevos",
         ["settings.popup_matches"] = "Mostrar un pop-up para coincidencias nuevas",
         ["settings.auto_open_minimized"] = "Abrir minimizado automáticamente al iniciar sesión",
-        ["settings.pulse_optout"] = "Mensajes ocasionales en el juego",
+        ["settings.pulse_optout"] = "Recibe mensajes increíbles del equipo de Aethernet para recordarte que deslices",
         ["settings.pulse_optout_tooltip"] = "De vez en cuando, AetherLove puede dejar un mensaje divertido en tu chat del juego. Desactívalo para detenerlos.",
         ["settings.combat_behavior"] = "Al entrar en combate",
         ["settings.combat_behavior_hide"] = "Ocultar AetherLove",
@@ -84,5 +88,16 @@ internal static class SettingsEs
         ["settings.submit"] = "Enviar",
         ["settings.feedback_rate_limited"] = "Solo puedes enviar comentarios {0} veces por hora. Inténtalo de nuevo más tarde.",
         ["settings.feedback_send_failed"] = "No se pudieron enviar tus comentarios. Inténtalo de nuevo.",
+
+        ["settings.contributors"] = "Colaboradores",
+        ["settings.contributors_thanks_title"] = "Gracias",
+        ["settings.contributors_intro"] = "AetherLove no sería posible sin:",
+        ["settings.contributors_council"] = "The Chon-Chon Council",
+        ["settings.contributors_moderation"] = "Moderación: Su",
+        ["settings.contributors_translators"] = "Traductores: Tears, Mufami, Terashi, Su, Astraea",
+        ["settings.contributors_xivauth"] = "XIVAuth by KazWolfe",
+        ["settings.contributors_punish"] = "Puni.sh",
+        ["settings.contributors_dalamud"] = "The Dalamud project",
+        ["settings.contributors_testers"] = "Todos los maravillosos beta testers de Eorzea.",
     };
 }

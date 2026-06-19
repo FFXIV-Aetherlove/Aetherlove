@@ -39,6 +39,7 @@ public partial class MyProfileScreen
 
     private readonly FileDialogManager _imgFileDialog = new();
     private readonly ImageCropPopup _imgCropPopup = new();
+    private readonly SfwImageGateModal _imgSfwGate = new();
     // -1 = avatar, 0-3 = photo slot (0 = main portrait, 1-3 = extras)
     private int _imgPickerTarget;
 
@@ -124,39 +125,17 @@ public partial class MyProfileScreen
         _committingImages = true;
         var ct = _cts.Token;
 
-        var avatarUpload = _imgAvatarConfirmed
-            ? ReadPhotoUpload(_imgAvatarPath, _imgAvatarCropRect, isNsfw: false)
-            : (PhotoUploadDto?)null;
-
-        PhotoUploadDto? mainUpload = null;
-        PhotoUploadDto? extra1Upload = null;
-        PhotoUploadDto? extra2Upload = null;
-        PhotoUploadDto? extra3Upload = null;
+        // Snapshot the upload inputs on the UI thread; the heavy decode/resize/encode runs off-thread below.
+        var avatarConfirmed = _imgAvatarConfirmed;
+        var avatarPath = _imgAvatarPath;
+        var avatarCrop = _imgAvatarCropRect;
+        var slotInputs = new (bool Confirmed, string Path, Vector4 Crop, bool IsNsfw)[4];
         for (int i = 0; i < 4; i++)
         {
             var slot = _imgPhotoSlots[i];
-            if (!slot.Confirmed)
-            {
-                continue;
-            }
             // Main portrait (i == 0) is always SFW by policy. Extras carry their per-photo declaration.
             var isNsfw = i != 0 && slot.Declaration == PhotoNsfwDecl.Nsfw;
-            var dto = ReadPhotoUpload(slot.Path, slot.CropRect, isNsfw);
-            switch (i)
-            {
-                case 0:
-                    mainUpload = dto;
-                    break;
-                case 1:
-                    extra1Upload = dto;
-                    break;
-                case 2:
-                    extra2Upload = dto;
-                    break;
-                case 3:
-                    extra3Upload = dto;
-                    break;
-            }
+            slotInputs[i] = (slot.Confirmed, slot.Path, slot.CropRect, isNsfw);
         }
 
         // Server orders: avatar=0, main=1, extras=2/3/4.
@@ -173,6 +152,37 @@ public partial class MyProfileScreen
         {
             try
             {
+                var avatarUpload = avatarConfirmed
+                    ? ReadPhotoUpload(avatarPath, avatarCrop, isNsfw: false, PhotoKind.Avatar)
+                    : (PhotoUploadDto?)null;
+                PhotoUploadDto? mainUpload = null;
+                PhotoUploadDto? extra1Upload = null;
+                PhotoUploadDto? extra2Upload = null;
+                PhotoUploadDto? extra3Upload = null;
+                for (int i = 0; i < 4; i++)
+                {
+                    if (!slotInputs[i].Confirmed)
+                    {
+                        continue;
+                    }
+                    var dto = ReadPhotoUpload(slotInputs[i].Path, slotInputs[i].Crop, slotInputs[i].IsNsfw, PhotoKind.Portrait);
+                    switch (i)
+                    {
+                        case 0:
+                            mainUpload = dto;
+                            break;
+                        case 1:
+                            extra1Upload = dto;
+                            break;
+                        case 2:
+                            extra2Upload = dto;
+                            break;
+                        case 3:
+                            extra3Upload = dto;
+                            break;
+                    }
+                }
+
                 if (avatarUpload is not null
                     || mainUpload is not null
                     || extra1Upload is not null
@@ -751,9 +761,20 @@ public partial class MyProfileScreen
 
     private void OpenImgFilePicker()
     {
+        // Avatar (-1) and the first profile photo (0) are SFW-mandatory; gate them behind the rules modal.
+        if (_imgPickerTarget is -1 or 0)
+        {
+            _imgSfwGate.Open(OpenImgFilePickerCore);
+            return;
+        }
+        OpenImgFilePickerCore();
+    }
+
+    private void OpenImgFilePickerCore()
+    {
         _imgFileDialog.OpenFileDialog(
             title: Loc.T("profile.select_image"),
-            filters: Loc.T("profile.image_files_filter") + "{.png,.jpg,.jpeg,.bmp}",
+            filters: Loc.T("profile.image_files_filter") + "{.png,.jpg,.jpeg,.bmp,.webp}",
             callback: (ok, path) =>
             {
                 if (!ok)
@@ -763,7 +784,7 @@ public partial class MyProfileScreen
 
                 if (_imgPickerTarget == -1)
                 {
-                    var handle = Plugin.TextureProvider.GetFromFile(path);
+                    var handle = LoadPickedPreview(path);
                     _imgAvatarPath = path;
                     _imgAvatarConfirmed = false;
                     _imgAvatarHandle = handle;
@@ -795,7 +816,7 @@ public partial class MyProfileScreen
                     var prevHandle = slot.Handle;
                     var prevCropRect = slot.CropRect;
                     var prevConf = slot.Confirmed;
-                    var handle = Plugin.TextureProvider.GetFromFile(path);
+                    var handle = LoadPickedPreview(path);
 
                     slot.Path = path;
                     slot.Confirmed = false;

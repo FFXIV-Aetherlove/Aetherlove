@@ -51,9 +51,9 @@ internal static class CommonFr
         ["common.nsfw_decl_sfw"] = "cette photo est SFW",
         ["common.nsfw_decl_nsfw"] = "cette photo est NSFW",
         ["common.lalafell_nsfw_title"] = "NSFW non disponible",
-        ["common.lalafell_nsfw_body"] = "Nous n'autorisons pas les photos NSFW de personnages Lalafell. Comme les Lalafells ont une apparence enfantine, nous appliquons cette politique de manière uniforme à chaque compte Lalafell et ne faisons aucune exception au cas par cas.\n\nVotre photo a été remise en SFW. Si cette photo n'est pas safe-for-work, veuillez la retirer et en téléverser une autre.",
+        ["common.lalafell_nsfw_body"] = "Nous n'autorisons pas les photos NSFW de personnages Lalafell. Comme les Lalafells ont une apparence enfantine, nous appliquons cette politique de manière uniforme à chaque compte Lalafell et ne faisons aucune exception au cas par cas.\n\nVotre photo a été remise en SFW. Si cette photo n'est pas safe-for-work, veuillez la retirer et en envoyer une autre.",
         ["common.undeclared_photo_title"] = "Déclaration requise",
-        ["common.undeclared_photo_body"] = "Vous devez indiquer si votre autre photo est SFW ou NSFW dans la zone de sélection avant d'en téléverser une autre.",
+        ["common.undeclared_photo_body"] = "Vous devez indiquer si votre autre photo est SFW ou NSFW dans la zone de sélection avant d'en envoyer une autre.",
 
         ["common.changelog_window_title"] = "AetherLove — Nouveautés",
         ["common.whats_new"] = "Nouveautés",
@@ -87,6 +87,7 @@ internal static class CommonFr
         ["common.close_plugin_title"] = "Fermer AetherLove ?",
         ["common.close_plugin_body"] = "Cela masque simplement la fenêtre. Vous resterez connecté et continuerez à recevoir de nouvelles correspondances et des messages tant que le plugin est activé.\n\nRouvrez la fenêtre à tout moment en tapant {0} dans le chat.",
         ["common.close_plugin_tip"] = "Astuce : utilisez plutôt le bouton Réduire en bas pour garder la petite bulle flottante visible avec son badge de notification.",
+        ["common.close_plugin_dont_ask"] = "Ne plus afficher cette fenêtre",
         ["common.close"] = "Fermer",
 
         // Save-error modal
@@ -104,5 +105,17 @@ internal static class CommonFr
         // Image crop window
         ["common.loading_image"] = "Chargement de l'image...",
         ["common.use_this_crop"] = "Utiliser ce recadrage",
+
+        // SFW-image gate modal (main avatar + first profile photo must be SFW)
+        ["common.sfw_gate_title"] = "Profil + Avatar - SFW UNIQUEMENT",
+        ["common.sfw_gate_subtitle"] = "Ce qui n'est PAS SFW :",
+        ["common.sfw_gate_b1"] = "Nudité intégrale, quel que soit le genre.",
+        ["common.sfw_gate_b2"] = "Tétons visibles, quel que soit le genre.",
+        ["common.sfw_gate_b3"] = "Poils pubiens ou zones génitales visibles.",
+        ["common.sfw_gate_b4"] = "Représentations graphiques de sang, de blessures, de plaies ou de dommages corporels.",
+        ["common.sfw_gate_b5"] = "Tatouages, marquages, symboles ou textes obscènes, discriminatoires ou haineux, ou visant des personnes ou des groupes en raison de leur race, origine ethnique, nationalité, religion, genre, orientation sexuelle ou d'autres caractéristiques protégées.",
+        ["common.sfw_gate_b6"] = "Gestes, poses ou références visuelles à caractère sexuel qui sous-entendent ou simulent des actes sexuels, y compris le sexe oral, la masturbation ou toute autre activité sexuelle.",
+        ["common.sfw_gate_secondary"] = "Vous pouvez toujours ajouter du contenu NSFW dans vos images de profil secondaires.",
+        ["common.sfw_gate_ack"] = "Je comprends les règles SFW",
     };
 }

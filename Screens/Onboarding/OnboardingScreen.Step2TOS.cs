@@ -15,16 +15,7 @@ public partial class OnboardingScreen
     private DateTime _tosTimerStart = DateTime.MinValue;
     private const double TosDuration = 15.0;
 
-    private static string[] TosParagraphs =>
-    [
-        Loc.T("onboarding.tos_p1"),
-        Loc.T("onboarding.tos_p2"),
-        Loc.T("onboarding.tos_p3"),
-        Loc.T("onboarding.tos_p4"),
-        Loc.T("onboarding.tos_p5"),
-        Loc.T("onboarding.tos_p6"),
-        Loc.T("onboarding.tos_p7"),
-    ];
+    private static string[] TosParagraphs => TermsOfServiceParagraphs();
 
 
     private void DrawStepTOS()

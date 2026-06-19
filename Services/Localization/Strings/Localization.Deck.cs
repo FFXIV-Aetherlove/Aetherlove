@@ -40,8 +40,7 @@ internal static class DeckEn
         ["deck.match_fx_treasure_title"] = "TREASURE FOUND",
         ["deck.match_start_chatting"] = "Start Chatting",
         ["deck.match_keep_swiping"] = "Keep Swiping",
-        ["deck.no_pool_heading"] = "No new matches for you based on your preferences",
-        ["deck.no_pool_body"] = "During beta this is to be expected",
-        ["deck.no_pool_footer"] = "Try again later! <3",
+        ["deck.no_pool_heading"] = "You're out of matches",
+        ["deck.no_pool_body"] = "No more matches were found for you with your current criteria. Broaden your criteria, and try again later.",
     };
 }

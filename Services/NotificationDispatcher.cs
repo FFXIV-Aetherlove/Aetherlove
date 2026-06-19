@@ -16,6 +16,7 @@ public sealed class NotificationDispatcher : IDisposable
 {
     private const uint ChatLinkCommandId = 1;
     private const uint PulseLinkCommandId = 2;
+    private const uint NewsLinkCommandId = 3;
     private const ushort LinkColor = 539;
 
     private readonly IChatGui _chat;
@@ -25,6 +26,7 @@ public sealed class NotificationDispatcher : IDisposable
 
     private readonly DalamudLinkPayload? _chatLink;
     private readonly DalamudLinkPayload? _pulseLink;
+    private readonly DalamudLinkPayload? _newsLink;
 
     public NotificationDispatcher(IChatGui chat, Configuration config, IServiceProvider services)
     {
@@ -36,6 +38,7 @@ public sealed class NotificationDispatcher : IDisposable
         {
             _chatLink = _chat.AddChatLinkHandler(ChatLinkCommandId, (_, _) => OpenChat());
             _pulseLink = _chat.AddChatLinkHandler(PulseLinkCommandId, (_, _) => OpenDeck());
+            _newsLink = _chat.AddChatLinkHandler(NewsLinkCommandId, (_, _) => OpenNews());
         }
         catch (Exception ex)
         {
@@ -111,6 +114,58 @@ public sealed class NotificationDispatcher : IDisposable
         catch (Exception ex)
         {
             Plugin.Log.Warning(ex, "[NotificationDispatcher] OpenDeck failed.");
+        }
+    }
+
+    private void OpenNews()
+    {
+        try
+        {
+            _services.GetService<MainPluginWindow>()?.OpenToNews();
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Warning(ex, "[NotificationDispatcher] OpenNews failed.");
+        }
+    }
+
+    /// <summary>Announces a freshly-published news item in the game chat with a link that opens News.</summary>
+    public void NotifyNews(string title)
+    {
+        if (!_config.EnableNotifications)
+        {
+            return;
+        }
+        PrintNews(title);
+        if (_config.EnableNotificationSounds)
+        {
+            NotificationSoundPlayer.Play(_config.NotificationSoundChoice);
+        }
+    }
+
+    private void PrintNews(string title)
+    {
+        try
+        {
+            var sb = new SeStringBuilder()
+                .AddText("[AetherLove] ")
+                .AddText(Loc.T("news.notif_available", title));
+
+            if (_newsLink is not null)
+            {
+                sb.AddText(" ")
+                  .Add(_newsLink)
+                  .AddUiForeground(LinkColor)
+                  .AddText($"[{Loc.T("news.notif_link")}]")
+                  .AddUiForegroundOff()
+                  .Add(RawPayload.LinkTerminator);
+            }
+
+            _chat.Print(sb.BuiltString);
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Warning(ex, "[NotificationDispatcher] News print failed.");
         }
     }
 
@@ -200,6 +255,7 @@ public sealed class NotificationDispatcher : IDisposable
         {
             _chat.RemoveChatLinkHandler(ChatLinkCommandId);
             _chat.RemoveChatLinkHandler(PulseLinkCommandId);
+            _chat.RemoveChatLinkHandler(NewsLinkCommandId);
         }
         catch (Exception ex)
         {

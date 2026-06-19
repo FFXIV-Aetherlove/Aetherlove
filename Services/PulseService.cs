@@ -8,15 +8,14 @@ using Dalamud.Game.ClientState.Conditions;
 
 namespace AetherLove.Services;
 
-/// <summary>Surfaces a server-provided presence line in the game chat after a long stretch of plugin
-/// inactivity, only while the player is in a safe state. The schedule is client-owned and persisted; the
-/// server only supplies the line when asked.</summary>
+/// <summary>Surfaces a server-provided presence line in the game chat once the player hasn't swiped for
+/// <see cref="InactivityWindow"/>, only while they're in a safe state. The schedule is client-owned and
+/// persisted; the server only supplies the line when asked.</summary>
 public sealed class PulseService : IDisposable
 {
     private static readonly TimeSpan TickInterval = TimeSpan.FromSeconds(300);
-    private static readonly TimeSpan MinWindow = TimeSpan.FromHours(24);
-    private static readonly TimeSpan MaxWindow = TimeSpan.FromHours(36);
-    private static readonly TimeSpan SessionWarmup = TimeSpan.FromMinutes(30);
+    private static readonly TimeSpan InactivityWindow = TimeSpan.FromHours(4);
+    private static readonly TimeSpan SessionWarmup = TimeSpan.FromMinutes(5);
 
     private readonly Configuration _config;
     private readonly AetherLoveHubClient _hub;
@@ -58,20 +57,15 @@ public sealed class PulseService : IDisposable
 
     private void OnLogin() => _sessionStartUtc = DateTimeOffset.UtcNow;
 
-    /// <summary>Records a plugin interaction and pushes the next eligible time out by a random 24–36 h.
-    /// Held in memory until the next flush so frequent calls (e.g. swipes) don't hit disk.</summary>
+    /// <summary>Records a swipe and pushes the next eligible time out by <see cref="InactivityWindow"/>, so a
+    /// line only fires after the player stops swiping. Held in memory until the next flush so frequent swipes
+    /// don't hit disk.</summary>
     public void MarkActivity()
     {
         var now = DateTimeOffset.UtcNow;
         _config.Pulse.LastActivityUtc = now;
-        _config.Pulse.NextEligibleUtc = now + RandomWindow();
+        _config.Pulse.NextEligibleUtc = now + InactivityWindow;
         _activityDirty = true;
-    }
-
-    private static TimeSpan RandomWindow()
-    {
-        var spreadTicks = (MaxWindow - MinWindow).Ticks;
-        return MinWindow + TimeSpan.FromTicks((long)(Random.Shared.NextDouble() * spreadTicks));
     }
 
     private void Flush()
@@ -156,7 +150,7 @@ public sealed class PulseService : IDisposable
         var pulse = await _hub.GetPulseAsync(lang, ct).ConfigureAwait(false);
 
         // Reschedule either way so an empty pool doesn't re-hit the hub every tick.
-        _config.Pulse.NextEligibleUtc = DateTimeOffset.UtcNow + RandomWindow();
+        _config.Pulse.NextEligibleUtc = DateTimeOffset.UtcNow + InactivityWindow;
 
         if (pulse is null || string.IsNullOrWhiteSpace(pulse.Text))
         {

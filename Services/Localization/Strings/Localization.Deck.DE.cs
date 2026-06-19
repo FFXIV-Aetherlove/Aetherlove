@@ -41,8 +41,7 @@ internal static class DeckDe
         ["deck.match_fx_treasure_title"] = "SCHATZ GEFUNDEN",
         ["deck.match_start_chatting"] = "Chat starten",
         ["deck.match_keep_swiping"] = "Weiter wischen",
-        ["deck.no_pool_heading"] = "Keine neuen Matches für dich basierend auf deinen Vorlieben",
-        ["deck.no_pool_body"] = "In der Beta ist das zu erwarten",
-        ["deck.no_pool_footer"] = "Schau später nochmal rein! <3",
+        ["deck.no_pool_heading"] = "Keine Matches mehr",
+        ["deck.no_pool_body"] = "Mit deinen aktuellen Kriterien wurden keine weiteren Matches für dich gefunden. Erweitere deine Kriterien und versuche es später noch einmal.",
     };
 }

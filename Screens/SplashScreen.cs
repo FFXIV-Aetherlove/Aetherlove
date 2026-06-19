@@ -139,40 +139,7 @@ public sealed class SplashScreen : IDisposable
     private void Advance()
     {
         StopAudio();
-
-        if (_bootstrap.LastResult == SessionBootstrapResult.OutdatedClient)
-        {
-            _router.Navigate(Screen.Outdated);
-            return;
-        }
-
-        if (_bootstrap.LastResult == SessionBootstrapResult.Banned)
-        {
-            _router.Navigate(Screen.Banned);
-            return;
-        }
-
-        if (_bootstrap.HasUnseenWarnings &&
-            (_bootstrap.LastResult == SessionBootstrapResult.SignedInActive ||
-             _bootstrap.LastResult == SessionBootstrapResult.SignedInOnboarding))
-        {
-            _router.Navigate(Screen.WarningsAcknowledge);
-            return;
-        }
-
-        if (_bootstrap.NeedsPassphraseUnlock)
-        {
-            _router.Navigate(Screen.PassphraseUnlock);
-            return;
-        }
-
-        var target = _bootstrap.LastResult switch
-        {
-            SessionBootstrapResult.SignedInActive => Screen.Deck,
-            SessionBootstrapResult.SignedInOnboarding => Screen.Onboarding,
-            _ => Screen.Onboarding,
-        };
-        _router.Navigate(target);
+        _router.Navigate(_bootstrap.ResolveNextStartupScreen());
     }
 
     public void Dispose() => StopAudio();

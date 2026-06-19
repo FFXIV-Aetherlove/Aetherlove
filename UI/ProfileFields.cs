@@ -28,6 +28,7 @@ internal static class ProfileFields
     [
         Gender.Male,
         Gender.Female,
+        Gender.Other,
     ];
 
     internal static readonly Region[] RegionValues =
@@ -168,6 +169,7 @@ internal static class ProfileFields
     [
         Loc.T("onboarding.gender_male"),
         Loc.T("onboarding.gender_female"),
+        Loc.T("onboarding.gender_other"),
     ];
 
     internal static string[] Expansions =>

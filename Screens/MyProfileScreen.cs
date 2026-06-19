@@ -659,31 +659,19 @@ public partial class MyProfileScreen
 
         ImGui.Spacing();
         ImGui.TextColored(muted, Loc.T("profile.preview"));
-        ImGui.PushStyleColor(ImGuiCol.ChildBg, UiColors.PreviewPaneBg);
-        ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, Px(4f));
         var previewW = w - Px(8f);
-        // Height grows with content; subtract the child border before measuring.
-        var previewH = _bio.Length > 0
-            ? Math.Max(Px(44f), parsedBio.MeasureHeight(previewW - Px(4f)))
-            : Px(44f);
-        using (var prev = ImRaii.Child("##edBioPreview", new Vector2(previewW, previewH), true))
+        if (_bio.Length > 0)
         {
-            if (prev.Success)
-            {
-                if (_bio.Length > 0)
-                {
-                    ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
-                    parsedBio.Draw();
-                    ImGui.PopTextWrapPos();
-                }
-                else
-                {
-                    ImGui.TextColored(new Vector4(0.38f, 0.38f, 0.38f, 1f), Loc.T("profile.bio_placeholder"));
-                }
-            }
+            // Render through the shared DrawWrapped helper (measure/draw/wrap-pos all share one edge),
+            // tinted to match the real profile's About-me text.
+            ImGui.PushStyleColor(ImGuiCol.Text, UiColors.BioText);
+            parsedBio.DrawWrapped("##edBioPreview", previewW);
+            ImGui.PopStyleColor();
         }
-        ImGui.PopStyleVar();
-        ImGui.PopStyleColor();
+        else
+        {
+            ImGui.TextColored(UiColors.BioPlaceholder, Loc.T("profile.bio_placeholder"));
+        }
         ImGui.Spacing();
 
         DrawSectionHeading(Loc.T("profile.heading_character"), t);

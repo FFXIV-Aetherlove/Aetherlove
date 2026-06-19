@@ -247,30 +247,17 @@ public partial class OnboardingScreen
 
         ImGui.Spacing();
         ImGui.TextColored(UiColors.Hint, Loc.T("onboarding.profile_preview"));
-        ImGui.PushStyleColor(ImGuiCol.ChildBg, UiColors.PreviewPaneBg);
-        ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, Px(4f));
         var previewW = Px(340f);
-        var previewH = _bio.Length > 0
-            ? Math.Max(Px(44f), parsedBio.MeasureHeight(previewW - Px(4f)))
-            : Px(44f);
-        using (var prev = ImRaii.Child("##bioPreview", new Vector2(previewW, previewH), true))
+        if (_bio.Length > 0)
         {
-            if (prev.Success)
-            {
-                if (_bio.Length > 0)
-                {
-                    ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
-                    parsedBio.Draw();
-                    ImGui.PopTextWrapPos();
-                }
-                else
-                {
-                    ImGui.TextColored(new Vector4(0.38f, 0.38f, 0.38f, 1f), Loc.T("onboarding.profile_bio_placeholder"));
-                }
-            }
+            ImGui.PushStyleColor(ImGuiCol.Text, UiColors.BioText);
+            parsedBio.DrawWrapped("##bioPreview", previewW);
+            ImGui.PopStyleColor();
         }
-        ImGui.PopStyleVar();
-        ImGui.PopStyleColor();
+        else
+        {
+            ImGui.TextColored(UiColors.BioPlaceholder, Loc.T("onboarding.profile_bio_placeholder"));
+        }
 
         DrawSectionHeading(Loc.T("onboarding.profile_location"), t);
 

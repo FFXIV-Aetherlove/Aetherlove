@@ -42,8 +42,10 @@ internal static class UiColors
     internal static readonly Vector4 NsfwFrameBgHovered = new(0.70f, 0.18f, 0.18f, 1.00f);
     internal static readonly Vector4 NsfwFrameBgActive = new(0.40f, 0.06f, 0.06f, 1.00f);
 
-    /// <summary>Background of the profile-preview pane on the profile form.</summary>
-    internal static readonly Vector4 PreviewPaneBg = new(0.07f, 0.07f, 0.07f, 0.60f);
+    /// <summary>Profile bio body text and its empty-state placeholder, shared by the profile view and
+    /// both bio edit previews.</summary>
+    internal static readonly Vector4 BioText = new(0.88f, 0.88f, 0.88f, 1f);
+    internal static readonly Vector4 BioPlaceholder = new(0.38f, 0.38f, 0.38f, 1f);
 
     /// <summary>Muted grey for draw-list text (placeholder labels, hints).</summary>
     internal const uint TextMuted = 0xFF888888u;

@@ -153,12 +153,14 @@ public sealed class Plugin : IDalamudPlugin
         services.AddSingleton<BannedScreen>();
         services.AddSingleton<WarningAcknowledgeScreen>();
         services.AddSingleton<PassphraseUnlockScreen>();
+        services.AddSingleton<NewsScreen>();
         services.AddSingleton<OfflineScreen>();
         services.AddSingleton<OutdatedScreen>();
 
         services.AddSingleton<MainPluginWindow>();
         services.AddSingleton<MiniWindow>();
         services.AddSingleton<ChangelogWindow>();
+        services.AddSingleton<DebugWindow>();
 
         services.AddSingleton<AetherLoveBootstrap>();
         services.AddHostedService(sp => sp.GetRequiredService<AetherLoveBootstrap>());

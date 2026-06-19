@@ -36,6 +36,7 @@ public partial class OnboardingScreen
 
     private readonly FileDialogManager _fileDialog = new();
     private readonly ImageCropPopup _cropPopup = new();
+    private readonly SfwImageGateModal _sfwGate = new();
     private int _pickerTarget; // -1 = avatar, 0-3 = photo slot
 
 
@@ -342,7 +343,11 @@ public partial class OnboardingScreen
                 return;
 
             case OnboardingStep.Photos:
-                BeginSave("photos", BuildPhotoBatch, (dto, ct) => _hubClient.SavePhotosAsync(dto, ct));
+                // Snapshot the slots on the UI thread; the heavy decode/resize/encode runs in the hub-call
+                // task (off-thread). A PhotoProcessingException there localizes via the save catch.
+                var photoInputs = SnapshotPhotoInputs();
+                BeginSave("photos", () => photoInputs,
+                    (inputs, ct) => _hubClient.SavePhotosAsync(BuildPhotoBatch(inputs), ct));
                 return;
 
             case OnboardingStep.OptionalInfo:
@@ -457,9 +462,20 @@ public partial class OnboardingScreen
 
     private void OpenFilePicker()
     {
+        // Avatar (-1) and the first profile photo (0) are SFW-mandatory; gate them behind the rules modal.
+        if (_pickerTarget is -1 or 0)
+        {
+            _sfwGate.Open(OpenFilePickerCore);
+            return;
+        }
+        OpenFilePickerCore();
+    }
+
+    private void OpenFilePickerCore()
+    {
         _fileDialog.OpenFileDialog(
             title: Loc.T("onboarding.select_photo"),
-            filters: $"{Loc.T("onboarding.image_files")}{{.png,.jpg,.jpeg,.bmp}}",
+            filters: $"{Loc.T("onboarding.image_files")}{{.png,.jpg,.jpeg,.bmp,.webp}}",
             callback: (ok, path) =>
             {
                 if (!ok)
@@ -469,7 +485,7 @@ public partial class OnboardingScreen
                 if (_pickerTarget == -1)
                 {
                     var prevFromServer = _avatarFromServer;
-                    var handle = Plugin.TextureProvider.GetFromFile(path);
+                    var handle = LoadPickedPreview(path);
                     _avatarPath = path;
                     _avatarConfirmed = false;
                     _avatarFromServer = false;
@@ -500,7 +516,7 @@ public partial class OnboardingScreen
                     var prevCropRect = slot.CropRect;
                     var prevConfirmed = slot.Confirmed;
                     var prevFromServer = slot.FromServer;
-                    var handle = Plugin.TextureProvider.GetFromFile(path);
+                    var handle = LoadPickedPreview(path);
                     slot.Path = path;
                     slot.Confirmed = false;
                     slot.FromServer = false;

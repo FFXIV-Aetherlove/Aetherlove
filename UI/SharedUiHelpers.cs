@@ -4,6 +4,7 @@ using System.IO;
 using System.Numerics;
 using AetherLove.Services;
 using AetherLove.Services.Localization;
+using AetherLove.Shared;
 using AetherLove.Shared.Profile;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Textures;
@@ -102,6 +103,19 @@ internal static class SharedUiHelpers
             Plugin.Log.Warning(ex, "[SharedUiHelpers] Failed to open Discord invite.");
         }
     }
+
+    /// <summary>The Terms of Service paragraphs, shared by the onboarding ToS step and the Settings ToS view.</summary>
+    internal static string[] TermsOfServiceParagraphs() =>
+    [
+        Loc.T("onboarding.tos_p1"),
+        Loc.T("onboarding.tos_p2"),
+        Loc.T("onboarding.tos_p3"),
+        Loc.T("onboarding.tos_p4"),
+        Loc.T("onboarding.tos_p5"),
+        Loc.T("onboarding.tos_p6"),
+        Loc.T("onboarding.tos_ai"),
+        Loc.T("onboarding.tos_p7"),
+    ];
 
     /// <summary>Pushes the thin themed scrollbar style used by every scrolling panel; pair with
     /// <see cref="PopScrollbarStyle"/> (4 colours + 1 var).</summary>
@@ -413,16 +427,48 @@ internal static class SharedUiHelpers
         return (88, 101, 242);
     }
 
-    /// <summary>Reads an image file and packs it (with its crop rectangle) into an upload DTO.</summary>
-    internal static PhotoUploadDto ReadPhotoUpload(string path, Vector4 cropRect, bool isNsfw)
+    /// <summary>Loads a just-picked source image for preview/cropping. WIC (notably on Wine) has no WebP
+    /// codec, so a <c>.webp</c> source is transcoded to a cached PNG the loader can read; other formats load
+    /// straight from disk. The transcoded preview keeps the source's pixel dimensions, so the crop rect still
+    /// maps onto the original at save time.</summary>
+    internal static ISharedImmediateTexture? LoadPickedPreview(string path)
+    {
+        if (path.EndsWith(".webp", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var png = PhotoTransform.DecodeToPng(File.ReadAllBytes(path));
+                var dir = Path.Combine(Path.GetTempPath(), "AetherLovePreview");
+                var tex = AvatarDiskCache.Store(dir, "pick", png);
+                if (tex is not null)
+                {
+                    return tex;
+                }
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.Warning(ex, "[SharedUiHelpers] WebP preview transcode failed.");
+            }
+        }
+        return Plugin.TextureProvider.GetFromFile(path);
+    }
+
+    /// <summary>Reads an image file, applies the crop + resize to the slot's target size, and packs the
+    /// small PNG into an upload DTO. The crop fields are set to the full (already-processed) image — the
+    /// server's signal that no further crop/resize is needed. CPU-bound; call off the UI thread. Throws
+    /// <see cref="PhotoProcessingException"/> (a localizable <c>AL_ERR</c> payload) on a bad image.</summary>
+    internal static PhotoUploadDto ReadPhotoUpload(string path, Vector4 cropRect, bool isNsfw, PhotoKind kind)
     {
         var bytes = File.ReadAllBytes(path);
+        var crop = new CropRect((int)cropRect.X, (int)cropRect.Y, (int)cropRect.Z, (int)cropRect.W);
+        var png = PhotoTransform.ProcessToPng(bytes, crop, kind);
+        var (width, height) = PhotoTransform.TargetDimensions(kind);
         return new PhotoUploadDto(
-            Base64: Convert.ToBase64String(bytes),
-            CropX: (int)cropRect.X,
-            CropY: (int)cropRect.Y,
-            CropWidth: (int)cropRect.Z,
-            CropHeight: (int)cropRect.W,
+            Base64: Convert.ToBase64String(png),
+            CropX: 0,
+            CropY: 0,
+            CropWidth: width,
+            CropHeight: height,
             IsNsfw: isNsfw);
     }
 }

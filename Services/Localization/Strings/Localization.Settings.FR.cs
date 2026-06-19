@@ -14,6 +14,8 @@ internal static class SettingsFr
         ["settings.section_general"] = "Général",
         ["settings.section_notifications"] = "Notifications",
         ["settings.section_moderation"] = "Modération",
+        ["settings.section_other"] = "Autre",
+        ["settings.section_danger_zone"] = "Zone de danger",
 
         ["settings.phone_size_small"] = "Petite",
         ["settings.phone_size_medium"] = "Moyenne",
@@ -21,9 +23,11 @@ internal static class SettingsFr
         ["settings.phone_size_caption"] = "Met à l'échelle l'ensemble du téléphone. Les grandes tailles conviennent aux écrans haute résolution ; la taille Grande peut ne pas tenir sur un écran 1080p.",
 
         ["settings.disable_startup_heartbeat"] = "Désactiver le son de battement de cœur au démarrage",
+        ["settings.confirm_before_close"] = "Confirmer avant de fermer AetherLove",
 
         ["settings.view_changelog"] = "Voir le journal des modifications",
-        ["settings.send_feedback"] = "Envoyer un retour",
+        ["settings.send_feedback"] = "Envoyer un commentaire",
+        ["settings.terms_of_service"] = "Conditions d'utilisation",
         ["settings.delete_account"] = "Supprimer le compte",
         ["settings.create_new_profile"] = "Créer un nouveau profil",
         ["settings.cancel"] = "Annuler",
@@ -44,7 +48,7 @@ internal static class SettingsFr
         ["settings.popup_messages"] = "Afficher une fenêtre contextuelle pour les nouveaux messages",
         ["settings.popup_matches"] = "Afficher une fenêtre contextuelle pour les nouvelles correspondances",
         ["settings.auto_open_minimized"] = "Ouvrir automatiquement en mode réduit à la connexion",
-        ["settings.pulse_optout"] = "Messages occasionnels en jeu",
+        ["settings.pulse_optout"] = "Reçois d'incroyables messages de l'équipe Aethernet pour te rappeler de swiper",
         ["settings.pulse_optout_tooltip"] = "De temps en temps, AetherLove peut glisser un message amusant dans votre chat de jeu. Désactivez pour les arrêter.",
         ["settings.combat_behavior"] = "En combat",
         ["settings.combat_behavior_hide"] = "Masquer AetherLove",
@@ -73,9 +77,9 @@ internal static class SettingsFr
         ["settings.back_to_settings_arrow"] = "← Retour aux paramètres",
 
         ["settings.back_to_settings"] = "Retour aux paramètres",
-        ["settings.feedback_thanks"] = "Merci ! Votre retour a été envoyé à l'équipe d'AetherLove.",
+        ["settings.feedback_thanks"] = "Merci ! Votre commentaire a été envoyé à l'équipe d'AetherLove.",
         ["settings.feedback_intro"] = "Vous avez trouvé un bug, vous avez une idée ou une suggestion ? Faites-le-nous savoir.",
-        ["settings.feedback_note"] = "À noter : les retours ne peuvent pas servir à contester un bannissement ou un avertissement.",
+        ["settings.feedback_note"] = "À noter : les commentaires ne peuvent pas servir à contester un bannissement ou un avertissement.",
         ["settings.feedback_type"] = "Type",
         ["settings.feedback_kind_bug"] = "Bug",
         ["settings.feedback_kind_improvement"] = "Amélioration",
@@ -83,7 +87,18 @@ internal static class SettingsFr
         ["settings.feedback_your_message"] = "Votre message",
         ["settings.sending"] = "Envoi…",
         ["settings.submit"] = "Envoyer",
-        ["settings.feedback_rate_limited"] = "Vous ne pouvez envoyer un retour que {0} fois par heure. Veuillez réessayer plus tard.",
-        ["settings.feedback_send_failed"] = "Impossible d'envoyer votre retour. Veuillez réessayer.",
+        ["settings.feedback_rate_limited"] = "Vous ne pouvez envoyer un commentaire que {0} fois par heure. Veuillez réessayer plus tard.",
+        ["settings.feedback_send_failed"] = "Impossible d'envoyer votre commentaire. Veuillez réessayer.",
+
+        ["settings.contributors"] = "Contributeurs",
+        ["settings.contributors_thanks_title"] = "Merci",
+        ["settings.contributors_intro"] = "AetherLove ne serait pas possible sans :",
+        ["settings.contributors_council"] = "The Chon-Chon Council",
+        ["settings.contributors_moderation"] = "Modération : Su",
+        ["settings.contributors_translators"] = "Traducteurs : Tears, Mufami, Terashi, Su, Astraea",
+        ["settings.contributors_xivauth"] = "XIVAuth by KazWolfe",
+        ["settings.contributors_punish"] = "Puni.sh",
+        ["settings.contributors_dalamud"] = "The Dalamud project",
+        ["settings.contributors_testers"] = "Tous les merveilleux bêta-testeurs à travers Éorzéa.",
     };
 }

@@ -24,6 +24,12 @@ public static class HubErrorText
         {
             return LocalizeMessage(hub.Message);
         }
+        // Client-side failures (e.g. PhotoProcessingException from the pre-upload image pipeline) carry the
+        // same AL_ERR payload, so localize them the same way as server errors.
+        if (ex.Message is { } m && m.Contains(HubErrors.Sentinel, StringComparison.Ordinal))
+        {
+            return LocalizeMessage(m);
+        }
         return ex.Message;
     }
 

@@ -40,8 +40,7 @@ internal static class DeckEs
         ["deck.match_fx_treasure_title"] = "TESORO ENCONTRADO",
         ["deck.match_start_chatting"] = "Empezar a chatear",
         ["deck.match_keep_swiping"] = "Seguir deslizando",
-        ["deck.no_pool_heading"] = "No hay nuevas coincidencias para ti según tus preferencias",
-        ["deck.no_pool_body"] = "Durante la beta esto es de esperar",
-        ["deck.no_pool_footer"] = "¡Inténtalo más tarde! <3",
+        ["deck.no_pool_heading"] = "Sin más coincidencias",
+        ["deck.no_pool_body"] = "No se encontraron más coincidencias para ti con tus criterios actuales. Amplía tus criterios e inténtalo de nuevo más tarde.",
     };
 }

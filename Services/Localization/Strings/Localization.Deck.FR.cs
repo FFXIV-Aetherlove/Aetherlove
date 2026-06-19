@@ -41,8 +41,7 @@ internal static class DeckFr
         ["deck.match_fx_treasure_title"] = "TRÉSOR DÉCOUVERT",
         ["deck.match_start_chatting"] = "Commencer à discuter",
         ["deck.match_keep_swiping"] = "Continuer à swiper",
-        ["deck.no_pool_heading"] = "Aucun nouveau match selon vos préférences",
-        ["deck.no_pool_body"] = "Pendant la bêta, c'est à prévoir",
-        ["deck.no_pool_footer"] = "Réessayez plus tard ! <3",
+        ["deck.no_pool_heading"] = "Plus aucune correspondance",
+        ["deck.no_pool_body"] = "Aucune autre correspondance n'a été trouvée selon vos critères actuels. Élargissez vos critères et réessayez plus tard.",
     };
 }

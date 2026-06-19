@@ -86,6 +86,7 @@ internal static class CommonEs
         ["common.close_plugin_title"] = "¿Cerrar AetherLove?",
         ["common.close_plugin_body"] = "Esto solo oculta la ventana. Seguirás conectado y recibirás nuevas coincidencias y mensajes mientras el plugin esté habilitado.\n\nVuelve a abrir la ventana en cualquier momento escribiendo {0} en el chat.",
         ["common.close_plugin_tip"] = "Consejo: usa el botón Minimizar en la parte inferior para mantener visible la pequeña burbuja flotante con su indicador de notificaciones.",
+        ["common.close_plugin_dont_ask"] = "No volver a mostrar esta ventana",
         ["common.close"] = "Cerrar",
 
         // Save-error modal
@@ -103,5 +104,17 @@ internal static class CommonEs
         // Image crop window
         ["common.loading_image"] = "Cargando imagen...",
         ["common.use_this_crop"] = "Usar este recorte",
+
+        // SFW-image gate modal (main avatar + first profile photo must be SFW)
+        ["common.sfw_gate_title"] = "Perfil + Avatar - SOLO SFW",
+        ["common.sfw_gate_subtitle"] = "Qué NO es SFW:",
+        ["common.sfw_gate_b1"] = "Desnudez total de cualquier género.",
+        ["common.sfw_gate_b2"] = "Pezones visibles de cualquier género.",
+        ["common.sfw_gate_b3"] = "Vello púbico o zonas genitales visibles.",
+        ["common.sfw_gate_b4"] = "Representaciones gráficas de sangre, lesiones, heridas o daño corporal.",
+        ["common.sfw_gate_b5"] = "Tatuajes, marcas, símbolos o texto que sean obscenos, discriminatorios o que inciten al odio, o que ataquen a personas o grupos por motivos de raza, etnia, nacionalidad, religión, género, orientación sexual u otras características protegidas.",
+        ["common.sfw_gate_b6"] = "Gestos, posturas o referencias visuales de carácter sexual que impliquen o simulen actos sexuales, incluidos el sexo oral, la masturbación u otra actividad sexual.",
+        ["common.sfw_gate_secondary"] = "Aún puedes subir material NSFW en tus imágenes de perfil secundarias.",
+        ["common.sfw_gate_ack"] = "Entiendo las reglas para SFW",
     };
 }

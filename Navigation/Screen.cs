@@ -16,6 +16,7 @@ public enum Screen
     Banned,
     WarningsAcknowledge,
     PassphraseUnlock,
+    News,
     Offline,
     Outdated,
 }

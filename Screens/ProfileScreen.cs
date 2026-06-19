@@ -789,7 +789,7 @@ public class ProfileScreen
         // DrawWrapped renders in the default text colour; push ImGuiCol.Text for the tint.
         var bioW = winW - PadX * 2f;
         ImGui.SetCursorPosX(PadX);
-        ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0.88f, 0.88f, 0.88f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.Text, UiColors.BioText);
         AetherLove.Emoji.ParsedMessage.Parse(_profile.Bio).DrawWrapped("##aboutBio", bioW);
         ImGui.PopStyleColor();
         SpaceDivide(dl, winW);

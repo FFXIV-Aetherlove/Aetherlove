@@ -1,9 +1,13 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AetherLove.Config;
+using AetherLove.Navigation;
 using AetherLove.Services.Hub;
 using AetherLove.Services.Signal;
+using AetherLove.Shared.News;
 using AetherLove.Shared.Profile;
 using Dalamud.Plugin.Services;
 
@@ -132,6 +136,67 @@ public sealed class SessionBootstrapper
             }
             return false;
         }
+    }
+
+    /// <summary>True when the connection snapshot carries at least one unseen published news item.</summary>
+    public bool HasUnseenNews => (_lastConnection?.UnseenNews?.Length ?? 0) > 0;
+
+    /// <summary>The next screen in the startup gate order — outdated/banned (terminal) → warnings → passphrase
+    /// → news → the regular target. Every startup gate screen funnels onward through this, so the order lives
+    /// in one place; each gate clears its own condition in the cached snapshot before calling it again.</summary>
+    public Screen ResolveNextStartupScreen()
+    {
+        if (_lastResult == SessionBootstrapResult.OutdatedClient)
+        {
+            return Screen.Outdated;
+        }
+        if (_lastResult == SessionBootstrapResult.Banned)
+        {
+            return Screen.Banned;
+        }
+        if (HasUnseenWarnings && _lastResult is SessionBootstrapResult.SignedInActive
+                                              or SessionBootstrapResult.SignedInOnboarding)
+        {
+            return Screen.WarningsAcknowledge;
+        }
+        if (NeedsPassphraseUnlock)
+        {
+            return Screen.PassphraseUnlock;
+        }
+        if (HasUnseenNews && _lastResult == SessionBootstrapResult.SignedInActive)
+        {
+            return Screen.News;
+        }
+        return _lastResult == SessionBootstrapResult.SignedInActive
+            ? Screen.Deck
+            : Screen.Onboarding;
+    }
+
+    /// <summary>Drops the given news ids from the cached unseen list so the news gate clears without a reconnect.</summary>
+    public void MarkNewsSeenInSnapshot(IReadOnlyCollection<Guid> seenIds)
+    {
+        var c = _lastConnection;
+        if (c is null || c.UnseenNews.Length == 0 || seenIds.Count == 0)
+        {
+            return;
+        }
+        var remaining = c.UnseenNews.Where(n => !seenIds.Contains(n.Id)).ToArray();
+        if (remaining.Length != c.UnseenNews.Length)
+        {
+            _lastConnection = c with { UnseenNews = remaining };
+        }
+    }
+
+    /// <summary>Adds a freshly-published news item to the cached unseen list (idempotent) so a live push
+    /// surfaces it without a reconnect.</summary>
+    public void AppendNewsToSnapshot(NewsSummaryDto summary)
+    {
+        var c = _lastConnection;
+        if (c is null || c.UnseenNews.Any(n => n.Id == summary.Id))
+        {
+            return;
+        }
+        _lastConnection = c with { UnseenNews = c.UnseenNews.Append(summary).ToArray() };
     }
 
     /// <summary>Starts or returns the in-flight bootstrap task.</summary>

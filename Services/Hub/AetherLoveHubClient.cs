@@ -3,11 +3,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using AetherLove.Services;
 using AetherLove.Services.Signal;
+using AetherLove.Shared.Diagnostics;
 using AetherLove.Shared.Feedback;
 using AetherLove.Shared.Flairs;
 using AetherLove.Shared.Matching;
 using AetherLove.Shared.Messaging;
 using AetherLove.Shared.Moderation;
+using AetherLove.Shared.News;
 using AetherLove.Shared.Profile;
 using AetherLove.Shared.Profile.Enums;
 using AetherLove.Shared.Pulse;
@@ -35,6 +37,9 @@ public sealed class AetherLoveHubClient
         await _signal.EnsureConnectedAsync(ct).ConfigureAwait(false);
         return _signal.RequireConnection();
     }
+
+    public async Task<DebugInfoDto> GetDebugInfoAsync(CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<DebugInfoDto>("GetDebugInfoAsync", ct).ConfigureAwait(false);
 
     public async Task SaveBasicProfileAsync(BasicProfileDto dto, CancellationToken ct = default)
     {
@@ -81,6 +86,18 @@ public sealed class AetherLoveHubClient
 
     public async Task MarkWarningsSeenAsync(Guid[] warningIds, CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync("MarkWarningsSeenAsync", warningIds, ct).ConfigureAwait(false);
+
+    public async Task<NewsDto?> GetNewsAsync(Guid newsId, CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<NewsDto?>("GetNewsAsync", newsId, ct).ConfigureAwait(false);
+
+    public async Task<NewsDto?> GetNewsPreviewAsync(Guid newsId, CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<NewsDto?>("GetNewsPreviewAsync", newsId, ct).ConfigureAwait(false);
+
+    public async Task<NewsSummaryDto[]> GetNewsListAsync(CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<NewsSummaryDto[]>("GetNewsListAsync", ct).ConfigureAwait(false);
+
+    public async Task MarkNewsSeenAsync(Guid[] newsIds, CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync("MarkNewsSeenAsync", newsIds, ct).ConfigureAwait(false);
 
     public async Task<OnboardingStateDto> GetOnboardingStateAsync(CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync<OnboardingStateDto>("GetOnboardingStateAsync", ct).ConfigureAwait(false);

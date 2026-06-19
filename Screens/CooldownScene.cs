@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using AetherLove.Services;
-using AetherLove.Services.Localization;
 using AetherLove.UI;
 using AetherLove.Widgets;
 using Dalamud.Bindings.ImGui;
@@ -11,8 +10,8 @@ using static AetherLove.Screens.MatchFx;
 
 namespace AetherLove.Screens;
 
-/// <summary>The "you're all caught up" cooldown view: a night-sky pegasus scene drawn over the deck once
-/// the slot is exhausted. The deck supplies the live countdown text and any refresh error; call
+/// <summary>The night-sky pegasus scene drawn over the deck for its empty states (slot cooldown and an empty
+/// candidate pool). The caller supplies the heading, body, live countdown text and any refresh error; call
 /// <see cref="Reset"/> when the view re-appears to replay the fade-in.</summary>
 public sealed class CooldownScene
 {
@@ -41,7 +40,7 @@ public sealed class CooldownScene
         _settle = 0f;
     }
 
-    public void Draw(Vector2 pos, Vector2 size, string? timer, string? error)
+    public void Draw(Vector2 pos, Vector2 size, string heading, string body, string? timer, string? error)
     {
         var reduce = AccessibilityService.ReduceMotion;
         var dt = (float)ImGui.GetIO().DeltaTime;
@@ -80,8 +79,8 @@ public sealed class CooldownScene
         DrawStardust(dl, horseCenter, time, reduce, settle);
         DrawHorse(dl, horseCenter, flap, time, reduce, settle);
 
-        DrawHeading(dl, cx, pos.Y + Px(44f), reduce, time, settle);
-        DrawBody(dl, cx, max.Y - Px(106f), size.X - Px(72f), settle);
+        DrawHeading(dl, cx, pos.Y + Px(44f), heading, reduce, time, settle);
+        DrawBody(dl, cx, max.Y - Px(106f), size.X - Px(72f), body, settle);
 
         if (!string.IsNullOrEmpty(timer))
         {
@@ -376,11 +375,10 @@ public sealed class CooldownScene
         }
     }
 
-    private void DrawHeading(ImDrawListPtr dl, float cx, float y, bool reduce, float time, float settle)
+    private void DrawHeading(ImDrawListPtr dl, float cx, float y, string heading, bool reduce, float time, float settle)
     {
         using (UiFonts.H1?.Push())
         {
-            var heading = Loc.T("deck.cooldown_heading");
             int vtx = dl.VtxBuffer.Size;
             CenterText(dl, cx, y, heading, U32(Rgba(Cream, settle)));
             if (!reduce)
@@ -391,11 +389,11 @@ public sealed class CooldownScene
         }
     }
 
-    private void DrawBody(ImDrawListPtr dl, float cx, float bottomY, float wrap, float settle)
+    private void DrawBody(ImDrawListPtr dl, float cx, float bottomY, float wrap, string body, float settle)
     {
         using (UiFonts.H3?.Push())
         {
-            var lines = WrapLines(Loc.T("deck.cooldown_body"), wrap);
+            var lines = WrapLines(body, wrap);
             var lineH = ImGui.GetTextLineHeightWithSpacing();
             var topY = bottomY - lines.Count * lineH;
 

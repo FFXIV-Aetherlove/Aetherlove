@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Numerics;
+using AetherLove.Shared;
 using AetherLove.Shared.Profile;
 using AetherLove.Shared.Profile.Enums;
 
@@ -41,41 +42,40 @@ public partial class OnboardingScreen
             SyncTool: MaskOr(SyncToolValues, _syncToolsSelected, (a, b) => (SyncTool)((short)a | (short)b)));
     }
 
-    // Gathers the five photo slots (avatar, main, three extras) into one upload batch. A slot only
-    // contributes bytes when the user picked a new local image for it: slots that are unconfirmed, or
-    // that are unchanged from what the server already has, are sent as null and left untouched server-side.
-    private PhotoBatchDto BuildPhotoBatch()
-    {
-        PhotoUploadDto? avatar = (_avatarConfirmed, _avatarFromServer) switch
-        {
-            (true, true)  => null,
-            (true, false) => ReadPhotoUpload(_avatarPath, _avatarCropRect, isNsfw: false),
-            _             => null,
-        };
-        PhotoUploadDto? main = (_photos[0].Confirmed, _photos[0].FromServer) switch
-        {
-            (true, true)  => null,
-            (true, false) => ReadPhotoUpload(_photos[0].Path, _photos[0].CropRect, isNsfw: false),
-            _             => null,
-        };
-        var extra1 = BuildExtraSlot(_photos[1]);
-        var extra2 = BuildExtraSlot(_photos[2]);
-        var extra3 = BuildExtraSlot(_photos[3]);
+    /// <summary>One slot's upload inputs, snapshotted on the UI thread. The heavy decode/resize/encode is
+    /// deferred to <see cref="BuildPhotoBatch"/>, which runs off-thread.</summary>
+    private readonly record struct PhotoInput(bool Send, string Path, Vector4 Crop, bool IsNsfw, PhotoKind Kind);
 
-        return new PhotoBatchDto(avatar, main, extra1, extra2, extra3);
+    // Snapshots the five photo slots (avatar, main, three extras) on the UI thread — cheap field reads only.
+    // A slot only contributes bytes when the user picked a new local image: unconfirmed slots, or slots
+    // unchanged from the server copy, are skipped (sent as null) and left untouched server-side.
+    private PhotoInput[] SnapshotPhotoInputs()
+    {
+        var inputs = new PhotoInput[5];
+        inputs[0] = _avatarConfirmed && !_avatarFromServer
+            ? new PhotoInput(true, _avatarPath, _avatarCropRect, false, PhotoKind.Avatar)
+            : default;
+        for (var i = 0; i < 4; i++)
+        {
+            var slot = _photos[i];
+            var send = slot.Confirmed && !slot.FromServer;
+            // _photos[0] is the main portrait (always SFW); _photos[1..3] are extras with a declaration.
+            var isNsfw = i >= 1 && slot.Declaration == PhotoNsfwDecl.Nsfw;
+            inputs[i + 1] = send
+                ? new PhotoInput(true, slot.Path, slot.CropRect, isNsfw, PhotoKind.Portrait)
+                : default;
+        }
+        return inputs;
     }
 
-    private PhotoUploadDto? BuildExtraSlot(PhotoSlot slot)
+    // Decodes/crops/resizes/encodes each snapshotted slot. CPU-bound — call off the UI thread.
+    private PhotoBatchDto BuildPhotoBatch(PhotoInput[] inputs)
     {
-        if (!slot.Confirmed)
-        {
-            return null;
-        }
-        if (slot.FromServer)
-        {
-            return null;
-        }
-        return ReadPhotoUpload(slot.Path, slot.CropRect, slot.Declaration == PhotoNsfwDecl.Nsfw);
+        static PhotoUploadDto? Make(PhotoInput inp) =>
+            inp.Send ? ReadPhotoUpload(inp.Path, inp.Crop, inp.IsNsfw, inp.Kind) : null;
+
+        return new PhotoBatchDto(
+            Make(inputs[0]), Make(inputs[1]), Make(inputs[2]), Make(inputs[3]), Make(inputs[4]));
     }
 
     private FiltersDto BuildFilters()

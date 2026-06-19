@@ -13,6 +13,8 @@ internal static class SettingsRu
         ["settings.section_general"] = "Общие",
         ["settings.section_notifications"] = "Уведомления",
         ["settings.section_moderation"] = "Уведомления от администрации",
+        ["settings.section_other"] = "Прочее",
+        ["settings.section_danger_zone"] = "Опасная зона",
 
         ["settings.phone_size_small"] = "Маленький",
         ["settings.phone_size_medium"] = "Средний",
@@ -20,9 +22,11 @@ internal static class SettingsRu
         ["settings.phone_size_caption"] = "Масштабирует весь телефон. Большие размеры подходят для экранов с высоким разрешением; «Большой» может не поместиться на дисплее 1080p.",
 
         ["settings.disable_startup_heartbeat"] = "Отключить звук сердцебиения при запуске",
+        ["settings.confirm_before_close"] = "Подтверждать перед закрытием AetherLove",
 
         ["settings.view_changelog"] = "Просмотреть список изменений",
         ["settings.send_feedback"] = "Отправить отзыв",
+        ["settings.terms_of_service"] = "Условия использования",
         ["settings.delete_account"] = "Удалить аккаунт",
         ["settings.create_new_profile"] = "Создать новый профиль",
         ["settings.cancel"] = "Отмена",
@@ -43,7 +47,7 @@ internal static class SettingsRu
         ["settings.popup_messages"] = "Показывать всплывающее окно для новых сообщений",
         ["settings.popup_matches"] = "Показывать всплывающее окно для новых совпадений",
         ["settings.auto_open_minimized"] = "Открывать свёрнутым автоматически при входе в игру",
-        ["settings.pulse_optout"] = "Иногда сообщения в игровом чате",
+        ["settings.pulse_optout"] = "Получайте потрясающие сообщения от команды Aethernet, напоминающие свайпать",
         ["settings.pulse_optout_tooltip"] = "Время от времени AetherLove может оставлять шутливое сообщение в игровом чате. Отключите, чтобы прекратить.",
         ["settings.combat_behavior"] = "В бою",
         ["settings.combat_behavior_hide"] = "Скрыть AetherLove",
@@ -84,5 +88,16 @@ internal static class SettingsRu
         ["settings.submit"] = "Отправить",
         ["settings.feedback_rate_limited"] = "Вы можете отправлять отзыв только {0} раз в час. Пожалуйста, попробуйте позже.",
         ["settings.feedback_send_failed"] = "Не удалось отправить ваш отзыв. Пожалуйста, попробуйте снова.",
+
+        ["settings.contributors"] = "Участники",
+        ["settings.contributors_thanks_title"] = "Спасибо",
+        ["settings.contributors_intro"] = "AetherLove был бы невозможен без:",
+        ["settings.contributors_council"] = "The Chon-Chon Council",
+        ["settings.contributors_moderation"] = "Модерация: Su",
+        ["settings.contributors_translators"] = "Переводчики: Tears, Mufami, Terashi, Su, Astraea",
+        ["settings.contributors_xivauth"] = "XIVAuth by KazWolfe",
+        ["settings.contributors_punish"] = "Puni.sh",
+        ["settings.contributors_dalamud"] = "The Dalamud project",
+        ["settings.contributors_testers"] = "Всем замечательным бета-тестерам по всей Эорзее.",
     };
 }

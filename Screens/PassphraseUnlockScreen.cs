@@ -254,12 +254,7 @@ public sealed class PassphraseUnlockScreen
 
     private void NavigateToTarget()
     {
-        var target = _bootstrap.LastResult switch
-        {
-            SessionBootstrapResult.SignedInActive => Screen.Deck,
-            SessionBootstrapResult.SignedInOnboarding => Screen.Onboarding,
-            _ => Screen.Onboarding,
-        };
-        _router.Navigate(target);
+        // The key is stored, so the passphrase gate is satisfied; advance to the next gate (news → target).
+        _router.Navigate(_bootstrap.ResolveNextStartupScreen());
     }
 }

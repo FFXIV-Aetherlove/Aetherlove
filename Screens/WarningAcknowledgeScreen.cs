@@ -212,11 +212,8 @@ public sealed class WarningAcknowledgeScreen
 
     private void NavigateToTarget()
     {
-        // Only mid-onboarding goes to the wizard. Everything else (including the transient Pending
-        // during a reconnect) goes to Deck, so acknowledging never drops an active user into onboarding.
-        var target = _bootstrap.LastResult == SessionBootstrapResult.SignedInOnboarding
-            ? Screen.Onboarding
-            : Screen.Deck;
-        _router.Navigate(target);
+        // Warnings are flipped to Seen in the cached snapshot first, so the resolver advances past them to
+        // the next startup gate (passphrase → news → the regular target).
+        _router.Navigate(_bootstrap.ResolveNextStartupScreen());
     }
 }

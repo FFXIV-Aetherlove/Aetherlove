@@ -96,6 +96,7 @@ internal static class CommonDe
         ["common.close_plugin_title"] = "AetherLove schließen?",
         ["common.close_plugin_body"] = "Das schließt nur das Fenster. Du bleibst verbunden und erhältst weiterhin neue Matches und Nachrichten, solange das Plugin aktiv ist.\n\nÖffne das Fenster jederzeit wieder, indem du {0} im Chat eingibst.",
         ["common.close_plugin_tip"] = "Tipp: Nutze stattdessen die Minimieren-Schaltfläche unten, damit die kleine schwebende Blase mit ihrem Benachrichtigungsabzeichen sichtbar bleibt.",
+        ["common.close_plugin_dont_ask"] = "Dieses Pop-up nicht mehr anzeigen",
         ["common.close"] = "Schließen",
 
         // Save-error modal
@@ -113,5 +114,17 @@ internal static class CommonDe
         // Image crop window
         ["common.loading_image"] = "Bild wird geladen…",
         ["common.use_this_crop"] = "Diesen Ausschnitt verwenden",
+
+        // SFW-image gate modal (main avatar + first profile photo must be SFW)
+        ["common.sfw_gate_title"] = "Profil + Avatar - NUR SFW",
+        ["common.sfw_gate_subtitle"] = "Was ist NICHT SFW:",
+        ["common.sfw_gate_b1"] = "Vollständige Nacktheit jeglichen Geschlechts.",
+        ["common.sfw_gate_b2"] = "Sichtbare Brustwarzen jeglichen Geschlechts.",
+        ["common.sfw_gate_b3"] = "Sichtbares Schamhaar oder Genitalbereiche.",
+        ["common.sfw_gate_b4"] = "Grafische Darstellungen von Blut, Verletzungen, Wunden oder körperlichem Schaden.",
+        ["common.sfw_gate_b5"] = "Tätowierungen, Kennzeichen, Symbole oder Texte, die obszön, diskriminierend oder hasserfüllt sind oder Einzelpersonen bzw. Gruppen aufgrund von Rasse, Ethnie, Nationalität, Religion, Geschlecht, sexueller Orientierung oder anderen geschützten Merkmalen angreifen.",
+        ["common.sfw_gate_b6"] = "Sexuelle Gesten, Posen oder visuelle Anspielungen, die sexuelle Handlungen andeuten oder simulieren, einschließlich Oralsex, Masturbation oder anderer sexueller Aktivität.",
+        ["common.sfw_gate_secondary"] = "NSFW-Material kannst du weiterhin in deinen weiteren Profilbildern hochladen.",
+        ["common.sfw_gate_ack"] = "Ich verstehe die SFW-Regeln",
     };
 }

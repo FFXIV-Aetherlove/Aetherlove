@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
-    <Version>0.9.42.0</Version>
+    <Version>0.9.43.0</Version>
     <Authors>Astraea, Nihal</Authors>
     <Company>Astraea</Company>
     <Copyright>Copyright © 2026 Astraea</Copyright>
     <IsPackable>false</IsPackable>
+    <Platforms>x64</Platforms>
+    <Platform Condition="'$(Platform)' == '' or '$(Platform)' == 'AnyCPU'">x64</Platform>
   </PropertyGroup>
 
   <!--

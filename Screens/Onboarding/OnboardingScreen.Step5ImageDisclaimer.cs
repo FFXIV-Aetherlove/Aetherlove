@@ -48,7 +48,7 @@ public partial class OnboardingScreen
             foreach (var item in notAllowedItems)
             {
                 ImGui.SetCursorPosX(ImGui.GetCursorPosX() + Px(22f));
-                ImGui.TextColored(new Vector4(0.92f, 0.45f, 0.45f, 0.90f), $"✕  {item}");
+                ImGui.TextColored(new Vector4(0.92f, 0.45f, 0.45f, 0.90f), $"-  {item}");
             }
             ImGui.Spacing();
 
@@ -56,6 +56,10 @@ public partial class OnboardingScreen
             ImGui.TextWrapped(Loc.T("onboarding.disclaimer_nsfw_body1"));
             ImGui.Spacing();
             ImGui.TextWrapped(Loc.T("onboarding.disclaimer_nsfw_body2"));
+            ImGui.Spacing();
+
+            DrawSectionHeading(Loc.T("onboarding.disclaimer_ai_heading"), t);
+            ImGui.TextWrapped(Loc.T("onboarding.disclaimer_ai_body"));
             ImGui.Spacing();
 
             DrawSectionHeading(Loc.T("onboarding.disclaimer_rules_heading"), t);

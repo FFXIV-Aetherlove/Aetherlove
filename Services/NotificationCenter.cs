@@ -36,4 +36,19 @@ public sealed class NotificationCenter
     }
 
     public void ClearPendingWarning() => HasPendingWarning = false;
+
+    /// <summary>True from when a news item is published while the phone is minimised/closed until the user
+    /// next opens the phone (which routes them to the news screen).</summary>
+    public bool HasPendingNews { get; private set; }
+
+    /// <summary>Raised when news arrives while the phone isn't open, so the mini phone can react.</summary>
+    public event Action? PendingNewsRaised;
+
+    public void RaisePendingNews()
+    {
+        HasPendingNews = true;
+        PendingNewsRaised?.Invoke();
+    }
+
+    public void ClearPendingNews() => HasPendingNews = false;
 }

@@ -28,8 +28,9 @@ public class SettingsScreen
     private readonly TokenService _tokens;
     private readonly SessionBootstrapper _bootstrap;
     private readonly ChangelogWindow _changelogWindow;
+    private readonly NewsScreen _newsScreen;
 
-    private enum View { Normal, ConfirmDelete, Deleting, Deleted, WarningsList, Feedback }
+    private enum View { Normal, ConfirmDelete, Deleting, Deleted, WarningsList, Feedback, Tos, Contributors }
 
     // volatile: written from the deletion task, read on the UI thread.
     private volatile int _viewRaw = (int)View.Normal;
@@ -54,14 +55,26 @@ public class SettingsScreen
     private volatile string? _nsfwError;
     private bool _nsfwShowLockedHint;
 
+    private readonly Widgets.ConfettiBurst _thanksConfetti = new();
+
     private const float PadX = 16f;
+
+    // Gradient-button colours (top → bottom) for the "Other" group and the danger-zone delete button.
+    private static readonly Vector4 DiscordTop = new(0.43f, 0.48f, 1.00f, 1f);
+    // Distinct moderation orange (the "in review" accent), not a flat yellow.
+    private static readonly Vector4 WarnTop = new(0.97f, 0.55f, 0.20f, 1f);
+    private static readonly Vector4 WarnBottom = new(0.66f, 0.30f, 0.07f, 1f);
+    private static readonly Vector4 DangerTop = new(0.66f, 0.16f, 0.16f, 1f);
+    private static readonly Vector4 DangerBottom = new(0.34f, 0.05f, 0.05f, 1f);
+    private static readonly Vector4 DangerLabelColor = new(0.93f, 0.36f, 0.36f, 1f);
 
     public SettingsScreen(ScreenRouter router,
                           AetherLoveHubClient hubClient,
                           AetherSignalService signal,
                           TokenService tokens,
                           SessionBootstrapper bootstrap,
-                          ChangelogWindow changelogWindow)
+                          ChangelogWindow changelogWindow,
+                          NewsScreen newsScreen)
     {
         _router = router;
         _hubClient = hubClient;
@@ -69,6 +82,7 @@ public class SettingsScreen
         _tokens = tokens;
         _bootstrap = bootstrap;
         _changelogWindow = changelogWindow;
+        _newsScreen = newsScreen;
     }
 
     public void OnShow()
@@ -158,6 +172,12 @@ public class SettingsScreen
             case View.Feedback:
                 DrawFeedback(winW);
                 break;
+            case View.Tos:
+                DrawTos(winW);
+                break;
+            case View.Contributors:
+                DrawContributors(winW);
+                break;
         }
     }
 
@@ -206,19 +226,20 @@ public class SettingsScreen
             ImGui.Spacing();
             Divider(dl, winW);
 
-            SectionLabel(Loc.T("settings.section_privacy"), t);
+            // General now also hosts the privacy toggles and the pulse opt-out.
+            SectionLabel(Loc.T("settings.section_general"), t);
             ImGui.Spacing();
             DrawNsfwBlurToggle(winW);
             ImGui.Spacing();
             DrawNsfwProfileToggle(winW);
             ImGui.Spacing();
-            Divider(dl, winW);
-
-            SectionLabel(Loc.T("settings.section_general"), t);
-            ImGui.Spacing();
             SettingCheckbox(Loc.T("settings.disable_startup_heartbeat"),
                 () => Plugin.Configuration.DisableStartupHeartbeatSound,
                 v => Plugin.Configuration.DisableStartupHeartbeatSound = v);
+            SettingCheckbox(Loc.T("settings.confirm_before_close"),
+                () => !Plugin.Configuration.SkipCloseConfirmation,
+                v => Plugin.Configuration.SkipCloseConfirmation = !v);
+            DrawPulseOptOut(winW);
             ImGui.Spacing();
             Divider(dl, winW);
 
@@ -228,61 +249,20 @@ public class SettingsScreen
             ImGui.Spacing();
             Divider(dl, winW);
 
-            ImGui.SetCursorPosX(Px(PadX));
-            ImGui.PushStyleColor(ImGuiCol.Button, t.ButtonNormal);
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, t.ButtonHovered);
-            ImGui.PushStyleColor(ImGuiCol.ButtonActive, t.ButtonActive);
-            ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
-            if (ImGui.Button(Loc.T("settings.view_changelog"), new Vector2(winW - Px(PadX) * 2f, Px(30f))))
-            {
-                _changelogWindow.IsOpen = true;
-            }
-            ImGui.PopStyleVar();
-            ImGui.PopStyleColor(3);
-
+            SectionLabel(Loc.T("settings.section_other"), t);
             ImGui.Spacing();
-            ImGui.SetCursorPosX(Px(PadX));
-            ImGui.PushStyleColor(ImGuiCol.Button, t.ButtonNormal);
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, t.ButtonHovered);
-            ImGui.PushStyleColor(ImGuiCol.ButtonActive, t.ButtonActive);
-            ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
-            if (ImGui.Button(Loc.T("settings.send_feedback"), new Vector2(winW - Px(PadX) * 2f, Px(30f))))
-            {
-                ResetFeedback();
-                _view = View.Feedback;
-            }
-            ImGui.PopStyleVar();
-            ImGui.PopStyleColor(3);
-
-            ImGui.Spacing();
-            ImGui.SetCursorPosX(Px(PadX));
-            DrawDiscordButton("Discord", new Vector2(winW - Px(PadX) * 2f, Px(30f)));
-
+            DrawOtherButtons(winW, t);
             ImGui.Spacing();
             Divider(dl, winW);
 
-            var warningCount = _bootstrap.LastConnection?.Warnings.Length ?? 0;
-            if (warningCount > 0)
-            {
-                DrawWarningsRow(winW, warningCount, t);
-                ImGui.Spacing();
-                Divider(dl, winW);
-            }
-
+            SectionLabel(Loc.T("settings.section_danger_zone"), DangerLabelColor);
             ImGui.Spacing();
-            ImGui.Spacing();
-            ImGui.SetCursorPosX(Px(PadX));
-
-            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.18f, 0.04f, 0.04f, 1f));
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.62f, 0.12f, 0.12f, 1f));
-            ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.42f, 0.06f, 0.06f, 1f));
-            ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
-            if (ImGui.Button(Loc.T("settings.delete_account"), new Vector2(winW - Px(PadX) * 2f, Px(36f))))
+            DrawWarningsButton(winW);
+            if (GradientMenuButton("##settDelete", winW, Loc.T("settings.delete_account"),
+                    FontAwesomeIcon.TrashAlt, DangerTop, DangerBottom))
             {
                 _view = View.ConfirmDelete;
             }
-            ImGui.PopStyleVar();
-            ImGui.PopStyleColor(3);
 
             ImGui.Spacing();
             ImGui.Spacing();
@@ -718,16 +698,6 @@ public class SettingsScreen
             () => Plugin.Configuration.AutoOpenMinimizedOnLogin,
             v => Plugin.Configuration.AutoOpenMinimizedOnLogin = v);
 
-        // Only surfaces once the user has actually seen a pulse line.
-        if (Plugin.Configuration.Pulse.SeenPulse)
-        {
-            SettingCheckbox(Loc.T("settings.pulse_optout"),
-                () => !Plugin.Configuration.Pulse.MutePulse,
-                v => Plugin.Configuration.Pulse.MutePulse = !v);
-            ImGui.SameLine();
-            HelpMarker(Loc.T("settings.pulse_optout_tooltip"));
-        }
-
         ImGui.Spacing();
         ImGui.SetCursorPosX(Px(PadX));
         ImGui.TextColored(new Vector4(0.70f, 0.70f, 0.70f, 1f), Loc.T("settings.combat_behavior"));
@@ -800,40 +770,385 @@ public class SettingsScreen
         ImGui.EndDisabled();
     }
 
-    private void DrawWarningsRow(float winW, int total, ThemeDefinition t)
+    private void DrawOtherButtons(float winW, ThemeDefinition t)
     {
-        var unseen = 0;
-        var conn = _bootstrap.LastConnection;
-        if (conn is not null)
+        var rowH = Px(44f);
+        const int rowCount = 6;
+        var origin = ImGui.GetCursorScreenPos();
+        var dl = ImGui.GetWindowDrawList();
+        var cardMin = new Vector2(origin.X + Px(PadX), origin.Y);
+        var cardMax = new Vector2(origin.X + winW - Px(PadX), origin.Y + rowH * rowCount);
+        dl.AddRectFilled(cardMin, cardMax, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.045f)), Px(10f));
+
+        ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(0f, 0f));
+
+        if (DrawMenuRow(winW, rowH, "##settTos", FontAwesomeIcon.FileContract, t.Accent, Loc.T("settings.terms_of_service"), false, false, 0))
         {
-            for (int i = 0; i < conn.Warnings.Length; i++)
-            {
-                if (!conn.Warnings[i].Seen)
-                {
-                    unseen++;
-                }
-            }
+            _view = View.Tos;
+        }
+        if (DrawMenuRow(winW, rowH, "##settChangelog", FontAwesomeIcon.History, t.Accent, Loc.T("settings.view_changelog"), false, false, 0))
+        {
+            _changelogWindow.IsOpen = true;
+        }
+        var newsBadge = _bootstrap.HasUnseenNews ? _bootstrap.LastConnection!.UnseenNews.Length : 0;
+        if (DrawMenuRow(winW, rowH, "##settNews", FontAwesomeIcon.Newspaper, t.Accent, Loc.T("news.settings_button"), false, false, newsBadge))
+        {
+            _newsScreen.RequestListView();
+            _router.Navigate(Screen.News);
+        }
+        if (DrawMenuRow(winW, rowH, "##settFeedback", FontAwesomeIcon.CommentDots, t.Accent, Loc.T("settings.send_feedback"), false, false, 0))
+        {
+            ResetFeedback();
+            _view = View.Feedback;
+        }
+        if (DrawMenuRow(winW, rowH, "##settDiscord", FontAwesomeIcon.Comments, DiscordTop, "Discord", false, true, 0))
+        {
+            OpenDiscord();
+        }
+        if (DrawMenuRow(winW, rowH, "##settContributors", FontAwesomeIcon.Heart, t.Accent, Loc.T("settings.contributors"), true, false, 0))
+        {
+            _thanksConfetti.Reset();
+            _view = View.Contributors;
         }
 
-        SectionLabel(Loc.T("settings.section_moderation"), t);
+        ImGui.PopStyleVar();
 
+        dl.AddRect(cardMin, cardMax, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.07f)), Px(10f), ImDrawFlags.None, Px(1f));
+    }
+
+    /// <summary>One row of the "Other" menu card: a full-width hit target with a leading icon, a label, an
+    /// optional unseen-count badge, and a trailing chevron (or external-link glyph for browser links). Rows
+    /// share one grouped card so the section reads as a menu rather than a stack of buttons.</summary>
+    private bool DrawMenuRow(float winW, float rowH, string id, FontAwesomeIcon icon, Vector4 iconColor, string label, bool isLast, bool external, int badge)
+    {
         ImGui.SetCursorPosX(Px(PadX));
-        var btnW = winW - Px(PadX) * 2f;
+        ImGui.PushStyleColor(ImGuiCol.Header, new Vector4(1f, 1f, 1f, 0.05f));
+        ImGui.PushStyleColor(ImGuiCol.HeaderHovered, new Vector4(1f, 1f, 1f, 0.08f));
+        ImGui.PushStyleColor(ImGuiCol.HeaderActive, new Vector4(1f, 1f, 1f, 0.12f));
+        var clicked = ImGui.Selectable(id, false, ImGuiSelectableFlags.None, new Vector2(winW - Px(PadX) * 2f, rowH));
+        ImGui.PopStyleColor(3);
+
+        var rmin = ImGui.GetItemRectMin();
+        var rmax = ImGui.GetItemRectMax();
+        var dl = ImGui.GetWindowDrawList();
+        var midY = (rmin.Y + rmax.Y) * 0.5f;
+        var iconFontPtr = Plugin.PluginInterface.UiBuilder.FontIcon;
+
+        var iconPx = Px(18f);
+        ImGui.PushFont(iconFontPtr);
+        var iconFont = ImGui.GetFont();
+        var iconGlyph = icon.ToIconString();
+        var iconSz = ImGui.CalcTextSize(iconGlyph) * (iconPx / ImGui.GetFontSize());
+        ImGui.PopFont();
+        var iconX = rmin.X + Px(14f);
+        dl.AddText(iconFont, iconPx, new Vector2(iconX, midY - iconSz.Y * 0.5f), ImGui.GetColorU32(iconColor), iconGlyph);
+
+        var labelSz = ImGui.CalcTextSize(label);
+        dl.AddText(new Vector2(iconX + iconSz.X + Px(14f), midY - labelSz.Y * 0.5f),
+            ImGui.GetColorU32(new Vector4(0.93f, 0.93f, 0.96f, 1f)), label);
+
+        var rightX = rmax.X - Px(14f);
+        var chevGlyph = (external ? FontAwesomeIcon.ExternalLinkAlt : FontAwesomeIcon.ChevronRight).ToIconString();
+        var chevPx = external ? Px(12f) : Px(13f);
+        ImGui.PushFont(iconFontPtr);
+        var chevFont = ImGui.GetFont();
+        var chevSz = ImGui.CalcTextSize(chevGlyph) * (chevPx / ImGui.GetFontSize());
+        ImGui.PopFont();
+        dl.AddText(chevFont, chevPx, new Vector2(rightX - chevSz.X, midY - chevSz.Y * 0.5f),
+            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.30f)), chevGlyph);
+
+        if (badge > 0)
+        {
+            var badgeText = badge.ToString();
+            var badgeSz = ImGui.CalcTextSize(badgeText);
+            var pad = Px(7f);
+            var pillH = Px(18f);
+            var pillRight = rightX - chevSz.X - Px(10f);
+            var pillMin = new Vector2(pillRight - badgeSz.X - pad * 2f, midY - pillH * 0.5f);
+            var pillMax = new Vector2(pillRight, midY + pillH * 0.5f);
+            dl.AddRectFilled(pillMin, pillMax, ImGui.GetColorU32(ThemeService.Current.Accent), pillH * 0.5f);
+            dl.AddText(new Vector2(pillMin.X + pad, midY - badgeSz.Y * 0.5f), 0xFFFFFFFFu, badgeText);
+        }
+
+        if (!isLast)
+        {
+            dl.AddLine(new Vector2(rmin.X + Px(14f), rmax.Y), new Vector2(rmax.X - Px(14f), rmax.Y),
+                ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.06f)), 1f);
+        }
+
+        return clicked;
+    }
+
+    /// <summary>The "view warnings" button — shown in the danger zone only when warnings exist.</summary>
+    private void DrawWarningsButton(float winW)
+    {
+        var conn = _bootstrap.LastConnection;
+        var total = conn?.Warnings.Length ?? 0;
+        if (total == 0)
+        {
+            return;
+        }
+
+        var unseen = 0;
+        for (int i = 0; i < conn!.Warnings.Length; i++)
+        {
+            if (!conn.Warnings[i].Seen)
+            {
+                unseen++;
+            }
+        }
         var label = unseen > 0
             ? Loc.T("settings.warnings_button_unseen", unseen, total)
             : Loc.T("settings.warnings_button", total);
 
-        // The "view warnings" button is always the warning orange, independent of the active theme.
-        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.35f, 0.28f, 0.10f, 1f));
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.52f, 0.42f, 0.16f, 1f));
-        ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.28f, 0.22f, 0.08f, 1f));
-        ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
-        if (ImGui.Button(label, new Vector2(btnW, Px(32f))))
+        if (GradientMenuButton("##settWarnings", winW, label,
+                FontAwesomeIcon.ExclamationTriangle, WarnTop, WarnBottom))
         {
             _view = View.WarningsList;
         }
-        ImGui.PopStyleVar();
-        ImGui.PopStyleColor(3);
+        ImGui.Spacing();
+    }
+
+    private static void DrawPulseOptOut(float winW)
+    {
+        // Surfaces only after the player has actually seen a pulse line — keeps it a surprise until then.
+        if (!Plugin.Configuration.Pulse.SeenPulse)
+        {
+            return;
+        }
+        ImGui.Spacing();
+        ImGui.SetCursorPosX(Px(PadX));
+        var on = !Plugin.Configuration.Pulse.MutePulse;
+        if (ImGui.Checkbox("##pulseOptout", ref on))
+        {
+            Plugin.Configuration.Pulse.MutePulse = !on;
+            Plugin.Configuration.Save();
+        }
+        ImGui.SameLine(0f, Px(6f));
+        HelpMarker(Loc.T("settings.pulse_optout_tooltip"));
+        // The label is long and playful, so it wraps instead of overflowing the checkbox row.
+        ImGui.SameLine(0f, Px(6f));
+        ImGui.PushTextWrapPos(winW - Px(PadX));
+        ImGui.TextWrapped(Loc.T("settings.pulse_optout"));
+        ImGui.PopTextWrapPos();
+    }
+
+    /// <summary>Full-width rounded button with a vertical gradient, a leading icon and a left-aligned label.
+    /// Drawn by hand because the gradient and icon are beyond a plain <c>ImGui.Button</c>.</summary>
+    private static bool GradientMenuButton(string id, float winW, string label, FontAwesomeIcon icon,
+                                           Vector4 top, Vector4 bottom)
+    {
+        var w = winW - Px(PadX) * 2f;
+        var h = Px(38f);
+        ImGui.SetCursorPosX(Px(PadX));
+        ImGui.InvisibleButton(id, new Vector2(w, h));
+        var clicked = ImGui.IsItemClicked();
+        var hovered = ImGui.IsItemHovered();
+        var active = ImGui.IsItemActive();
+
+        var min = ImGui.GetItemRectMin();
+        var max = ImGui.GetItemRectMax();
+        var dl = ImGui.GetWindowDrawList();
+        var r = Px(9f);
+
+        var lift = active ? -0.05f : (hovered ? 0.08f : 0f);
+        var topU = ImGui.ColorConvertFloat4ToU32(Shade(top, lift));
+        var botU = ImGui.ColorConvertFloat4ToU32(Shade(bottom, lift));
+
+        // Rounded top half + rounded bottom half, blended in the middle so all four corners stay rounded.
+        dl.AddRectFilled(min, max, topU, r, ImDrawFlags.RoundCornersTop);
+        dl.AddRectFilled(new Vector2(min.X, min.Y + h * 0.5f), max, botU, r, ImDrawFlags.RoundCornersBottom);
+        dl.AddRectFilledMultiColor(
+            new Vector2(min.X, min.Y + h * 0.28f), new Vector2(max.X, min.Y + h * 0.72f),
+            topU, topU, botU, botU);
+        // Glossy sheen, inset so it never reaches the rounded corners.
+        dl.AddRectFilledMultiColor(
+            new Vector2(min.X + r, min.Y + Px(1f)), new Vector2(max.X - r, min.Y + h * 0.5f),
+            0x24FFFFFFu, 0x24FFFFFFu, 0x00FFFFFFu, 0x00FFFFFFu);
+        dl.AddRect(min, max, ImGui.ColorConvertFloat4ToU32(Shade(top, hovered ? 0.22f : 0.10f)),
+            r, ImDrawFlags.None, Px(1f));
+
+        ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
+        var iconStr = icon.ToIconString();
+        var iconSz = ImGui.CalcTextSize(iconStr);
+        dl.AddText(new Vector2(min.X + Px(16f), min.Y + (h - iconSz.Y) * 0.5f), 0xFFFFFFFFu, iconStr);
+        ImGui.PopFont();
+
+        var labelSz = ImGui.CalcTextSize(label);
+        dl.AddText(new Vector2(min.X + Px(44f), min.Y + (h - labelSz.Y) * 0.5f), 0xFFFFFFFFu, label);
+
+        return clicked;
+    }
+
+    private static Vector4 Shade(Vector4 c, float d) =>
+        new(Math.Clamp(c.X + d, 0f, 1f), Math.Clamp(c.Y + d, 0f, 1f), Math.Clamp(c.Z + d, 0f, 1f), c.W);
+
+    private void DrawTos(float winW)
+    {
+        var t = ThemeService.Current;
+        var scrollH = ImGui.GetContentRegionAvail().Y;
+
+        PushScrollbarStyle();
+        using (var scroll = Dalamud.Interface.Utility.Raii.ImRaii.Child("##settTos", new Vector2(0f, scrollH), false))
+        {
+            PopScrollbarStyle();
+            if (!scroll.Success)
+            {
+                return;
+            }
+
+            var dl = ImGui.GetWindowDrawList();
+
+            ImGui.Spacing();
+            ImGui.Spacing();
+            ImGui.SetCursorPosX(Px(PadX));
+            ImGui.TextColored(new Vector4(1f, 1f, 1f, 1f), Loc.T("settings.terms_of_service"));
+            ImGui.Spacing();
+            Divider(dl, winW);
+
+            foreach (var para in TermsOfServiceParagraphs())
+            {
+                ImGui.SetCursorPosX(Px(PadX));
+                ImGui.PushTextWrapPos(winW - Px(PadX));
+                ImGui.TextColored(UiColors.Body, para);
+                ImGui.PopTextWrapPos();
+                ImGui.Spacing();
+                ImGui.Spacing();
+            }
+
+            ImGui.Spacing();
+            ImGui.SetCursorPosX(Px(PadX));
+            ImGui.PushStyleColor(ImGuiCol.Button, t.ButtonNormal);
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, t.ButtonHovered);
+            ImGui.PushStyleColor(ImGuiCol.ButtonActive, t.ButtonActive);
+            ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
+            if (ImGui.Button(Loc.T("settings.back_to_settings_arrow"), new Vector2(winW - Px(PadX) * 2f, Px(32f))))
+            {
+                _view = View.Normal;
+            }
+            ImGui.PopStyleVar();
+            ImGui.PopStyleColor(3);
+
+            ImGui.Spacing();
+        }
+    }
+
+    private void DrawContributors(float winW)
+    {
+        var t = ThemeService.Current;
+        var scrollH = ImGui.GetContentRegionAvail().Y;
+
+        PushScrollbarStyle();
+        using (var scroll = Dalamud.Interface.Utility.Raii.ImRaii.Child("##settContributors", new Vector2(0f, scrollH), false))
+        {
+            PopScrollbarStyle();
+            if (!scroll.Success)
+            {
+                return;
+            }
+
+            if (!AccessibilityService.ReduceMotion)
+            {
+                var winPos = ImGui.GetWindowPos();
+                _thanksConfetti.Draw(winPos, winPos + ImGui.GetWindowSize());
+            }
+
+            ImGui.Dummy(new Vector2(0f, Px(20f)));
+            CenteredIcon(FontAwesomeIcon.Heart, t.Accent, winW, Px(48f));
+            ImGui.Dummy(new Vector2(0f, Px(12f)));
+
+            using (UiFonts.H1?.Push())
+            {
+                CenteredHeading(Loc.T("settings.contributors_thanks_title"), new Vector4(1f, 1f, 1f, 1f), winW);
+            }
+            ImGui.Dummy(new Vector2(0f, Px(4f)));
+            var introCol = new Vector4(t.AccentLight.X, t.AccentLight.Y, t.AccentLight.Z, 1f);
+            using (UiFonts.H3?.Push())
+            {
+                CenteredHeading(Loc.T("settings.contributors_intro"), introCol, winW);
+            }
+
+            ImGui.Dummy(new Vector2(0f, Px(18f)));
+
+            string[] credits =
+            [
+                Loc.T("settings.contributors_council"),
+                Loc.T("settings.contributors_moderation"),
+                Loc.T("settings.contributors_translators"),
+                Loc.T("settings.contributors_xivauth"),
+                Loc.T("settings.contributors_punish"),
+                Loc.T("settings.contributors_dalamud"),
+                Loc.T("settings.contributors_testers"),
+            ];
+
+            var heartGlyph = FontAwesomeIcon.Heart.ToIconString();
+            var rowCol = new Vector4(0.94f, 0.93f, 0.97f, 1f);
+            using (UiFonts.H3?.Push())
+            {
+                foreach (var line in credits)
+                {
+                    ImGui.SetCursorPosX(Px(PadX) + Px(10f));
+                    ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
+                    ImGui.TextColored(t.Accent, heartGlyph);
+                    ImGui.PopFont();
+                    ImGui.SameLine(0f, Px(12f));
+                    ImGui.PushTextWrapPos(winW - Px(PadX));
+                    ImGui.TextColored(rowCol, line);
+                    ImGui.PopTextWrapPos();
+                    ImGui.Dummy(new Vector2(0f, Px(9f)));
+                }
+            }
+
+            ImGui.Dummy(new Vector2(0f, Px(12f)));
+            ImGui.SetCursorPosX(Px(PadX));
+            ImGui.PushStyleColor(ImGuiCol.Button, t.ButtonNormal);
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, t.ButtonHovered);
+            ImGui.PushStyleColor(ImGuiCol.ButtonActive, t.ButtonActive);
+            ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
+            if (ImGui.Button(Loc.T("settings.back_to_settings_arrow"), new Vector2(winW - Px(PadX) * 2f, Px(32f))))
+            {
+                _view = View.Normal;
+            }
+            ImGui.PopStyleVar();
+            ImGui.PopStyleColor(3);
+
+            ImGui.Spacing();
+        }
+    }
+
+    /// <summary>Centers a single line horizontally in the content area; falls back to a left-padded, wrapped
+    /// paragraph when the text is too wide to fit on one line.</summary>
+    private static void CenteredHeading(string text, Vector4 color, float winW)
+    {
+        var avail = winW - Px(PadX) * 2f;
+        var w = ImGui.CalcTextSize(text).X;
+        if (w <= avail)
+        {
+            ImGui.SetCursorPosX(MathF.Max(Px(PadX), (winW - w) * 0.5f));
+            ImGui.TextColored(color, text);
+        }
+        else
+        {
+            ImGui.SetCursorPosX(Px(PadX));
+            ImGui.PushTextWrapPos(winW - Px(PadX));
+            ImGui.TextColored(color, text);
+            ImGui.PopTextWrapPos();
+        }
+    }
+
+    /// <summary>Draws a FontAwesome glyph centered in the content area, scaled to <paramref name="sizePx"/>.</summary>
+    private static void CenteredIcon(FontAwesomeIcon icon, Vector4 color, float winW, float sizePx)
+    {
+        ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
+        var iconFont = ImGui.GetFont();
+        var glyph = icon.ToIconString();
+        var sz = ImGui.CalcTextSize(glyph) * (sizePx / ImGui.GetFontSize());
+        ImGui.PopFont();
+
+        var origin = ImGui.GetCursorScreenPos();
+        var dl = ImGui.GetWindowDrawList();
+        dl.AddText(iconFont, sizePx, new Vector2(origin.X + (winW - sz.X) * 0.5f, origin.Y), ImGui.GetColorU32(color), glyph);
+        ImGui.Dummy(new Vector2(winW, sz.Y));
     }
 
     private void DrawWarningsList(float winW)
@@ -1099,10 +1414,12 @@ public class SettingsScreen
         });
     }
 
-    private static void SectionLabel(string title, ThemeDefinition t)
+    private static void SectionLabel(string title, ThemeDefinition t) => SectionLabel(title, t.Accent);
+
+    private static void SectionLabel(string title, Vector4 color)
     {
         ImGui.SetCursorPosX(Px(PadX));
-        ImGui.TextColored(t.Accent, title);
+        ImGui.TextColored(color, title);
         ImGui.Spacing();
     }
 

@@ -95,6 +95,7 @@ internal static class CommonEn
         ["common.close_plugin_title"] = "Close AetherLove?",
         ["common.close_plugin_body"] = "This just hides the window. You'll stay connected and still receive new matches and messages while the plugin is enabled.\n\nReopen the window any time by typing {0} in chat.",
         ["common.close_plugin_tip"] = "Tip: use the Minimize button at the bottom instead to keep the small floating bubble visible with its notification badge.",
+        ["common.close_plugin_dont_ask"] = "Do not show this popup again",
         ["common.close"] = "Close",
 
         // Save-error modal
@@ -112,5 +113,17 @@ internal static class CommonEn
         // Image crop window
         ["common.loading_image"] = "Loading image...",
         ["common.use_this_crop"] = "Use this crop",
+
+        // SFW-image gate modal (main avatar + first profile photo must be SFW)
+        ["common.sfw_gate_title"] = "Profile + Avatar - SFW ONLY",
+        ["common.sfw_gate_subtitle"] = "What is NOT SFW:",
+        ["common.sfw_gate_b1"] = "Full nudity of any gender.",
+        ["common.sfw_gate_b2"] = "Visible nipples of any gender.",
+        ["common.sfw_gate_b3"] = "Visible pubic hair or genital areas.",
+        ["common.sfw_gate_b4"] = "Graphic depictions of blood, injuries, wounds, or bodily harm.",
+        ["common.sfw_gate_b5"] = "Tattoos, markings, symbols, or text that are obscene, discriminatory, hateful, or target individuals or groups based on race, ethnicity, nationality, religion, gender, sexual orientation, or other protected characteristics.",
+        ["common.sfw_gate_b6"] = "Sexual gestures, poses, or visual references that imply or simulate sexual acts, including oral sex, masturbation, or other sexual activity.",
+        ["common.sfw_gate_secondary"] = "You can still upload NSFW material in your secondary profile images.",
+        ["common.sfw_gate_ack"] = "I understand the rules for SFW",
     };
 }

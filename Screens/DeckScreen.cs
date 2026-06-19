@@ -45,10 +45,6 @@ public class DeckScreen : IDisposable
 
     private volatile bool _pendingMatchNav;
 
-    private ISharedImmediateTexture? _logoTex;
-    private bool _logoLoaded;
-    private const string LogoFileName = "logo_mini.png";
-
     private readonly CooldownScene _cooldownScene = new();
 
     // Loader sticks for at least MinLoaderDuration so a fast fetch doesn't flash the cooldown screen.
@@ -266,103 +262,19 @@ public class DeckScreen : IDisposable
         }
     }
 
-    private void EnsureLogo()
-    {
-        if (_logoLoaded)
-        {
-            return;
-        }
-        _logoLoaded = true;
-        try
-        {
-            var dir = Path.GetDirectoryName(Plugin.PluginInterface.AssemblyLocation.FullName) ?? "";
-            var path = Path.Combine(dir, "Media", LogoFileName);
-            if (File.Exists(path))
-            {
-                _logoTex = Plugin.TextureProvider.GetFromFile(path);
-            }
-        }
-        catch (Exception ex)
-        {
-            Plugin.Log.Warning(ex, "[DeckScreen] Failed to load logo_mini.png");
-        }
-    }
-
     private void DrawEmptyState(Vector2 windowPos, Vector2 windowSize)
     {
         var loaderActive = _refreshInFlight
             || (DateTimeOffset.UtcNow - _loaderShownAt) < MinLoaderDuration;
-
         if (loaderActive)
         {
             Widgets.LoadingIndicator.Draw();
+            return;
         }
-        else if (_noPoolForPreferences)
-        {
-            DrawNoPool(windowPos, windowSize);
-        }
-        else
-        {
-            DrawCooldown(windowPos, windowSize);
-        }
-    }
 
-    private void DrawNoPool(Vector2 windowPos, Vector2 windowSize)
-    {
-        EnsureLogo();
-        var dl = ImGui.GetWindowDrawList();
-        var t = ThemeService.Current;
-        var centerX = windowPos.X + windowSize.X * 0.5f;
-        var textW = windowSize.X - Px(56f);
-        var curY = windowPos.Y + windowSize.Y * 0.13f;
+        var heading = _noPoolForPreferences ? Loc.T("deck.no_pool_heading") : Loc.T("deck.cooldown_heading");
+        var body = _noPoolForPreferences ? Loc.T("deck.no_pool_body") : Loc.T("deck.cooldown_body");
 
-        var logoWrap = _logoTex?.GetWrapOrDefault();
-        const float LogoSz = 74f;
-        if (logoWrap != null)
-        {
-            dl.AddImage(logoWrap.Handle,
-                new Vector2(centerX - Px(LogoSz) * 0.5f, curY),
-                new Vector2(centerX + Px(LogoSz) * 0.5f, curY + Px(LogoSz)));
-        }
-        curY += Px(LogoSz) + Px(14f);
-
-        var iconFontHandle = Plugin.PluginInterface.UiBuilder.FontIcon;
-        var baseFontSize = ImGui.GetFontSize();
-        ImGui.PushFont(iconFontHandle);
-        var icon = FontAwesomeIcon.SearchMinus.ToIconString();
-        var iconSz = baseFontSize * 1.7f;
-        var iconW = ImGui.CalcTextSize(icon).X * (iconSz / baseFontSize);
-        var iconH = ImGui.CalcTextSize(icon).Y * (iconSz / baseFontSize);
-        var iconFont = ImGui.GetFont();
-        ImGui.PopFont();
-        dl.AddText(iconFont, iconSz, new Vector2(centerX - iconW * 0.5f, curY), t.AccentU32, icon);
-        curY += iconH + Px(14f);
-
-        using (UiFonts.H3?.Push())
-        {
-            var head = Loc.T("deck.no_pool_heading");
-            var headSz = ImGui.CalcTextSize(head);
-            ImGui.SetCursorScreenPos(new Vector2(centerX - headSz.X * 0.5f, curY));
-            ImGui.TextColored(t.AccentLight, head);
-        }
-        curY = ImGui.GetCursorScreenPos().Y + Px(10f);
-
-        ImGui.SetCursorScreenPos(new Vector2(centerX - textW * 0.5f, curY));
-        ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + textW);
-        ImGui.TextColored(new Vector4(0.80f, 0.80f, 0.80f, 1f), Loc.T("deck.no_pool_body"));
-        ImGui.PopTextWrapPos();
-        curY = ImGui.GetCursorScreenPos().Y + Px(10f);
-
-        ImGui.SetCursorScreenPos(new Vector2(centerX - textW * 0.5f, curY));
-        ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + textW);
-        ImGui.TextColored(new Vector4(0.80f, 0.80f, 0.80f, 1f), Loc.T("deck.no_pool_footer"));
-        ImGui.PopTextWrapPos();
-    }
-
-    /// <summary>Cooldown view shown once the slot's deck is exhausted: the night-sky pegasus scene with the
-    /// live countdown to the next batch.</summary>
-    private void DrawCooldown(Vector2 windowPos, Vector2 windowSize)
-    {
         string? timer = null;
         if (_nextPullAtUtc.HasValue)
         {
@@ -377,7 +289,7 @@ public class DeckScreen : IDisposable
         }
 
         var error = _refreshError is not null ? Loc.T("deck.server_error", _refreshError) : null;
-        _cooldownScene.Draw(windowPos, windowSize, timer, error);
+        _cooldownScene.Draw(windowPos, windowSize, heading, body, timer, error);
     }
 
     public void Dispose()
@@ -653,7 +565,8 @@ public class DeckScreen : IDisposable
             {
                 AddInfoSegment(raceLabel, infoFontPtr, MainW(raceLabel));
             }
-            if (profile.Gender != Gender.None)
+            // Only Male/Female have a glyph; None (fakes) and Other render without an icon.
+            if (profile.Gender is Gender.Male or Gender.Female)
             {
                 AddInfoSegment(genderIcon, iconFontPtr, genderW);
             }
