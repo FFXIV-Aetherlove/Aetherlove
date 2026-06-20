@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
-    <Version>0.9.44.0</Version>
+    <Version>1.0.0.0</Version>
     <Authors>Astraea, Nihal</Authors>
     <Company>Astraea</Company>
     <Copyright>Copyright © 2026 Astraea</Copyright>
@@ -20,7 +20,7 @@
     <Name>AetherLove</Name>
     <Author>Astraea, Nihal</Author>
     <Punchline>Swipe for joy.</Punchline>
-    <Description>FFXIV in-game dating and matchmaking — swipe, match, and chat with other adventurers. /al opens the phone.</Description>
+    <Description>FFXIV in-game dating and matchmaking — swipe, match, and chat with other adventurers. /love opens the phone.</Description>
     <ApplicableVersion>any</ApplicableVersion>
     <Tags>dating;social;matchmaking;chat</Tags>
     <RepoUrl>https://git.honse.farm/astraea/aetherlove</RepoUrl>

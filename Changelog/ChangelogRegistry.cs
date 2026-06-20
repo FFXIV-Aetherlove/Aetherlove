@@ -11,55 +11,26 @@ public static class ChangelogRegistry
     private static readonly List<ChangelogEntry> _entries =
     [
         new(
-            Version: new Version(0, 9, 6),
-            ReleaseDate: new DateOnly(2026, 6, 3),
+            Version: new Version(1, 0, 0),
+            ReleaseDate: new DateOnly(2026, 06, 20),
             NewFeatures:
             [
-                "New \"Phone size\" setting (Small / Medium / Large) under Settings → Appearance, so you can make the whole app bigger on larger screens.",
-                "Pressing Enter now sends a chat message and keeps the text box focused, so you can fire off messages back-to-back.",
+                "The launch of Aetherlove v1.0.0",
+                "This marks a beautiful moment after weeks of testing, laughing, coding and dreaming.",
+                "Aetherlove is now available to everyone - Sweep with joy and share the love with your friends!",
+                "We hope you'll make LOTS and LOTS of new friends, and meet beautiful new people through Aetherlove"
             ],
             BugFixes:
             [
-                "The phone now renders at a consistent size for everyone instead of growing oversized with Dalamud's global font-scale setting — use the new Phone size setting to scale it instead.",
-                "Fixed chat messages (both sent and received) being cut off at the bottom.",
-                "Fixed a crash that could happen when quickly switching between the deck and your chat list.",
-                "Opening the deck is now instant when you already have cards, instead of reloading every time.",
-                "Fixed display glitches and the small, awkward \"Sign out\" button on the passphrase unlock screen.",
+                "All beta testers who helped report issues - thank you so very much!",
+                "Without all of your hard work, this release wouldn't be possible.",
+                "If you find any issues, please report them in the #bug-reports channel on our Discord server or via the in-app feedback form.",
             ],
             Important:
-            []
-        ),
-        new(
-            Version: new Version(0, 9, 3),
-            ReleaseDate: new DateOnly(2026, 6, 2),
-            NewFeatures:
-            [],
-            BugFixes:
             [
-                "Emoji shortcodes (like :smile:) now show as emoji in profile bios instead of the raw text.",
-                "Added an emoji picker and live preview to the \"About Me\" field when editing your profile — previously emoji could only be added during first-time setup.",
-                "Fixed a hard crash that could happen when enabling \"NSFW Profiles: YES\" during onboarding.",
-                "The phone now scales with Dalamud's global font-scale setting (/xlsettings), so larger text no longer overflows the layout.",
-            ],
-            Important:
-            []
-        ),
-        new(
-            Version: new Version(0, 9, 0),
-            ReleaseDate: new DateOnly(2026, 5, 31),
-            NewFeatures:
-            [
-                "Welcome to the beta!",
-                "Swipe through adventurer profiles and match when the interest is mutual.",
-                "Private one-on-one chat with your matches, end-to-end encrypted — not even AetherLove staff can read it.",
-                "Build your profile with photos, languages, region, and content interests.",
-                "Real-time notifications for new matches and messages, with optional sounds.",
-            ],
-            BugFixes:
-            [],
-            Important:
-            [
-                "Welcome to the AetherLove public beta! Thank you for helping us test. Please share feedback and report anything that feels off — your input shapes the release.",
+                "Share Aetherlove with your friends - point them to www.aetherlove.space!",
+                "Thank you for your support, and we hope you enjoy using Aetherlove as much as we enjoyed making it!",
+                "Project team: Astraea & Nihal"
             ]
         ),
     ];
