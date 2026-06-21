@@ -9,6 +9,7 @@ internal static class ChatEs
         ["chat.report_submitted_toast"] = "Denuncia enviada. Nuestro equipo de moderación la revisará.",
         ["chat.view_profile"] = "Ver perfil",
         ["chat.menu_open_profile"] = "Abrir perfil",
+        ["chat.menu_copy_message"] = "Copiar mensaje",
         ["chat.menu_pin"] = "Fijar chat",
         ["chat.menu_unpin"] = "Dejar de fijar chat",
         ["chat.menu_unmatch"] = "Deshacer coincidencia",

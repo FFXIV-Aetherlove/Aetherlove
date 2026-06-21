@@ -56,6 +56,12 @@ internal static class ProfileEs
         ["profile.closing_in"] = "Cerrando en {0} segundos",
         ["profile.close"] = "Cerrar",
 
+        // ProfileScreen — copy profile text (viewing others only)
+        ["profile.copy_text"] = "Copiar texto del perfil",
+        ["profile.copy_warning_title"] = "Advertencia",
+        ["profile.copy_warning_body"] = "Has copiado el texto de otra persona. Ten cuidado al hacer clic o seguir cualquier enlace que contenga — lo haces bajo tu propia responsabilidad.",
+        ["profile.copy_warning_agree"] = "Lo entiendo y estoy de acuerdo",
+
         ["profile.tab_view"] = "Ver perfil",
         ["profile.tab_edit"] = "Editar perfil",
         ["profile.tab_images"] = "Cambiar imágenes",

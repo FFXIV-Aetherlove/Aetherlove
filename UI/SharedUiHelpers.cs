@@ -7,6 +7,7 @@ using AetherLove.Services.Localization;
 using AetherLove.Shared;
 using AetherLove.Shared.Profile;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Textures;
 
 namespace AetherLove.UI;
@@ -24,6 +25,35 @@ internal static class SharedUiHelpers
         if (ImGui.IsItemHovered())
         {
             ImGui.SetTooltip(text);
+        }
+    }
+
+    /// <summary>Copies player-authored text to the clipboard and, on the first copy ever, shows the one-time
+    /// link-safety warning gated by the shared AcknowledgedProfileCopyTextWarning flag. Used by the profile bio
+    /// and chat-message copy actions.</summary>
+    internal static void CopyTextWithLinkWarning(string text)
+    {
+        ImGui.SetClipboardText(text ?? string.Empty);
+        if (!Plugin.Configuration.AcknowledgedProfileCopyTextWarning)
+        {
+            Widgets.ModalHost.Instance?.Open(320f, DrawCopyTextWarningBody);
+        }
+    }
+
+    private static void DrawCopyTextWarningBody(float availW)
+    {
+        Widgets.ModalUi.Header(availW, FontAwesomeIcon.ExclamationTriangle,
+            Loc.T("profile.copy_warning_title"), UiColors.Amber);
+
+        ImGui.TextColored(UiColors.Body, Loc.T("profile.copy_warning_body"));
+        ImGui.Spacing();
+        ImGui.Spacing();
+
+        if (Widgets.ModalUi.Button($"{Loc.T("profile.copy_warning_agree")}##copyWarnAgree", availW))
+        {
+            Plugin.Configuration.AcknowledgedProfileCopyTextWarning = true;
+            Plugin.Configuration.Save();
+            Widgets.ModalHost.Instance?.Close();
         }
     }
 
@@ -300,9 +330,10 @@ internal static class SharedUiHelpers
     internal static void DrawLanguagePillsCore(
         ISharedImmediateTexture?[] flags,
         float flagW, float flagH, bool useCode, string idPrefix,
-        Func<int, bool> isSelected, Action<int> onToggle)
+        Func<int, bool> isSelected, Action<int> onToggle, int? count = null)
     {
         var t = ThemeService.Current;
+        var n = count ?? LanguageEntries.Length;
         var availW = ImGui.GetContentRegionAvail().X;
         var dl = ImGui.GetWindowDrawList();
 
@@ -315,11 +346,11 @@ internal static class SharedUiHelpers
         var pillW = flagW + pillPadX * 2f;
         var pillH = pillPadY + flagH + labelGap + labelH + pillPadY;
 
-        var totalW = LanguageEntries.Length * pillW + (LanguageEntries.Length - 1) * pillGap;
+        var totalW = n * pillW + (n - 1) * pillGap;
         var startX = MathF.Max(0f, (availW - totalW) * 0.5f);
         var startY = ImGui.GetCursorPosY();
 
-        for (var i = 0; i < LanguageEntries.Length; i++)
+        for (var i = 0; i < n; i++)
         {
             var selected = isSelected(i);
             var pillX = startX + i * (pillW + pillGap);

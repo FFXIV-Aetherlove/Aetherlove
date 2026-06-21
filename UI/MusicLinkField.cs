@@ -15,6 +15,11 @@ public sealed class MusicLinkField
     private readonly Func<MusicProvider, string, CancellationToken, Task<MusicLinkDto?>> _resolve;
     private int _seq;
 
+    /// <summary>The last input string a resolve was kicked off for. Guards against re-resolving the same
+    /// text (an ImGui InputText re-reports its value each frame while focused), which would otherwise loop
+    /// hub calls and exhaust the resolve rate limit.</summary>
+    private string _lastResolvedInput = string.Empty;
+
     public MusicProvider Provider { get; }
 
     /// <summary>Raw input the user pasted / the collapsed canonical ref after a successful resolve.</summary>
@@ -44,6 +49,7 @@ public sealed class MusicLinkField
         Input = storedRef ?? string.Empty;
         ResolvedRef = Input;
         ResolvedName = storedName ?? string.Empty;
+        _lastResolvedInput = Input;
         Fetching = false;
         Invalid = false;
     }
@@ -57,14 +63,18 @@ public sealed class MusicLinkField
         {
             ResolvedRef = string.Empty;
             ResolvedName = string.Empty;
+            _lastResolvedInput = string.Empty;
             Fetching = false;
             Invalid = false;
             return;
         }
-        if (input == ResolvedRef)
+        // Resolve each distinct input only once — the box already equals the canonical ref, or we already
+        // fired a resolve for this exact text. Skipping the repeat is what prevents a per-frame hub-call loop.
+        if (input == ResolvedRef || input == _lastResolvedInput)
         {
             return;
         }
+        _lastResolvedInput = input;
         ResolvedName = string.Empty;
         Invalid = false;
         Fetching = true;
@@ -75,29 +85,36 @@ public sealed class MusicLinkField
     private async Task ResolveAsync(string input, int seq)
     {
         MusicLinkDto? dto = null;
+        Exception? error = null;
         try
         {
             dto = await _resolve(Provider, input, CancellationToken.None).ConfigureAwait(false);
         }
-        catch { /* preview is best-effort; leave fields cleared */ }
+        catch (Exception ex)
+        {
+            error = ex;
+        }
 
         if (seq != _seq)
         {
             return;
         }
         Fetching = false;
-        if (dto is null)
-        {
-            ResolvedRef = string.Empty;
-            ResolvedName = string.Empty;
-            Invalid = true;
-        }
-        else
+        if (dto is not null)
         {
             ResolvedRef = dto.Ref;
             ResolvedName = dto.Name;
             Invalid = false;
-            Input = dto.Ref; // collapse a pasted URL down to the canonical ref in the box
+            return;
         }
+        // A null result is the server rejecting the link; an exception is the hub call itself failing
+        // (connection / rate-limit). Both leave the field invalid — log the exception so it isn't silent.
+        if (error is not null)
+        {
+            Plugin.Log.Warning(error, "[MusicLink] {0} resolve failed for input of length {1}.", Provider, input.Length);
+        }
+        ResolvedRef = string.Empty;
+        ResolvedName = string.Empty;
+        Invalid = true;
     }
 }

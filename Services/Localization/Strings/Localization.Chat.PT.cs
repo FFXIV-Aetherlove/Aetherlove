@@ -9,6 +9,7 @@ internal static class ChatPt
         ["chat.report_submitted_toast"] = "Denúncia enviada. Nossa equipa de moderação vai analisá-la.",
         ["chat.view_profile"] = "Ver perfil",
         ["chat.menu_open_profile"] = "Abrir perfil",
+        ["chat.menu_copy_message"] = "Copiar mensagem",
         ["chat.menu_pin"] = "Fixar conversa",
         ["chat.menu_unpin"] = "Desafixar conversa",
         ["chat.menu_unmatch"] = "Desfazer match",

@@ -9,6 +9,7 @@ internal static class ChatEn
         ["chat.report_submitted_toast"] = "Report submitted. Our moderation team will review it.",
         ["chat.view_profile"] = "View profile",
         ["chat.menu_open_profile"] = "Open profile",
+        ["chat.menu_copy_message"] = "Copy message",
         ["chat.menu_pin"] = "Pin chat",
         ["chat.menu_unpin"] = "Unpin chat",
         ["chat.menu_unmatch"] = "Unmatch",

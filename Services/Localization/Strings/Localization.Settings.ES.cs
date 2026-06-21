@@ -46,6 +46,8 @@ internal static class SettingsEs
         ["settings.announce_matches_chat"] = "Anunciar coincidencias nuevas en el chat del juego",
         ["settings.popup_messages"] = "Mostrar un pop-up para mensajes nuevos",
         ["settings.popup_matches"] = "Mostrar un pop-up para coincidencias nuevas",
+        ["settings.hide_notifications_in_combat"] = "Ocultar notificaciones en combate",
+        ["settings.hide_notifications_in_combat_tooltip"] = "Cuando está activado, no recibirás ninguna notificación —ni avisos en el chat del juego, ni pop-ups, ni sonidos— mientras estés en combate.",
         ["settings.auto_open_minimized"] = "Abrir minimizado automáticamente al iniciar sesión",
         ["settings.pulse_optout"] = "Recibe mensajes increíbles del equipo de Aethernet para recordarte que deslices",
         ["settings.pulse_optout_tooltip"] = "De vez en cuando, AetherLove puede dejar un mensaje divertido en tu chat del juego. Desactívalo para detenerlos.",

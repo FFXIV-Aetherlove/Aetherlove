@@ -9,6 +9,7 @@ internal static class ChatRu
         ["chat.report_submitted_toast"] = "Жалоба отправлена. Команда модераторов рассмотрит её.",
         ["chat.view_profile"] = "Открыть профиль",
         ["chat.menu_open_profile"] = "Открыть профиль",
+        ["chat.menu_copy_message"] = "Скопировать сообщение",
         ["chat.menu_pin"] = "Закрепить чат",
         ["chat.menu_unpin"] = "Открепить чат",
         ["chat.menu_unmatch"] = "Отменить пару",

@@ -792,6 +792,16 @@ public class ProfileScreen
         ImGui.PushStyleColor(ImGuiCol.Text, UiColors.BioText);
         AetherLove.Emoji.ParsedMessage.Parse(_profile.Bio).DrawWrapped("##aboutBio", bioW);
         ImGui.PopStyleColor();
+        if (_source != ProfileSource.Self
+            && ImGui.BeginPopupContextItem("##bioCopyCtx", ImGuiPopupFlags.MouseButtonRight))
+        {
+            if (ChatScreen.DrawIconMenuItem(FontAwesomeIcon.Copy, Loc.T("profile.copy_text")))
+            {
+                ImGui.CloseCurrentPopup();
+                CopyTextWithLinkWarning(_profile!.Bio ?? string.Empty);
+            }
+            ImGui.EndPopup();
+        }
         SpaceDivide(dl, winW);
     }
 

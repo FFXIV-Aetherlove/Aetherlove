@@ -10,6 +10,7 @@ internal static class ChatFr
         ["chat.report_submitted_toast"] = "Signalement envoyé. Notre équipe de modération l'examinera.",
         ["chat.view_profile"] = "Voir le profil",
         ["chat.menu_open_profile"] = "Ouvrir le profil",
+        ["chat.menu_copy_message"] = "Copier le message",
         ["chat.menu_pin"] = "Épingler le chat",
         ["chat.menu_unpin"] = "Désépingler le chat",
         ["chat.menu_unmatch"] = "Annuler la correspondance",

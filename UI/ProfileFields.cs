@@ -48,6 +48,7 @@ internal static class ProfileFields
         Language.Russian,
         Language.German,
         Language.Portuguese,
+        Language.Japanese,
     ];
 
     internal static readonly ContentInterest[] ContentInterestValues =
@@ -125,6 +126,8 @@ internal static class ProfileFields
         Job.Miner, Job.Botanist, Job.Fisher,
     ];
 
+    // UI-translatable languages (those with an ILanguageService) MUST stay first: the plugin-language pickers
+    // render only the leading LanguageProvider.UiLanguageCount; spoken-only ones (Japanese) are appended after.
     internal static readonly (string Name, string Code, string FlagFile)[] LanguageEntries =
     [
         ("English",    "EN", "flag_en.png"),
@@ -133,6 +136,7 @@ internal static class ProfileFields
         ("Russian",    "RU", "flag_ru.png"),
         ("German",     "DE", "flag_de.png"),
         ("Portuguese", "PT", "flag_pt.png"),
+        ("Japanese",   "JA", "flag_jp.png"),
     ];
 
     internal static readonly string[] Languages =

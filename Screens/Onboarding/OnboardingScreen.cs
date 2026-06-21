@@ -276,7 +276,7 @@ public partial class OnboardingScreen
             : _step switch
             {
                 OnboardingStep.Finished => Loc.T("onboarding.start_swiping"),
-                OnboardingStep.Preferences => Loc.T("onboarding.finish"),
+                OnboardingStep.Filters => _saveError is not null ? Loc.T("onboarding.retry") : Loc.T("onboarding.finish"),
                 _ => _saveError is not null ? Loc.T("onboarding.retry") : Loc.T("onboarding.next"),
             };
         float baseW = Px(_step == OnboardingStep.Finished ? 130f : 92f);

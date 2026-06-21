@@ -305,7 +305,7 @@ public sealed class NewsScreen : IDisposable
         {
             ImGui.Spacing();
             ImGui.SetCursorPosX(PadX);
-            ImGui.TextColored(UiColors.Muted, day.Key.ToString("D", LanguageProvider.CurrentCulture));
+            ImGui.TextColored(UiColors.Muted, LanguageProvider.FormatDate(day.Key, "D"));
             ImGui.Spacing();
 
             foreach (var item in day.OrderByDescending(n => n.PublishedAtUtc))

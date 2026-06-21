@@ -93,6 +93,7 @@ public partial class OnboardingScreen
             {
                 _pluginLangIdx = i;
                 LanguageProvider.SetLanguage(LanguageEntries[i].Name);
-            });
+            },
+            count: LanguageProvider.UiLanguageCount);
     }
 }

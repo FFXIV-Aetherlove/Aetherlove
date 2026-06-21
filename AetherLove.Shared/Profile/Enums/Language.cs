@@ -11,4 +11,5 @@ public enum Language : short
     Russian = 8,
     German = 16,
     Portuguese = 32,
+    Japanese = 64,
 }

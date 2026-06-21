@@ -47,6 +47,8 @@ internal static class SettingsFr
         ["settings.announce_matches_chat"] = "Annoncer les nouvelles correspondances dans le chat de jeu",
         ["settings.popup_messages"] = "Afficher une fenêtre contextuelle pour les nouveaux messages",
         ["settings.popup_matches"] = "Afficher une fenêtre contextuelle pour les nouvelles correspondances",
+        ["settings.hide_notifications_in_combat"] = "Masquer les notifications en combat",
+        ["settings.hide_notifications_in_combat_tooltip"] = "Lorsque cette option est activée, vous ne recevez aucune notification — annonces dans le chat de jeu, fenêtres contextuelles ou sons — tant que vous êtes en combat.",
         ["settings.auto_open_minimized"] = "Ouvrir automatiquement en mode réduit à la connexion",
         ["settings.pulse_optout"] = "Reçois d'incroyables messages de l'équipe Aethernet pour te rappeler de swiper",
         ["settings.pulse_optout_tooltip"] = "De temps en temps, AetherLove peut glisser un message amusant dans votre chat de jeu. Désactivez pour les arrêter.",

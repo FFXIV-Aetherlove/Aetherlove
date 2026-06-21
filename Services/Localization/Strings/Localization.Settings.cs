@@ -52,6 +52,8 @@ internal static class SettingsEn
         ["settings.announce_matches_chat"] = "Announce new matches in game chat",
         ["settings.popup_messages"] = "Show a popup for new messages",
         ["settings.popup_matches"] = "Show a popup for new matches",
+        ["settings.hide_notifications_in_combat"] = "Hide notifications during combat",
+        ["settings.hide_notifications_in_combat_tooltip"] = "When enabled, you won't receive any notifications — chat announcements, popups, or sounds — while you're in combat.",
         ["settings.auto_open_minimized"] = "Open minimized automatically when you log in",
         ["settings.pulse_optout"] = "Receive amazing messages from the Aethernet team to remind you to swipe",
         ["settings.pulse_optout_tooltip"] = "Every so often, AetherLove may drop a playful line into your game chat. Turn this off to stop them.",

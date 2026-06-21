@@ -99,6 +99,9 @@ public class Configuration : IPluginConfiguration
     /// <summary>Show a Dalamud toast when a new match is made.</summary>
     public bool NotifyPopupOnMatch { get; set; } = true;
 
+    /// <summary>Suppress every notification (chat, popup, sound) while the player is in combat.</summary>
+    public bool HideNotificationsDuringCombat { get; set; } = true;
+
     /// <summary>Open the minimised bubble automatically on character login.</summary>
     public bool AutoOpenMinimizedOnLogin { get; set; } = true;
 
@@ -107,6 +110,10 @@ public class Configuration : IPluginConfiguration
 
     /// <summary>Set after the first launch so onboarding is only force-opened on a fresh install.</summary>
     public bool HasCompletedFirstLaunch { get; set; } = false;
+
+    /// <summary>Set once the user has acknowledged the link-safety warning shown the first time they copy
+    /// another player's profile text, so it appears only once.</summary>
+    public bool AcknowledgedProfileCopyTextWarning { get; set; } = false;
 
     /// <summary>Changelog versions ("Major.Minor.Build") whose "What's New" window has already been shown.</summary>
     public HashSet<string> ShownChangelogVersions { get; set; } = [];

@@ -487,6 +487,7 @@ public class SettingsScreen
         var t = ThemeService.Current;
         var dl = ImGui.GetWindowDrawList();
         var entries = LanguageEntries;
+        var count = LanguageProvider.UiLanguageCount;
 
         var FlagW = Px(36f);
         var FlagH = Px(27f);
@@ -499,13 +500,13 @@ public class SettingsScreen
         var pillH = PillPadY + FlagH + LabelGap + labelH + PillPadY;
 
         var usableW = winW - Px(PadX) * 2f;
-        var totalW = entries.Length * pillW + (entries.Length - 1) * PillGap;
+        var totalW = count * pillW + (count - 1) * PillGap;
         var startX = Px(PadX) + MathF.Max(0f, (usableW - totalW) * 0.5f);
         var startY = ImGui.GetCursorPosY();
 
         var currentLang = LanguageProvider.Current.LanguageName;
 
-        for (int i = 0; i < entries.Length; i++)
+        for (int i = 0; i < count; i++)
         {
             var entry = entries[i];
             var selected = string.Equals(entry.Name, currentLang, StringComparison.OrdinalIgnoreCase);
@@ -697,6 +698,12 @@ public class SettingsScreen
         SettingCheckbox(Loc.T("settings.auto_open_minimized"),
             () => Plugin.Configuration.AutoOpenMinimizedOnLogin,
             v => Plugin.Configuration.AutoOpenMinimizedOnLogin = v);
+
+        SettingCheckbox(Loc.T("settings.hide_notifications_in_combat"),
+            () => Plugin.Configuration.HideNotificationsDuringCombat,
+            v => Plugin.Configuration.HideNotificationsDuringCombat = v);
+        ImGui.SameLine();
+        HelpMarker(Loc.T("settings.hide_notifications_in_combat_tooltip"));
 
         ImGui.Spacing();
         ImGui.SetCursorPosX(Px(PadX));

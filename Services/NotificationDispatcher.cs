@@ -1,5 +1,6 @@
 using System;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Interface.ImGuiNotification;
@@ -46,9 +47,17 @@ public sealed class NotificationDispatcher : IDisposable
         }
     }
 
+    /// <summary>Hard requirement for every notification: a character must be logged in. Message/match/news
+    /// pushes arrive over the live hub even at the title screen or character select, where a chat line or
+    /// toast would be wrong.</summary>
+    private static bool LoggedIn => Plugin.ClientState.IsLoggedIn;
+
+    /// <summary>When the user has opted in, suppress every notification while in combat.</summary>
+    private bool CombatSuppressed => _config.HideNotificationsDuringCombat && Plugin.Condition[ConditionFlag.InCombat];
+
     public void NotifyChatMessage()
     {
-        if (!_config.EnableNotifications)
+        if (!_config.EnableNotifications || !LoggedIn || CombatSuppressed)
         {
             return;
         }
@@ -71,7 +80,7 @@ public sealed class NotificationDispatcher : IDisposable
 
     public void NotifyNewMatch(string otherName)
     {
-        if (!_config.EnableNotifications)
+        if (!_config.EnableNotifications || !LoggedIn || CombatSuppressed)
         {
             return;
         }
@@ -132,7 +141,7 @@ public sealed class NotificationDispatcher : IDisposable
     /// <summary>Announces a freshly-published news item in the game chat with a link that opens News.</summary>
     public void NotifyNews(string title)
     {
-        if (!_config.EnableNotifications)
+        if (!_config.EnableNotifications || !LoggedIn || CombatSuppressed)
         {
             return;
         }
@@ -172,6 +181,10 @@ public sealed class NotificationDispatcher : IDisposable
     /// <summary>Prints a presence line into the game chat with a clickable link that opens the deck.</summary>
     public void PrintPulse(string text)
     {
+        if (!LoggedIn || CombatSuppressed)
+        {
+            return;
+        }
         try
         {
             var sb = new SeStringBuilder()

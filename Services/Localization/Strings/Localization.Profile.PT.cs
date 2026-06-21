@@ -61,6 +61,12 @@ internal static class ProfilePt
         ["profile.closing_in"] = "Fechando em {0} segundos",
         ["profile.close"] = "Fechar",
 
+        // ProfileScreen — copy profile text (viewing others only)
+        ["profile.copy_text"] = "Copiar texto do perfil",
+        ["profile.copy_warning_title"] = "Aviso",
+        ["profile.copy_warning_body"] = "Você copiou o texto de outra pessoa. Tenha cuidado ao clicar ou acessar qualquer link que ele contenha — você faz isso por sua conta e risco.",
+        ["profile.copy_warning_agree"] = "Entendi e concordo",
+
         // MyProfileScreen — tabs
         ["profile.tab_view"] = "Ver Perfil",
         ["profile.tab_edit"] = "Editar Perfil",

@@ -15,6 +15,7 @@ public static class LanguageFlagService
         ["Russian"] = "flag_ru.png",
         ["German"] = "flag_de.png",
         ["Portuguese"] = "flag_pt.png",
+        ["Japanese"] = "flag_jp.png",
     };
 
     private static readonly Dictionary<string, ISharedImmediateTexture?> Cache = new();

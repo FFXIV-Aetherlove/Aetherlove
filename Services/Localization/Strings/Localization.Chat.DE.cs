@@ -10,6 +10,7 @@ internal static class ChatDe
         ["chat.report_submitted_toast"] = "Meldung eingereicht. Unser Moderationsteam wird sie prüfen.",
         ["chat.view_profile"] = "Profil ansehen",
         ["chat.menu_open_profile"] = "Profil öffnen",
+        ["chat.menu_copy_message"] = "Nachricht kopieren",
         ["chat.menu_pin"] = "Chat anheften",
         ["chat.menu_unpin"] = "Chat lösen",
         ["chat.menu_unmatch"] = "Match auflösen",

@@ -46,6 +46,8 @@ internal static class SettingsRu
         ["settings.announce_matches_chat"] = "Объявлять о новых парах в игровом чате",
         ["settings.popup_messages"] = "Показывать всплывающее окно для новых сообщений",
         ["settings.popup_matches"] = "Показывать всплывающее окно для новых совпадений",
+        ["settings.hide_notifications_in_combat"] = "Скрывать уведомления в бою",
+        ["settings.hide_notifications_in_combat_tooltip"] = "Когда включено, вы не будете получать никаких уведомлений — объявлений в игровом чате, всплывающих окон и звуков — пока находитесь в бою.",
         ["settings.auto_open_minimized"] = "Открывать свёрнутым автоматически при входе в игру",
         ["settings.pulse_optout"] = "Получайте потрясающие сообщения от команды Aethernet, напоминающие свайпать",
         ["settings.pulse_optout_tooltip"] = "Время от времени AetherLove может оставлять шутливое сообщение в игровом чате. Отключите, чтобы прекратить.",

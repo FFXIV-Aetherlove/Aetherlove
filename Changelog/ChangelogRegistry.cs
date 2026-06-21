@@ -11,6 +11,30 @@ public static class ChangelogRegistry
     private static readonly List<ChangelogEntry> _entries =
     [
         new(
+            Version: new Version(1, 1, 0),
+            ReleaseDate: new DateOnly(2026, 06, 21),
+            NewFeatures:
+            [
+                "Players can now select \"Japanese\" as a language spoken and language filter.",
+                "It is now possible to copy ones profile text by right clicking on it and selecting the copy action.",
+                "It is now possible to copy chat messages by right clicking on them and selecting the copy action.",
+                "Players can now disable notifications while being in combat.",
+                "Onboarding has been optimized - players can choose size + theme right from the start."
+            ],
+            BugFixes:
+            [
+                "Notifications (in any form) will only be sent when you are logged into a character.",
+                "Youtube Music links now process correctly.",
+                "Improved the contrast for the chat messages in the yellow theme."
+            ],
+            Important:
+            [
+                "We are overwhelmed with your support and swiping in the past 24 hours!",
+                "Thank you for your support and enthusiasm, and thank you for swiping!",
+                "After this release, we'll upgrade the amount of cards you'll get to 20!"
+            ]
+        ),
+        new(
             Version: new Version(1, 0, 0),
             ReleaseDate: new DateOnly(2026, 06, 20),
             NewFeatures:

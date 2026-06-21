@@ -56,6 +56,12 @@ internal static class ProfileRu
         ["profile.closing_in"] = "Закрытие через {0} секунд",
         ["profile.close"] = "Закрыть",
 
+        // ProfileScreen — copy profile text (viewing others only)
+        ["profile.copy_text"] = "Скопировать текст профиля",
+        ["profile.copy_warning_title"] = "Предупреждение",
+        ["profile.copy_warning_body"] = "Вы скопировали чужой текст. Будьте осторожны, переходя по любым содержащимся в нём ссылкам, — вы делаете это на свой страх и риск.",
+        ["profile.copy_warning_agree"] = "Я понимаю и соглашаюсь",
+
         ["profile.tab_view"] = "Профиль",
         ["profile.tab_edit"] = "Настроить",
         ["profile.tab_images"] = "Фото",

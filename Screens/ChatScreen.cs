@@ -784,12 +784,33 @@ public class ChatScreen
         {
             if (body.Success)
             {
+                // Own bubbles fill with the accent; Vanilla Sunrise's light-yellow accent leaves white text
+                // low-contrast, so draw it near-black there.
+                var darkText = msg.IsOwn && ThemeService.CurrentTheme == AppTheme.VanillaSunrise;
+                if (darkText)
+                {
+                    ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0.13f, 0.10f, 0.03f, 1f));
+                }
                 ImGui.PushTextWrapPos(innerW);
                 parsed.Draw();
                 ImGui.PopTextWrapPos();
+                if (darkText)
+                {
+                    ImGui.PopStyleColor();
+                }
             }
         }
         ImGui.PopStyleVar();
+
+        if (ImGui.BeginPopupContextItem($"##msgCopyCtx{msg.Id}", ImGuiPopupFlags.MouseButtonRight))
+        {
+            if (DrawIconMenuItem(FontAwesomeIcon.Copy, Loc.T("chat.menu_copy_message")))
+            {
+                ImGui.CloseCurrentPopup();
+                CopyTextWithLinkWarning(msg.Text);
+            }
+            ImGui.EndPopup();
+        }
 
         if (isGroupEnd)
         {
@@ -889,12 +910,12 @@ public class ChatScreen
     /// "th" suffix never leaks into e.g. French ("vendredi 19 juin 2026").</summary>
     private static string BuildDayLabel(DateTime date)
     {
-        var culture = LanguageProvider.CurrentCulture;
         if (string.Equals(LanguageProvider.Current.LanguageName, "English", StringComparison.Ordinal))
         {
+            var culture = LanguageProvider.CurrentCulture;
             return $"{date.ToString("dddd", culture)}, {Ordinal(date.Day)} {date.ToString("MMMM yyyy", culture)}";
         }
-        return date.ToString("D", culture);
+        return LanguageProvider.FormatDate(date, "D");
     }
 
     private static void DrawDayDivider(DateTime date)

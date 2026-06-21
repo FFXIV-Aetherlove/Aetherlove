@@ -52,6 +52,8 @@ internal static class SettingsPt
         ["settings.announce_matches_chat"] = "Anunciar novos matches no chat do jogo",
         ["settings.popup_messages"] = "Mostrar um popup para novas mensagens",
         ["settings.popup_matches"] = "Mostrar um popup para novos matches",
+        ["settings.hide_notifications_in_combat"] = "Ocultar notificações em combate",
+        ["settings.hide_notifications_in_combat_tooltip"] = "Quando ativado, você não recebe nenhuma notificação — avisos no chat do jogo, popups ou sons — enquanto estiver em combate.",
         ["settings.auto_open_minimized"] = "Abrir minimizado automaticamente ao fazer login",
         ["settings.pulse_optout"] = "Mensagens ocasionais no jogo",
         ["settings.pulse_optout_tooltip"] = "Ocasionalmente, o AetherLove pode deixar uma mensagem divertida no chat do jogo. Desative para parar.",

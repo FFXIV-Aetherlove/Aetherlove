@@ -85,7 +85,7 @@ public sealed class ChangelogWindow : Window
     private static void DrawEntry(ChangelogEntry entry, int index, ThemeDefinition t)
     {
         var isLatest = index == 0;
-        var date = entry.ReleaseDate.ToString("d MMM yyyy", LanguageProvider.CurrentCulture);
+        var date = LanguageProvider.FormatDate(entry.ReleaseDate, "d MMM yyyy");
         var label = isLatest
             ? $"v{entry.VersionString}  ·  {date}   ({Loc.T("common.changelog_latest")})##chlog{index}"
             : $"v{entry.VersionString}  ·  {date}##chlog{index}";

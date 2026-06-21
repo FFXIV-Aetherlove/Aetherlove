@@ -28,9 +28,28 @@ public static class LanguageProvider
 
     public static ILanguageService Current { get; private set; } = Fallback;
 
+    /// <summary>Number of plugin UI languages (those with a translation service). The UI-language pickers
+    /// render only these; spoken-only languages such as Japanese are excluded.</summary>
+    public static int UiLanguageCount => Services.Count;
+
     /// <summary>CultureInfo matching the selected plugin language, for locale-correct date/number formatting
     /// (day and month names, ordinals, separators) instead of the player's OS culture.</summary>
     public static CultureInfo CurrentCulture => CultureInfo.GetCultureInfo(IsoCode(Current.LanguageName));
+
+    /// <summary>Formats a date with <see cref="CurrentCulture"/>, then replaces the no-break spaces some
+    /// locales embed in dates (e.g. Russian "2026 г.", French) with regular spaces — the bundled game font
+    /// has no glyph for them and renders them as tofu boxes.</summary>
+    public static string FormatDate(DateTime date, string format) =>
+        NormalizeSpaces(date.ToString(format, CurrentCulture));
+
+    /// <inheritdoc cref="FormatDate(DateTime, string)"/>
+    public static string FormatDate(DateOnly date, string format) =>
+        NormalizeSpaces(date.ToString(format, CurrentCulture));
+
+    /// <summary>Swaps no-break (U+00A0) and narrow no-break (U+202F) spaces for a regular space so the game
+    /// font doesn't render them as tofu.</summary>
+    public static string NormalizeSpaces(string text) =>
+        text.Replace('\u00A0', ' ').Replace('\u202F', ' ');
 
     private static string IsoCode(string languageName) => languageName switch
     {
