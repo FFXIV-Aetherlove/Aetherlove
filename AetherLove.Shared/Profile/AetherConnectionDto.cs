@@ -36,7 +36,6 @@ public sealed record AetherConnectionDto(
     ProfileLifecycle Status,
     string DisplayName,
     string? BanReason,
-    string? ModerationNotes,
     WarningDto[] Warnings,
     ModeratorMessageDto[] ModeratorMessages,
     int NewMatchCount,

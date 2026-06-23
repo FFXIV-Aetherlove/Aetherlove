@@ -12,7 +12,6 @@ internal static class CommonEs
         ["common.i_understand"] = "Entiendo",
         ["common.sign_out"] = "Cerrar sesión",
         ["common.got_it"] = "¡Entendido!",
-        ["common.moderator_notes_label"] = "Notas del moderador",
         ["common.server_unreachable_detail"] = "No se pudo conectar con el servidor: {0}",
 
         ["common.banned_title"] = "Cuenta baneada",

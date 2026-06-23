@@ -108,19 +108,6 @@ public sealed class WarningAcknowledgeScreen
                 DrawWarningCard(w, winW);
             }
 
-            var notes = _bootstrap.LastConnection?.ModerationNotes;
-            if (!string.IsNullOrWhiteSpace(notes))
-            {
-                ImGui.Spacing();
-                ImGui.SetCursorPosX(PadX);
-                ImGui.TextColored(UiColors.Muted, Loc.T("common.moderator_notes_label"));
-                ImGui.SetCursorPosX(PadX);
-                ImGui.PushTextWrapPos(winW - PadX);
-                ImGui.TextColored(new Vector4(0.80f, 0.80f, 0.80f, 1f), notes);
-                ImGui.PopTextWrapPos();
-                ImGui.Spacing();
-            }
-
             ImGui.Spacing();
             ImGui.SetCursorPosX(PadX);
             ImGui.PushStyleColor(ImGuiCol.Button, t.ButtonNormal);

@@ -12,7 +12,6 @@ internal static class CommonRu
         ["common.i_understand"] = "Понятно",
         ["common.sign_out"] = "Выйти",
         ["common.got_it"] = "Понятно!",
-        ["common.moderator_notes_label"] = "Примечания от модераторов",
         ["common.server_unreachable_detail"] = "Не удалось подключиться к серверу: {0}",
 
         ["common.banned_title"] = "Аккаунт заблокирован",

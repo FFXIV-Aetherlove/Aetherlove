@@ -13,7 +13,6 @@ internal static class CommonEn
         ["common.i_understand"] = "I understand",
         ["common.sign_out"] = "Sign out",
         ["common.got_it"] = "Got it!",
-        ["common.moderator_notes_label"] = "Moderator notes",
         ["common.server_unreachable_detail"] = "Couldn't reach the server: {0}",
 
         // Banned screen

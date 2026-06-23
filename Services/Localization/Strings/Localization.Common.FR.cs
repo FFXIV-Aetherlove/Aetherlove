@@ -13,7 +13,6 @@ internal static class CommonFr
         ["common.i_understand"] = "J'ai compris",
         ["common.sign_out"] = "Se déconnecter",
         ["common.got_it"] = "Compris !",
-        ["common.moderator_notes_label"] = "Notes du modérateur",
         ["common.server_unreachable_detail"] = "Impossible de joindre le serveur : {0}",
 
         ["common.banned_title"] = "Compte banni",

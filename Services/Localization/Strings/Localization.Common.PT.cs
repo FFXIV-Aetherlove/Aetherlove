@@ -13,7 +13,6 @@ internal static class CommonPt
         ["common.i_understand"] = "Eu entendi",
         ["common.sign_out"] = "Sair",
         ["common.got_it"] = "Entendi!",
-        ["common.moderator_notes_label"] = "Notas do moderador",
         ["common.server_unreachable_detail"] = "Não foi possível acessar o servidor: {0}",
 
         // Banned screen

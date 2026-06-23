@@ -14,7 +14,6 @@ internal static class CommonDe
         ["common.i_understand"] = "Ich verstehe",
         ["common.sign_out"] = "Abmelden",
         ["common.got_it"] = "Verstanden!",
-        ["common.moderator_notes_label"] = "Moderatoren-Notizen",
         ["common.server_unreachable_detail"] = "Server konnte nicht erreicht werden: {0}",
 
         // Banned screen

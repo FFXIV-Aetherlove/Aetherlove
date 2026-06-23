@@ -74,19 +74,6 @@ public sealed class BannedScreen
                 ImGui.Spacing();
             }
 
-            var notes = conn?.ModerationNotes;
-            if (!string.IsNullOrWhiteSpace(notes))
-            {
-                ImGui.SetCursorPosX(PadX);
-                ImGui.TextColored(UiColors.Muted, Loc.T("common.moderator_notes_label"));
-                ImGui.SetCursorPosX(PadX);
-                ImGui.PushTextWrapPos(winW - PadX);
-                ImGui.TextColored(new Vector4(0.80f, 0.80f, 0.80f, 1f), notes);
-                ImGui.PopTextWrapPos();
-                ImGui.Spacing();
-                ImGui.Spacing();
-            }
-
             ImGui.SetCursorPosX(PadX);
             ImGui.PushTextWrapPos(winW - PadX);
             ImGui.TextColored(new Vector4(0.60f, 0.60f, 0.60f, 1f),
