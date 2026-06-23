@@ -14,7 +14,7 @@ internal static class HubErrorsEs
         ["huberror.profile_not_visible"] = "Este perfil no está disponible.",
         ["huberror.deck_expired"] = "Este perfil ya no está en tu baraja. Actualiza tu baraja e inténtalo de nuevo.",
         ["huberror.no_active_match"] = "Ya no tienes match con este jugador.",
-        ["huberror.peer_keys_missing"] = "Tu match aún no ha terminado de configurar el chat cifrado. Inténtalo más tarde.",
+        ["huberror.peer_keys_missing"] = "Este usuario aún no ha configurado el cifrado E2E y no puede chatear, inténtalo de nuevo más tarde.",
         ["huberror.key_bundle_exists"] = "Las claves de cifrado ya están configuradas para esta cuenta.",
         ["huberror.message_too_large"] = "Este mensaje es demasiado largo para enviarlo.",
         ["huberror.bio_too_long"] = "Tu biografía supera el límite de {0} caracteres.",

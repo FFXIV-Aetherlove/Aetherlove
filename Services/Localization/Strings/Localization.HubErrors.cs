@@ -14,7 +14,7 @@ internal static class HubErrorsEn
         ["huberror.profile_not_visible"] = "This profile is not available.",
         ["huberror.deck_expired"] = "This profile is no longer in your deck. Refresh your deck and try again.",
         ["huberror.no_active_match"] = "You are no longer matched with this player.",
-        ["huberror.peer_keys_missing"] = "Your match hasn't finished setting up encrypted chat yet. Try again later.",
+        ["huberror.peer_keys_missing"] = "This user has not set up E2E encryption yet and can't chat, please try again later.",
         ["huberror.key_bundle_exists"] = "Encryption keys are already set up for this account.",
         ["huberror.message_too_large"] = "This message is too long to send.",
         ["huberror.bio_too_long"] = "Your bio exceeds the {0}-character limit.",

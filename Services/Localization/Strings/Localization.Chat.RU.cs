@@ -24,6 +24,7 @@ internal static class ChatRu
         ["chat.cancel"] = "Отмена",
         ["chat.loading_messages"] = "Загрузка сообщений…",
         ["chat.error"] = "Ошибка: {0}",
+        ["chat.e2e_self_broken"] = "Что-то не так с вашей настройкой E2E. Пожалуйста, обратитесь в поддержку.",
         ["chat.seen_suffix"] = " · просмотрено",
         ["chat.send"] = "Отправить",
         ["chat.emoji_button"] = ":)",

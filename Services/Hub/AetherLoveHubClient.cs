@@ -87,6 +87,9 @@ public sealed class AetherLoveHubClient
     public async Task MarkWarningsSeenAsync(Guid[] warningIds, CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync("MarkWarningsSeenAsync", warningIds, ct).ConfigureAwait(false);
 
+    public async Task MarkModeratorMessagesSeenAsync(Guid[] messageIds, CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync("MarkModeratorMessagesSeenAsync", messageIds, ct).ConfigureAwait(false);
+
     public async Task<NewsDto?> GetNewsAsync(Guid newsId, CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync<NewsDto?>("GetNewsAsync", newsId, ct).ConfigureAwait(false);
 

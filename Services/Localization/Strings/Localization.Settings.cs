@@ -84,6 +84,12 @@ internal static class SettingsEn
         ["settings.warnings_button"] = "Warnings ({0})",
         ["settings.warnings_title"] = "Warnings",
         ["settings.no_warnings"] = "No warnings on file.",
+
+        // Moderator messages
+        ["settings.modmsg_button_unseen"] = "Moderator messages ({0} unseen / {1})",
+        ["settings.modmsg_button"] = "Moderator messages ({0})",
+        ["settings.modmsg_title"] = "Moderator messages",
+        ["settings.no_modmsg"] = "No messages on file.",
         ["settings.back_to_settings_arrow"] = "← Back to settings",
 
         // Feedback flow

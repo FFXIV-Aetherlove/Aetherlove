@@ -84,6 +84,12 @@ internal static class SettingsPt
         ["settings.warnings_button"] = "Advertências ({0})",
         ["settings.warnings_title"] = "Advertências",
         ["settings.no_warnings"] = "Nenhuma advertência registrada.",
+
+        // Moderator messages
+        ["settings.modmsg_button_unseen"] = "Mensagens do moderador ({0} não lidas / {1})",
+        ["settings.modmsg_button"] = "Mensagens do moderador ({0})",
+        ["settings.modmsg_title"] = "Mensagens do moderador",
+        ["settings.no_modmsg"] = "Nenhuma mensagem registrada.",
         ["settings.back_to_settings_arrow"] = "← Voltar às configurações",
 
         // Feedback flow

@@ -11,6 +11,24 @@ public static class ChangelogRegistry
     private static readonly List<ChangelogEntry> _entries =
     [
         new(
+            Version: new Version(1, 2, 0),
+            ReleaseDate: new DateOnly(2026, 06, 23),
+            NewFeatures:
+            [
+                "Added a news and moderator-message system, an add-on to the warnings system already in place, so the team can reach you with updates and notes right inside AetherLove."
+            ],
+            BugFixes:
+            [
+                "Some users couldn't send or receive chats because of a problem with their end-to-end encryption setup. AetherLove now helps them fix it the next time they open the app.",
+                "Some users were rate limited by mistake when updating their favorite songs. This is now fixed.",
+                "Small improvements to some error messages."
+            ],
+            Important:
+            [
+                "AetherLove is ONLY available inside the game as a plugin. Do not trust any websites or Discord servers that promise to be a web version of the app. They are NOT safe."
+            ]
+        ),
+        new(
             Version: new Version(1, 1, 0),
             ReleaseDate: new DateOnly(2026, 06, 21),
             NewFeatures:

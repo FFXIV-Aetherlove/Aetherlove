@@ -75,6 +75,12 @@ internal static class SettingsEs
         ["settings.warnings_button"] = "Advertencias ({0})",
         ["settings.warnings_title"] = "Advertencias",
         ["settings.no_warnings"] = "No hay advertencias registradas.",
+
+        // Moderator messages
+        ["settings.modmsg_button_unseen"] = "Mensajes del moderador ({0} sin ver / {1})",
+        ["settings.modmsg_button"] = "Mensajes del moderador ({0})",
+        ["settings.modmsg_title"] = "Mensajes del moderador",
+        ["settings.no_modmsg"] = "No hay mensajes registrados.",
         ["settings.back_to_settings_arrow"] = "← Volver a los ajustes",
 
         ["settings.back_to_settings"] = "Volver a los ajustes",

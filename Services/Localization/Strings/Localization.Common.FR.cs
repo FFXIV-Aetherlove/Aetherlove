@@ -27,9 +27,11 @@ internal static class CommonFr
         ["common.outdated_hint"] = "Veuillez mettre à jour le plugin dans l'installateur de plugins de Dalamud, puis rouvrir AetherLove.",
 
         ["common.offline_title"] = "AetherLove est hors ligne",
-        ["common.offline_body"] = "Nous ne parvenons pas à joindre les serveurs d'AetherLove pour le moment. L'application a besoin d'une connexion active pour parcourir, correspondre et discuter, elle est donc en pause jusqu'à notre retour en ligne.",
+        ["common.offline_body"] = "Les serveurs sont très probablement hors ligne pour cause de mises à jour ou de maintenance. Cela ne devrait pas prendre plus de 2 minutes !",
         ["common.offline_reconnecting"] = "Reconnexion…",
         ["common.offline_keep_trying"] = "Nous continuerons d'essayer automatiquement.",
+        ["common.offline_taking_long"] = "Cela prend plus de temps que d'habitude. Rejoignez notre Discord pour connaître les dernières informations.",
+        ["common.offline_join_discord"] = "Rejoindre le Discord",
 
         ["common.passphrase_title"] = "Saisissez votre phrase secrète de chiffrement",
         ["common.passphrase_intro"] = "Nous reconnaissons ce compte, mais cet appareil n'a pas encore votre clé de chat. Saisissez la phrase secrète que vous avez définie sur votre premier appareil pour déverrouiller votre historique de discussion.",
@@ -41,11 +43,23 @@ internal static class CommonFr
         ["common.unlock"] = "Déverrouiller",
         ["common.unlocking"] = "Déverrouillage…",
 
+        // Encryption recovery screen
+        ["common.recovery_title"] = "Configurer la messagerie sécurisée",
+        ["common.recovery_intro"] = "Votre compte n'a pas de clés de chiffrement, vous ne pouvez donc pas encore envoyer ni recevoir de messages. Choisissez une phrase secrète pour les configurer. Conservez-la précieusement, elle est irrécupérable.",
+        ["common.recovery_button"] = "Activer la messagerie sécurisée",
+        ["common.recovery_support"] = "Toujours bloqué ? Déconnectez-vous ci-dessous ou contactez-nous sur Discord.",
+
         ["common.warnings_heading_one"] = "Vous avez un avertissement de modération",
         ["common.warnings_heading_many"] = "Vous avez {0} avertissements de modération",
         ["common.warnings_body"] = "Veuillez lire le ou les avertissements suivants de l'équipe de modération. Les récidives peuvent entraîner une suspension de compte.",
         ["common.warnings_submit_error"] = "Impossible de joindre le serveur : {0}. Touchez pour réessayer.",
         ["common.acknowledging"] = "Prise en compte…",
+
+        // Moderator message screen
+        ["common.modmsg_heading_one"] = "Vous avez un message de l'équipe de modération",
+        ["common.modmsg_heading_many"] = "Vous avez {0} messages de l'équipe de modération",
+        ["common.modmsg_body"] = "L'équipe de modération vous a envoyé ceci :",
+        ["common.modmsg_got_it"] = "Compris",
 
         ["common.nsfw_decl_unselected"] = "sélectionnez une option ci-dessous",
         ["common.nsfw_decl_sfw"] = "cette photo est SFW",

@@ -37,6 +37,15 @@ public sealed class NotificationCenter
 
     public void ClearPendingWarning() => HasPendingWarning = false;
 
+    /// <summary>True from when a moderator message arrives while the phone is minimised/closed until the user
+    /// next opens the phone (which routes them to the message screen). Unlike warnings, this raises no event:
+    /// moderator messages deliberately surface in fewer places (no mini-phone badge/buzz).</summary>
+    public bool HasPendingModeratorMessage { get; private set; }
+
+    public void RaisePendingModeratorMessage() => HasPendingModeratorMessage = true;
+
+    public void ClearPendingModeratorMessage() => HasPendingModeratorMessage = false;
+
     /// <summary>True from when a news item is published while the phone is minimised/closed until the user
     /// next opens the phone (which routes them to the news screen).</summary>
     public bool HasPendingNews { get; private set; }

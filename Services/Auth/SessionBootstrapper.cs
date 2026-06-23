@@ -118,6 +118,22 @@ public sealed class SessionBootstrapper
         }
     }
 
+    /// <summary>True when the user is signed in and Active but the server has no key bundle at all (e.g. an
+    /// account that re-registered after deletion, completing onboarding without establishing encryption). They
+    /// can't message and have no in-app way to fix it, so the startup ladder routes them to a one-time setup.</summary>
+    public bool NeedsEncryptionRecovery
+    {
+        get
+        {
+            var c = _lastConnection;
+            if (c is null || c.HasKeyBundle)
+            {
+                return false;
+            }
+            return _lastResult == SessionBootstrapResult.SignedInActive;
+        }
+    }
+
     public bool HasUnseenWarnings
     {
         get
@@ -138,12 +154,35 @@ public sealed class SessionBootstrapper
         }
     }
 
+    public bool HasUnseenModeratorMessages
+    {
+        get
+        {
+            var c = _lastConnection;
+            // Null-guarded for version skew: a new client briefly talking to a server without this field.
+            var messages = c?.ModeratorMessages;
+            if (messages is null)
+            {
+                return false;
+            }
+            for (int i = 0; i < messages.Length; i++)
+            {
+                if (!messages[i].Seen)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
     /// <summary>True when the connection snapshot carries at least one unseen published news item.</summary>
     public bool HasUnseenNews => (_lastConnection?.UnseenNews?.Length ?? 0) > 0;
 
-    /// <summary>The next screen in the startup gate order — outdated/banned (terminal) → warnings → passphrase
-    /// → news → the regular target. Every startup gate screen funnels onward through this, so the order lives
-    /// in one place; each gate clears its own condition in the cached snapshot before calling it again.</summary>
+    /// <summary>The next screen in the startup gate order — outdated/banned (terminal) → warnings → moderator
+    /// messages → passphrase → news → the regular target. Every startup gate screen funnels onward through this,
+    /// so the order lives in one place; each gate clears its own condition in the cached snapshot before
+    /// calling it again.</summary>
     public Screen ResolveNextStartupScreen()
     {
         if (_lastResult == SessionBootstrapResult.OutdatedClient)
@@ -159,9 +198,18 @@ public sealed class SessionBootstrapper
         {
             return Screen.WarningsAcknowledge;
         }
+        if (HasUnseenModeratorMessages && _lastResult is SessionBootstrapResult.SignedInActive
+                                                       or SessionBootstrapResult.SignedInOnboarding)
+        {
+            return Screen.ModeratorMessages;
+        }
         if (NeedsPassphraseUnlock)
         {
             return Screen.PassphraseUnlock;
+        }
+        if (NeedsEncryptionRecovery)
+        {
+            return Screen.EncryptionRecovery;
         }
         if (HasUnseenNews && _lastResult == SessionBootstrapResult.SignedInActive)
         {

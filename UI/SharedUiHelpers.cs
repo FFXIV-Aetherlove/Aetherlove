@@ -61,6 +61,7 @@ internal static class SharedUiHelpers
     /// "fetching" / "saved link" status). The displayed name is curated server-side — never user-typed.</summary>
     internal static void DrawMusicLinkField(MusicLinkField field, string label, string tip, float width)
     {
+        field.Tick();
         ImGui.Text(label);
         ImGui.SameLine();
         HelpTooltip(tip);
@@ -139,6 +140,7 @@ internal static class SharedUiHelpers
     [
         Loc.T("onboarding.tos_p1"),
         Loc.T("onboarding.tos_p2"),
+        Loc.T("onboarding.tos_ownership"),
         Loc.T("onboarding.tos_p3"),
         Loc.T("onboarding.tos_p4"),
         Loc.T("onboarding.tos_p5"),

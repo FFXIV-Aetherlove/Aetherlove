@@ -14,7 +14,7 @@ internal static class HubErrorsDe
         ["huberror.profile_not_visible"] = "Dieses Profil ist nicht verfügbar.",
         ["huberror.deck_expired"] = "Dieses Profil ist nicht mehr in deinem Deck. Aktualisiere dein Deck und versuche es erneut.",
         ["huberror.no_active_match"] = "Du bist mit diesem Spieler nicht mehr gematcht.",
-        ["huberror.peer_keys_missing"] = "Dein Match hat die Einrichtung des verschlüsselten Chats noch nicht abgeschlossen. Versuche es später erneut.",
+        ["huberror.peer_keys_missing"] = "Dieser Nutzer hat die E2E-Verschlüsselung noch nicht eingerichtet und kann nicht chatten. Bitte versuche es später erneut.",
         ["huberror.key_bundle_exists"] = "Für dieses Konto sind bereits Verschlüsselungsschlüssel eingerichtet.",
         ["huberror.message_too_large"] = "Diese Nachricht ist zu lang zum Senden.",
         ["huberror.bio_too_long"] = "Deine Biografie überschreitet das Limit von {0} Zeichen.",

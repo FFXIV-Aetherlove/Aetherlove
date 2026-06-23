@@ -29,9 +29,11 @@ internal static class CommonEn
 
         // Offline screen
         ["common.offline_title"] = "AetherLove is offline",
-        ["common.offline_body"] = "We can't reach the AetherLove servers right now. The app needs a live connection to browse, match, and chat, so it's paused until we're back online.",
+        ["common.offline_body"] = "The server is most likely offline due to updates or maintenance. This shouldn't take more than 2 minutes!",
         ["common.offline_reconnecting"] = "Reconnecting…",
         ["common.offline_keep_trying"] = "We'll keep trying automatically.",
+        ["common.offline_taking_long"] = "This is taking longer than usual. Join our Discord for the latest status.",
+        ["common.offline_join_discord"] = "Join the Discord",
 
         // Passphrase unlock screen
         ["common.passphrase_title"] = "Enter your encryption passphrase",
@@ -44,12 +46,24 @@ internal static class CommonEn
         ["common.unlock"] = "Unlock",
         ["common.unlocking"] = "Unlocking…",
 
+        // Encryption recovery screen (Active account missing its server key bundle)
+        ["common.recovery_title"] = "Set up secure messaging",
+        ["common.recovery_intro"] = "Your account is missing its encryption keys, so you can't send or receive messages yet. Choose a passphrase to set them up. Keep it safe, there's no way to recover it.",
+        ["common.recovery_button"] = "Enable secure messaging",
+        ["common.recovery_support"] = "Still stuck? Sign out below, or reach us on the Discord for help.",
+
         // Warning acknowledge screen
         ["common.warnings_heading_one"] = "You have a moderation warning",
         ["common.warnings_heading_many"] = "You have {0} moderation warnings",
         ["common.warnings_body"] = "Please read the following warning(s) from the moderation team. Repeat offenses can result in account suspension.",
         ["common.warnings_submit_error"] = "Couldn't reach the server: {0}. Tap to retry.",
         ["common.acknowledging"] = "Acknowledging…",
+
+        // Moderator message screen
+        ["common.modmsg_heading_one"] = "You have a message from the moderation team",
+        ["common.modmsg_heading_many"] = "You have {0} messages from the moderation team",
+        ["common.modmsg_body"] = "The moderation team sent you the following:",
+        ["common.modmsg_got_it"] = "Got it",
 
         // Photo moderation
         ["common.nsfw_decl_unselected"] = "select an option below",

@@ -218,6 +218,14 @@ public partial class OnboardingScreen
             return;
         }
 
+        // Active account with no server key bundle (e.g. re-registered after deletion): set up encryption
+        // once before reaching the deck, otherwise messaging stays broken with no in-app fix.
+        if (_bootstrap.NeedsEncryptionRecovery)
+        {
+            _router.Navigate(Screen.EncryptionRecovery);
+            return;
+        }
+
         if (_bootstrap.LastResult == SessionBootstrapResult.SignedInActive)
         {
             DrawWelcomeBack(centerX);

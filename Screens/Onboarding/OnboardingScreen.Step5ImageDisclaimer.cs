@@ -51,6 +51,8 @@ public partial class OnboardingScreen
                 ImGui.TextColored(new Vector4(0.92f, 0.45f, 0.45f, 0.90f), $"-  {item}");
             }
             ImGui.Spacing();
+            ImGui.TextWrapped(Loc.T("onboarding.disclaimer_profile_images_consent"));
+            ImGui.Spacing();
 
             DrawSectionHeading(Loc.T("onboarding.disclaimer_nsfw_heading"), t);
             ImGui.TextWrapped(Loc.T("onboarding.disclaimer_nsfw_body1"));

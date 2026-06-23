@@ -85,6 +85,12 @@ internal static class SettingsDe
         ["settings.warnings_button"] = "Verwarnungen ({0})",
         ["settings.warnings_title"] = "Verwarnungen",
         ["settings.no_warnings"] = "Keine Verwarnungen vorhanden.",
+
+        // Moderator messages
+        ["settings.modmsg_button_unseen"] = "Moderator-Nachrichten ({0} ungelesen / {1})",
+        ["settings.modmsg_button"] = "Moderator-Nachrichten ({0})",
+        ["settings.modmsg_title"] = "Moderator-Nachrichten",
+        ["settings.no_modmsg"] = "Keine Nachrichten vorhanden.",
         ["settings.back_to_settings_arrow"] = "← Zurück zu den Einstellungen",
 
         // Feedback flow

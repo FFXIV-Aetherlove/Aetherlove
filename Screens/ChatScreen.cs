@@ -169,6 +169,14 @@ public class ChatScreen
         {
             return;
         }
+        if (!_keys.HasLocalKey)
+        {
+            // No local E2E identity: this account's encryption was never established. The startup recovery
+            // gate normally fixes this before chat is reachable; surface it here as a defensive fallback.
+            _loadError = Loc.T("chat.e2e_self_broken");
+            _loading = false;
+            return;
+        }
         _loading = true;
         _loadError = null;
         var ct = _cts.Token;
@@ -618,7 +626,7 @@ public class ChatScreen
             }
             if (_loadError is not null)
             {
-                ImGui.TextColored(UiColors.Danger, Loc.T("chat.error", _loadError));
+                DrawErrorBubble(_loadError);
             }
 
             var lineH = ImGui.GetTextLineHeight();
@@ -1055,6 +1063,38 @@ public class ChatScreen
                 }
             }
         });
+    }
+
+    /// <summary>A wrapped, rounded red notice box for a load error (peer has no E2E, own E2E missing, server
+    /// unreachable), so the message reads cleanly instead of overflowing the phone width as one clipped line.</summary>
+    private void DrawErrorBubble(string text)
+    {
+        var winW = ImGui.GetContentRegionAvail().X;
+        const float MarginX = 8f;
+        const float PadX = 14f;
+        const float PadY = 12f;
+        var boxW = winW - Px(MarginX * 2f);
+        var wrapW = boxW - Px(PadX * 2f);
+
+        var textH = ImGui.CalcTextSize(text, wrapWidth: wrapW).Y;
+        var boxH = Px(PadY) * 2f + textH;
+
+        var scrCursor = ImGui.GetCursorScreenPos();
+        var boxTL = scrCursor + Px(MarginX, 0f);
+        var boxBR = boxTL + new Vector2(boxW, boxH);
+        var dl = ImGui.GetWindowDrawList();
+        dl.AddRectFilled(boxTL, boxBR, ImGui.GetColorU32(UiColors.Danger with { W = 0.14f }), Px(8f));
+        dl.AddRect(boxTL, boxBR, ImGui.GetColorU32(UiColors.Danger with { W = 0.55f }), Px(8f), 0, 1.5f);
+
+        ImGui.SetCursorScreenPos(new Vector2(boxTL.X + Px(PadX), boxTL.Y + Px(PadY)));
+        var wrapEnd = ImGui.GetCursorPos().X + wrapW;
+        ImGui.PushStyleColor(ImGuiCol.Text, UiColors.Danger);
+        ImGui.PushTextWrapPos(wrapEnd);
+        ImGui.TextUnformatted(text);
+        ImGui.PopTextWrapPos();
+        ImGui.PopStyleColor();
+
+        ImGui.SetCursorScreenPos(new Vector2(scrCursor.X, boxBR.Y + Px(10f)));
     }
 
     private void DrawSystemNotice()

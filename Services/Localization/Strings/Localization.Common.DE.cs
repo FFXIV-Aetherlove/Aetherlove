@@ -30,9 +30,11 @@ internal static class CommonDe
         ["common.outdated_hint"] = "Bitte aktualisiere das Plugin im Plugin-Installer von Dalamud und öffne AetherLove dann erneut.",
 
         ["common.offline_title"] = "AetherLove ist offline",
-        ["common.offline_body"] = "Wir können die AetherLove-Server derzeit nicht erreichen. Die App benötigt eine aktive Verbindung, um zu stöbern, zu matchen und zu chatten, daher ist sie pausiert, bis wir wieder online sind.",
+        ["common.offline_body"] = "Der Server ist höchstwahrscheinlich wegen Updates oder Wartungsarbeiten offline. Das sollte nicht länger als 2 Minuten dauern!",
         ["common.offline_reconnecting"] = "Verbindung wird wiederhergestellt…",
         ["common.offline_keep_trying"] = "Wir versuchen es automatisch weiter.",
+        ["common.offline_taking_long"] = "Das dauert länger als üblich. Tritt unserem Discord bei, um den aktuellen Status zu erfahren.",
+        ["common.offline_join_discord"] = "Discord beitreten",
 
         // Passphrase unlock screen
         ["common.passphrase_title"] = "Gib deine Verschlüsselungs-Passphrase ein",
@@ -45,12 +47,24 @@ internal static class CommonDe
         ["common.unlock"] = "Entsperren",
         ["common.unlocking"] = "Wird entsperrt…",
 
+        // Encryption recovery screen
+        ["common.recovery_title"] = "Sichere Nachrichten einrichten",
+        ["common.recovery_intro"] = "Deinem Konto fehlen die Verschlüsselungsschlüssel, daher kannst du noch keine Nachrichten senden oder empfangen. Wähle eine Passphrase, um sie einzurichten. Bewahre sie gut auf, sie kann nicht wiederhergestellt werden.",
+        ["common.recovery_button"] = "Sichere Nachrichten aktivieren",
+        ["common.recovery_support"] = "Klappt es immer noch nicht? Melde dich unten ab oder kontaktiere uns auf Discord.",
+
         // Warning acknowledge screen
         ["common.warnings_heading_one"] = "Du hast eine Moderationsverwarnung",
         ["common.warnings_heading_many"] = "Du hast {0} Moderationsverwarnungen",
         ["common.warnings_body"] = "Bitte lies die folgende(n) Verwarnung(en) des Moderationsteams. Wiederholte Verstöße können zur Sperrung des Kontos führen.",
         ["common.warnings_submit_error"] = "Server konnte nicht erreicht werden: {0}. Tippen, um es erneut zu versuchen.",
         ["common.acknowledging"] = "Wird bestätigt…",
+
+        // Moderator message screen
+        ["common.modmsg_heading_one"] = "Du hast eine Nachricht vom Moderationsteam",
+        ["common.modmsg_heading_many"] = "Du hast {0} Nachrichten vom Moderationsteam",
+        ["common.modmsg_body"] = "Das Moderationsteam hat dir Folgendes geschickt:",
+        ["common.modmsg_got_it"] = "Verstanden",
 
         // Photo moderation
         ["common.nsfw_decl_unselected"] = "wähle unten eine Option",

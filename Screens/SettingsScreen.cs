@@ -30,7 +30,7 @@ public class SettingsScreen
     private readonly ChangelogWindow _changelogWindow;
     private readonly NewsScreen _newsScreen;
 
-    private enum View { Normal, ConfirmDelete, Deleting, Deleted, WarningsList, Feedback, Tos, Contributors }
+    private enum View { Normal, ConfirmDelete, Deleting, Deleted, WarningsList, ModeratorMessagesList, Feedback, Tos, Contributors }
 
     // volatile: written from the deletion task, read on the UI thread.
     private volatile int _viewRaw = (int)View.Normal;
@@ -64,6 +64,9 @@ public class SettingsScreen
     // Distinct moderation orange (the "in review" accent), not a flat yellow.
     private static readonly Vector4 WarnTop = new(0.97f, 0.55f, 0.20f, 1f);
     private static readonly Vector4 WarnBottom = new(0.66f, 0.30f, 0.07f, 1f);
+    // Friendly (non-danger) blue for the moderator-messages entry.
+    private static readonly Vector4 InfoTop = new(0.27f, 0.62f, 0.92f, 1f);
+    private static readonly Vector4 InfoBottom = new(0.13f, 0.37f, 0.62f, 1f);
     private static readonly Vector4 DangerTop = new(0.66f, 0.16f, 0.16f, 1f);
     private static readonly Vector4 DangerBottom = new(0.34f, 0.05f, 0.05f, 1f);
     private static readonly Vector4 DangerLabelColor = new(0.93f, 0.36f, 0.36f, 1f);
@@ -169,6 +172,9 @@ public class SettingsScreen
             case View.WarningsList:
                 DrawWarningsList(winW);
                 break;
+            case View.ModeratorMessagesList:
+                DrawModeratorMessagesList(winW);
+                break;
             case View.Feedback:
                 DrawFeedback(winW);
                 break;
@@ -252,6 +258,7 @@ public class SettingsScreen
             SectionLabel(Loc.T("settings.section_other"), t);
             ImGui.Spacing();
             DrawOtherButtons(winW, t);
+            DrawModeratorMessagesButton(winW);
             ImGui.Spacing();
             Divider(dl, winW);
 
@@ -916,6 +923,36 @@ public class SettingsScreen
         ImGui.Spacing();
     }
 
+    /// <summary>The "moderator messages" button — shown in the Other group only when messages exist.</summary>
+    private void DrawModeratorMessagesButton(float winW)
+    {
+        var messages = _bootstrap.LastConnection?.ModeratorMessages;
+        var total = messages?.Length ?? 0;
+        if (total == 0)
+        {
+            return;
+        }
+        ImGui.Spacing();
+
+        var unseen = 0;
+        for (int i = 0; i < messages!.Length; i++)
+        {
+            if (!messages[i].Seen)
+            {
+                unseen++;
+            }
+        }
+        var label = unseen > 0
+            ? Loc.T("settings.modmsg_button_unseen", unseen, total)
+            : Loc.T("settings.modmsg_button", total);
+
+        if (GradientMenuButton("##settModMsg", winW, label,
+                FontAwesomeIcon.Envelope, InfoTop, InfoBottom))
+        {
+            _view = View.ModeratorMessagesList;
+        }
+    }
+
     private static void DrawPulseOptOut(float winW)
     {
         // Surfaces only after the player has actually seen a pulse line — keeps it a surprise until then.
@@ -1210,6 +1247,82 @@ public class SettingsScreen
                         w.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm"));
                     ImGui.SetCursorPosX(Px(PadX));
                     ImGui.TextColored(reasonColor, w.Reason);
+                    ImGui.PopTextWrapPos();
+
+                    ImGui.Spacing();
+                    ImGui.Spacing();
+                }
+            }
+
+            ImGui.Spacing();
+            ImGui.SetCursorPosX(Px(PadX));
+            ImGui.PushStyleColor(ImGuiCol.Button, t.ButtonNormal);
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, t.ButtonHovered);
+            ImGui.PushStyleColor(ImGuiCol.ButtonActive, t.ButtonActive);
+            ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
+            if (ImGui.Button(Loc.T("settings.back_to_settings_arrow"), new Vector2(winW - Px(PadX) * 2f, Px(32f))))
+            {
+                _view = View.Normal;
+            }
+            ImGui.PopStyleVar();
+            ImGui.PopStyleColor(3);
+
+            ImGui.Spacing();
+        }
+    }
+
+
+    private void DrawModeratorMessagesList(float winW)
+    {
+        var t = ThemeService.Current;
+        var scrollH = ImGui.GetContentRegionAvail().Y;
+
+        PushScrollbarStyle();
+
+        using (var scroll = Dalamud.Interface.Utility.Raii.ImRaii.Child("##settModMsgList", new Vector2(0f, scrollH), false))
+        {
+            PopScrollbarStyle();
+
+            if (!scroll.Success)
+            {
+                return;
+            }
+
+            var dl = ImGui.GetWindowDrawList();
+
+            ImGui.Spacing();
+            ImGui.Spacing();
+
+            ImGui.SetCursorPosX(Px(PadX));
+            ImGui.TextColored(new Vector4(1f, 1f, 1f, 1f), Loc.T("settings.modmsg_title"));
+            ImGui.Spacing();
+            Divider(dl, winW);
+
+            var messages = _bootstrap.LastConnection?.ModeratorMessages ?? [];
+            if (messages.Length == 0)
+            {
+                ImGui.SetCursorPosX(Px(PadX));
+                ImGui.TextColored(new Vector4(0.60f, 0.60f, 0.60f, 1f),
+                    Loc.T("settings.no_modmsg"));
+            }
+            else
+            {
+                foreach (var m in messages)
+                {
+                    ImGui.SetCursorPosX(Px(PadX));
+                    ImGui.PushTextWrapPos(winW - Px(PadX));
+
+                    var dateColor = m.Seen
+                        ? new Vector4(0.45f, 0.45f, 0.45f, 1f)
+                        : new Vector4(0.40f, 0.62f, 0.80f, 1f);
+                    var bodyColor = m.Seen
+                        ? new Vector4(0.70f, 0.70f, 0.70f, 1f)
+                        : new Vector4(0.95f, 0.95f, 0.95f, 1f);
+
+                    ImGui.TextColored(dateColor,
+                        m.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm"));
+                    ImGui.SetCursorPosX(Px(PadX));
+                    ImGui.TextColored(bodyColor, m.Body);
                     ImGui.PopTextWrapPos();
 
                     ImGui.Spacing();

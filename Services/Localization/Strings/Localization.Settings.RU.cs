@@ -75,6 +75,12 @@ internal static class SettingsRu
         ["settings.warnings_button"] = "Предупреждения ({0})",
         ["settings.warnings_title"] = "Предупреждения",
         ["settings.no_warnings"] = "Предупреждений нет.",
+
+        // Moderator messages
+        ["settings.modmsg_button_unseen"] = "Сообщения модератора ({0} новых / {1})",
+        ["settings.modmsg_button"] = "Сообщения модератора ({0})",
+        ["settings.modmsg_title"] = "Сообщения модератора",
+        ["settings.no_modmsg"] = "Сообщений нет.",
         ["settings.back_to_settings_arrow"] = "← Назад к настройкам",
 
         ["settings.back_to_settings"] = "Назад к настройкам",

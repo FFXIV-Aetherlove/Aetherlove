@@ -24,6 +24,7 @@ internal static class ChatEs
         ["chat.cancel"] = "Cancelar",
         ["chat.loading_messages"] = "Cargando mensajes…",
         ["chat.error"] = "Error: {0}",
+        ["chat.e2e_self_broken"] = "Algo va mal con tu configuración E2E, ponte en contacto con el soporte.",
         ["chat.seen_suffix"] = " · visto",
         ["chat.send"] = "Enviar",
         ["chat.emoji_button"] = ":)",

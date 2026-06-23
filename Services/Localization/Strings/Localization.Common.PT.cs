@@ -29,9 +29,11 @@ internal static class CommonPt
         ["common.outdated_hint"] = "Atualiza o plugin no instalador de plugins no Dalamud e reabre o AetherLove.",
 
         ["common.offline_title"] = "O AetherLove está offline",
-        ["common.offline_body"] = "Não conseguimos conectar aos servidores do AetherLove agora. O app precisa de uma conexão ativa para explorar, dar match e conversar, então ficará pausado até voltarmos a ficar online.",
+        ["common.offline_body"] = "O servidor provavelmente está offline por causa de atualizações ou manutenção. Isso não deve demorar mais de 2 minutos!",
         ["common.offline_reconnecting"] = "Reconectando…",
         ["common.offline_keep_trying"] = "Continuamos a tentar automaticamente.",
+        ["common.offline_taking_long"] = "Isso está demorando mais do que o normal. Entre no nosso Discord para saber o status mais recente.",
+        ["common.offline_join_discord"] = "Entrar no Discord",
 
         // Passphrase unlock screen
         ["common.passphrase_title"] = "Digite a tua frase-senha de criptografia",
@@ -44,12 +46,24 @@ internal static class CommonPt
         ["common.unlock"] = "Desbloquear",
         ["common.unlocking"] = "Desbloqueando…",
 
+        // Encryption recovery screen
+        ["common.recovery_title"] = "Configurar mensagens seguras",
+        ["common.recovery_intro"] = "À tua conta faltam as chaves de encriptação, por isso ainda não podes enviar nem receber mensagens. Escolhe uma palavra-passe para as configurar. Guarda-a bem, não é possível recuperá-la.",
+        ["common.recovery_button"] = "Ativar mensagens seguras",
+        ["common.recovery_support"] = "Ainda com problemas? Termina sessão abaixo ou fala connosco no Discord.",
+
         // Warning acknowledge screen
         ["common.warnings_heading_one"] = "Tem uma advertência da moderação",
         ["common.warnings_heading_many"] = "Tem {0} advertências da moderação",
         ["common.warnings_body"] = "Por favor, leia a(s) seguinte(s) advertência(s) da equipe de moderação. Reincidências podem resultar em suspensão da conta.",
         ["common.warnings_submit_error"] = "Não foi possível acessar o servidor: {0}. Toque para tentar de novo.",
         ["common.acknowledging"] = "Confirmando…",
+
+        // Moderator message screen
+        ["common.modmsg_heading_one"] = "Você tem uma mensagem da equipe de moderação",
+        ["common.modmsg_heading_many"] = "Você tem {0} mensagens da equipe de moderação",
+        ["common.modmsg_body"] = "A equipe de moderação enviou o seguinte:",
+        ["common.modmsg_got_it"] = "Entendi",
 
         // Photo moderation
         ["common.nsfw_decl_unselected"] = "seleciona uma opção abaixo",

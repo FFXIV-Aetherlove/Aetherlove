@@ -22,6 +22,14 @@ public sealed record WarningDto(
     bool Seen,
     DateTimeOffset CreatedAtUtc);
 
+/// <summary>One informational message a moderator sent to a profile (no warning sentiment).</summary>
+[MessagePackObject(keyAsPropertyName: true)]
+public sealed record ModeratorMessageDto(
+    Guid Id,
+    string Body,
+    bool Seen,
+    DateTimeOffset CreatedAtUtc);
+
 /// <summary>Snapshot the server hands the plugin right after a hub connection comes up.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record AetherConnectionDto(
@@ -30,6 +38,7 @@ public sealed record AetherConnectionDto(
     string? BanReason,
     string? ModerationNotes,
     WarningDto[] Warnings,
+    ModeratorMessageDto[] ModeratorMessages,
     int NewMatchCount,
     bool HasKeyBundle,
     NewsSummaryDto[] UnseenNews);

@@ -20,6 +20,14 @@ public sealed class MusicLinkField
     /// hub calls and exhaust the resolve rate limit.</summary>
     private string _lastResolvedInput = string.Empty;
 
+    /// <summary>Input waiting out the debounce window before a resolve fires; null when nothing is pending.
+    /// Collapses a paste or a burst of typing into a single hub call instead of one resolve per keystroke.</summary>
+    private string? _pendingInput;
+    private DateTime _pendingSince;
+
+    /// <summary>How long the input must sit unchanged before a resolve is sent.</summary>
+    private static readonly TimeSpan DebounceWindow = TimeSpan.FromMilliseconds(500);
+
     public MusicProvider Provider { get; }
 
     /// <summary>Raw input the user pasted / the collapsed canonical ref after a successful resolve.</summary>
@@ -50,17 +58,19 @@ public sealed class MusicLinkField
         ResolvedRef = Input;
         ResolvedName = storedName ?? string.Empty;
         _lastResolvedInput = Input;
+        _pendingInput = null;
         Fetching = false;
         Invalid = false;
     }
 
-    /// <summary>Called when the input box changes. Re-resolves via the hub unless the input is blank or already
-    /// equals the last resolved ref.</summary>
+    /// <summary>Called when the input box changes. Schedules a debounced resolve unless the input is blank or
+    /// already equals the last resolved ref / scheduled text.</summary>
     public void OnInputChanged()
     {
         var input = Input.Trim();
         if (input.Length == 0)
         {
+            _pendingInput = null;
             ResolvedRef = string.Empty;
             ResolvedName = string.Empty;
             _lastResolvedInput = string.Empty;
@@ -69,15 +79,32 @@ public sealed class MusicLinkField
             return;
         }
         // Resolve each distinct input only once — the box already equals the canonical ref, or we already
-        // fired a resolve for this exact text. Skipping the repeat is what prevents a per-frame hub-call loop.
+        // fired a resolve for this exact text (an ImGui InputText re-reports its value each frame while focused).
         if (input == ResolvedRef || input == _lastResolvedInput)
         {
+            _pendingInput = null;
             return;
         }
-        _lastResolvedInput = input;
+        // Defer the resolve until the input settles; every keystroke/paste resets the window, so a burst
+        // collapses into a single hub call instead of one resolve per edit (which exhausts the rate limit).
+        _pendingInput = input;
+        _pendingSince = DateTime.UtcNow;
         ResolvedName = string.Empty;
         Invalid = false;
         Fetching = true;
+    }
+
+    /// <summary>Per-frame pump: fires the deferred resolve once the input has been unchanged for the debounce
+    /// window. Call once per frame while the field is drawn.</summary>
+    public void Tick()
+    {
+        if (_pendingInput is null || DateTime.UtcNow - _pendingSince < DebounceWindow)
+        {
+            return;
+        }
+        var input = _pendingInput;
+        _pendingInput = null;
+        _lastResolvedInput = input;
         var seq = ++_seq;
         _ = ResolveAsync(input, seq);
     }

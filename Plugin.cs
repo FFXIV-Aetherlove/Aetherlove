@@ -153,7 +153,9 @@ public sealed class Plugin : IDalamudPlugin
         services.AddSingleton<MyProfileScreen>();
         services.AddSingleton<BannedScreen>();
         services.AddSingleton<WarningAcknowledgeScreen>();
+        services.AddSingleton<ModeratorMessageScreen>();
         services.AddSingleton<PassphraseUnlockScreen>();
+        services.AddSingleton<EncryptionRecoveryScreen>();
         services.AddSingleton<NewsScreen>();
         services.AddSingleton<OfflineScreen>();
         services.AddSingleton<OutdatedScreen>();

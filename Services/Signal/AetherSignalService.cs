@@ -356,6 +356,37 @@ public sealed class AetherSignalService : IAsyncDisposable
             }
         });
 
+        hub.On<ModeratorMessageIssuedPushDto>("ModeratorMessageIssued", payload =>
+        {
+            _log.Information($"[AetherSignalService] ModeratorMessageIssued push: {payload.Message.Id}.");
+            AppendModeratorMessageToCachedSnapshot(payload.Message);
+
+            // Phone open: show it now and mark it seen. Minimised/closed: defer to the next phone open with no
+            // mini-phone surface — moderator messages deliberately show in fewer places than warnings.
+            if (_services.GetRequiredService<MainPluginWindow>().IsOpen)
+            {
+                _services.GetRequiredService<ModeratorMessageScreen>().RequestLiveAcknowledge();
+                _router.Navigate(Screen.ModeratorMessages);
+
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await hub.InvokeAsync("MarkModeratorMessagesSeenAsync", new[] { payload.Message.Id })
+                            .ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        _log.Warning(ex, "[AetherSignalService] MarkModeratorMessagesSeenAsync (auto-ack) failed.");
+                    }
+                });
+            }
+            else
+            {
+                _notifications.RaisePendingModeratorMessage();
+            }
+        });
+
         hub.On<NewsPublishedPushDto>("NewsPublished", payload =>
         {
             _log.Information($"[AetherSignalService] NewsPublished push: {payload.Summary.Id}.");
@@ -435,6 +466,25 @@ public sealed class AetherSignalService : IAsyncDisposable
         Array.Copy(conn.Warnings, grown, conn.Warnings.Length);
         grown[^1] = warning;
         bootstrap.ReplaceConnectionSnapshot(conn with { Warnings = grown });
+    }
+
+    private void AppendModeratorMessageToCachedSnapshot(ModeratorMessageDto message)
+    {
+        var bootstrap = _services.GetRequiredService<SessionBootstrapper>();
+        var conn = bootstrap.LastConnection;
+        if (conn?.ModeratorMessages is null)
+        {
+            return;
+        }
+        // Idempotent.
+        if (conn.ModeratorMessages.Any(m => m.Id == message.Id))
+        {
+            return;
+        }
+        var grown = new ModeratorMessageDto[conn.ModeratorMessages.Length + 1];
+        Array.Copy(conn.ModeratorMessages, grown, conn.ModeratorMessages.Length);
+        grown[^1] = message;
+        bootstrap.ReplaceConnectionSnapshot(conn with { ModeratorMessages = grown });
     }
 
     private void ApplyBanToCachedSnapshot(string? reason)

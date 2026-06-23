@@ -34,7 +34,9 @@ public class MainPluginWindow : Window, IDisposable
     private readonly MyProfileScreen _myProfileScreen;
     private readonly BannedScreen _bannedScreen;
     private readonly WarningAcknowledgeScreen _warningsAckScreen;
+    private readonly ModeratorMessageScreen _moderatorMessageScreen;
     private readonly PassphraseUnlockScreen _passphraseUnlockScreen;
+    private readonly EncryptionRecoveryScreen _encryptionRecoveryScreen;
     private readonly NewsScreen _newsScreen;
     private readonly OfflineScreen _offlineScreen;
     private readonly OutdatedScreen _outdatedScreen;
@@ -64,7 +66,9 @@ public class MainPluginWindow : Window, IDisposable
         MyProfileScreen myProfileScreen,
         BannedScreen bannedScreen,
         WarningAcknowledgeScreen warningsAckScreen,
+        ModeratorMessageScreen moderatorMessageScreen,
         PassphraseUnlockScreen passphraseUnlockScreen,
+        EncryptionRecoveryScreen encryptionRecoveryScreen,
         NewsScreen newsScreen,
         OfflineScreen offlineScreen,
         OutdatedScreen outdatedScreen,
@@ -94,7 +98,9 @@ public class MainPluginWindow : Window, IDisposable
         _myProfileScreen = myProfileScreen;
         _bannedScreen = bannedScreen;
         _warningsAckScreen = warningsAckScreen;
+        _moderatorMessageScreen = moderatorMessageScreen;
         _passphraseUnlockScreen = passphraseUnlockScreen;
+        _encryptionRecoveryScreen = encryptionRecoveryScreen;
         _newsScreen = newsScreen;
         _offlineScreen = offlineScreen;
         _outdatedScreen = outdatedScreen;
@@ -121,6 +127,12 @@ public class MainPluginWindow : Window, IDisposable
             _notifications.ClearPendingWarning();
             _warningsAckScreen.RequestLiveAcknowledge();
             _router.Navigate(Screen.WarningsAcknowledge);
+        }
+        else if (_notifications.HasPendingModeratorMessage)
+        {
+            _notifications.ClearPendingModeratorMessage();
+            _moderatorMessageScreen.RequestLiveAcknowledge();
+            _router.Navigate(Screen.ModeratorMessages);
         }
         else if (_notifications.HasPendingNews)
         {
@@ -297,8 +309,14 @@ public class MainPluginWindow : Window, IDisposable
             case Screen.WarningsAcknowledge:
                 _warningsAckScreen.Draw();
                 break;
+            case Screen.ModeratorMessages:
+                _moderatorMessageScreen.Draw();
+                break;
             case Screen.PassphraseUnlock:
                 _passphraseUnlockScreen.Draw();
+                break;
+            case Screen.EncryptionRecovery:
+                _encryptionRecoveryScreen.Draw();
                 break;
             case Screen.News:
                 _newsScreen.Draw();
@@ -566,8 +584,14 @@ public class MainPluginWindow : Window, IDisposable
             case Screen.WarningsAcknowledge:
                 _warningsAckScreen.OnShow();
                 break;
+            case Screen.ModeratorMessages:
+                _moderatorMessageScreen.OnShow();
+                break;
             case Screen.PassphraseUnlock:
                 _passphraseUnlockScreen.OnShow();
+                break;
+            case Screen.EncryptionRecovery:
+                _encryptionRecoveryScreen.OnShow();
                 break;
             case Screen.News:
                 _newsScreen.OnShow();

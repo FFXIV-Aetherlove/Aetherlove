@@ -14,7 +14,7 @@ internal static class HubErrorsPt
         ["huberror.profile_not_visible"] = "Este perfil não está disponível.",
         ["huberror.deck_expired"] = "Este perfil não está mais no teu baralho. Atualiza o baralho e tenta novamente.",
         ["huberror.no_active_match"] = "Não tem mais match com este jogador.",
-        ["huberror.peer_keys_missing"] = "O teu match ainda não terminou de configurar o chat criptografado. Tente novamente mais tarde.",
+        ["huberror.peer_keys_missing"] = "Este utilizador ainda não configurou a encriptação E2E e ainda não pode conversar. Tenta novamente mais tarde.",
         ["huberror.key_bundle_exists"] = "As chaves de criptografia já estão configuradas para esta conta.",
         ["huberror.message_too_large"] = "Esta mensagem é longa demais para ser enviada.",
         ["huberror.bio_too_long"] = "Bio excede o limite de {0} caracteres.",

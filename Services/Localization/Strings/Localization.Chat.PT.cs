@@ -24,6 +24,7 @@ internal static class ChatPt
         ["chat.cancel"] = "Cancelar",
         ["chat.loading_messages"] = "Carregando mensagens…",
         ["chat.error"] = "Erro: {0}",
+        ["chat.e2e_self_broken"] = "Algo está errado com a tua configuração E2E. Contacta o suporte.",
         ["chat.seen_suffix"] = " · visto",
         ["chat.send"] = "Enviar",
         ["chat.emoji_button"] = ":)",

@@ -6,7 +6,7 @@ namespace AetherLove.Shared;
 /// change (DTO shape, hub method contract) would break older clients.</summary>
 public static class ApiVersion
 {
-    public const int Current = 2;
+    public const int Current = 3;
 
     /// <summary>Sentinel the server puts in a <c>HubException</c> on a version mismatch so the client can
     /// recognise it (vs. an ordinary error) and show the "update the plugin" screen. Format:

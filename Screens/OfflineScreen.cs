@@ -1,5 +1,5 @@
 using System;
-using System.IO;
+using System.Collections.Generic;
 using System.Numerics;
 using System.Threading.Tasks;
 using AetherLove.Services;
@@ -9,131 +9,214 @@ using AetherLove.UI;
 using AetherLove.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Textures;
+using static AetherLove.Screens.MatchFx;
 
 namespace AetherLove.Screens;
 
-/// <summary>Blocking screen shown when the SignalR hub connection drops; clears once it's restored.</summary>
+/// <summary>Blocking screen shown when the SignalR hub connection drops; clears once it's restored. Paints an
+/// animated "severed signal" backdrop, keeps quietly retrying the connection, and once it has been down for a
+/// couple of minutes surfaces a Discord link for live status.</summary>
 public sealed class OfflineScreen
 {
+    /// <summary>How long the connection must stay down before the Discord call-to-action appears.</summary>
+    private const float DiscordGraceSeconds = 120f;
+
+    /// <summary>The default auto-reconnect gives up after roughly 30s, so this nudges a fresh attempt on
+    /// this cadence while the screen is up.</summary>
+    private const float RetryIntervalSeconds = 5f;
+
     private readonly AetherSignalService _signal;
 
-    private ISharedImmediateTexture? _logoTex;
-    private bool _logoLoaded;
-    private const string LogoFileName = "logo_mini.png";
+    private float _elapsed;
+    private float _retryTimer;
 
     public OfflineScreen(AetherSignalService signal)
     {
         _signal = signal;
     }
 
-    public void OnShow() { }
+    public void OnShow()
+    {
+        _elapsed = 0f;
+        _retryTimer = RetryIntervalSeconds;
+    }
 
     public void Draw()
     {
-        EnsureLogo();
+        var dt = (float)ImGui.GetIO().DeltaTime;
+        _elapsed += dt;
+        MaybeAutoRetry(dt);
 
-        var t = ThemeService.Current;
+        var pos = ImGui.GetWindowPos();
+        var size = ImGui.GetWindowSize();
         var dl = ImGui.GetWindowDrawList();
-        var winPos = ImGui.GetWindowPos();
-        var winSize = ImGui.GetWindowSize();
-        var centerX = winPos.X + winSize.X * 0.5f;
-        var curY = winPos.Y + winSize.Y * 0.14f;
+        var cx = pos.X + size.X * 0.5f;
 
-        var logoWrap = _logoTex?.GetWrapOrDefault();
-        var LogoSz = Px(70f);
-        if (logoWrap != null)
-        {
-            dl.AddImage(logoWrap.Handle,
-                new Vector2(centerX - LogoSz * 0.5f, curY),
-                new Vector2(centerX + LogoSz * 0.5f, curY + LogoSz),
-                Vector2.Zero, Vector2.One, 0x66FFFFFFu);
-        }
-        curY += LogoSz + Px(18f);
+        dl.PushClipRect(pos, pos + size, true);
 
-        var iconCol = ImGui.ColorConvertFloat4ToU32(new Vector4(0.92f, 0.42f, 0.42f, 1f));
-        ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
-        var icon = FontAwesomeIcon.Plug.ToIconString();
-        var iconRender = ImGui.GetFontSize() * 3.0f;
-        var iconBaseSz = ImGui.CalcTextSize(icon);
-        var iconGlyphW = iconBaseSz.X * (iconRender / ImGui.GetFontSize());
-        var iconGlyphH = iconBaseSz.Y * (iconRender / ImGui.GetFontSize());
-        var iconFont = ImGui.GetFont();
-        ImGui.PopFont();
-        dl.AddText(iconFont, iconRender, new Vector2(centerX - iconGlyphW * 0.5f, curY), iconCol, icon);
-        curY += iconGlyphH + Px(18f);
+        DrawSeveredSignal(dl, pos, size, _elapsed);
+
+        // Legibility scrim fading up into the lower copy band.
+        var bandTop = pos.Y + size.Y * 0.58f;
+        var clear = U32(new Vector4(0.03f, 0.03f, 0.06f, 0f));
+        var solid = U32(new Vector4(0.02f, 0.02f, 0.05f, 0.92f));
+        dl.AddRectFilledMultiColor(
+            new Vector2(pos.X, bandTop - Px(36f)), new Vector2(pos.X + size.X, pos.Y + size.Y),
+            clear, clear, solid, solid);
 
         using (UiFonts.H2?.Push())
         {
-            var Title = Loc.T("common.offline_title");
-            var titleSz = ImGui.CalcTextSize(Title);
-            ImGui.SetCursorScreenPos(new Vector2(centerX - titleSz.X * 0.5f, curY));
-            ImGui.TextColored(new Vector4(0.95f, 0.55f, 0.55f, 1f), Title);
+            CenterText(dl, cx, bandTop, Loc.T("common.offline_title"), U32(new Vector4(0.96f, 0.58f, 0.58f, 1f)));
         }
-        curY = ImGui.GetCursorScreenPos().Y + Px(12f);
 
-        var textW = winSize.X - Px(56f);
-        var Body = Loc.T("common.offline_body");
-        ImGui.SetCursorScreenPos(new Vector2(centerX - textW * 0.5f, curY));
-        ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + textW);
-        ImGui.TextColored(new Vector4(0.82f, 0.82f, 0.82f, 1f), Body);
-        ImGui.PopTextWrapPos();
-        curY = ImGui.GetCursorScreenPos().Y + Px(22f);
-
-        // Status: auto-reconnecting (spinner) vs. fully disconnected (manual retry).
-        var state = _signal.State;
-        if (state is SignalConnectionState.Reconnecting or SignalConnectionState.Connecting)
+        using (UiFonts.H3?.Push())
         {
-            LoadingSpinner.Draw(new Vector2(centerX - Px(46f), curY + Px(9f)), Px(8f), Px(2.5f), ImGui.ColorConvertFloat4ToU32(t.AccentLight));
-            ImGui.SetCursorScreenPos(new Vector2(centerX - Px(30f), curY));
-            ImGui.TextColored(t.AccentLight, Loc.T("common.offline_reconnecting"));
-        }
-        else
-        {
-            var Msg = Loc.T("common.offline_keep_trying");
-            var msgSz = ImGui.CalcTextSize(Msg);
-            ImGui.SetCursorScreenPos(new Vector2(centerX - msgSz.X * 0.5f, curY));
-            ImGui.TextColored(new Vector4(0.60f, 0.60f, 0.60f, 1f), Msg);
-            curY = ImGui.GetCursorScreenPos().Y + Px(12f);
-
-            var BtnW = Px(150f);
-            ImGui.SetCursorScreenPos(new Vector2(centerX - BtnW * 0.5f, curY));
-            ImGui.PushStyleColor(ImGuiCol.Button, t.ButtonNormal);
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, t.ButtonHovered);
-            ImGui.PushStyleColor(ImGuiCol.ButtonActive, t.ButtonActive);
-            ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
-            if (ImGui.Button($"{Loc.T("common.try_again")}##offlineRetry", new Vector2(BtnW, Px(32f))))
+            var lineH = ImGui.GetTextLineHeightWithSpacing();
+            var lines = WrapLines(Loc.T("common.offline_body"), size.X - Px(56f));
+            var y = bandTop + Px(34f);
+            var col = U32(new Vector4(0.82f, 0.82f, 0.90f, 1f));
+            for (var i = 0; i < lines.Count; i++)
             {
-                _ = Task.Run(async () =>
-                {
-                    try { await _signal.EnsureConnectedAsync().ConfigureAwait(false); }
-                    catch (Exception ex) { Plugin.Log.Warning(ex, "[OfflineScreen] Retry connect failed."); }
-                });
+                CenterText(dl, cx, y + i * lineH, lines[i], col);
             }
-            ImGui.PopStyleVar();
-            ImGui.PopStyleColor(3);
         }
+
+        dl.PopClipRect();
+
+        DrawStatus(pos, size, cx);
     }
 
-    private void EnsureLogo()
+    /// <summary>While fully disconnected, kick a fresh connect attempt every few seconds (idempotent). Reset
+    /// the timer whenever a connect/reconnect is already in flight so we don't pile on.</summary>
+    private void MaybeAutoRetry(float dt)
     {
-        if (_logoLoaded)
+        if (_signal.State != SignalConnectionState.Disconnected)
+        {
+            _retryTimer = RetryIntervalSeconds;
+            return;
+        }
+        _retryTimer -= dt;
+        if (_retryTimer > 0f)
         {
             return;
         }
-        _logoLoaded = true;
-        try
+        _retryTimer = RetryIntervalSeconds;
+        _ = Task.Run(async () =>
         {
-            var dir = Path.GetDirectoryName(Plugin.PluginInterface.AssemblyLocation.FullName) ?? "";
-            var path = Path.Combine(dir, "Media", LogoFileName);
-            if (File.Exists(path))
+            try { await _signal.EnsureConnectedAsync().ConfigureAwait(false); }
+            catch (Exception ex) { Plugin.Log.Warning(ex, "[OfflineScreen] Auto-retry connect failed."); }
+        });
+    }
+
+    private void DrawStatus(Vector2 pos, Vector2 size, float cx)
+    {
+        var th = ThemeService.Current;
+
+        if (_elapsed < DiscordGraceSeconds)
+        {
+            var y = pos.Y + size.Y - Px(64f);
+            LoadingSpinner.Draw(new Vector2(cx - Px(52f), y + Px(8f)), Px(8f), Px(2.5f),
+                ImGui.ColorConvertFloat4ToU32(th.AccentLight));
+            ImGui.SetCursorScreenPos(new Vector2(cx - Px(36f), y));
+            ImGui.TextColored(th.AccentLight, Loc.T("common.offline_reconnecting"));
+            return;
+        }
+
+        var dl = ImGui.GetWindowDrawList();
+        var msgY = pos.Y + size.Y - Px(108f);
+        using (UiFonts.H3?.Push())
+        {
+            var lines = WrapLines(Loc.T("common.offline_taking_long"), size.X - Px(56f));
+            var lineH = ImGui.GetTextLineHeightWithSpacing();
+            var col = U32(Rgba(th.AccentLight, 1f));
+            for (var i = 0; i < lines.Count; i++)
             {
-                _logoTex = Plugin.TextureProvider.GetFromFile(path);
+                CenterText(dl, cx, msgY + i * lineH, lines[i], col);
             }
         }
-        catch (Exception ex)
+
+        var btnW = Px(200f);
+        ImGui.SetCursorScreenPos(new Vector2(cx - btnW * 0.5f, pos.Y + size.Y - Px(52f)));
+        DrawDiscordButton($"{Loc.T("common.offline_join_discord")}##offlineDiscord", new Vector2(btnW, Px(34f)));
+    }
+
+    /// <summary>Concentric "failed ping" rings expanding from a pulsing broken-plug glyph over a faint circuit
+    /// grid, on a theme-tinted backdrop.</summary>
+    private static void DrawSeveredSignal(ImDrawListPtr dl, Vector2 pos, Vector2 size, float t)
+    {
+        var th = ThemeService.Current;
+        var reduce = AccessibilityService.ReduceMotion;
+        var center = new Vector2(pos.X + size.X * 0.5f, pos.Y + size.Y * 0.36f);
+
+        var topU = U32(new Vector4(th.AccentDark.X * 0.40f, th.AccentDark.Y * 0.40f, th.AccentDark.Z * 0.50f, 1f));
+        var botU = U32(new Vector4(0.03f, 0.03f, 0.06f, 1f));
+        dl.AddRectFilledMultiColor(pos, pos + size, topU, topU, botU, botU);
+
+        var gridCol = U32(Rgba(th.Accent, 0.06f));
+        var step = Px(34f);
+        for (var x = pos.X + step; x < pos.X + size.X; x += step)
         {
-            Plugin.Log.Warning(ex, "[OfflineScreen] Failed to load logo.");
+            dl.AddLine(new Vector2(x, pos.Y), new Vector2(x, pos.Y + size.Y), gridCol, 1f);
         }
+        for (var y = pos.Y + step; y < pos.Y + size.Y; y += step)
+        {
+            dl.AddLine(new Vector2(pos.X, y), new Vector2(pos.X + size.X, y), gridCol, 1f);
+        }
+
+        var maxR = Px(130f);
+        for (var i = 0; i < 3; i++)
+        {
+            var phase = reduce ? 0.45f : (t * 0.5f + i / 3f) % 1f;
+            var r = Px(24f) + phase * maxR;
+            dl.AddCircle(center, r, U32(Rgba(th.AccentLight, (1f - phase) * 0.5f)), 64, Px(2f));
+        }
+
+        var pulse = reduce ? 0.6f : 0.5f + 0.5f * MathF.Sin(t * 2.2f);
+        for (var i = 5; i >= 1; i--)
+        {
+            var f = i / 5f;
+            dl.AddCircleFilled(center, Px(46f) * (1f + f),
+                U32(Rgba(th.Accent, 0.05f * (1f - f) * (0.6f + 0.4f * pulse))), 48);
+        }
+
+        dl.AddCircleFilled(center, Px(40f), U32(new Vector4(0.10f, 0.09f, 0.16f, 1f)), 48);
+        dl.AddCircle(center, Px(40f), U32(Rgba(th.AccentLight, 0.85f)), 48, Px(2f));
+
+        var shake = reduce ? 0f : MathF.Sin(t * 18f) * Px(1.4f);
+        ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
+        var glyph = FontAwesomeIcon.Plug.ToIconString();
+        var render = ImGui.GetFontSize() * 2.4f;
+        var baseSz = ImGui.CalcTextSize(glyph);
+        var gw = baseSz.X * (render / ImGui.GetFontSize());
+        var gh = baseSz.Y * (render / ImGui.GetFontSize());
+        var font = ImGui.GetFont();
+        ImGui.PopFont();
+        dl.AddText(font, render,
+            new Vector2(center.X - gw * 0.5f + shake, center.Y - gh * 0.5f),
+            U32(new Vector4(0.95f, 0.45f, 0.45f, 1f)), glyph);
+    }
+
+    private static List<string> WrapLines(string text, float wrap)
+    {
+        var result = new List<string>();
+        var line = string.Empty;
+        foreach (var word in text.Split(' '))
+        {
+            var probe = line.Length == 0 ? word : line + " " + word;
+            if (ImGui.CalcTextSize(probe).X > wrap && line.Length > 0)
+            {
+                result.Add(line);
+                line = word;
+            }
+            else
+            {
+                line = probe;
+            }
+        }
+        if (line.Length > 0)
+        {
+            result.Add(line);
+        }
+        return result;
     }
 }

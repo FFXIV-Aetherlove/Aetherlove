@@ -26,9 +26,11 @@ internal static class CommonEs
         ["common.outdated_hint"] = "Actualiza el complemento en el instalador de complementos de Dalamud y vuelve a abrir AetherLove.",
 
         ["common.offline_title"] = "AetherLove está fuera de línea",
-        ["common.offline_body"] = "No podemos conectar con los servidores de AetherLove en este momento. La app necesita una conexión activa para explorar, coincidir y chatear, así que está en pausa hasta que volvamos a estar en línea.",
+        ["common.offline_body"] = "El servidor seguramente está fuera de línea por actualizaciones o mantenimiento. ¡Esto no debería tardar más de 2 minutos!",
         ["common.offline_reconnecting"] = "Reconectando…",
         ["common.offline_keep_trying"] = "Seguiremos intentándolo automáticamente.",
+        ["common.offline_taking_long"] = "Esto está tardando más de lo normal. Únete a nuestro Discord para ver el estado más reciente.",
+        ["common.offline_join_discord"] = "Únete a Discord",
 
         ["common.passphrase_title"] = "Introduce tu frase de contraseña de cifrado",
         ["common.passphrase_intro"] = "Reconocemos esta cuenta, pero este dispositivo aún no tiene tu clave de chat. Introduce la frase de contraseña que definiste en tu primer dispositivo para desbloquear tu historial de chat.",
@@ -40,11 +42,23 @@ internal static class CommonEs
         ["common.unlock"] = "Desbloquear",
         ["common.unlocking"] = "Desbloqueando…",
 
+        // Encryption recovery screen
+        ["common.recovery_title"] = "Configurar mensajería segura",
+        ["common.recovery_intro"] = "A tu cuenta le faltan las claves de cifrado, así que todavía no puedes enviar ni recibir mensajes. Elige una contraseña para configurarlas. Guárdala bien, no se puede recuperar.",
+        ["common.recovery_button"] = "Activar mensajería segura",
+        ["common.recovery_support"] = "¿Sigues con problemas? Cierra sesión abajo o escríbenos en Discord.",
+
         ["common.warnings_heading_one"] = "Tienes una advertencia de moderación",
         ["common.warnings_heading_many"] = "Tienes {0} advertencias de moderación",
         ["common.warnings_body"] = "Por favor, lee la(s) siguiente(s) advertencia(s) del equipo de moderación. Las infracciones reiteradas pueden conllevar la suspensión de la cuenta.",
         ["common.warnings_submit_error"] = "No se pudo conectar con el servidor: {0}. Toca para reintentar.",
         ["common.acknowledging"] = "Confirmando…",
+
+        // Moderator message screen
+        ["common.modmsg_heading_one"] = "Tienes un mensaje del equipo de moderación",
+        ["common.modmsg_heading_many"] = "Tienes {0} mensajes del equipo de moderación",
+        ["common.modmsg_body"] = "El equipo de moderación te ha enviado lo siguiente:",
+        ["common.modmsg_got_it"] = "Entendido",
 
         ["common.nsfw_decl_unselected"] = "selecciona una opción abajo",
         ["common.nsfw_decl_sfw"] = "esta foto es SFW",
