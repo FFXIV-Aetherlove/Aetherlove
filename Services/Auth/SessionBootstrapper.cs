@@ -22,6 +22,10 @@ public enum SessionBootstrapResult
     SignedInActive = 3,
     Banned = 4,
     OutdatedClient = 5,
+
+    /// <summary>Have a session (tokens present) but the server can't be reached. Tokens are kept; the user is
+    /// shown the Offline screen, which retries the bootstrap rather than dropping them into onboarding.</summary>
+    ServerUnreachable = 6,
 }
 
 /// <summary>Plugin-startup orchestrator: refreshes tokens, opens SignalR, resolves profile lifecycle.</summary>
@@ -185,6 +189,12 @@ public sealed class SessionBootstrapper
     /// calling it again.</summary>
     public Screen ResolveNextStartupScreen()
     {
+        // ServerUnreachable (and a still-Pending result reached via the splash timeout) hold on the Offline
+        // screen, which retries the bootstrap, rather than dropping a returning user into onboarding.
+        if (_lastResult is SessionBootstrapResult.ServerUnreachable or SessionBootstrapResult.Pending)
+        {
+            return Screen.Offline;
+        }
         if (_lastResult == SessionBootstrapResult.OutdatedClient)
         {
             return Screen.Outdated;
@@ -289,9 +299,15 @@ public sealed class SessionBootstrapper
                 var refreshed = await _tokens.TryRefreshAsync(ct).ConfigureAwait(false);
                 if (!refreshed)
                 {
-                    _log.Information("[SessionBootstrapper] Refresh failed; wiping tokens.");
-                    _tokens.Clear();
-                    return Settle(SessionBootstrapResult.NoSession, null);
+                    if (_tokens.LastRefreshFailedUnauthorized)
+                    {
+                        _log.Information("[SessionBootstrapper] Refresh rejected (401); wiping tokens.");
+                        _tokens.Clear();
+                        return Settle(SessionBootstrapResult.NoSession, null);
+                    }
+                    // Server down/unreachable, not a real auth rejection: keep tokens so a retry resumes the session.
+                    _log.Warning("[SessionBootstrapper] Refresh failed; server unreachable, keeping tokens.");
+                    return Settle(SessionBootstrapResult.ServerUnreachable, null);
                 }
             }
 
@@ -307,9 +323,9 @@ public sealed class SessionBootstrapper
                     return Settle(SessionBootstrapResult.NoSession, null);
                 }
 
-                // Network-level failure; keep tokens so a later retry can succeed.
-                _log.Warning("[SessionBootstrapper] Hub failed to connect; falling back to onboarding.");
-                return Settle(SessionBootstrapResult.NoSession, null);
+                // Network-level failure; keep tokens and show Offline so a later retry resumes the session.
+                _log.Warning("[SessionBootstrapper] Hub unreachable; keeping tokens, showing offline.");
+                return Settle(SessionBootstrapResult.ServerUnreachable, null);
             }
 
             var status = await _hub.GetConnectionInfoAsync(ct).ConfigureAwait(false);
@@ -366,8 +382,10 @@ public sealed class SessionBootstrapper
         }
         catch (Exception ex)
         {
-            _log.Warning(ex, "[SessionBootstrapper] Bootstrap failed.");
-            return Settle(SessionBootstrapResult.NoSession, null);
+            // A refresh token is still present here (the no-token case returned earlier), so treat any
+            // unexpected failure as the server being unreachable rather than wiping the session to onboarding.
+            _log.Warning(ex, "[SessionBootstrapper] Bootstrap failed; treating as server-unreachable.");
+            return Settle(SessionBootstrapResult.ServerUnreachable, null);
         }
     }
 

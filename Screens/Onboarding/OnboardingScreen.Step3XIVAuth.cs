@@ -210,6 +210,15 @@ public partial class OnboardingScreen
             return;
         }
 
+        // Authenticated, but the hub is unreachable (server down): show the same Offline screen as startup
+        // rather than walking them into profile steps that can't save. It retries the bootstrap and routes
+        // back into the wizard (or the deck) once the server answers.
+        if (_bootstrap.LastResult == SessionBootstrapResult.ServerUnreachable)
+        {
+            _router.Navigate(Screen.Offline);
+            return;
+        }
+
         // New device / existing account: server has a key bundle but this machine has no private key.
         // Route to the passphrase screen to rebuild it, else messaging has no chat key. Mirrors SplashScreen.
         if (_bootstrap.NeedsPassphraseUnlock)

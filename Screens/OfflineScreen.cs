@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Threading.Tasks;
+using AetherLove.Navigation;
 using AetherLove.Services;
+using AetherLove.Services.Auth;
 using AetherLove.Services.Localization;
 using AetherLove.Services.Signal;
 using AetherLove.UI;
@@ -26,19 +28,28 @@ public sealed class OfflineScreen
     private const float RetryIntervalSeconds = 5f;
 
     private readonly AetherSignalService _signal;
+    private readonly SessionBootstrapper _bootstrap;
+    private readonly ScreenRouter _router;
 
     private float _elapsed;
     private float _retryTimer;
+    private bool _startupMode;
+    private bool _bootstrapRetryInFlight;
 
-    public OfflineScreen(AetherSignalService signal)
+    public OfflineScreen(AetherSignalService signal, SessionBootstrapper bootstrap, ScreenRouter router)
     {
         _signal = signal;
+        _bootstrap = bootstrap;
+        _router = router;
     }
 
     public void OnShow()
     {
         _elapsed = 0f;
         _retryTimer = RetryIntervalSeconds;
+        // Captured per-show. A mid-session drop arms restore (reconnect the signal, snap back to the prior
+        // screen); a startup "can't reach the server" does not, so we re-run the bootstrap to resolve the session.
+        _startupMode = !_signal.RestoreArmed;
     }
 
     public void Draw()
@@ -90,6 +101,14 @@ public sealed class OfflineScreen
     /// the timer whenever a connect/reconnect is already in flight so we don't pile on.</summary>
     private void MaybeAutoRetry(float dt)
     {
+        // Startup couldn't reach the server: re-run the whole bootstrap (refresh + connect + lifecycle) so a
+        // recovered server lands the user where they belong, not just back on the deck.
+        if (_startupMode)
+        {
+            MaybeRetryBootstrap(dt);
+            return;
+        }
+
         if (_signal.State != SignalConnectionState.Disconnected)
         {
             _retryTimer = RetryIntervalSeconds;
@@ -105,6 +124,37 @@ public sealed class OfflineScreen
         {
             try { await _signal.EnsureConnectedAsync().ConfigureAwait(false); }
             catch (Exception ex) { Plugin.Log.Warning(ex, "[OfflineScreen] Auto-retry connect failed."); }
+        });
+    }
+
+    /// <summary>Startup-offline retry: re-runs the session bootstrap on the retry cadence and, once the server
+    /// answers again, routes to the resolved startup screen (deck / onboarding / a gate). No-ops while one is
+    /// already in flight.</summary>
+    private void MaybeRetryBootstrap(float dt)
+    {
+        if (_bootstrapRetryInFlight)
+        {
+            return;
+        }
+        _retryTimer -= dt;
+        if (_retryTimer > 0f)
+        {
+            return;
+        }
+        _retryTimer = RetryIntervalSeconds;
+        _bootstrapRetryInFlight = true;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var result = await _bootstrap.RunAsync().ConfigureAwait(false);
+                if (result is not (SessionBootstrapResult.ServerUnreachable or SessionBootstrapResult.Pending))
+                {
+                    _router.Navigate(_bootstrap.ResolveNextStartupScreen());
+                }
+            }
+            catch (Exception ex) { Plugin.Log.Warning(ex, "[OfflineScreen] Bootstrap retry failed."); }
+            finally { _bootstrapRetryInFlight = false; }
         });
     }
 

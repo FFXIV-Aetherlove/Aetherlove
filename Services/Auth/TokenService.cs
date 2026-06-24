@@ -1,4 +1,5 @@
 using System;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -30,6 +31,11 @@ public sealed class TokenService
         _config = config;
         _http = http;
     }
+
+    /// <summary>True when the most recent <see cref="TryRefreshAsync"/> failed because the server actively
+    /// rejected the refresh token (HTTP 401), as opposed to the server being unreachable. Lets the startup
+    /// bootstrapper wipe tokens only on a real auth rejection, not when the server is merely down.</summary>
+    public bool LastRefreshFailedUnauthorized { get; private set; }
 
     /// <summary>True when there is no access token or it expires within <see cref="RefreshSkew"/>.</summary>
     public bool IsAccessTokenStale()
@@ -65,6 +71,7 @@ public sealed class TokenService
     /// <summary>Exchanges the refresh token for a fresh pair. Returns false on failure or no stored token.</summary>
     public async Task<bool> TryRefreshAsync(CancellationToken ct)
     {
+        LastRefreshFailedUnauthorized = false;
         var refreshToken = _config.Auth.RefreshToken;
         if (string.IsNullOrEmpty(refreshToken))
         {
@@ -93,6 +100,10 @@ public sealed class TokenService
 
             if (!resp.IsSuccessStatusCode)
             {
+                if (resp.StatusCode == HttpStatusCode.Unauthorized)
+                {
+                    LastRefreshFailedUnauthorized = true;
+                }
                 _log.Warning($"[TokenService] /auth/refresh returned {(int)resp.StatusCode}.");
                 return false;
             }

@@ -56,6 +56,11 @@ public sealed class AetherSignalService : IAsyncDisposable
     /// <summary>Screen to restore once the connection returns, captured when we drop to Offline.</summary>
     private Screen _screenBeforeOffline = Screen.Deck;
 
+    /// <summary>Armed only by a mid-session drop (<see cref="GoOffline"/>) so a reconnect restores the prior app
+    /// screen. A startup "server unreachable" routes to Offline without arming this, leaving the Offline screen's
+    /// bootstrap retry in charge of routing (lifecycle resolution) instead of snapping straight to the deck.</summary>
+    private bool _armedRestore;
+
     private const string HubPath = "hubs/aetherlove";
 
     public AetherSignalService(
@@ -83,6 +88,10 @@ public sealed class AetherSignalService : IAsyncDisposable
 
     /// <summary>True if the last connect attempt failed with HTTP 401.</summary>
     public bool LastFailureWasUnauthorized => _lastFailureWasUnauthorized;
+
+    /// <summary>True when Offline was reached from a mid-session drop (a reconnect should restore the previous
+    /// app screen). False when reached from startup routing, where the bootstrap owns re-routing.</summary>
+    public bool RestoreArmed => _armedRestore;
 
     /// <summary>Returns the live hub connection. Throws if not connected.</summary>
     public HubConnection RequireConnection()
@@ -544,15 +553,17 @@ public sealed class AetherSignalService : IAsyncDisposable
             return;
         }
         _screenBeforeOffline = current == Screen.Match ? Screen.Deck : current;
+        _armedRestore = true;
         _router.Navigate(Screen.Offline);
     }
 
     private void RestoreOnline()
     {
-        if (_router.Current != Screen.Offline)
+        if (_router.Current != Screen.Offline || !_armedRestore)
         {
             return;
         }
+        _armedRestore = false;
         var target = _screenBeforeOffline == Screen.Offline ? Screen.Deck : _screenBeforeOffline;
         _router.Navigate(target);
     }
