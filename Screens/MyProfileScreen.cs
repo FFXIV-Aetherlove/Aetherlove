@@ -118,7 +118,8 @@ public partial class MyProfileScreen
 
     public MyProfileScreen(ProfileScreen profileScreen, AetherLoveHubClient hubClient,
                            OwnAvatarCache ownAvatar, RateLimitModal rateLimitModal,
-                           SaveErrorModal saveErrorModal, ImageRequirementsModal imageReqModal)
+                           SaveErrorModal saveErrorModal, ImageRequirementsModal imageReqModal,
+                           Services.Auth.SessionBootstrapper bootstrap, ScreenRouter router, NewsScreen newsScreen)
     {
         _profileScreen = profileScreen;
         _hubClient = hubClient;
@@ -126,11 +127,17 @@ public partial class MyProfileScreen
         _rateLimitModal = rateLimitModal;
         _saveErrorModal = saveErrorModal;
         _imgPendingPick = new PendingImagePick(imageReqModal);
+        _bootstrap = bootstrap;
+        _router = router;
+        _newsScreen = newsScreen;
     }
 
 
     public void OnShow()
     {
+        _section = Section.Hub;
+        StartStatsFetch();
+
         _activeTab = Tab.View;
         _prevTab = Tab.Edit;
 
@@ -444,74 +451,21 @@ public partial class MyProfileScreen
             _savedTimer -= ImGui.GetIO().DeltaTime;
         }
 
-        DrawTabStrip();
-
-        switch (_activeTab)
+        switch (_section)
         {
-            case Tab.View:
-                DrawViewTab();
+            case Section.Hub:
+                DrawHub();
                 break;
-            case Tab.Edit:
-                DrawEditTab();
+            case Section.Detail:
+                DrawDetail();
                 break;
-            case Tab.Images:
-                DrawImagesTab();
+            case Section.Warnings:
+                DrawWarningsView();
+                break;
+            case Section.ModMessages:
+                DrawModMessagesView();
                 break;
         }
-    }
-
-
-    private static string[] TabLabels => new[]
-    {
-        Loc.T("profile.tab_view"), Loc.T("profile.tab_edit"), Loc.T("profile.tab_images"),
-    };
-
-    private void DrawTabStrip()
-    {
-        var t = ThemeService.Current;
-        var dl = ImGui.GetWindowDrawList();
-        var origin = ImGui.GetCursorScreenPos();
-        var availW = ImGui.GetContentRegionAvail().X;
-        var TabH = Px(36f);
-        var tabW = availW / 3f;
-
-        for (int i = 0; i < 3; i++)
-        {
-            var isActive = _activeTab == (Tab)i;
-            var label = TabLabels[i];
-            var x = origin.X + i * tabW;
-
-            if (isActive)
-            {
-                dl.AddRectFilled(
-                    new Vector2(x, origin.Y),
-                    new Vector2(x + tabW, origin.Y + TabH),
-                    t.AccentWithAlpha(0.18f));
-                dl.AddRectFilled(
-                    new Vector2(x + Px(8f), origin.Y + TabH - Px(3f)),
-                    new Vector2(x + tabW - Px(8f), origin.Y + TabH),
-                    t.AccentU32, Px(2f));
-            }
-
-            var labelSz = ImGui.CalcTextSize(label);
-            dl.AddText(
-                new Vector2(x + (tabW - labelSz.X) * 0.5f, origin.Y + (TabH - labelSz.Y) * 0.5f),
-                isActive ? 0xFFFFFFFF : 0xFFAAAAAA, label);
-
-            ImGui.SetCursorScreenPos(new Vector2(x, origin.Y));
-            ImGui.InvisibleButton($"##mypTab{i}", new Vector2(tabW, TabH));
-            if (ImGui.IsItemClicked())
-            {
-                _activeTab = (Tab)i;
-            }
-        }
-
-        dl.AddLine(
-            new Vector2(origin.X, origin.Y + TabH),
-            new Vector2(origin.X + availW, origin.Y + TabH),
-            UiColors.Divider, 1f);
-
-        ImGui.SetCursorScreenPos(new Vector2(origin.X, origin.Y + TabH + Px(6f)));
     }
 
 
@@ -581,7 +535,9 @@ public partial class MyProfileScreen
         ImGui.PushStyleColor(ImGuiCol.Button, btnColor);
         ImGui.PushStyleColor(ImGuiCol.ButtonHovered, btnHover);
         ImGui.PushStyleColor(ImGuiCol.ButtonActive, t.ButtonActive);
-        if (savingNow)
+        var saveDisabled = savingNow
+            || _displayName.Trim().Length < AetherLove.Shared.ProfileLimits.DisplayNameMinLength;
+        if (saveDisabled)
         {
             ImGui.BeginDisabled();
         }
@@ -589,7 +545,7 @@ public partial class MyProfileScreen
         {
             SaveToServer();
         }
-        if (savingNow)
+        if (saveDisabled)
         {
             ImGui.EndDisabled();
         }
@@ -611,7 +567,7 @@ public partial class MyProfileScreen
         var muted = UiColors.Muted with { W = 0.75f };
         ImGui.Spacing();
 
-        DrawSectionHeading(Loc.T("profile.heading_identity"), t);
+        DrawSectionHeading(Loc.T("profile.menu_edit"), t);
 
         DrawFieldLabel(Loc.T("profile.display_name"), t);
         ImGui.SetNextItemWidth(Px(260f));
@@ -620,6 +576,7 @@ public partial class MyProfileScreen
         {
             _displayName = _displayName.Replace(" ", "");
         }
+        ImGui.TextColored(UiColors.Hint, Loc.T("onboarding.profile_display_name_hint"));
         ImGui.TextColored(muted, Loc.T("profile.display_name_hint"));
         ImGui.Spacing();
 

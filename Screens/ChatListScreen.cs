@@ -40,6 +40,8 @@ public class ChatListScreen
     // Decrypted last-message previews, keyed by peer. Derived keys cached so re-renders don't re-do ECDH.
     private readonly ConcurrentDictionary<Guid, string> _previewByPeer = new();
     private readonly ConcurrentDictionary<Guid, byte[]> _keyByPeer = new();
+    // Per-peer conversation cache for content search; an entry is dropped when a message arrives or its chat opens.
+    private readonly ConcurrentDictionary<Guid, ConversationHistoryDto> _convoCache = new();
     private volatile bool _fetching;
     private volatile string? _fetchError;
     private volatile bool _connectivityError;
@@ -48,6 +50,26 @@ public class ChatListScreen
     private Guid _selectedPeerId;
     private string _selectedPeerName = string.Empty;
     private byte[] _selectedPeerAvatar = [];
+    private Guid _selectedScrollMessageId;
+
+    /// <summary>One match that satisfied the current search: whether its name matched, and the id of the
+    /// first message whose text matched (Empty if only the name matched).</summary>
+    private sealed record SearchHit(bool NameMatch, Guid ContentMessageId);
+
+    private string _searchQuery = string.Empty;
+    private volatile bool _searching;
+    private volatile bool _searchActive;
+    private volatile string _appliedQuery = string.Empty;
+    private volatile Dictionary<Guid, SearchHit> _searchHits = new();
+    private CancellationTokenSource _searchCts = new();
+    // Shown under the search box while a large content search runs (an ETA) or after one fails (rate-limited).
+    private volatile string? _searchEstimate;
+    private volatile string? _searchError;
+    // Above this many conversations to fetch, a content search is slow enough to warrant an on-screen ETA.
+    private const int SearchEstimateThreshold = 25;
+
+    /// <summary>Fixed height of one match row; shared by the list's virtualization and the row draw.</summary>
+    private const float MatchRowHeight = 80f;
 
     public ChatListScreen(
         ScreenRouter router,
@@ -65,11 +87,20 @@ public class ChatListScreen
         _keys = keys;
         _notifications = notifications;
         _archive = archive;
+
+        // Singleton screen: stay subscribed for the whole session so a peer's cache drops even while it's hidden.
+        _events.MessageReceived += InvalidateConvoCache;
     }
+
+    private void InvalidateConvoCache(MessageReceivedPushDto p) => _convoCache.TryRemove(p.FromProfileId, out _);
 
     public Guid SelectedPeerId => _selectedPeerId;
     public string SelectedPeerName => _selectedPeerName;
     public byte[] SelectedPeerAvatar => _selectedPeerAvatar;
+
+    /// <summary>When a search result is opened by content, the message to scroll to and highlight in the chat
+    /// (Empty for a normal open). Read by <see cref="ChatScreen"/> on show.</summary>
+    public Guid SelectedScrollMessageId => _selectedScrollMessageId;
 
     public void OnShow()
     {
@@ -77,6 +108,7 @@ public class ChatListScreen
         _events.BlockedByPeer += OnBlockedByPeer;
         _events.MessageReceived += OnMessageReceived;
         _events.MatchCreated += OnMatchCreated;
+        ClearSearch();
         StartFetch();
     }
 
@@ -89,6 +121,8 @@ public class ChatListScreen
         _cts.Cancel();
         _cts.Dispose();
         _cts = new CancellationTokenSource();
+        // Stop any in-flight content search; the applied filter is kept so returning from a chat keeps it.
+        _searchCts.Cancel();
     }
 
     private void StartFetch()
@@ -339,7 +373,7 @@ public class ChatListScreen
 
     public void Draw()
     {
-        DrawHeader(Loc.T("chat.matches_title"), Loc.T("chat.archive_title"), () => _router.Navigate(Screen.ChatArchive));
+        DrawMatchesHeader();
         DrawList(archived: false);
     }
 
@@ -379,6 +413,275 @@ public class ChatListScreen
         ImGui.Spacing();
     }
 
+    /// <summary>Matches-view header: centred title, an overflow menu (Archived + show/hide search), and the
+    /// search row when enabled.</summary>
+    private void DrawMatchesHeader()
+    {
+        var winW = ImGui.GetWindowSize().X;
+        var t = ThemeService.Current;
+        var headerTop = ImGui.GetCursorPosY();
+
+        var title = Loc.T("chat.matches_title");
+        ImGui.SetCursorPosX((winW - ImGui.CalcTextSize(title).X) * 0.5f);
+        ImGui.Text(title);
+        var afterTitleY = ImGui.GetCursorPosY();
+
+        var btnW = Px(26f);
+        var btnH = ImGui.GetTextLineHeight() + Px(4f);
+        ImGui.SetCursorPos(new Vector2(winW - btnW - Px(10f), headerTop - Px(2f)));
+        ImGui.InvisibleButton("##matchesMenuBtn", new Vector2(btnW, btnH));
+        var menuHovered = ImGui.IsItemHovered();
+        if (menuHovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+        var menuClicked = ImGui.IsItemClicked();
+        var rectMin = ImGui.GetItemRectMin();
+        ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
+        var icon = FontAwesomeIcon.EllipsisV.ToIconString();
+        var iconSz = ImGui.CalcTextSize(icon);
+        ImGui.GetWindowDrawList().AddText(ImGui.GetFont(), ImGui.GetFontSize(),
+            rectMin + new Vector2((btnW - iconSz.X) * 0.5f, (btnH - iconSz.Y) * 0.5f),
+            menuHovered ? t.AccentLightU32 : t.AccentU32, icon);
+        ImGui.PopFont();
+
+        if (menuClicked)
+        {
+            ImGui.OpenPopup("##matchesMenu");
+        }
+        if (ImGui.BeginPopup("##matchesMenu"))
+        {
+            if (ChatScreen.DrawIconMenuItem(FontAwesomeIcon.Archive, Loc.T("chat.archive_title")))
+            {
+                ImGui.CloseCurrentPopup();
+                _router.Navigate(Screen.ChatArchive);
+            }
+            var showing = Plugin.Configuration.ShowChatSearch;
+            if (ChatScreen.DrawIconMenuItem(showing ? FontAwesomeIcon.SearchMinus : FontAwesomeIcon.Search,
+                    showing ? Loc.T("chat.hide_search") : Loc.T("chat.show_search")))
+            {
+                ImGui.CloseCurrentPopup();
+                ToggleSearchVisible();
+            }
+            ImGui.EndPopup();
+        }
+
+        ImGui.SetCursorPosY(afterTitleY);
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+
+        if (Plugin.Configuration.ShowChatSearch)
+        {
+            DrawSearchRow();
+            ImGui.Separator();
+            ImGui.Spacing();
+        }
+    }
+
+    private void DrawSearchRow()
+    {
+        var t = ThemeService.Current;
+
+        var btnW = Px(32f);
+        var spacing = ImGui.GetStyle().ItemSpacing.X;
+        var avail = ImGui.GetContentRegionAvail().X;
+        var inputW = MathF.Max(Px(60f), avail - (btnW * 2f + spacing * 2f));
+
+        ImGui.SetNextItemWidth(inputW);
+        var submit = ImGui.InputTextWithHint("##chatSearchInput", Loc.T("chat.search_hint"),
+            ref _searchQuery, 100, ImGuiInputTextFlags.EnterReturnsTrue);
+        ImGui.SameLine();
+
+        PushThemeButton(t);
+        ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
+        var search = ImGui.Button(FontAwesomeIcon.Search.ToIconString() + "##doSearch", new Vector2(btnW, 0f));
+        ImGui.SameLine();
+        var clear = ImGui.Button(FontAwesomeIcon.Times.ToIconString() + "##clearSearch", new Vector2(btnW, 0f));
+        ImGui.PopFont();
+        PopThemeButton();
+
+        if (search || submit)
+        {
+            RunSearch();
+        }
+        if (clear)
+        {
+            ClearSearch();
+        }
+
+        if (_searching)
+        {
+            var r = Px(7f);
+            var spinTL = ImGui.GetCursorScreenPos();
+            ImGui.Dummy(new Vector2(r * 2f + Px(4f), r * 2f + Px(2f)));
+            Widgets.LoadingSpinner.Draw(spinTL + new Vector2(r, r + Px(1f)), r, Px(2.2f), t.AccentU32);
+            ImGui.SameLine();
+            ImGui.AlignTextToFramePadding();
+            ImGui.TextColored(UiColors.Subtle, Loc.T("chat.searching"));
+
+            if (_searchEstimate is { } est)
+            {
+                ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
+                ImGui.TextColored(UiColors.Subtle, est);
+                ImGui.PopTextWrapPos();
+            }
+        }
+        else if (_searchError is { } err)
+        {
+            ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
+            ImGui.TextColored(UiColors.Amber, err);
+            ImGui.PopTextWrapPos();
+        }
+        ImGui.Spacing();
+    }
+
+    private void ToggleSearchVisible()
+    {
+        var now = !Plugin.Configuration.ShowChatSearch;
+        Plugin.Configuration.ShowChatSearch = now;
+        Plugin.Configuration.Save();
+        if (!now)
+        {
+            ClearSearch();
+        }
+    }
+
+    private void ClearSearch()
+    {
+        _searchCts.Cancel();
+        _searching = false;
+        _searchActive = false;
+        _searchHits = new Dictionary<Guid, SearchHit>();
+        _appliedQuery = string.Empty;
+        _searchQuery = string.Empty;
+        _searchEstimate = null;
+        _searchError = null;
+    }
+
+    /// <summary>Runs the current query over names and, by fetching + decrypting each conversation, message
+    /// contents. Builds the per-peer hit map the list filters on. Content search is client-side because the
+    /// server only ever holds ciphertext.</summary>
+    private void RunSearch()
+    {
+        var query = _searchQuery.Trim();
+        if (query.Length == 0)
+        {
+            ClearSearch();
+            return;
+        }
+
+        _searchCts.Cancel();
+        _searchCts.Dispose();
+        _searchCts = new CancellationTokenSource();
+        var ct = _searchCts.Token;
+        _searching = true;
+        _searchError = null;
+
+        MatchSummaryDto[] snapshot;
+        lock (_matchesLock)
+        {
+            snapshot = _matches.Where(m => !_archive.IsArchived(m.PeerProfileId)).ToArray();
+        }
+
+        // Only un-cached conversations cost a round-trip; warn with an ETA when enough of them remain to be slow.
+        var toFetch = snapshot.Count(m => !_convoCache.ContainsKey(m.PeerProfileId));
+        _searchEstimate = toFetch > SearchEstimateThreshold
+            ? Loc.T("chat.search_estimate", (int)MathF.Ceiling(toFetch * 0.3f), (int)MathF.Ceiling(toFetch * 0.8f))
+            : null;
+
+        _ = Task.Run(async () =>
+        {
+            var hits = new Dictionary<Guid, SearchHit>();
+            try
+            {
+                foreach (var m in snapshot)
+                {
+                    if (ct.IsCancellationRequested)
+                    {
+                        return;
+                    }
+                    var nameMatch = m.PeerDisplayName.Contains(query, StringComparison.OrdinalIgnoreCase);
+                    var contentMsg = await FindContentMatchAsync(m, query, ct).ConfigureAwait(false);
+                    if (nameMatch || contentMsg != Guid.Empty)
+                    {
+                        hits[m.PeerProfileId] = new SearchHit(nameMatch, contentMsg);
+                    }
+                }
+
+                if (ct.IsCancellationRequested)
+                {
+                    return;
+                }
+                _searchHits = hits;
+                _appliedQuery = query;
+                _searchActive = true;
+            }
+            catch (OperationCanceledException) { }
+            catch (RateLimitException)
+            {
+                _searchError = Loc.T("chat.search_rate_limited");
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.Warning(ex, "[ChatListScreen] search failed.");
+            }
+            finally
+            {
+                _searching = false;
+                _searchEstimate = null;
+            }
+        }, ct);
+    }
+
+    /// <summary>Id of the first message in the peer's conversation whose text contains <paramref name="query"/>,
+    /// or Empty. Decrypts locally with the per-conversation key.</summary>
+    private async Task<Guid> FindContentMatchAsync(MatchSummaryDto m, string query, CancellationToken ct)
+    {
+        var key = KeyForPeer(m);
+        if (key is null)
+        {
+            return Guid.Empty;
+        }
+        try
+        {
+            if (!_convoCache.TryGetValue(m.PeerProfileId, out var convo))
+            {
+                convo = await _hub.GetConversationAsync(m.PeerProfileId, ct).ConfigureAwait(false);
+                _convoCache[m.PeerProfileId] = convo;
+            }
+            foreach (var em in convo.Messages)
+            {
+                try
+                {
+                    var text = Encoding.UTF8.GetString(_crypto.Decrypt(key, em.Nonce, em.Ciphertext));
+                    if (text.Contains(query, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return em.Id;
+                    }
+                }
+                catch
+                {
+                    // Skip an undecryptable message; keep scanning the rest.
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (RateLimitException)
+        {
+            // Bubble up so the whole search stops and the user can retry, rather than returning partial results.
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Warning(ex, $"[ChatListScreen] search fetch failed for {m.PeerProfileId}.");
+        }
+        return Guid.Empty;
+    }
+
     private void DrawList(bool archived)
     {
         MatchSummaryDto[] all;
@@ -407,9 +710,21 @@ public class ChatListScreen
         }
 
         var rows = all.Where(m => _archive.IsArchived(m.PeerProfileId) == archived).ToArray();
+
+        var hits = _searchHits;
+        var searchOn = !archived && _searchActive;
+        if (searchOn)
+        {
+            rows = rows.Where(m => hits.ContainsKey(m.PeerProfileId)).ToArray();
+        }
+
         if (rows.Length == 0)
         {
-            if (archived)
+            if (searchOn)
+            {
+                DrawCenteredHint(Loc.T("chat.search_no_results"));
+            }
+            else if (archived)
             {
                 DrawCenteredHint(Loc.T("chat.no_archived"));
             }
@@ -433,12 +748,32 @@ public class ChatListScreen
             {
                 return;
             }
+
+            // Virtualize: rows are a fixed height, so only those intersecting the viewport (plus a one-screen
+            // margin) are drawn. Off-screen rows just advance the cursor, so scroll extent and position stay correct.
+            var rowHeight = Px(MatchRowHeight);
+            var viewH = ImGui.GetWindowSize().Y;
+            var bandTop = ImGui.GetScrollY() - viewH;
+            var bandBot = ImGui.GetScrollY() + viewH * 2f;
+
             for (int i = 0; i < rows.Length; i++)
             {
+                var y0 = ImGui.GetCursorPosY();
+                if (y0 + rowHeight < bandTop || y0 > bandBot)
+                {
+                    ImGui.SetCursorPosY(y0 + rowHeight);
+                    continue;
+                }
+
                 var m = rows[i];
                 // Mark the row that sits on the pinned/unpinned boundary so it gets an accent divider.
                 var isPinnedBoundary = !archived && m.IsPinned && i + 1 < rows.Length && !rows[i + 1].IsPinned;
-                DrawMatchRow(m, isPinnedBoundary, archived);
+                SearchHit? hit = null;
+                if (searchOn)
+                {
+                    hits.TryGetValue(m.PeerProfileId, out hit);
+                }
+                DrawMatchRow(m, isPinnedBoundary, archived, hit);
             }
         }
     }
@@ -636,11 +971,11 @@ public class ChatListScreen
         return lines.ToArray();
     }
 
-    private void DrawMatchRow(MatchSummaryDto m, bool isPinnedBoundary, bool archivedView)
+    private void DrawMatchRow(MatchSummaryDto m, bool isPinnedBoundary, bool archivedView, SearchHit? hit = null)
     {
         var drawList = ImGui.GetWindowDrawList();
         var cursorStart = ImGui.GetCursorScreenPos();
-        var rowHeight = Px(80f);
+        var rowHeight = Px(MatchRowHeight);
         var windowWidth = ImGui.GetContentRegionAvail().X;
 
         ImGui.InvisibleButton($"##match_{m.PeerProfileId}", new Vector2(windowWidth, rowHeight));
@@ -660,6 +995,9 @@ public class ChatListScreen
             _selectedPeerId = m.PeerProfileId;
             _selectedPeerName = m.PeerDisplayName;
             _selectedPeerAvatar = m.PeerAvatarWebp;
+            _selectedScrollMessageId = hit?.ContentMessageId ?? Guid.Empty;
+            // Drop this peer's cache: opening the chat may add sent messages, so a later search re-syncs just this one.
+            _convoCache.TryRemove(m.PeerProfileId, out _);
             _router.Navigate(Screen.Chat);
         }
 
@@ -724,7 +1062,14 @@ public class ChatListScreen
         }
 
         var textPos = cursorStart + Px(80, 12);
-        drawList.AddText(textPos, 0xFFFFFFFF, m.PeerDisplayName);
+        if (hit is { NameMatch: true } && _appliedQuery.Length > 0)
+        {
+            DrawNameHighlighted(drawList, textPos, m.PeerDisplayName, _appliedQuery);
+        }
+        else
+        {
+            drawList.AddText(textPos, 0xFFFFFFFF, m.PeerDisplayName);
+        }
         if (m.IsPinned)
         {
             var nameW = ImGui.CalcTextSize(m.PeerDisplayName).X;
@@ -786,6 +1131,34 @@ public class ChatListScreen
             return Loc.T("chat.time_ago_hours", (int)diff.TotalHours);
         }
         return Loc.T("chat.time_ago_days", (int)diff.TotalDays);
+    }
+
+    /// <summary>Draws a match's name, colouring the first occurrence of <paramref name="query"/> with the
+    /// search-highlight accent so the matched text stands out in the row.</summary>
+    private static void DrawNameHighlighted(ImDrawListPtr dl, Vector2 pos, string name, string query)
+    {
+        var idx = name.IndexOf(query, StringComparison.OrdinalIgnoreCase);
+        if (idx < 0)
+        {
+            dl.AddText(pos, 0xFFFFFFFF, name);
+            return;
+        }
+        var highlight = ImGui.GetColorU32(UiColors.Amber);
+        var x = pos.X;
+        if (idx > 0)
+        {
+            var before = name[..idx];
+            dl.AddText(new Vector2(x, pos.Y), 0xFFFFFFFF, before);
+            x += ImGui.CalcTextSize(before).X;
+        }
+        var match = name.Substring(idx, query.Length);
+        dl.AddText(new Vector2(x, pos.Y), highlight, match);
+        x += ImGui.CalcTextSize(match).X;
+        var afterIdx = idx + query.Length;
+        if (afterIdx < name.Length)
+        {
+            dl.AddText(new Vector2(x, pos.Y), 0xFFFFFFFF, name[afterIdx..]);
+        }
     }
 
 }

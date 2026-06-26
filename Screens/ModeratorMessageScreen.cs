@@ -11,6 +11,7 @@ using AetherLove.Services.Localization;
 using AetherLove.Shared.Profile;
 using AetherLove.UI;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 
 namespace AetherLove.Screens;
@@ -103,10 +104,13 @@ public sealed class ModeratorMessageScreen
             ImGui.Spacing();
             ImGui.Spacing();
 
-            foreach (var m in _toAcknowledge)
+            ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(0f, Px(10f)));
+            foreach (var m in _toAcknowledge.OrderByDescending(m => m.CreatedAtUtc))
             {
-                DrawMessageCard(m, winW);
+                DrawNoticeCard(winW, FontAwesomeIcon.Envelope, UiColors.MessageAccent,
+                    m.CreatedAtUtc, m.Body, m.Seen, 16f);
             }
+            ImGui.PopStyleVar();
 
             ImGui.Spacing();
             ImGui.SetCursorPosX(PadX);
@@ -141,21 +145,6 @@ public sealed class ModeratorMessageScreen
                 ImGui.PopTextWrapPos();
             }
         }
-    }
-
-    private static void DrawMessageCard(ModeratorMessageDto m, float winW)
-    {
-        ImGui.SetCursorPosX(PadX);
-        ImGui.PushTextWrapPos(winW - PadX);
-
-        ImGui.TextColored(UiColors.Muted,
-            m.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm"));
-        ImGui.SetCursorPosX(PadX);
-        ImGui.TextColored(new Vector4(0.92f, 0.92f, 0.92f, 1f), m.Body);
-        ImGui.PopTextWrapPos();
-
-        ImGui.Spacing();
-        ImGui.Spacing();
     }
 
     private void StartAcknowledge()

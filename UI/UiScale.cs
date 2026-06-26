@@ -23,6 +23,8 @@ public static class UiScale
     {
         PhoneScalePreset.Medium => 1.15f,
         PhoneScalePreset.Large  => 1.30f,
+        PhoneScalePreset.XL     => 1.75f,
+        PhoneScalePreset.XXL    => 2.00f,
         _                       => 1.0f,
     };
 

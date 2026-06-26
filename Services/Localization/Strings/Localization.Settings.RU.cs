@@ -6,20 +6,35 @@ internal static class SettingsRu
     {
         ["settings.title"] = "Настройки",
 
+        ["settings.section_plugin_settings"] = "Настройки плагина",
         ["settings.section_appearance"] = "Внешний вид",
         ["settings.section_phone_size"] = "Размер телефона",
         ["settings.section_plugin_language"] = "Язык плагина",
         ["settings.section_privacy"] = "Конфиденциальность",
-        ["settings.section_general"] = "Общие",
+        ["settings.section_general"] = "Общие настройки",
         ["settings.section_notifications"] = "Уведомления",
         ["settings.section_moderation"] = "Уведомления от администрации",
         ["settings.section_other"] = "Прочее",
         ["settings.section_danger_zone"] = "Опасная зона",
+        ["settings.menu_language_theme"] = "Язык и тема",
+        ["settings.menu_appearance"] = "Внешний вид телефона",
+        ["settings.menu_chat_colors"] = "Оформление чата",
+        ["settings.section_theme"] = "Тема",
+        ["settings.back_arrow"] = "← Назад",
+        ["settings.chat_own_bg"] = "Фон ваших сообщений",
+        ["settings.chat_own_fg"] = "Текст ваших сообщений",
+        ["settings.chat_peer_bg"] = "Фон сообщений собеседника",
+        ["settings.chat_peer_fg"] = "Текст сообщений собеседника",
+        ["settings.chat_reset"] = "Сбросить",
 
         ["settings.phone_size_small"] = "Маленький",
         ["settings.phone_size_medium"] = "Средний",
         ["settings.phone_size_large"] = "Большой",
-        ["settings.phone_size_caption"] = "Масштабирует весь телефон. Большие размеры подходят для экранов с высоким разрешением; «Большой» может не поместиться на дисплее 1080p.",
+        ["settings.phone_size_xl"] = "XL",
+        ["settings.phone_size_xxl"] = "XXL",
+        ["settings.phone_size_caption"] = "Масштабирует весь телефон. Большие размеры подходят для экранов с высоким разрешением; XL и XXL рассчитаны на 4K и могут не поместиться на экранах меньшего размера.",
+        ["settings.section_mini_phone_size"] = "Размер мини-телефона",
+        ["settings.mini_phone_size_caption"] = "Размер свёрнутого пузырька (показывается, когда телефон свёрнут). Предпросмотр ниже показывает выбранный размер.",
 
         ["settings.disable_startup_heartbeat"] = "Отключить звук сердцебиения при запуске",
         ["settings.confirm_before_close"] = "Подтверждать перед закрытием AetherLove",
@@ -73,7 +88,7 @@ internal static class SettingsRu
 
         ["settings.warnings_button_unseen"] = "Предупреждения ({0} непросмотренных: / {1})",
         ["settings.warnings_button"] = "Предупреждения ({0})",
-        ["settings.warnings_title"] = "Предупреждения",
+        ["settings.warnings_title"] = "Предупреждения аккаунта",
         ["settings.no_warnings"] = "Предупреждений нет.",
 
         // Moderator messages

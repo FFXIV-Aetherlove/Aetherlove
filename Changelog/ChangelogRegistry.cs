@@ -11,6 +11,34 @@ public static class ChangelogRegistry
     private static readonly List<ChangelogEntry> _entries =
     [
         new(
+            Version: new Version(1, 3, 0),
+            ReleaseDate: new DateOnly(2026, 06, 26),
+            NewFeatures:
+            [
+                "You can now customize your chat bubble colors, with a new \"Language & Theme\" menu to manage them in one place.",
+                "Tap your avatar to see new profile statistics, including how many people have loved your profile!",
+                "The \"My Profile\" and \"Settings\" screens have been redesigned into cleaner, easier-to-navigate hubs.",
+                "You can now search your matches by name or message content, and the matches list is smoother and faster even with lots of matches.",
+                "You can verify a chat's end-to-end encryption from a new in-app screen, so you can confirm no one is intercepting your messages.",
+                "Added XL and XXL phone sizes for high-resolution and 4K displays, plus a configurable size for the minimized phone.",
+                "The chat screen now has a back button in its header and a tidier layout.",
+                "The swipe deck now warns you when your next batch of cards is less than 5 minutes away.",
+                "Minimize the phone instantly by double-clicking any of its edges."
+            ],
+            BugFixes:
+            [
+                "We fine-tuned a lot of rate limits that could previously cause odd behavior in the app, such as failing to save profile edits and/or pictures.",
+                "When the AetherLove server can't be reached, you now always see an Offline screen. This wasn't previously the case.",
+                "Uploaded photos with transparency no longer show up with gray blocks; they're now placed on a solid background."
+            ],
+            Important:
+            [
+                "This release is all about quality of life: lots of little improvements to make AetherLove smoother and nicer to use.",
+                "Did you know we've already had over 1,000,000 swipes? Absolutely crazy!",
+                "We've added a strict zero-tolerance policy on NSFL content (real or graphic gore, death, and similarly shocking imagery): uploading it results in an immediate and permanent ban, with no warning and no appeal. See the Terms of Service for details."
+            ]
+        ),
+        new(
             Version: new Version(1, 2, 0),
             ReleaseDate: new DateOnly(2026, 06, 23),
             NewFeatures:

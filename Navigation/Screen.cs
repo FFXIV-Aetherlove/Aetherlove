@@ -18,6 +18,7 @@ public enum Screen
     ModeratorMessages,
     PassphraseUnlock,
     EncryptionRecovery,
+    EncryptionVerification,
     News,
     Offline,
     Outdated,

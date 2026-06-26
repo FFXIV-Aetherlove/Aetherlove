@@ -66,6 +66,17 @@ internal static class ProfileEs
         ["profile.tab_edit"] = "Editar perfil",
         ["profile.tab_images"] = "Cambiar imágenes",
 
+        // MyProfileScreen hub: stats + menu
+        ["profile.section_myprofile"] = "Mi perfil",
+        ["profile.section_service"] = "Servicio",
+        ["profile.menu_view"] = "Ver mi perfil",
+        ["profile.menu_edit"] = "Modificar perfil",
+        ["profile.menu_images"] = "Fotos de perfil",
+        ["profile.stat_loves_you"] = "te quieren",
+        ["profile.stat_matches"] = "Matches",
+        ["profile.stat_match_rate"] = "% de match",
+        ["profile.back_to_my"] = "← Volver",
+
         ["profile.load_profile_failed"] = "No se pudo cargar tu perfil: {0}",
         ["profile.retry"] = "Reintentar",
         ["profile.save_failed"] = "Error al guardar: {0}",
@@ -73,7 +84,6 @@ internal static class ProfileEs
         ["profile.saved"] = "Guardado  ✓",
         ["profile.save_changes"] = "Guardar cambios",
 
-        ["profile.heading_identity"] = "Identidad",
         ["profile.heading_character"] = "Personaje",
         ["profile.heading_location"] = "Ubicación",
         ["profile.heading_languages"] = "Idiomas que hablo",

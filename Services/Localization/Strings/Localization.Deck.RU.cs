@@ -42,5 +42,6 @@ internal static class DeckRu
         ["deck.match_keep_swiping"] = "Продолжить листать",
         ["deck.no_pool_heading"] = "Пары закончились",
         ["deck.no_pool_body"] = "По вашим текущим критериям больше пар не найдено. Расширьте критерии и повторите попытку позже.",
+        ["deck.next_deck"] = "Следующая колода: {0}",
     };
 }

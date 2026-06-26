@@ -42,6 +42,7 @@ internal static class DeckPt
         ["deck.match_keep_swiping"] = "Continuar Deslizando",
         ["deck.no_pool_heading"] = "Sem novos matches para você com base nas suas preferências",
         ["deck.no_pool_body"] = "Durante o beta, isto é esperado",
+        ["deck.next_deck"] = "Próximo deck: {0}",
         ["deck.no_pool_footer"] = "Tente novamente mais tarde! <3",
     };
 }

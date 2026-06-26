@@ -13,6 +13,12 @@ internal static class UiColors
     /// <summary>Error accent (red) for inline error text and failure-style modals.</summary>
     internal static readonly Vector4 Danger = new(0.95f, 0.45f, 0.45f, 1f);
 
+    /// <summary>Account-warning accent (orange): the warning notice cards and the "My" hub warnings row.</summary>
+    internal static readonly Vector4 WarningAccent = new(0.97f, 0.62f, 0.25f, 1f);
+
+    /// <summary>Moderator-message accent (blue): the message notice cards and the "My" hub messages row.</summary>
+    internal static readonly Vector4 MessageAccent = new(0.40f, 0.68f, 0.95f, 1f);
+
     /// <summary>Primary body text.</summary>
     internal static readonly Vector4 Body = new(0.85f, 0.85f, 0.85f, 1f);
 
@@ -91,6 +97,9 @@ internal static class UiColors
 
     /// <summary>Opaque border for a caution/notice callout box — amber/orange.</summary>
     internal const uint WarningBoxBorder = 0xFF2080FFu;
+
+    /// <summary>Opaque dark fill for the deck-expiry warning banner; it overlays a card photo, so it can't be translucent.</summary>
+    internal const uint DeckExpiryWarnFill = 0xE0181818u;
 
     /// <summary>Festive confetti palette (0x00BBGGRR; per-particle alpha is applied at draw time).</summary>
     internal static readonly uint[] ConfettiPalette =

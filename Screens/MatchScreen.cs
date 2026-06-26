@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using AetherLove.Services;
 using AetherLove.Services.Auth;
@@ -75,8 +74,10 @@ public sealed class MatchScreen
         {
             return;
         }
-        var cacheDir = Path.Combine(Plugin.PluginInterface.ConfigDirectory.FullName, "MatchOverlayCache");
+        var cacheDir = ImageCacheCleaner.MatchOverlayCacheDir;
         _peerAvatarTex = AvatarDiskCache.Store(cacheDir, _pending.PeerProfileId.ToString(), _pending.PeerAvatarWebp);
         _cachedPeerId = _pending.PeerProfileId;
+        // Only the current overlay peer (and the user's own "self_" avatar) need to stay; drop earlier matches.
+        ImageCacheCleaner.ClearExcept(cacheDir, "self_", _pending.PeerProfileId.ToString());
     }
 }

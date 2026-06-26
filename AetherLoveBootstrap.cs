@@ -88,6 +88,7 @@ public sealed class AetherLoveBootstrap : IHostedService
     public Task StartAsync(CancellationToken cancellationToken)
     {
         UiScale.Apply(_config.PhoneSize);
+        MiniScale.Apply(_config.MiniPhoneSize);
         UiFonts.Rebuild();
 
         _mainWindow.SetMiniWindow(_miniWindow);

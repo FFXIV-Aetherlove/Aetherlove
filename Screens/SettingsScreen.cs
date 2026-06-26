@@ -28,12 +28,11 @@ public class SettingsScreen
     private readonly TokenService _tokens;
     private readonly SessionBootstrapper _bootstrap;
     private readonly ChangelogWindow _changelogWindow;
-    private readonly NewsScreen _newsScreen;
 
-    private enum View { Normal, ConfirmDelete, Deleting, Deleted, WarningsList, ModeratorMessagesList, Feedback, Tos, Contributors }
+    private enum View { Hub, LanguageTheme, General, Notifications, Appearance, ChatColors, ConfirmDelete, Deleting, Deleted, Feedback, Tos, Contributors }
 
     // volatile: written from the deletion task, read on the UI thread.
-    private volatile int _viewRaw = (int)View.Normal;
+    private volatile int _viewRaw = (int)View.Hub;
     private View _view
     {
         get => (View)_viewRaw;
@@ -59,16 +58,8 @@ public class SettingsScreen
 
     private const float PadX = 16f;
 
-    // Gradient-button colours (top → bottom) for the "Other" group and the danger-zone delete button.
+    // Icon tint for the "Other" Discord row, and the danger-zone label / delete-button outline colour.
     private static readonly Vector4 DiscordTop = new(0.43f, 0.48f, 1.00f, 1f);
-    // Distinct moderation orange (the "in review" accent), not a flat yellow.
-    private static readonly Vector4 WarnTop = new(0.97f, 0.55f, 0.20f, 1f);
-    private static readonly Vector4 WarnBottom = new(0.66f, 0.30f, 0.07f, 1f);
-    // Friendly (non-danger) blue for the moderator-messages entry.
-    private static readonly Vector4 InfoTop = new(0.27f, 0.62f, 0.92f, 1f);
-    private static readonly Vector4 InfoBottom = new(0.13f, 0.37f, 0.62f, 1f);
-    private static readonly Vector4 DangerTop = new(0.66f, 0.16f, 0.16f, 1f);
-    private static readonly Vector4 DangerBottom = new(0.34f, 0.05f, 0.05f, 1f);
     private static readonly Vector4 DangerLabelColor = new(0.93f, 0.36f, 0.36f, 1f);
 
     public SettingsScreen(ScreenRouter router,
@@ -76,8 +67,7 @@ public class SettingsScreen
                           AetherSignalService signal,
                           TokenService tokens,
                           SessionBootstrapper bootstrap,
-                          ChangelogWindow changelogWindow,
-                          NewsScreen newsScreen)
+                          ChangelogWindow changelogWindow)
     {
         _router = router;
         _hubClient = hubClient;
@@ -85,12 +75,11 @@ public class SettingsScreen
         _tokens = tokens;
         _bootstrap = bootstrap;
         _changelogWindow = changelogWindow;
-        _newsScreen = newsScreen;
     }
 
     public void OnShow()
     {
-        _view = View.Normal;
+        _view = View.Hub;
         _deleteError = null;
         ResetFeedback();
         LoadNsfwState();
@@ -157,8 +146,23 @@ public class SettingsScreen
 
         switch (_view)
         {
-            case View.Normal:
-                DrawNormal(winW);
+            case View.Hub:
+                DrawHub(winW);
+                break;
+            case View.LanguageTheme:
+                DrawLanguageThemePage(winW);
+                break;
+            case View.General:
+                DrawGeneralPage(winW);
+                break;
+            case View.Notifications:
+                DrawNotificationsPage(winW);
+                break;
+            case View.Appearance:
+                DrawAppearancePage(winW);
+                break;
+            case View.ChatColors:
+                DrawChatColorsPage(winW);
                 break;
             case View.ConfirmDelete:
                 DrawConfirmDelete(winW);
@@ -168,12 +172,6 @@ public class SettingsScreen
                 break;
             case View.Deleted:
                 DrawDeleted(winW);
-                break;
-            case View.WarningsList:
-                DrawWarningsList(winW);
-                break;
-            case View.ModeratorMessagesList:
-                DrawModeratorMessagesList(winW);
                 break;
             case View.Feedback:
                 DrawFeedback(winW);
@@ -188,14 +186,13 @@ public class SettingsScreen
     }
 
 
-    private void DrawNormal(float winW)
+    private void DrawHub(float winW)
     {
         var t = ThemeService.Current;
-
         var scrollH = ImGui.GetContentRegionAvail().Y;
         PushScrollbarStyle();
 
-        using (var scroll = Dalamud.Interface.Utility.Raii.ImRaii.Child("##settNorm", new Vector2(0f, scrollH), false))
+        using (var scroll = Dalamud.Interface.Utility.Raii.ImRaii.Child("##settHub", new Vector2(0f, scrollH), false))
         {
             PopScrollbarStyle();
 
@@ -204,36 +201,52 @@ public class SettingsScreen
                 return;
             }
 
-            var dl = ImGui.GetWindowDrawList();
+            ImGui.Spacing();
+            ImGui.Spacing();
+
+            DrawSectionHeader(Loc.T("settings.section_plugin_settings"), PadX);
+            DrawMenuCard("settMain", winW, PadX, new System.Collections.Generic.List<MenuRow>
+            {
+                new(FontAwesomeIcon.Cog, t.Accent, Loc.T("settings.section_general"), 0, false, () => _view = View.General),
+                new(FontAwesomeIcon.Palette, t.Accent, Loc.T("settings.menu_language_theme"), 0, false, () => _view = View.LanguageTheme),
+                new(FontAwesomeIcon.MobileAlt, t.Accent, Loc.T("settings.menu_appearance"), 0, false, () => _view = View.Appearance),
+                new(FontAwesomeIcon.Bell, t.Accent, Loc.T("settings.section_notifications"), 0, false, () => _view = View.Notifications),
+                new(FontAwesomeIcon.Comments, t.Accent, Loc.T("settings.menu_chat_colors"), 0, false, () => _view = View.ChatColors),
+            });
 
             ImGui.Spacing();
             ImGui.Spacing();
 
-            ImGui.SetCursorPosX(Px(PadX));
-            ImGui.TextColored(new Vector4(1f, 1f, 1f, 1f), Loc.T("settings.title"));
-            ImGui.Spacing();
-            Divider(dl, winW);
+            DrawSectionHeader(Loc.T("settings.section_other"), PadX);
+            DrawOtherCard(winW, t);
 
-            SectionLabel(Loc.T("settings.section_appearance"), t);
             ImGui.Spacing();
-            Widgets.AppearancePicker.DrawThemeCards(winW, PadX);
             ImGui.Spacing();
-            Divider(dl, winW);
 
-            SectionLabel(Loc.T("settings.section_phone_size"), t);
+            SectionLabel(Loc.T("settings.section_danger_zone"), DangerLabelColor);
             ImGui.Spacing();
-            Widgets.AppearancePicker.DrawPhoneSizeButtons(winW, PadX, t);
-            ImGui.Spacing();
-            Divider(dl, winW);
+            DrawDeleteButton(winW);
 
-            SectionLabel(Loc.T("settings.section_plugin_language"), t);
             ImGui.Spacing();
-            DrawLanguagePills(winW);
             ImGui.Spacing();
-            Divider(dl, winW);
+        }
+    }
 
-            // General now also hosts the privacy toggles and the pulse opt-out.
-            SectionLabel(Loc.T("settings.section_general"), t);
+    private void DrawGeneralPage(float winW)
+    {
+        DrawSubpageBack();
+        DrawSubpageHeading(Loc.T("settings.section_general"), PadX);
+
+        var scrollH = ImGui.GetContentRegionAvail().Y;
+        PushScrollbarStyle();
+        using (var scroll = Dalamud.Interface.Utility.Raii.ImRaii.Child("##settGeneral", new Vector2(0f, scrollH), false))
+        {
+            PopScrollbarStyle();
+            if (!scroll.Success)
+            {
+                return;
+            }
+
             ImGui.Spacing();
             DrawNsfwBlurToggle(winW);
             ImGui.Spacing();
@@ -247,48 +260,259 @@ public class SettingsScreen
                 v => Plugin.Configuration.SkipCloseConfirmation = !v);
             DrawPulseOptOut(winW);
             ImGui.Spacing();
-            Divider(dl, winW);
+        }
+    }
 
-            SectionLabel(Loc.T("settings.section_notifications"), t);
-            ImGui.Spacing();
-            DrawNotificationSettings(winW);
-            ImGui.Spacing();
-            Divider(dl, winW);
+    private void DrawNotificationsPage(float winW)
+    {
+        DrawSubpageBack();
+        DrawSubpageHeading(Loc.T("settings.section_notifications"), PadX);
 
-            SectionLabel(Loc.T("settings.section_other"), t);
-            ImGui.Spacing();
-            DrawOtherButtons(winW, t);
-            DrawModeratorMessagesButton(winW);
-            ImGui.Spacing();
-            Divider(dl, winW);
-
-            SectionLabel(Loc.T("settings.section_danger_zone"), DangerLabelColor);
-            ImGui.Spacing();
-            DrawWarningsButton(winW);
-            if (GradientMenuButton("##settDelete", winW, Loc.T("settings.delete_account"),
-                    FontAwesomeIcon.TrashAlt, DangerTop, DangerBottom))
+        var scrollH = ImGui.GetContentRegionAvail().Y;
+        PushScrollbarStyle();
+        using (var scroll = Dalamud.Interface.Utility.Raii.ImRaii.Child("##settNotifs", new Vector2(0f, scrollH), false))
+        {
+            PopScrollbarStyle();
+            if (!scroll.Success)
             {
-                _view = View.ConfirmDelete;
+                return;
             }
 
             ImGui.Spacing();
+            DrawNotificationSettings(winW);
             ImGui.Spacing();
         }
+    }
+
+    private void DrawAppearancePage(float winW)
+    {
+        var t = ThemeService.Current;
+        DrawSubpageBack();
+        DrawSubpageHeading(Loc.T("settings.menu_appearance"), PadX);
+
+        var scrollH = ImGui.GetContentRegionAvail().Y;
+        PushScrollbarStyle();
+        using (var scroll = Dalamud.Interface.Utility.Raii.ImRaii.Child("##settAppearance", new Vector2(0f, scrollH), false))
+        {
+            PopScrollbarStyle();
+            if (!scroll.Success)
+            {
+                return;
+            }
+
+            var dl = ImGui.GetWindowDrawList();
+
+            ImGui.Spacing();
+            SectionLabel(Loc.T("settings.section_phone_size"), t);
+            ImGui.Spacing();
+            Widgets.AppearancePicker.DrawPhoneSizeButtons(winW, PadX, t);
+            ImGui.Spacing();
+            Divider(dl, winW);
+
+            SectionLabel(Loc.T("settings.section_mini_phone_size"), t);
+            ImGui.Spacing();
+            Widgets.AppearancePicker.DrawMiniSizeButtons(winW, PadX, t);
+            ImGui.Spacing();
+            Widgets.AppearancePicker.DrawMiniSizePreview(winW, PadX);
+            ImGui.Spacing();
+        }
+    }
+
+    private void DrawLanguageThemePage(float winW)
+    {
+        var t = ThemeService.Current;
+        DrawSubpageBack();
+        DrawSubpageHeading(Loc.T("settings.menu_language_theme"), PadX);
+
+        var scrollH = ImGui.GetContentRegionAvail().Y;
+        PushScrollbarStyle();
+        using (var scroll = Dalamud.Interface.Utility.Raii.ImRaii.Child("##settLangTheme", new Vector2(0f, scrollH), false))
+        {
+            PopScrollbarStyle();
+            if (!scroll.Success)
+            {
+                return;
+            }
+
+            var dl = ImGui.GetWindowDrawList();
+
+            ImGui.Spacing();
+            SectionLabel(Loc.T("settings.section_plugin_language"), t);
+            ImGui.Spacing();
+            DrawLanguagePills(winW);
+            ImGui.Spacing();
+            Divider(dl, winW);
+
+            SectionLabel(Loc.T("settings.section_theme"), t);
+            ImGui.Spacing();
+            Widgets.AppearancePicker.DrawThemeCards(winW, PadX);
+            ImGui.Spacing();
+        }
+    }
+
+    private void DrawChatColorsPage(float winW)
+    {
+        DrawSubpageBack();
+        DrawSubpageHeading(Loc.T("settings.menu_chat_colors"), PadX);
+
+        var scrollH = ImGui.GetContentRegionAvail().Y;
+        PushScrollbarStyle();
+        using (var scroll = Dalamud.Interface.Utility.Raii.ImRaii.Child("##settChatColors", new Vector2(0f, scrollH), false))
+        {
+            PopScrollbarStyle();
+            if (!scroll.Success)
+            {
+                return;
+            }
+
+            var dl = ImGui.GetWindowDrawList();
+
+            ImGui.Spacing();
+            DrawChatPreview();
+            ImGui.Spacing();
+            Divider(dl, winW);
+
+            DrawColorRow(Loc.T("settings.chat_own_bg"), "ownbg",
+                () => Plugin.Configuration.OwnChatBg, v => Plugin.Configuration.OwnChatBg = v, ChatColors.OwnBgDefault);
+            DrawColorRow(Loc.T("settings.chat_own_fg"), "ownfg",
+                () => Plugin.Configuration.OwnChatFg, v => Plugin.Configuration.OwnChatFg = v, ChatColors.OwnFgDefault);
+            DrawColorRow(Loc.T("settings.chat_peer_bg"), "peerbg",
+                () => Plugin.Configuration.PeerChatBg, v => Plugin.Configuration.PeerChatBg = v, ChatColors.PeerBgDefault);
+            DrawColorRow(Loc.T("settings.chat_peer_fg"), "peerfg",
+                () => Plugin.Configuration.PeerChatFg, v => Plugin.Configuration.PeerChatFg = v, ChatColors.PeerFgDefault);
+
+            ImGui.Spacing();
+        }
+    }
+
+    /// <summary>A label + colour swatch (opens a picker) + a reset-to-theme button for one chat colour.</summary>
+    private static void DrawColorRow(string label, string id, Func<Vector4?> get, Action<Vector4?> set, Vector4 themeDefault)
+    {
+        ImGui.SetCursorPosX(Px(PadX));
+        ImGui.TextColored(UiColors.Body, label);
+
+        ImGui.SetCursorPosX(Px(PadX));
+        var current = get() ?? themeDefault;
+        // Live-update the in-memory value each frame so the preview follows the picker; persist only on release.
+        if (ImGui.ColorEdit4($"##{id}", ref current, ImGuiColorEditFlags.NoInputs | ImGuiColorEditFlags.AlphaPreviewHalf))
+        {
+            set(current);
+        }
+        if (ImGui.IsItemDeactivatedAfterEdit())
+        {
+            Plugin.Configuration.Save();
+        }
+
+        ImGui.SameLine(0f, Px(8f));
+        PushThemeButton(ThemeService.Current);
+        ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(6f));
+        if (ImGui.Button($"{Loc.T("settings.chat_reset")}##reset{id}", new Vector2(0f, Px(24f))))
+        {
+            set(null);
+            Plugin.Configuration.Save();
+        }
+        ImGui.PopStyleVar();
+        PopThemeButton();
+
+        ImGui.Spacing();
+        ImGui.Spacing();
+    }
+
+    /// <summary>A live three-bubble chat sample (own, peer, own) using the current chat colours.</summary>
+    private static void DrawChatPreview()
+    {
+        var areaW = ImGui.GetContentRegionAvail().X;
+        DrawPreviewBubble("Hello", true, areaW);
+        DrawPreviewBubble("Hello to you", false, areaW);
+        DrawPreviewBubble("How are you?", true, areaW);
+    }
+
+    private static void DrawPreviewBubble(string text, bool isOwn, float areaW)
+    {
+        var dl = ImGui.GetWindowDrawList();
+        var bg = isOwn ? ChatColors.OwnBg : ChatColors.PeerBg;
+        var fg = isOwn ? ChatColors.OwnFg : ChatColors.PeerFg;
+        var padIn = Px(11f, 7f);
+        var inset = Px(10f);
+
+        var maxBubW = areaW * 0.72f;
+        var textSz = ImGui.CalcTextSize(text);
+        var bubbleW = MathF.Min(maxBubW, textSz.X + padIn.X * 2f);
+        var bubbleH = textSz.Y + padIn.Y * 2f;
+
+        var origin = ImGui.GetCursorScreenPos();
+        var leftX = isOwn ? origin.X + areaW - bubbleW - inset : origin.X + inset;
+        var tl = new Vector2(leftX, origin.Y);
+
+        dl.AddRectFilled(tl, tl + new Vector2(bubbleW, bubbleH), ImGui.ColorConvertFloat4ToU32(bg), Px(10f));
+        dl.AddText(ImGui.GetFont(), ImGui.GetFontSize(), tl + padIn, ImGui.ColorConvertFloat4ToU32(fg), text);
+
+        ImGui.Dummy(new Vector2(areaW, bubbleH + Px(5f)));
+    }
+
+    /// <summary>The themed "← Back" pill at the top of a settings sub-page; returns to the settings hub.</summary>
+    private void DrawSubpageBack()
+    {
+        ImGui.Spacing();
+        ImGui.Spacing();
+        ImGui.SetCursorPosX(Px(PadX));
+        if (DrawBackButton(Loc.T("settings.back_arrow")))
+        {
+            _view = View.Hub;
+        }
+        ImGui.Spacing();
+    }
+
+    private void DrawOtherCard(float winW, ThemeDefinition t)
+    {
+        DrawMenuCard("settOther", winW, PadX, new System.Collections.Generic.List<MenuRow>
+        {
+            new(FontAwesomeIcon.FileContract, t.Accent, Loc.T("settings.terms_of_service"), 0, false, () => _view = View.Tos),
+            new(FontAwesomeIcon.History, t.Accent, Loc.T("settings.view_changelog"), 0, false, () => _changelogWindow.IsOpen = true),
+            new(FontAwesomeIcon.CommentDots, t.Accent, Loc.T("settings.send_feedback"), 0, false, () =>
+            {
+                ResetFeedback();
+                _view = View.Feedback;
+            }),
+            new(FontAwesomeIcon.Comments, DiscordTop, "Discord", 0, true, OpenDiscord),
+            new(FontAwesomeIcon.Heart, t.Accent, Loc.T("settings.contributors"), 0, false, () =>
+            {
+                _thanksConfetti.Reset();
+                _view = View.Contributors;
+            }),
+        });
+    }
+
+    /// <summary>A red-outlined (not filled) "Delete Account" button that opens the confirmation flow.</summary>
+    private void DrawDeleteButton(float winW)
+    {
+        ImGui.SetCursorPosX(Px(PadX));
+        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.55f, 0.12f, 0.12f, 0.10f));
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.62f, 0.14f, 0.14f, 0.22f));
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.62f, 0.14f, 0.14f, 0.32f));
+        ImGui.PushStyleColor(ImGuiCol.Border, DangerLabelColor);
+        ImGui.PushStyleColor(ImGuiCol.Text, DangerLabelColor);
+        ImGui.PushStyleVar(ImGuiStyleVar.FrameBorderSize, Px(1.5f));
+        ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
+        if (ImGui.Button(Loc.T("settings.delete_account"), new Vector2(winW - Px(PadX) * 2f, Px(38f))))
+        {
+            _view = View.ConfirmDelete;
+        }
+        ImGui.PopStyleVar(2);
+        ImGui.PopStyleColor(5);
     }
 
     private void DrawConfirmDelete(float winW)
     {
         var scrollH = ImGui.GetContentRegionAvail().Y;
-        ImGui.PushStyleColor(ImGuiCol.ScrollbarBg, new Vector4(0.08f, 0.08f, 0.08f, 0.6f));
-        ImGui.PushStyleColor(ImGuiCol.ScrollbarGrab, new Vector4(0.65f, 0.15f, 0.15f, 0.85f));
-        ImGui.PushStyleColor(ImGuiCol.ScrollbarGrabHovered, new Vector4(0.80f, 0.22f, 0.22f, 1.0f));
-        ImGui.PushStyleColor(ImGuiCol.ScrollbarGrabActive, new Vector4(0.45f, 0.08f, 0.08f, 1.0f));
-        ImGui.PushStyleVar(ImGuiStyleVar.ScrollbarSize, Px(6f));
+        PushScrollbarStyle(
+            grab: new Vector4(0.65f, 0.15f, 0.15f, 0.85f),
+            grabHovered: new Vector4(0.80f, 0.22f, 0.22f, 1.0f),
+            grabActive: new Vector4(0.45f, 0.08f, 0.08f, 1.0f));
 
         using (var scroll = Dalamud.Interface.Utility.Raii.ImRaii.Child("##settConfirm", new Vector2(0f, scrollH), false))
         {
-            ImGui.PopStyleVar();
-            ImGui.PopStyleColor(4);
+            PopScrollbarStyle();
 
             if (!scroll.Success)
             {
@@ -346,7 +570,7 @@ public class SettingsScreen
             ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
             if (ImGui.Button($"{Loc.T("settings.cancel")}##delCancel", new Vector2(cancelW, Px(36f))))
             {
-                _view = View.Normal;
+                _view = View.Hub;
             }
             ImGui.PopStyleVar();
             ImGui.PopStyleColor(3);
@@ -784,175 +1008,6 @@ public class SettingsScreen
         ImGui.EndDisabled();
     }
 
-    private void DrawOtherButtons(float winW, ThemeDefinition t)
-    {
-        var rowH = Px(44f);
-        const int rowCount = 6;
-        var origin = ImGui.GetCursorScreenPos();
-        var dl = ImGui.GetWindowDrawList();
-        var cardMin = new Vector2(origin.X + Px(PadX), origin.Y);
-        var cardMax = new Vector2(origin.X + winW - Px(PadX), origin.Y + rowH * rowCount);
-        dl.AddRectFilled(cardMin, cardMax, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.045f)), Px(10f));
-
-        ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(0f, 0f));
-
-        if (DrawMenuRow(winW, rowH, "##settTos", FontAwesomeIcon.FileContract, t.Accent, Loc.T("settings.terms_of_service"), false, false, 0))
-        {
-            _view = View.Tos;
-        }
-        if (DrawMenuRow(winW, rowH, "##settChangelog", FontAwesomeIcon.History, t.Accent, Loc.T("settings.view_changelog"), false, false, 0))
-        {
-            _changelogWindow.IsOpen = true;
-        }
-        var newsBadge = _bootstrap.HasUnseenNews ? _bootstrap.LastConnection!.UnseenNews.Length : 0;
-        if (DrawMenuRow(winW, rowH, "##settNews", FontAwesomeIcon.Newspaper, t.Accent, Loc.T("news.settings_button"), false, false, newsBadge))
-        {
-            _newsScreen.RequestListView();
-            _router.Navigate(Screen.News);
-        }
-        if (DrawMenuRow(winW, rowH, "##settFeedback", FontAwesomeIcon.CommentDots, t.Accent, Loc.T("settings.send_feedback"), false, false, 0))
-        {
-            ResetFeedback();
-            _view = View.Feedback;
-        }
-        if (DrawMenuRow(winW, rowH, "##settDiscord", FontAwesomeIcon.Comments, DiscordTop, "Discord", false, true, 0))
-        {
-            OpenDiscord();
-        }
-        if (DrawMenuRow(winW, rowH, "##settContributors", FontAwesomeIcon.Heart, t.Accent, Loc.T("settings.contributors"), true, false, 0))
-        {
-            _thanksConfetti.Reset();
-            _view = View.Contributors;
-        }
-
-        ImGui.PopStyleVar();
-
-        dl.AddRect(cardMin, cardMax, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.07f)), Px(10f), ImDrawFlags.None, Px(1f));
-    }
-
-    /// <summary>One row of the "Other" menu card: a full-width hit target with a leading icon, a label, an
-    /// optional unseen-count badge, and a trailing chevron (or external-link glyph for browser links). Rows
-    /// share one grouped card so the section reads as a menu rather than a stack of buttons.</summary>
-    private bool DrawMenuRow(float winW, float rowH, string id, FontAwesomeIcon icon, Vector4 iconColor, string label, bool isLast, bool external, int badge)
-    {
-        ImGui.SetCursorPosX(Px(PadX));
-        ImGui.PushStyleColor(ImGuiCol.Header, new Vector4(1f, 1f, 1f, 0.05f));
-        ImGui.PushStyleColor(ImGuiCol.HeaderHovered, new Vector4(1f, 1f, 1f, 0.08f));
-        ImGui.PushStyleColor(ImGuiCol.HeaderActive, new Vector4(1f, 1f, 1f, 0.12f));
-        var clicked = ImGui.Selectable(id, false, ImGuiSelectableFlags.None, new Vector2(winW - Px(PadX) * 2f, rowH));
-        ImGui.PopStyleColor(3);
-
-        var rmin = ImGui.GetItemRectMin();
-        var rmax = ImGui.GetItemRectMax();
-        var dl = ImGui.GetWindowDrawList();
-        var midY = (rmin.Y + rmax.Y) * 0.5f;
-        var iconFontPtr = Plugin.PluginInterface.UiBuilder.FontIcon;
-
-        var iconPx = Px(18f);
-        ImGui.PushFont(iconFontPtr);
-        var iconFont = ImGui.GetFont();
-        var iconGlyph = icon.ToIconString();
-        var iconSz = ImGui.CalcTextSize(iconGlyph) * (iconPx / ImGui.GetFontSize());
-        ImGui.PopFont();
-        var iconX = rmin.X + Px(14f);
-        dl.AddText(iconFont, iconPx, new Vector2(iconX, midY - iconSz.Y * 0.5f), ImGui.GetColorU32(iconColor), iconGlyph);
-
-        var labelSz = ImGui.CalcTextSize(label);
-        dl.AddText(new Vector2(iconX + iconSz.X + Px(14f), midY - labelSz.Y * 0.5f),
-            ImGui.GetColorU32(new Vector4(0.93f, 0.93f, 0.96f, 1f)), label);
-
-        var rightX = rmax.X - Px(14f);
-        var chevGlyph = (external ? FontAwesomeIcon.ExternalLinkAlt : FontAwesomeIcon.ChevronRight).ToIconString();
-        var chevPx = external ? Px(12f) : Px(13f);
-        ImGui.PushFont(iconFontPtr);
-        var chevFont = ImGui.GetFont();
-        var chevSz = ImGui.CalcTextSize(chevGlyph) * (chevPx / ImGui.GetFontSize());
-        ImGui.PopFont();
-        dl.AddText(chevFont, chevPx, new Vector2(rightX - chevSz.X, midY - chevSz.Y * 0.5f),
-            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.30f)), chevGlyph);
-
-        if (badge > 0)
-        {
-            var badgeText = badge.ToString();
-            var badgeSz = ImGui.CalcTextSize(badgeText);
-            var pad = Px(7f);
-            var pillH = Px(18f);
-            var pillRight = rightX - chevSz.X - Px(10f);
-            var pillMin = new Vector2(pillRight - badgeSz.X - pad * 2f, midY - pillH * 0.5f);
-            var pillMax = new Vector2(pillRight, midY + pillH * 0.5f);
-            dl.AddRectFilled(pillMin, pillMax, ImGui.GetColorU32(ThemeService.Current.Accent), pillH * 0.5f);
-            dl.AddText(new Vector2(pillMin.X + pad, midY - badgeSz.Y * 0.5f), 0xFFFFFFFFu, badgeText);
-        }
-
-        if (!isLast)
-        {
-            dl.AddLine(new Vector2(rmin.X + Px(14f), rmax.Y), new Vector2(rmax.X - Px(14f), rmax.Y),
-                ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.06f)), 1f);
-        }
-
-        return clicked;
-    }
-
-    /// <summary>The "view warnings" button — shown in the danger zone only when warnings exist.</summary>
-    private void DrawWarningsButton(float winW)
-    {
-        var conn = _bootstrap.LastConnection;
-        var total = conn?.Warnings.Length ?? 0;
-        if (total == 0)
-        {
-            return;
-        }
-
-        var unseen = 0;
-        for (int i = 0; i < conn!.Warnings.Length; i++)
-        {
-            if (!conn.Warnings[i].Seen)
-            {
-                unseen++;
-            }
-        }
-        var label = unseen > 0
-            ? Loc.T("settings.warnings_button_unseen", unseen, total)
-            : Loc.T("settings.warnings_button", total);
-
-        if (GradientMenuButton("##settWarnings", winW, label,
-                FontAwesomeIcon.ExclamationTriangle, WarnTop, WarnBottom))
-        {
-            _view = View.WarningsList;
-        }
-        ImGui.Spacing();
-    }
-
-    /// <summary>The "moderator messages" button — shown in the Other group only when messages exist.</summary>
-    private void DrawModeratorMessagesButton(float winW)
-    {
-        var messages = _bootstrap.LastConnection?.ModeratorMessages;
-        var total = messages?.Length ?? 0;
-        if (total == 0)
-        {
-            return;
-        }
-        ImGui.Spacing();
-
-        var unseen = 0;
-        for (int i = 0; i < messages!.Length; i++)
-        {
-            if (!messages[i].Seen)
-            {
-                unseen++;
-            }
-        }
-        var label = unseen > 0
-            ? Loc.T("settings.modmsg_button_unseen", unseen, total)
-            : Loc.T("settings.modmsg_button", total);
-
-        if (GradientMenuButton("##settModMsg", winW, label,
-                FontAwesomeIcon.Envelope, InfoTop, InfoBottom))
-        {
-            _view = View.ModeratorMessagesList;
-        }
-    }
-
     private static void DrawPulseOptOut(float winW)
     {
         // Surfaces only after the player has actually seen a pulse line — keeps it a surprise until then.
@@ -976,56 +1031,6 @@ public class SettingsScreen
         ImGui.TextWrapped(Loc.T("settings.pulse_optout"));
         ImGui.PopTextWrapPos();
     }
-
-    /// <summary>Full-width rounded button with a vertical gradient, a leading icon and a left-aligned label.
-    /// Drawn by hand because the gradient and icon are beyond a plain <c>ImGui.Button</c>.</summary>
-    private static bool GradientMenuButton(string id, float winW, string label, FontAwesomeIcon icon,
-                                           Vector4 top, Vector4 bottom)
-    {
-        var w = winW - Px(PadX) * 2f;
-        var h = Px(38f);
-        ImGui.SetCursorPosX(Px(PadX));
-        ImGui.InvisibleButton(id, new Vector2(w, h));
-        var clicked = ImGui.IsItemClicked();
-        var hovered = ImGui.IsItemHovered();
-        var active = ImGui.IsItemActive();
-
-        var min = ImGui.GetItemRectMin();
-        var max = ImGui.GetItemRectMax();
-        var dl = ImGui.GetWindowDrawList();
-        var r = Px(9f);
-
-        var lift = active ? -0.05f : (hovered ? 0.08f : 0f);
-        var topU = ImGui.ColorConvertFloat4ToU32(Shade(top, lift));
-        var botU = ImGui.ColorConvertFloat4ToU32(Shade(bottom, lift));
-
-        // Rounded top half + rounded bottom half, blended in the middle so all four corners stay rounded.
-        dl.AddRectFilled(min, max, topU, r, ImDrawFlags.RoundCornersTop);
-        dl.AddRectFilled(new Vector2(min.X, min.Y + h * 0.5f), max, botU, r, ImDrawFlags.RoundCornersBottom);
-        dl.AddRectFilledMultiColor(
-            new Vector2(min.X, min.Y + h * 0.28f), new Vector2(max.X, min.Y + h * 0.72f),
-            topU, topU, botU, botU);
-        // Glossy sheen, inset so it never reaches the rounded corners.
-        dl.AddRectFilledMultiColor(
-            new Vector2(min.X + r, min.Y + Px(1f)), new Vector2(max.X - r, min.Y + h * 0.5f),
-            0x24FFFFFFu, 0x24FFFFFFu, 0x00FFFFFFu, 0x00FFFFFFu);
-        dl.AddRect(min, max, ImGui.ColorConvertFloat4ToU32(Shade(top, hovered ? 0.22f : 0.10f)),
-            r, ImDrawFlags.None, Px(1f));
-
-        ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
-        var iconStr = icon.ToIconString();
-        var iconSz = ImGui.CalcTextSize(iconStr);
-        dl.AddText(new Vector2(min.X + Px(16f), min.Y + (h - iconSz.Y) * 0.5f), 0xFFFFFFFFu, iconStr);
-        ImGui.PopFont();
-
-        var labelSz = ImGui.CalcTextSize(label);
-        dl.AddText(new Vector2(min.X + Px(44f), min.Y + (h - labelSz.Y) * 0.5f), 0xFFFFFFFFu, label);
-
-        return clicked;
-    }
-
-    private static Vector4 Shade(Vector4 c, float d) =>
-        new(Math.Clamp(c.X + d, 0f, 1f), Math.Clamp(c.Y + d, 0f, 1f), Math.Clamp(c.Z + d, 0f, 1f), c.W);
 
     private void DrawTos(float winW)
     {
@@ -1068,7 +1073,7 @@ public class SettingsScreen
             ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
             if (ImGui.Button(Loc.T("settings.back_to_settings_arrow"), new Vector2(winW - Px(PadX) * 2f, Px(32f))))
             {
-                _view = View.Normal;
+                _view = View.Hub;
             }
             ImGui.PopStyleVar();
             ImGui.PopStyleColor(3);
@@ -1152,7 +1157,7 @@ public class SettingsScreen
             ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
             if (ImGui.Button(Loc.T("settings.back_to_settings_arrow"), new Vector2(winW - Px(PadX) * 2f, Px(32f))))
             {
-                _view = View.Normal;
+                _view = View.Hub;
             }
             ImGui.PopStyleVar();
             ImGui.PopStyleColor(3);
@@ -1196,158 +1201,6 @@ public class SettingsScreen
         ImGui.Dummy(new Vector2(winW, sz.Y));
     }
 
-    private void DrawWarningsList(float winW)
-    {
-        var t = ThemeService.Current;
-        var scrollH = ImGui.GetContentRegionAvail().Y;
-
-        PushScrollbarStyle();
-
-        using (var scroll = Dalamud.Interface.Utility.Raii.ImRaii.Child("##settWarnList", new Vector2(0f, scrollH), false))
-        {
-            PopScrollbarStyle();
-
-            if (!scroll.Success)
-            {
-                return;
-            }
-
-            var dl = ImGui.GetWindowDrawList();
-
-            ImGui.Spacing();
-            ImGui.Spacing();
-
-            ImGui.SetCursorPosX(Px(PadX));
-            ImGui.TextColored(new Vector4(1f, 1f, 1f, 1f), Loc.T("settings.warnings_title"));
-            ImGui.Spacing();
-            Divider(dl, winW);
-
-            var warnings = _bootstrap.LastConnection?.Warnings ?? [];
-            if (warnings.Length == 0)
-            {
-                ImGui.SetCursorPosX(Px(PadX));
-                ImGui.TextColored(new Vector4(0.60f, 0.60f, 0.60f, 1f),
-                    Loc.T("settings.no_warnings"));
-            }
-            else
-            {
-                foreach (var w in warnings)
-                {
-                    ImGui.SetCursorPosX(Px(PadX));
-                    ImGui.PushTextWrapPos(winW - Px(PadX));
-
-                    var dateColor = w.Seen
-                        ? new Vector4(0.45f, 0.45f, 0.45f, 1f)
-                        : new Vector4(0.65f, 0.55f, 0.30f, 1f);
-                    var reasonColor = w.Seen
-                        ? new Vector4(0.70f, 0.70f, 0.70f, 1f)
-                        : new Vector4(0.95f, 0.95f, 0.95f, 1f);
-
-                    ImGui.TextColored(dateColor,
-                        w.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm"));
-                    ImGui.SetCursorPosX(Px(PadX));
-                    ImGui.TextColored(reasonColor, w.Reason);
-                    ImGui.PopTextWrapPos();
-
-                    ImGui.Spacing();
-                    ImGui.Spacing();
-                }
-            }
-
-            ImGui.Spacing();
-            ImGui.SetCursorPosX(Px(PadX));
-            ImGui.PushStyleColor(ImGuiCol.Button, t.ButtonNormal);
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, t.ButtonHovered);
-            ImGui.PushStyleColor(ImGuiCol.ButtonActive, t.ButtonActive);
-            ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
-            if (ImGui.Button(Loc.T("settings.back_to_settings_arrow"), new Vector2(winW - Px(PadX) * 2f, Px(32f))))
-            {
-                _view = View.Normal;
-            }
-            ImGui.PopStyleVar();
-            ImGui.PopStyleColor(3);
-
-            ImGui.Spacing();
-        }
-    }
-
-
-    private void DrawModeratorMessagesList(float winW)
-    {
-        var t = ThemeService.Current;
-        var scrollH = ImGui.GetContentRegionAvail().Y;
-
-        PushScrollbarStyle();
-
-        using (var scroll = Dalamud.Interface.Utility.Raii.ImRaii.Child("##settModMsgList", new Vector2(0f, scrollH), false))
-        {
-            PopScrollbarStyle();
-
-            if (!scroll.Success)
-            {
-                return;
-            }
-
-            var dl = ImGui.GetWindowDrawList();
-
-            ImGui.Spacing();
-            ImGui.Spacing();
-
-            ImGui.SetCursorPosX(Px(PadX));
-            ImGui.TextColored(new Vector4(1f, 1f, 1f, 1f), Loc.T("settings.modmsg_title"));
-            ImGui.Spacing();
-            Divider(dl, winW);
-
-            var messages = _bootstrap.LastConnection?.ModeratorMessages ?? [];
-            if (messages.Length == 0)
-            {
-                ImGui.SetCursorPosX(Px(PadX));
-                ImGui.TextColored(new Vector4(0.60f, 0.60f, 0.60f, 1f),
-                    Loc.T("settings.no_modmsg"));
-            }
-            else
-            {
-                foreach (var m in messages)
-                {
-                    ImGui.SetCursorPosX(Px(PadX));
-                    ImGui.PushTextWrapPos(winW - Px(PadX));
-
-                    var dateColor = m.Seen
-                        ? new Vector4(0.45f, 0.45f, 0.45f, 1f)
-                        : new Vector4(0.40f, 0.62f, 0.80f, 1f);
-                    var bodyColor = m.Seen
-                        ? new Vector4(0.70f, 0.70f, 0.70f, 1f)
-                        : new Vector4(0.95f, 0.95f, 0.95f, 1f);
-
-                    ImGui.TextColored(dateColor,
-                        m.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm"));
-                    ImGui.SetCursorPosX(Px(PadX));
-                    ImGui.TextColored(bodyColor, m.Body);
-                    ImGui.PopTextWrapPos();
-
-                    ImGui.Spacing();
-                    ImGui.Spacing();
-                }
-            }
-
-            ImGui.Spacing();
-            ImGui.SetCursorPosX(Px(PadX));
-            ImGui.PushStyleColor(ImGuiCol.Button, t.ButtonNormal);
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, t.ButtonHovered);
-            ImGui.PushStyleColor(ImGuiCol.ButtonActive, t.ButtonActive);
-            ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
-            if (ImGui.Button(Loc.T("settings.back_to_settings_arrow"), new Vector2(winW - Px(PadX) * 2f, Px(32f))))
-            {
-                _view = View.Normal;
-            }
-            ImGui.PopStyleVar();
-            ImGui.PopStyleColor(3);
-
-            ImGui.Spacing();
-        }
-    }
-
-
     private void DrawFeedback(float winW)
     {
         var t = ThemeService.Current;
@@ -1389,7 +1242,7 @@ public class SettingsScreen
                 ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
                 if (ImGui.Button(Loc.T("settings.back_to_settings"), new Vector2(winW - Px(PadX) * 2f, Px(34f))))
                 {
-                    _view = View.Normal;
+                    _view = View.Hub;
                 }
                 ImGui.PopStyleVar();
                 ImGui.PopStyleColor(3);
@@ -1451,7 +1304,7 @@ public class SettingsScreen
             ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
             if (ImGui.Button(Loc.T("settings.back"), new Vector2(backW, Px(36f))))
             {
-                _view = View.Normal;
+                _view = View.Hub;
             }
             ImGui.PopStyleVar();
             ImGui.PopStyleColor(3);

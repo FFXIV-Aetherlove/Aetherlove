@@ -6,22 +6,37 @@ internal static class SettingsEn
     {
         ["settings.title"] = "Settings",
 
-        // Section labels
+        // Section labels + hub menu
+        ["settings.section_plugin_settings"] = "Plugin settings",
         ["settings.section_appearance"] = "Appearance",
         ["settings.section_phone_size"] = "Phone size",
         ["settings.section_plugin_language"] = "Plugin language",
         ["settings.section_privacy"] = "Privacy",
-        ["settings.section_general"] = "General",
+        ["settings.section_general"] = "General settings",
         ["settings.section_notifications"] = "Notifications",
         ["settings.section_moderation"] = "Moderation",
         ["settings.section_other"] = "Other",
         ["settings.section_danger_zone"] = "Danger zone",
+        ["settings.menu_language_theme"] = "Language & Theme",
+        ["settings.menu_appearance"] = "Phone appearance",
+        ["settings.menu_chat_colors"] = "Chat appearance",
+        ["settings.section_theme"] = "Theme",
+        ["settings.back_arrow"] = "← Back",
+        ["settings.chat_own_bg"] = "Own chat background",
+        ["settings.chat_own_fg"] = "Own chat text",
+        ["settings.chat_peer_bg"] = "Peer chat background",
+        ["settings.chat_peer_fg"] = "Peer chat text",
+        ["settings.chat_reset"] = "Reset",
 
         // Phone size picker (AppearancePicker)
         ["settings.phone_size_small"] = "Small",
         ["settings.phone_size_medium"] = "Medium",
         ["settings.phone_size_large"] = "Large",
-        ["settings.phone_size_caption"] = "Scales the whole phone. Larger sizes suit higher-resolution screens; Large may not fit a 1080p display.",
+        ["settings.phone_size_xl"] = "XL",
+        ["settings.phone_size_xxl"] = "XXL",
+        ["settings.phone_size_caption"] = "Scales the whole phone. Larger sizes suit higher-resolution screens; XL and XXL are sized for 4K and may not fit smaller displays.",
+        ["settings.section_mini_phone_size"] = "Miniature phone size",
+        ["settings.mini_phone_size_caption"] = "Size of the minimised bubble (shown when the phone is minimised). The preview below shows the selected size.",
 
         // General
         ["settings.disable_startup_heartbeat"] = "Disable startup heartbeat sound",
@@ -82,7 +97,7 @@ internal static class SettingsEn
         // Warnings
         ["settings.warnings_button_unseen"] = "Warnings ({0} unseen / {1})",
         ["settings.warnings_button"] = "Warnings ({0})",
-        ["settings.warnings_title"] = "Warnings",
+        ["settings.warnings_title"] = "Account Warnings",
         ["settings.no_warnings"] = "No warnings on file.",
 
         // Moderator messages

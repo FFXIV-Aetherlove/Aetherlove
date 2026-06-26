@@ -162,6 +162,9 @@ public sealed class AetherLoveHubClient
     public async Task<ProfileDetailDto> GetMyProfileDetailAsync(CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync<ProfileDetailDto>("GetMyProfileDetailAsync", ct).ConfigureAwait(false);
 
+    public async Task<MyStatsDto> GetMyStatsAsync(CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<MyStatsDto>("GetMyStatsAsync", ct).ConfigureAwait(false);
+
     public async Task<FlairDto[]> GetFlairCatalogAsync(CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync<FlairDto[]>("GetFlairCatalogAsync", ct).ConfigureAwait(false);
 

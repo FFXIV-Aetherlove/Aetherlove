@@ -72,6 +72,17 @@ internal static class ProfilePt
         ["profile.tab_edit"] = "Editar Perfil",
         ["profile.tab_images"] = "Trocar Imagens",
 
+        // MyProfileScreen hub: stats + menu
+        ["profile.section_myprofile"] = "Meu perfil",
+        ["profile.section_service"] = "Serviço",
+        ["profile.menu_view"] = "Ver meu perfil",
+        ["profile.menu_edit"] = "Modificar perfil",
+        ["profile.menu_images"] = "Fotos do perfil",
+        ["profile.stat_loves_you"] = "te amam",
+        ["profile.stat_matches"] = "Matches",
+        ["profile.stat_match_rate"] = "Taxa de match",
+        ["profile.back_to_my"] = "← Voltar",
+
         // MyProfileScreen — edit tab load / save
         ["profile.load_profile_failed"] = "Não foi possível carregar seu perfil: {0}",
         ["profile.retry"] = "Tentar de novo",
@@ -81,7 +92,6 @@ internal static class ProfilePt
         ["profile.save_changes"] = "guardar Alterações",
 
         // MyProfileScreen — edit form section headings
-        ["profile.heading_identity"] = "Identidade",
         ["profile.heading_character"] = "Personagem",
         ["profile.heading_location"] = "Localização",
         ["profile.heading_languages"] = "Idiomas que Eu Falo",

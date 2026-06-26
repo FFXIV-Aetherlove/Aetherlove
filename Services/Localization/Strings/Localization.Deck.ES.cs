@@ -42,5 +42,6 @@ internal static class DeckEs
         ["deck.match_keep_swiping"] = "Seguir deslizando",
         ["deck.no_pool_heading"] = "Sin más coincidencias",
         ["deck.no_pool_body"] = "No se encontraron más coincidencias para ti con tus criterios actuales. Amplía tus criterios e inténtalo de nuevo más tarde.",
+        ["deck.next_deck"] = "Próximo mazo: {0}",
     };
 }

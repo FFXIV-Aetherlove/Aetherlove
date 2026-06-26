@@ -42,5 +42,6 @@ internal static class DeckEn
         ["deck.match_keep_swiping"] = "Keep Swiping",
         ["deck.no_pool_heading"] = "You're out of matches",
         ["deck.no_pool_body"] = "No more matches were found for you with your current criteria. Broaden your criteria, and try again later.",
+        ["deck.next_deck"] = "Next deck: {0}",
     };
 }

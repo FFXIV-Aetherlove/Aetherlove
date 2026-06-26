@@ -3,6 +3,7 @@ using AetherLove.UI;
 using Dalamud.Configuration;
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 
 namespace AetherLove.Config;
 
@@ -52,6 +53,15 @@ public class Configuration : IPluginConfiguration
 
     /// <summary>Phone size preset; scales the whole UI uniformly.</summary>
     public PhoneScalePreset PhoneSize { get; set; } = PhoneScalePreset.Small;
+
+    /// <summary>Minimised-bubble size preset; Medium is the bubble's authored (current) size.</summary>
+    public PhoneScalePreset MiniPhoneSize { get; set; } = PhoneScalePreset.Medium;
+
+    /// <summary>Chat-bubble colour overrides; null means "use the theme default" (see <see cref="ChatColors"/>).</summary>
+    public Vector4? OwnChatBg { get; set; }
+    public Vector4? OwnChatFg { get; set; }
+    public Vector4? PeerChatBg { get; set; }
+    public Vector4? PeerChatFg { get; set; }
 
     /// <summary>Server access + refresh tokens for this install.</summary>
     public AuthState Auth { get; set; } = new();
@@ -122,6 +132,9 @@ public class Configuration : IPluginConfiguration
     /// wholesale on change so it serializes as a consistent snapshot; <see cref="ChatArchiveStore"/>
     /// owns the live access.</summary>
     public List<Guid> ArchivedMatches { get; set; } = [];
+
+    /// <summary>Show the search row on the matches screen (toggled from its overflow menu).</summary>
+    public bool ShowChatSearch { get; set; } = false;
 
     /// <summary>Background presence cadence state.</summary>
     public PulseState Pulse { get; set; } = new();

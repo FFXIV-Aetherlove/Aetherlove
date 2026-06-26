@@ -6,4 +6,6 @@ public enum PhoneScalePreset
     Small,
     Medium,
     Large,
+    XL,
+    XXL,
 }

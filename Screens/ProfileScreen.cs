@@ -225,8 +225,7 @@ public class ProfileScreen
 
     private void CachePhotoTextures(ProfileDetailDto dto)
     {
-        var cacheDir = Path.Combine(
-            Plugin.PluginInterface.ConfigDirectory.FullName, "ProfileDetailCache");
+        var cacheDir = ImageCacheCleaner.ProfileDetailCacheDir;
         try
         {
             Directory.CreateDirectory(cacheDir);
@@ -236,6 +235,10 @@ public class ProfileScreen
             Plugin.Log.Warning(ex, "[ProfileScreen] Could not create the photo cache directory; photos will not be cached.");
             return;
         }
+
+        // Keep only the profile being viewed; a viewed profile's full photo set shouldn't linger on disk once
+        // the user moves on to the next one.
+        ImageCacheCleaner.ClearDir(cacheDir);
 
         foreach (var photo in dto.Photos)
         {
@@ -1016,30 +1019,6 @@ public class ProfileScreen
     }
 
     /// <summary>Trims text with a trailing ellipsis so it fits within <paramref name="maxWidth"/> px at the current font.</summary>
-    private static string TruncateToWidth(string text, float maxWidth)
-    {
-        if (string.IsNullOrEmpty(text) || ImGui.CalcTextSize(text).X <= maxWidth)
-        {
-            return text;
-        }
-        const string ellipsis = "…";
-        var ellipsisW = ImGui.CalcTextSize(ellipsis).X;
-        int lo = 0, hi = text.Length;
-        while (lo < hi)
-        {
-            var mid = (lo + hi + 1) / 2;
-            if (ImGui.CalcTextSize(text[..mid]).X + ellipsisW <= maxWidth)
-            {
-                lo = mid;
-            }
-            else
-            {
-                hi = mid - 1;
-            }
-        }
-        return lo <= 0 ? ellipsis : text[..lo].TrimEnd() + ellipsis;
-    }
-
     private void DrawFavoriteMovie(float winW, ImDrawListPtr dl)
     {
         if (string.IsNullOrEmpty(_profile!.FavoriteMovie))

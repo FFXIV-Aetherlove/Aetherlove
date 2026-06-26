@@ -43,5 +43,6 @@ internal static class DeckFr
         ["deck.match_keep_swiping"] = "Continuer à swiper",
         ["deck.no_pool_heading"] = "Plus aucune correspondance",
         ["deck.no_pool_body"] = "Aucune autre correspondance n'a été trouvée selon vos critères actuels. Élargissez vos critères et réessayez plus tard.",
+        ["deck.next_deck"] = "Prochain deck : {0}",
     };
 }

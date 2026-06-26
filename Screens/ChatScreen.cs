@@ -30,6 +30,7 @@ public class ChatScreen
     private readonly ScreenRouter _router;
     private readonly ChatListScreen _chatListScreen;
     private readonly ProfileScreen _profileScreen;
+    private readonly EncryptionVerificationScreen _verifyScreen;
     private readonly AetherLoveHubClient _hub;
     private readonly CryptoService _crypto;
     private readonly KeyStorageService _keys;
@@ -73,6 +74,14 @@ public class ChatScreen
 
     private float _scrollToBottom;
 
+    /// <summary>A message a search jumped to: scrolled into view after load, then its border flashes once and
+    /// fades back to normal. Empty for a normal open.</summary>
+    private Guid _scrollTargetMessageId;
+    private float _scrollToMessageTimer;
+    private float _flashTimer;
+    private const float FlashDuration = 3.0f;
+    private const int FlashPulses = 3;
+
     private bool _systemNoticeDismissed;
 
     private readonly EmojiPickerPopup _chatEmojiPicker = new();
@@ -88,7 +97,6 @@ public class ChatScreen
 
     private const float AvatarR = 22f;
     private const float HeaderH = AvatarR * 2f + 10f;
-    private const float HeaderPL = 6f;
     private const float MenuBtnW = 36f;
 
     private readonly NotificationCenter _notifications;
@@ -97,6 +105,7 @@ public class ChatScreen
         ScreenRouter router,
         ChatListScreen chatListScreen,
         ProfileScreen profileScreen,
+        EncryptionVerificationScreen verifyScreen,
         AetherLoveHubClient hub,
         CryptoService crypto,
         KeyStorageService keys,
@@ -106,6 +115,7 @@ public class ChatScreen
         _router = router;
         _chatListScreen = chatListScreen;
         _profileScreen = profileScreen;
+        _verifyScreen = verifyScreen;
         _hub = hub;
         _crypto = crypto;
         _keys = keys;
@@ -137,7 +147,10 @@ public class ChatScreen
         _peerPublicKey = null;
         _messageKey = null;
         _inputText = string.Empty;
-        _scrollToBottom = 1f;
+        _scrollTargetMessageId = _chatListScreen.SelectedScrollMessageId;
+        _scrollToMessageTimer = 0f;
+        _flashTimer = 0f;
+        _scrollToBottom = _scrollTargetMessageId == Guid.Empty ? 1f : 0f;
         _systemNoticeDismissed = false;
         _notifications.ActiveChatPeerId = _peerId;
         LoadHeaderAvatar();
@@ -192,7 +205,15 @@ public class ChatScreen
                 _peerPublicKey = dto.PeerPublicKey;
                 EnsureMessageKey();
                 DecryptAndAppend(dto.Messages);
-                _scrollToBottom = 1f;
+                if (_scrollTargetMessageId != Guid.Empty)
+                {
+                    _scrollToMessageTimer = 0.6f;
+                    _flashTimer = AccessibilityService.ReduceMotion ? 0f : FlashDuration;
+                }
+                else
+                {
+                    _scrollToBottom = 1f;
+                }
                 // Reading clears unread; drop it from the global badge immediately, not just after a list refetch.
                 var readIds = await _hub.MarkConversationReadAsync(_peerId, ct).ConfigureAwait(false);
                 if (readIds.Length > 0)
@@ -397,13 +418,68 @@ public class ChatScreen
         var dl = ImGui.GetWindowDrawList();
         var screenPos = ImGui.GetCursorScreenPos();
 
-        var avatarCenter = screenPos + Px(HeaderPL + AvatarR, HeaderH * 0.5f);
+        var headerH = Px(HeaderH);
+        var centerY = screenPos.Y + headerH * 0.5f;
+        var btnTop = screenPos.Y + (headerH - Px(MenuBtnW)) * 0.5f;
+        var iconFont = Plugin.PluginInterface.UiBuilder.FontIcon;
+
+        var backBtnX = screenPos.X + Px(2f);
+        ImGui.SetCursorScreenPos(new Vector2(backBtnX, btnTop));
+        ImGui.InvisibleButton("##chatBackBtn", Px(MenuBtnW, MenuBtnW));
+        var backHovered = ImGui.IsItemHovered();
+        if (backHovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            ImGui.SetTooltip(Loc.T("chat.back_to_matches"));
+        }
+        if (ImGui.IsItemClicked())
+        {
+            _router.Navigate(Screen.ChatList);
+        }
+        ImGui.PushFont(iconFont);
+        var backIcon = FontAwesomeIcon.ArrowLeft.ToIconString();
+        var backIconSz = ImGui.CalcTextSize(backIcon);
+        dl.AddText(ImGui.GetFont(), ImGui.GetFontSize(),
+            new Vector2(backBtnX + (Px(MenuBtnW) - backIconSz.X) * 0.5f,
+                        btnTop + (Px(MenuBtnW) - backIconSz.Y) * 0.5f),
+            backHovered ? t.AccentLightU32 : t.AccentU32, backIcon);
+        ImGui.PopFont();
+
+        var menuBtnX = screenPos.X + winW - Px(MenuBtnW + 2f);
+        ImGui.SetCursorScreenPos(new Vector2(menuBtnX, btnTop));
+        ImGui.InvisibleButton("##chatMenuBtn", Px(MenuBtnW, MenuBtnW));
+        var menuHovered = ImGui.IsItemHovered();
+        var menuClicked = ImGui.IsItemClicked();
+        ImGui.PushFont(iconFont);
+        var menuIcon = FontAwesomeIcon.Cog.ToIconString();
+        var menuIconSz = ImGui.CalcTextSize(menuIcon);
+        dl.AddText(ImGui.GetFont(), ImGui.GetFontSize(),
+            new Vector2(menuBtnX + (Px(MenuBtnW) - menuIconSz.X) * 0.5f,
+                        btnTop + (Px(MenuBtnW) - menuIconSz.Y) * 0.5f),
+            menuHovered ? t.AccentLightU32 : t.AccentU32, menuIcon);
+        ImGui.PopFont();
+
+        var avatarD = Px(AvatarR * 2f);
+        var gap = Px(8f);
+        var groupLeft = backBtnX + Px(MenuBtnW) + Px(6f);
+        var maxNameW = MathF.Max(0f, menuBtnX - Px(6f) - (groupLeft + avatarD + gap));
+
+        string shownName;
+        Vector2 nameSz;
+        using (UiFonts.H3?.Push())
+        {
+            shownName = TruncateToWidth(_peerName, maxNameW);
+            nameSz = ImGui.CalcTextSize(shownName);
+        }
+
+        var groupW = avatarD + gap + nameSz.X;
+        var avatarCenter = new Vector2(groupLeft + avatarD * 0.5f, centerY);
+
         var headerAvatarWrap = _headerAvatarTex?.GetWrapOrDefault();
         if (headerAvatarWrap != null)
         {
-            var tl = avatarCenter - Px(AvatarR, AvatarR);
-            var br = avatarCenter + Px(AvatarR, AvatarR);
-            dl.AddImageRounded(headerAvatarWrap.Handle, tl, br,
+            dl.AddImageRounded(headerAvatarWrap.Handle,
+                avatarCenter - Px(AvatarR, AvatarR), avatarCenter + Px(AvatarR, AvatarR),
                 Vector2.Zero, Vector2.One, 0xFFFFFFFF, Px(AvatarR), ImDrawFlags.RoundCornersAll);
         }
         else
@@ -412,9 +488,14 @@ public class ChatScreen
         }
         dl.AddCircle(avatarCenter, Px(AvatarR), t.AccentWithAlpha(0.65f), 0, 1.5f);
 
-        var avatarTL = avatarCenter - Px(AvatarR, AvatarR);
-        ImGui.SetCursorScreenPos(avatarTL);
-        ImGui.InvisibleButton("##chatPeerAvatar", Px(AvatarR * 2f, AvatarR * 2f));
+        using (UiFonts.H3?.Push())
+        {
+            dl.AddText(ImGui.GetFont(), ImGui.GetFontSize(),
+                new Vector2(groupLeft + avatarD + gap, centerY - nameSz.Y * 0.5f), 0xFFFFFFFF, shownName);
+        }
+
+        ImGui.SetCursorScreenPos(new Vector2(groupLeft, centerY - avatarD * 0.5f));
+        ImGui.InvisibleButton("##chatPeerGroup", new Vector2(groupW, avatarD));
         if (ImGui.IsItemHovered())
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -424,31 +505,6 @@ public class ChatScreen
         {
             OpenPeerProfile();
         }
-
-        using (UiFonts.H3?.Push())
-        {
-            var nameSz = ImGui.CalcTextSize(_peerName);
-            var fontSize = ImGui.GetFontSize();
-            var nameX = screenPos.X + Px(HeaderPL + AvatarR * 2f + 12f);
-            var nameY = screenPos.Y + (Px(HeaderH) - nameSz.Y) * 0.5f;
-            dl.AddText(ImGui.GetFont(), fontSize, new Vector2(nameX, nameY), 0xFFFFFFFF, _peerName);
-        }
-
-        var menuBtnX = screenPos.X + winW - Px(MenuBtnW + 2f);
-        var menuBtnY = screenPos.Y + (Px(HeaderH) - Px(MenuBtnW)) * 0.5f;
-        ImGui.SetCursorScreenPos(new Vector2(menuBtnX, menuBtnY));
-        ImGui.InvisibleButton("##chatMenuBtn", Px(MenuBtnW, MenuBtnW));
-        var menuHovered = ImGui.IsItemHovered();
-        var menuClicked = ImGui.IsItemClicked();
-
-        ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
-        var menuIcon = FontAwesomeIcon.Cog.ToIconString();
-        var menuIconSz = ImGui.CalcTextSize(menuIcon);
-        dl.AddText(ImGui.GetFont(), ImGui.GetFontSize(),
-            new Vector2(menuBtnX + (Px(MenuBtnW) - menuIconSz.X) * 0.5f,
-                        menuBtnY + (Px(MenuBtnW) - menuIconSz.Y) * 0.5f),
-            menuHovered ? t.AccentLightU32 : t.AccentU32, menuIcon);
-        ImGui.PopFont();
 
         if (menuClicked)
         {
@@ -461,6 +517,11 @@ public class ChatScreen
             {
                 ImGui.CloseCurrentPopup();
                 OpenPeerProfile();
+            }
+            if (DrawIconMenuItem(FontAwesomeIcon.Qrcode, Loc.T("verify.title")))
+            {
+                ImGui.CloseCurrentPopup();
+                OpenVerify();
             }
             var pinned = _chatListScreen.IsPinned(_peerId);
             if (DrawIconMenuItem(pinned ? FontAwesomeIcon.ThumbtackSlash : FontAwesomeIcon.Thumbtack,
@@ -538,6 +599,12 @@ public class ChatScreen
     {
         _profileScreen.SetProfile(_peerId, ProfileSource.Chat);
         _router.Navigate(Screen.Profile);
+    }
+
+    private void OpenVerify()
+    {
+        _verifyScreen.SetContext(_peerName, _peerPublicKey);
+        _router.Navigate(Screen.EncryptionVerification);
     }
 
     private void FireReport()
@@ -645,6 +712,7 @@ public class ChatScreen
             var bandBot = ImGui.GetScrollY() + availableHeight * 2f;
 
             var drawnSlot = 0; // frame-local child-id slot, so ImGui retains only ~visible-count windows
+            var targetY = -1f; // content-Y of the search-jump message, captured even when virtualized away
             for (int i = 0; i < messages.Length; i++)
             {
                 var msg = messages[i];
@@ -663,6 +731,10 @@ public class ChatScreen
                 }
 
                 var y0 = ImGui.GetCursorPosY();
+                if (msg.Id == _scrollTargetMessageId)
+                {
+                    targetY = y0;
+                }
                 if (y0 + rowH < bandTop || y0 > bandBot)
                 {
                     ImGui.SetCursorPosY(y0 + rowH); // reserve the row's space, draw nothing
@@ -677,11 +749,30 @@ public class ChatScreen
                 _msgRowH[msg.Id] = ImGui.GetCursorPosY() - y0; // exact drawn advance
             }
 
-            if (_scrollToBottom > 0)
+            // A manual wheel scroll takes over immediately instead of fighting the post-open auto-scroll.
+            if (ImGui.GetIO().MouseWheel != 0f)
+            {
+                _scrollToBottom = 0f;
+                _scrollToMessageTimer = 0f;
+            }
+
+            if (_scrollToMessageTimer > 0f && targetY >= 0f)
+            {
+                // Re-driven for a few frames so it settles as virtualized rows above resolve their exact height.
+                var dest = Math.Clamp(targetY - availableHeight * 0.35f, 0f, ImGui.GetScrollMaxY());
+                ImGui.SetScrollY(dest);
+                _scrollToMessageTimer -= ImGui.GetIO().DeltaTime;
+            }
+            else if (_scrollToBottom > 0)
             {
                 // Works with virtualization: the full height is reserved, so ScrollMaxY is the true bottom.
                 ImGui.SetScrollY(ImGui.GetScrollMaxY());
                 _scrollToBottom -= ImGui.GetIO().DeltaTime;
+            }
+
+            if (_flashTimer > 0f)
+            {
+                _flashTimer -= ImGui.GetIO().DeltaTime;
             }
         }
     }
@@ -752,12 +843,12 @@ public class ChatScreen
         float bubbleLeft;
         if (msg.IsOwn)
         {
-            bubbleColor = ThemeService.Current.AccentU32;
+            bubbleColor = ImGui.ColorConvertFloat4ToU32(ChatColors.OwnBg);
             bubbleLeft = cursorPos.X + windowWidth - maxBubW - Px(10);
         }
         else
         {
-            bubbleColor = 0xFF3A3A3A;
+            bubbleColor = ImGui.ColorConvertFloat4ToU32(ChatColors.PeerBg);
             bubbleLeft = cursorPos.X + Px(10);
         }
 
@@ -780,8 +871,16 @@ public class ChatScreen
         var bubbleH = innerH + padding.Y * 2f;
 
         var bubbleTL = new Vector2(bubbleLeft, cursorPos.Y + entryDy);
-        drawList.AddRectFilled(bubbleTL, bubbleTL + new Vector2(maxBubW, bubbleH), bubbleColor,
-            Px(10f), BubbleCorners(msg.IsOwn, isGroupStart, isGroupEnd));
+        var corners = BubbleCorners(msg.IsOwn, isGroupStart, isGroupEnd);
+        drawList.AddRectFilled(bubbleTL, bubbleTL + new Vector2(maxBubW, bubbleH), bubbleColor, Px(10f), corners);
+        if (msg.Id == _scrollTargetMessageId && _flashTimer > 0f)
+        {
+            // Border flash on a search jump (the bubble keeps its own colour): |sin| peaks FlashPulses times, each at full alpha.
+            var p = 1f - _flashTimer / FlashDuration;
+            var a = MathF.Abs(MathF.Sin(p * FlashPulses * MathF.PI));
+            drawList.AddRect(bubbleTL, bubbleTL + new Vector2(maxBubW, bubbleH),
+                ImGui.GetColorU32(ThemeService.Current.AccentDark with { W = a }), Px(10f), corners, Px(4f));
+        }
 
         // Render inside a child sized to the measured interior so the inline word/emoji wrapper (which
         // reads GetContentRegionAvail) and ImGui's wrap agree on the bubble boundary, and overflow clips.
@@ -792,20 +891,11 @@ public class ChatScreen
         {
             if (body.Success)
             {
-                // Own bubbles fill with the accent; Vanilla Sunrise's light-yellow accent leaves white text
-                // low-contrast, so draw it near-black there.
-                var darkText = msg.IsOwn && ThemeService.CurrentTheme == AppTheme.VanillaSunrise;
-                if (darkText)
-                {
-                    ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0.13f, 0.10f, 0.03f, 1f));
-                }
+                ImGui.PushStyleColor(ImGuiCol.Text, msg.IsOwn ? ChatColors.OwnFg : ChatColors.PeerFg);
                 ImGui.PushTextWrapPos(innerW);
                 parsed.Draw();
                 ImGui.PopTextWrapPos();
-                if (darkText)
-                {
-                    ImGui.PopStyleColor();
-                }
+                ImGui.PopStyleColor();
             }
         }
         ImGui.PopStyleVar();
@@ -1293,4 +1383,5 @@ public class ChatScreen
         ImGui.PopStyleVar(canSubmit ? 1 : 2);
         ImGui.PopStyleColor(3);
     }
+
 }

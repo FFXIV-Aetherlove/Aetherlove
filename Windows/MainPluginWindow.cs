@@ -37,6 +37,7 @@ public class MainPluginWindow : Window, IDisposable
     private readonly ModeratorMessageScreen _moderatorMessageScreen;
     private readonly PassphraseUnlockScreen _passphraseUnlockScreen;
     private readonly EncryptionRecoveryScreen _encryptionRecoveryScreen;
+    private readonly EncryptionVerificationScreen _encryptionVerificationScreen;
     private readonly NewsScreen _newsScreen;
     private readonly OfflineScreen _offlineScreen;
     private readonly OutdatedScreen _outdatedScreen;
@@ -69,6 +70,7 @@ public class MainPluginWindow : Window, IDisposable
         ModeratorMessageScreen moderatorMessageScreen,
         PassphraseUnlockScreen passphraseUnlockScreen,
         EncryptionRecoveryScreen encryptionRecoveryScreen,
+        EncryptionVerificationScreen encryptionVerificationScreen,
         NewsScreen newsScreen,
         OfflineScreen offlineScreen,
         OutdatedScreen outdatedScreen,
@@ -101,6 +103,7 @@ public class MainPluginWindow : Window, IDisposable
         _moderatorMessageScreen = moderatorMessageScreen;
         _passphraseUnlockScreen = passphraseUnlockScreen;
         _encryptionRecoveryScreen = encryptionRecoveryScreen;
+        _encryptionVerificationScreen = encryptionVerificationScreen;
         _newsScreen = newsScreen;
         _offlineScreen = offlineScreen;
         _outdatedScreen = outdatedScreen;
@@ -318,6 +321,9 @@ public class MainPluginWindow : Window, IDisposable
             case Screen.EncryptionRecovery:
                 _encryptionRecoveryScreen.Draw();
                 break;
+            case Screen.EncryptionVerification:
+                _encryptionVerificationScreen.Draw();
+                break;
             case Screen.News:
                 _newsScreen.Draw();
                 break;
@@ -341,6 +347,8 @@ public class MainPluginWindow : Window, IDisposable
         {
             DrawBottomNav();
         }
+
+        HandleBezelDoubleClickMinimize();
     }
 
     private static bool IsNavActive(Screen navTarget, Screen current) => navTarget switch
@@ -448,11 +456,7 @@ public class MainPluginWindow : Window, IDisposable
                 }
                 else
                 {
-                    IsOpen = false;
-                    if (_miniWindow != null)
-                    {
-                        _miniWindow.IsOpen = true;
-                    }
+                    Minimize();
                 }
             }
         }
@@ -593,6 +597,9 @@ public class MainPluginWindow : Window, IDisposable
             case Screen.EncryptionRecovery:
                 _encryptionRecoveryScreen.OnShow();
                 break;
+            case Screen.EncryptionVerification:
+                _encryptionVerificationScreen.OnShow();
+                break;
             case Screen.News:
                 _newsScreen.OnShow();
                 break;
@@ -719,6 +726,46 @@ public class MainPluginWindow : Window, IDisposable
         }
         ImGui.PopStyleVar();
         ImGui.PopStyleColor(3);
+    }
+
+    /// <summary>Hides the phone and shows the minimised bubble: the bottom-nav minimise action, also
+    /// triggered by double-clicking the phone bezel.</summary>
+    private void Minimize()
+    {
+        IsOpen = false;
+        if (_miniWindow != null)
+        {
+            _miniWindow.IsOpen = true;
+        }
+    }
+
+    /// <summary>Double-clicking the phone bezel (the frame around the content area) minimises, mirroring the
+    /// bottom-nav button. Ignores double-clicks over the content area or any bezel widget, so it never steals input.</summary>
+    private void HandleBezelDoubleClickMinimize()
+    {
+        if (!ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left))
+        {
+            return;
+        }
+        if (!ImGui.IsWindowHovered() || ImGui.IsAnyItemHovered())
+        {
+            return;
+        }
+
+        var winPos = ImGui.GetWindowPos();
+        var winSize = ImGui.GetWindowSize();
+        var mouse = ImGui.GetMousePos();
+
+        var contentTL = winPos + Px(BezelLeft, BezelTop);
+        var contentBR = winPos + new Vector2(winSize.X - Px(BezelRight), winSize.Y - Px(BezelBottom));
+        var inContent = mouse.X >= contentTL.X && mouse.X <= contentBR.X
+                     && mouse.Y >= contentTL.Y && mouse.Y <= contentBR.Y;
+        if (inContent)
+        {
+            return;
+        }
+
+        Minimize();
     }
 
     private void PerformClose()

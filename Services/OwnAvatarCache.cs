@@ -26,8 +26,7 @@ public sealed class OwnAvatarCache : IDisposable
         _hub = hub;
     }
 
-    private static string CacheDir => Path.Combine(
-        Plugin.PluginInterface.ConfigDirectory.FullName, "MatchOverlayCache");
+    private static string CacheDir => ImageCacheCleaner.MatchOverlayCacheDir;
 
     /// <summary>The last known avatar, or null before the first successful fetch on a fresh install.</summary>
     public ISharedImmediateTexture? Texture

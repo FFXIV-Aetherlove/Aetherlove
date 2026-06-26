@@ -6,22 +6,37 @@ internal static class SettingsPt
     {
         ["settings.title"] = "Configurações",
 
-        // Section labels
+        // Section labels + hub menu
+        ["settings.section_plugin_settings"] = "Configurações do plugin",
         ["settings.section_appearance"] = "Aparência",
         ["settings.section_phone_size"] = "Tamanho do telefone",
         ["settings.section_plugin_language"] = "Idioma do plugin",
         ["settings.section_privacy"] = "Privacidade",
-        ["settings.section_general"] = "Geral",
+        ["settings.section_general"] = "Configurações gerais",
         ["settings.section_notifications"] = "Notificações",
         ["settings.section_moderation"] = "Moderação",
         ["settings.section_other"] = "Outros",
         ["settings.section_danger_zone"] = "Zona de perigo",
+        ["settings.menu_language_theme"] = "Idioma e tema",
+        ["settings.menu_appearance"] = "Aparência do telefone",
+        ["settings.menu_chat_colors"] = "Aparência do chat",
+        ["settings.section_theme"] = "Tema",
+        ["settings.back_arrow"] = "← Voltar",
+        ["settings.chat_own_bg"] = "Fundo do seu chat",
+        ["settings.chat_own_fg"] = "Texto do seu chat",
+        ["settings.chat_peer_bg"] = "Fundo do chat do outro",
+        ["settings.chat_peer_fg"] = "Texto do chat do outro",
+        ["settings.chat_reset"] = "Redefinir",
 
         // Phone size picker (AppearancePicker)
         ["settings.phone_size_small"] = "Pequeno",
         ["settings.phone_size_medium"] = "Médio",
         ["settings.phone_size_large"] = "Grande",
-        ["settings.phone_size_caption"] = "Escala todo o telefone. Tamanhos maiores combinam com telas de resolução mais alta; Tamanhos grandes podem não caber em uma tela 1080p.",
+        ["settings.phone_size_xl"] = "XL",
+        ["settings.phone_size_xxl"] = "XXL",
+        ["settings.phone_size_caption"] = "Escala todo o telefone. Tamanhos maiores combinam com telas de resolução mais alta; XL e XXL são feitos para 4K e podem não caber em telas menores.",
+        ["settings.section_mini_phone_size"] = "Tamanho do telefone em miniatura",
+        ["settings.mini_phone_size_caption"] = "Tamanho da bolha minimizada (exibida quando o telefone está minimizado). A pré-visualização abaixo mostra o tamanho selecionado.",
 
         // General
         ["settings.disable_startup_heartbeat"] = "Desativar o som de coração a bater na inicialização",
@@ -82,7 +97,7 @@ internal static class SettingsPt
         // Warnings
         ["settings.warnings_button_unseen"] = "Advertências ({0} não vistas / {1})",
         ["settings.warnings_button"] = "Advertências ({0})",
-        ["settings.warnings_title"] = "Advertências",
+        ["settings.warnings_title"] = "Advertências da conta",
         ["settings.no_warnings"] = "Nenhuma advertência registrada.",
 
         // Moderator messages

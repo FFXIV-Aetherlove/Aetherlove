@@ -28,6 +28,32 @@ internal static class SharedUiHelpers
         }
     }
 
+    /// <summary>Returns <paramref name="text"/> shortened with a trailing ellipsis so it fits within
+    /// <paramref name="maxWidth"/> at the current font; returns it unchanged when it already fits.</summary>
+    internal static string TruncateToWidth(string text, float maxWidth)
+    {
+        if (string.IsNullOrEmpty(text) || ImGui.CalcTextSize(text).X <= maxWidth)
+        {
+            return text;
+        }
+        const string ellipsis = "…";
+        var ellipsisW = ImGui.CalcTextSize(ellipsis).X;
+        int lo = 0, hi = text.Length;
+        while (lo < hi)
+        {
+            var mid = (lo + hi + 1) / 2;
+            if (ImGui.CalcTextSize(text[..mid]).X + ellipsisW <= maxWidth)
+            {
+                lo = mid;
+            }
+            else
+            {
+                hi = mid - 1;
+            }
+        }
+        return lo <= 0 ? ellipsis : text[..lo].TrimEnd() + ellipsis;
+    }
+
     /// <summary>Copies player-authored text to the clipboard and, on the first copy ever, shows the one-time
     /// link-safety warning gated by the shared AcknowledgedProfileCopyTextWarning flag. Used by the profile bio
     /// and chat-message copy actions.</summary>
@@ -103,6 +129,187 @@ internal static class SharedUiHelpers
 
     internal static void PopThemeButton() => ImGui.PopStyleColor(3);
 
+    /// <summary>The themed "← Back" pill used to step out of a sub-page back to its parent (the "My" hub, the
+    /// News list). Position the cursor before calling; returns true on click.</summary>
+    internal static bool DrawBackButton(string label)
+    {
+        PushThemeButton(ThemeService.Current);
+        ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
+        var clicked = ImGui.Button(label, new Vector2(Px(96f), Px(28f)));
+        ImGui.PopStyleVar();
+        PopThemeButton();
+        return clicked;
+    }
+
+    /// <summary>One moderation notice as a card: an accent stripe + icon + timestamp header above the wrapped
+    /// body. Unseen notices get an accent-tinted fill, a brighter border and an unread dot; seen ones use a
+    /// neutral card. <paramref name="padX"/> is the design-pixel inset. Shared by the "My" hub lists and the
+    /// live warning / message acknowledge screens.</summary>
+    internal static void DrawNoticeCard(float listW, Dalamud.Interface.FontAwesomeIcon icon, Vector4 accent,
+        DateTimeOffset whenUtc, string body, bool seen, float padX)
+    {
+        var pad = Px(padX);
+        var cardW = listW - pad * 2f;
+        var rounding = Px(10f);
+        var cx = Px(18f);
+        var contentW = cardW - cx - Px(14f);
+
+        var font = ImGui.GetFont();
+        var fontSize = ImGui.GetFontSize();
+        var lineH = ImGui.GetTextLineHeight();
+        var bodyH = ImGui.CalcTextSize(body, false, contentW).Y;
+        var cardH = Px(11f) + lineH + Px(6f) + bodyH + Px(11f);
+
+        var origin = ImGui.GetCursorScreenPos();
+        var tl = new Vector2(origin.X + pad, origin.Y);
+        var br = new Vector2(tl.X + cardW, tl.Y + cardH);
+        var dl = ImGui.GetWindowDrawList();
+
+        var bg = seen ? new Vector4(1f, 1f, 1f, 0.04f) : accent with { W = 0.10f };
+        var border = seen ? new Vector4(1f, 1f, 1f, 0.07f) : accent with { W = 0.42f };
+        var stripe = accent with { W = seen ? 0.40f : 1f };
+        var dateCol = seen ? UiColors.Muted : accent;
+        var bodyCol = seen ? UiColors.Muted : UiColors.Body;
+
+        dl.AddRectFilled(tl, br, ImGui.GetColorU32(bg), rounding);
+        dl.AddRect(tl, br, ImGui.GetColorU32(border), rounding, ImDrawFlags.None, Px(1f));
+        dl.AddRectFilled(new Vector2(tl.X + Px(7f), tl.Y + Px(9f)), new Vector2(tl.X + Px(10f), br.Y - Px(9f)),
+            ImGui.GetColorU32(stripe), Px(2f), ImDrawFlags.RoundCornersAll);
+
+        var hy = tl.Y + Px(11f);
+        ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
+        var iconStr = icon.ToIconString();
+        var iconW = ImGui.CalcTextSize(iconStr).X;
+        dl.AddText(ImGui.GetFont(), ImGui.GetFontSize(), new Vector2(tl.X + cx, hy), ImGui.GetColorU32(accent), iconStr);
+        ImGui.PopFont();
+
+        var dateStr = whenUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
+        dl.AddText(font, fontSize, new Vector2(tl.X + cx + iconW + Px(8f), hy), ImGui.GetColorU32(dateCol), dateStr);
+
+        if (!seen)
+        {
+            dl.AddCircleFilled(new Vector2(br.X - Px(12f), hy + lineH * 0.5f), Px(3.5f), ImGui.GetColorU32(accent));
+        }
+
+        dl.AddText(font, fontSize, new Vector2(tl.X + cx, hy + lineH + Px(6f)), ImGui.GetColorU32(bodyCol), body, contentW);
+
+        ImGui.Dummy(new Vector2(cardW, cardH));
+    }
+
+    /// <summary>One entry of a grouped "menu card" (icon + label + optional badge), invoked on click. Shared so
+    /// the "My" hub and the Settings hub build identical menus.</summary>
+    internal readonly record struct MenuRow(Dalamud.Interface.FontAwesomeIcon Icon, Vector4 IconColor, string Label,
+        int Badge, bool External, Action OnClick);
+
+    /// <summary>Draws a grouped menu card: a faint rounded panel with a thin border holding one
+    /// <see cref="DrawMenuRow"/> per entry. <paramref name="padX"/> is the design-pixel inset.</summary>
+    internal static void DrawMenuCard(string idPrefix, float winW, float padX, IReadOnlyList<MenuRow> rows)
+    {
+        var rowH = Px(44f);
+        var origin = ImGui.GetCursorScreenPos();
+        var dl = ImGui.GetWindowDrawList();
+        var cardMin = new Vector2(origin.X + Px(padX), origin.Y);
+        var cardMax = new Vector2(origin.X + winW - Px(padX), origin.Y + rowH * rows.Count);
+        dl.AddRectFilled(cardMin, cardMax, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.045f)), Px(10f));
+
+        ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(0f, 0f));
+        for (var i = 0; i < rows.Count; i++)
+        {
+            var r = rows[i];
+            if (DrawMenuRow(winW, rowH, $"##{idPrefix}row{i}", r.Icon, r.IconColor, r.Label,
+                    i == rows.Count - 1, r.External, r.Badge, padX))
+            {
+                r.OnClick();
+            }
+        }
+        ImGui.PopStyleVar();
+        dl.AddRect(cardMin, cardMax, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.07f)), Px(10f), ImDrawFlags.None, Px(1f));
+    }
+
+    /// <summary>An accent block heading (e.g. "Plugin settings", "Service") inset by <paramref name="padX"/>.</summary>
+    internal static void DrawSectionHeader(string title, float padX)
+    {
+        ImGui.SetCursorPosX(Px(padX));
+        ImGui.TextColored(ThemeService.Current.Accent, title);
+        ImGui.Spacing();
+    }
+
+    /// <summary>A larger accent-light page title for a hub sub-page, inset by <paramref name="padX"/>.</summary>
+    internal static void DrawSubpageHeading(string title, float padX)
+    {
+        ImGui.SetCursorPosX(Px(padX));
+        using (UiFonts.H3?.Push())
+        {
+            ImGui.TextColored(ThemeService.Current.AccentLight, title);
+        }
+        ImGui.Spacing();
+    }
+
+    /// <summary>One row of a grouped "menu card": a full-width hit target with a leading coloured icon, a
+    /// label, an optional unseen-count badge, and a trailing chevron (or external-link glyph). Flat, not a
+    /// filled button: the caller draws the card background and border. Shared by the Settings "Other" list
+    /// and the "My" hub.</summary>
+    internal static bool DrawMenuRow(float winW, float rowH, string id, Dalamud.Interface.FontAwesomeIcon icon,
+        Vector4 iconColor, string label, bool isLast, bool external, int badge, float padX)
+    {
+        ImGui.SetCursorPosX(Px(padX));
+        ImGui.PushStyleColor(ImGuiCol.Header, new Vector4(1f, 1f, 1f, 0.05f));
+        ImGui.PushStyleColor(ImGuiCol.HeaderHovered, new Vector4(1f, 1f, 1f, 0.08f));
+        ImGui.PushStyleColor(ImGuiCol.HeaderActive, new Vector4(1f, 1f, 1f, 0.12f));
+        var clicked = ImGui.Selectable(id, false, ImGuiSelectableFlags.None, new Vector2(winW - Px(padX) * 2f, rowH));
+        ImGui.PopStyleColor(3);
+
+        var rmin = ImGui.GetItemRectMin();
+        var rmax = ImGui.GetItemRectMax();
+        var dl = ImGui.GetWindowDrawList();
+        var midY = (rmin.Y + rmax.Y) * 0.5f;
+        var iconFontPtr = Plugin.PluginInterface.UiBuilder.FontIcon;
+
+        var iconPx = Px(18f);
+        ImGui.PushFont(iconFontPtr);
+        var iconFont = ImGui.GetFont();
+        var iconGlyph = icon.ToIconString();
+        var iconSz = ImGui.CalcTextSize(iconGlyph) * (iconPx / ImGui.GetFontSize());
+        ImGui.PopFont();
+        var iconX = rmin.X + Px(14f);
+        dl.AddText(iconFont, iconPx, new Vector2(iconX, midY - iconSz.Y * 0.5f), ImGui.GetColorU32(iconColor), iconGlyph);
+
+        var labelSz = ImGui.CalcTextSize(label);
+        dl.AddText(new Vector2(iconX + iconSz.X + Px(14f), midY - labelSz.Y * 0.5f),
+            ImGui.GetColorU32(new Vector4(0.93f, 0.93f, 0.96f, 1f)), label);
+
+        var rightX = rmax.X - Px(14f);
+        var chevGlyph = (external ? Dalamud.Interface.FontAwesomeIcon.ExternalLinkAlt : Dalamud.Interface.FontAwesomeIcon.ChevronRight).ToIconString();
+        var chevPx = external ? Px(12f) : Px(13f);
+        ImGui.PushFont(iconFontPtr);
+        var chevFont = ImGui.GetFont();
+        var chevSz = ImGui.CalcTextSize(chevGlyph) * (chevPx / ImGui.GetFontSize());
+        ImGui.PopFont();
+        dl.AddText(chevFont, chevPx, new Vector2(rightX - chevSz.X, midY - chevSz.Y * 0.5f),
+            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.30f)), chevGlyph);
+
+        if (badge > 0)
+        {
+            var badgeText = badge.ToString();
+            var badgeSz = ImGui.CalcTextSize(badgeText);
+            var pad = Px(7f);
+            var pillH = Px(18f);
+            var pillRight = rightX - chevSz.X - Px(10f);
+            var pillMin = new Vector2(pillRight - badgeSz.X - pad * 2f, midY - pillH * 0.5f);
+            var pillMax = new Vector2(pillRight, midY + pillH * 0.5f);
+            dl.AddRectFilled(pillMin, pillMax, ImGui.GetColorU32(ThemeService.Current.Accent), pillH * 0.5f);
+            dl.AddText(new Vector2(pillMin.X + pad, midY - badgeSz.Y * 0.5f), 0xFFFFFFFFu, badgeText);
+        }
+
+        if (!isLast)
+        {
+            dl.AddLine(new Vector2(rmin.X + Px(14f), rmax.Y), new Vector2(rmax.X - Px(14f), rmax.Y),
+                ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.06f)), 1f);
+        }
+
+        return clicked;
+    }
+
     /// <summary>The community Discord invite, shared by the connectivity/error screens and Settings.</summary>
     internal const string DiscordInvite = "https://discord.gg/SkyQmpxWhB";
 
@@ -142,6 +349,7 @@ internal static class SharedUiHelpers
         Loc.T("onboarding.tos_p2"),
         Loc.T("onboarding.tos_ownership"),
         Loc.T("onboarding.tos_p3"),
+        Loc.T("onboarding.tos_nsfl"),
         Loc.T("onboarding.tos_p4"),
         Loc.T("onboarding.tos_p5"),
         Loc.T("onboarding.tos_p6"),
@@ -149,16 +357,26 @@ internal static class SharedUiHelpers
         Loc.T("onboarding.tos_p7"),
     ];
 
-    /// <summary>Pushes the thin themed scrollbar style used by every scrolling panel; pair with
-    /// <see cref="PopScrollbarStyle"/> (4 colours + 1 var).</summary>
+    /// <summary>Design-pixel thickness of every in-app scrollbar (scaled through <c>Px</c>).</summary>
+    internal const float ScrollbarWidth = 10f;
+
+    /// <summary>Pushes the themed scrollbar style (theme accent as the grab) used by every scrolling panel;
+    /// pair with <see cref="PopScrollbarStyle"/>.</summary>
     internal static void PushScrollbarStyle()
     {
         var t = ThemeService.Current;
+        PushScrollbarStyle(t.ScrollbarGrab, t.ScrollbarGrabHovered, t.ScrollbarGrabActive);
+    }
+
+    /// <summary>Pushes the scrollbar style with explicit grab colours, for a non-accent rail such as the
+    /// delete-confirmation danger scrollbar; pair with <see cref="PopScrollbarStyle"/>.</summary>
+    internal static void PushScrollbarStyle(Vector4 grab, Vector4 grabHovered, Vector4 grabActive)
+    {
         ImGui.PushStyleColor(ImGuiCol.ScrollbarBg, new Vector4(0.08f, 0.08f, 0.08f, 0.6f));
-        ImGui.PushStyleColor(ImGuiCol.ScrollbarGrab, t.ScrollbarGrab);
-        ImGui.PushStyleColor(ImGuiCol.ScrollbarGrabHovered, t.ScrollbarGrabHovered);
-        ImGui.PushStyleColor(ImGuiCol.ScrollbarGrabActive, t.ScrollbarGrabActive);
-        ImGui.PushStyleVar(ImGuiStyleVar.ScrollbarSize, Px(6f));
+        ImGui.PushStyleColor(ImGuiCol.ScrollbarGrab, grab);
+        ImGui.PushStyleColor(ImGuiCol.ScrollbarGrabHovered, grabHovered);
+        ImGui.PushStyleColor(ImGuiCol.ScrollbarGrabActive, grabActive);
+        ImGui.PushStyleVar(ImGuiStyleVar.ScrollbarSize, Px(ScrollbarWidth));
     }
 
     internal static void PopScrollbarStyle()

@@ -51,6 +51,9 @@ public class DeckScreen : IDisposable
     private DateTimeOffset _loaderShownAt;
     private static readonly TimeSpan MinLoaderDuration = TimeSpan.FromSeconds(1);
 
+    // Deck-expiry nudge: warn when the next pull is within this window and cards still remain.
+    private static readonly TimeSpan ExpiryWarnThreshold = TimeSpan.FromMinutes(5);
+
     private float _dragX;
     private float _dragY;
     private bool _isDragging;
@@ -186,6 +189,59 @@ public class DeckScreen : IDisposable
         }
 
         DrawActionButtons(centerX, windowPos.Y + usableHeight - Px(BottomMargin) - Px(ButtonAreaHeight) + Px(10f));
+
+        DrawDeckExpiryWarning(windowPos, windowSize);
+    }
+
+    /// <summary>Top pill nudging the player to swipe the remaining cards before the next pull. Shown when the
+    /// deck still has cards and the next pull is within <see cref="ExpiryWarnThreshold"/>. Drawn last so it
+    /// sits over the card.</summary>
+    private void DrawDeckExpiryWarning(Vector2 windowPos, Vector2 windowSize)
+    {
+        if (_cards.Count == 0 || !_nextPullAtUtc.HasValue)
+        {
+            return;
+        }
+        var remaining = _nextPullAtUtc.Value - DateTimeOffset.UtcNow;
+        if (remaining < TimeSpan.Zero)
+        {
+            remaining = TimeSpan.Zero;
+        }
+        if (remaining > ExpiryWarnThreshold)
+        {
+            return;
+        }
+
+        var t = ThemeService.Current;
+        var dl = ImGui.GetWindowDrawList();
+        var iconFont = Plugin.PluginInterface.UiBuilder.FontIcon;
+
+        var label = Loc.T("deck.next_deck", $"{(int)remaining.TotalMinutes:D2}:{remaining.Seconds:D2}");
+
+        ImGui.PushFont(iconFont);
+        var iconStr = FontAwesomeIcon.Clock.ToIconString();
+        var iconSz = ImGui.CalcTextSize(iconStr);
+        ImGui.PopFont();
+        var textSz = ImGui.CalcTextSize(label);
+
+        var padX = Px(13f);
+        var padY = Px(6f);
+        var gap = Px(7f);
+        var pillW = iconSz.X + gap + textSz.X + padX * 2f;
+        var pillH = MathF.Max(iconSz.Y, textSz.Y) + padY * 2f;
+        var pillTL = new Vector2(windowPos.X + (windowSize.X - pillW) * 0.5f, windowPos.Y + Px(8f));
+        var rounding = pillH * 0.5f;
+
+        dl.AddRectFilled(pillTL, pillTL + new Vector2(pillW, pillH), UiColors.DeckExpiryWarnFill, rounding);
+        dl.AddRect(pillTL, pillTL + new Vector2(pillW, pillH), t.AccentU32, rounding, ImDrawFlags.None, Px(1.5f));
+
+        var iconX = pillTL.X + padX;
+        ImGui.PushFont(iconFont);
+        dl.AddText(ImGui.GetFont(), ImGui.GetFontSize(),
+            new Vector2(iconX, pillTL.Y + (pillH - iconSz.Y) * 0.5f), t.AccentLightU32, iconStr);
+        ImGui.PopFont();
+        dl.AddText(new Vector2(iconX + iconSz.X + gap, pillTL.Y + (pillH - textSz.Y) * 0.5f),
+            0xFFFFFFFF, label);
     }
 
     private void StartRefresh()
@@ -236,7 +292,7 @@ public class DeckScreen : IDisposable
 
     private void CachePortraits(IEnumerable<DeckCardDto> cards)
     {
-        var cacheDir = Path.Combine(Plugin.PluginInterface.ConfigDirectory.FullName, "DeckCache");
+        var cacheDir = ImageCacheCleaner.DeckCacheDir;
         try
         {
             Directory.CreateDirectory(cacheDir);
@@ -246,6 +302,10 @@ public class DeckScreen : IDisposable
             Plugin.Log.Warning(ex, "[DeckScreen] Failed to create deck cache dir.");
             return;
         }
+
+        // A new deck fully replaces the old one, so drop the previous deck's portraits rather than letting
+        // every profile ever dealt pile up on disk.
+        ImageCacheCleaner.ClearDir(cacheDir);
 
         foreach (var c in cards)
         {

@@ -43,5 +43,6 @@ internal static class DeckDe
         ["deck.match_keep_swiping"] = "Weiter wischen",
         ["deck.no_pool_heading"] = "Keine Matches mehr",
         ["deck.no_pool_body"] = "Mit deinen aktuellen Kriterien wurden keine weiteren Matches für dich gefunden. Erweitere deine Kriterien und versuche es später noch einmal.",
+        ["deck.next_deck"] = "Nächstes Deck: {0}",
     };
 }

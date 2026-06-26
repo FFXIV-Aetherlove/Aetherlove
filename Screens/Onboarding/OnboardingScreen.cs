@@ -259,7 +259,7 @@ public partial class OnboardingScreen
             OnboardingStep.XIVAuth => _authService.State == AuthFlowState.Completed,
             // GoNext fires the upload if not yet uploaded.
             OnboardingStep.EncryptionSetup => _passphraseBundleUploaded || CanAdvancePassphrase(),
-            OnboardingStep.ProfileInfo => _displayName.Length > 0
+            OnboardingStep.ProfileInfo => _displayName.Trim().Length >= AetherLove.Shared.ProfileLimits.DisplayNameMinLength
                                           && _langSelected.Any(x => x)
                                           && _lookingFor.Any(x => x),
             OnboardingStep.AvatarUpload => _avatarConfirmed,

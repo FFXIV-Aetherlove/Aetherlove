@@ -133,6 +133,23 @@ public sealed class NewsScreen : IDisposable
         _router.Navigate(_bootstrap.ResolveNextStartupScreen());
     }
 
+    /// <summary>"← Back" out of the list / empty / error views: the per-day list is reached from the "My" hub,
+    /// so it returns there; a preview or unseen-flow error falls back to its normal exit.</summary>
+    private void NavigateBack()
+    {
+        if (_listMode)
+        {
+            _router.Navigate(Screen.MyProfile);
+            return;
+        }
+        if (_isPreview)
+        {
+            _router.Navigate(Screen.Deck);
+            return;
+        }
+        FinishUnseenFlow();
+    }
+
     private void StartPreview(Guid id)
     {
         _isPreview = true;
@@ -286,7 +303,6 @@ public sealed class NewsScreen : IDisposable
 
     private void DrawList()
     {
-        var winW = ImGui.GetWindowSize().X;
         var scrollH = ImGui.GetContentRegionAvail().Y;
 
         PushScrollbarStyle();
@@ -298,26 +314,82 @@ public sealed class NewsScreen : IDisposable
         }
 
         ImGui.Spacing();
-        DrawBackRow(() => _router.Navigate(Screen.Settings), Loc.T("news.back_to_settings"));
-        DrawHeading(Loc.T("news.title"));
-
-        foreach (var day in _list.GroupBy(n => n.PublishedAtUtc.ToLocalTime().Date).OrderByDescending(g => g.Key))
+        ImGui.SetCursorPosX(PadX);
+        if (DrawBackButton(Loc.T("profile.back_to_my")))
         {
-            ImGui.Spacing();
-            ImGui.SetCursorPosX(PadX);
-            ImGui.TextColored(UiColors.Muted, LanguageProvider.FormatDate(day.Key, "D"));
-            ImGui.Spacing();
-
-            foreach (var item in day.OrderByDescending(n => n.PublishedAtUtc))
-            {
-                ImGui.SetCursorPosX(PadX);
-                if (ImGui.Selectable($"{item.Title}##news_{item.Id:N}", false, ImGuiSelectableFlags.None,
-                        new Vector2(winW - PadX * 2f, 0f)))
-                {
-                    LoadEntry(item.Id);
-                }
-            }
+            NavigateBack();
         }
+        ImGui.Spacing();
+        DrawHeading(Loc.T("news.title"));
+        ImGui.Spacing();
+
+        var listW = ImGui.GetContentRegionAvail().X;
+        ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(0f, Px(10f)));
+        foreach (var item in _list)
+        {
+            DrawNewsCard(item, listW);
+        }
+        ImGui.PopStyleVar();
+    }
+
+    /// <summary>One news overview card: a "DATE - Title" header over a short body preview, with a "Read more"
+    /// button that opens the full entry.</summary>
+    private void DrawNewsCard(NewsSummaryDto item, float listW)
+    {
+        var t = ThemeService.Current;
+        var pad = PadX;
+        var cardW = listW - pad * 2f;
+        var innerX = Px(12f);
+        var contentW = cardW - innerX * 2f;
+        var rounding = Px(10f);
+        var gap = Px(7f);
+        var btnH = Px(26f);
+
+        var font = ImGui.GetFont();
+        var fontSize = ImGui.GetFontSize();
+        var lineH = ImGui.GetTextLineHeight();
+        var hasPreview = !string.IsNullOrWhiteSpace(item.Preview);
+        var previewH = hasPreview ? ImGui.CalcTextSize(item.Preview, false, contentW).Y : 0f;
+        var cardH = Px(12f) + lineH + (hasPreview ? gap + previewH : 0f) + gap + btnH + Px(12f);
+
+        var origin = ImGui.GetCursorScreenPos();
+        var tl = new Vector2(origin.X + pad, origin.Y);
+        var br = new Vector2(tl.X + cardW, tl.Y + cardH);
+        var dl = ImGui.GetWindowDrawList();
+        dl.AddRectFilled(tl, br, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.045f)), rounding);
+        dl.AddRect(tl, br, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.08f)), rounding, ImDrawFlags.None, Px(1f));
+
+        var cx = tl.X + innerX;
+        var y = tl.Y + Px(12f);
+
+        var dateStr = LanguageProvider.FormatDate(item.PublishedAtUtc.ToLocalTime().Date, "d MMM yyyy");
+        dl.AddText(font, fontSize, new Vector2(cx, y), ImGui.GetColorU32(UiColors.Muted), dateStr);
+        var dateW = ImGui.CalcTextSize(dateStr).X;
+        const string sep = "  -  ";
+        dl.AddText(font, fontSize, new Vector2(cx + dateW, y), ImGui.GetColorU32(UiColors.Muted), sep);
+        var sepW = ImGui.CalcTextSize(sep).X;
+        var title = TruncateToWidth(item.Title, contentW - dateW - sepW);
+        dl.AddText(font, fontSize, new Vector2(cx + dateW + sepW, y), ImGui.GetColorU32(t.AccentLight), title);
+        y += lineH + gap;
+
+        if (hasPreview)
+        {
+            dl.AddText(font, fontSize, new Vector2(cx, y), ImGui.GetColorU32(UiColors.Body), item.Preview, contentW);
+            y += previewH + gap;
+        }
+
+        ImGui.SetCursorScreenPos(new Vector2(cx, y));
+        PushThemeButton(t);
+        ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(6f));
+        if (ImGui.Button($"{Loc.T("news.read_more")}##nr_{item.Id:N}", new Vector2(Px(104f), btnH)))
+        {
+            LoadEntry(item.Id);
+        }
+        ImGui.PopStyleVar();
+        PopThemeButton();
+
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(cardW, cardH));
     }
 
     private void DrawEntry()
@@ -336,6 +408,16 @@ public sealed class NewsScreen : IDisposable
         }
 
         ImGui.Spacing();
+
+        if (_listMode)
+        {
+            ImGui.SetCursorPosX(PadX);
+            if (DrawBackButton(Loc.T("profile.back_to_my")))
+            {
+                DismissEntry();
+            }
+            ImGui.Spacing();
+        }
 
         // [News icon] Title
         ImGui.SetCursorPosX(PadX);
@@ -378,16 +460,20 @@ public sealed class NewsScreen : IDisposable
             ImGui.PopTextWrapPos();
         }
 
+        // In list mode the top "← Back" handles return, so there's no bottom action button.
+        if (_listMode)
+        {
+            return;
+        }
+
         ImGui.Spacing();
         ImGui.Spacing();
 
         var label = _isPreview
             ? Loc.T("news.got_it")
-            : _listMode
-                ? Loc.T("news.back")
-                : (_unseenIndex < _unseenQueue.Count - 1 ? Loc.T("news.next") : Loc.T("news.got_it"));
+            : (_unseenIndex < _unseenQueue.Count - 1 ? Loc.T("news.next") : Loc.T("news.got_it"));
 
-        if (!_listMode && !_isPreview && _unseenQueue.Count > 1)
+        if (!_isPreview && _unseenQueue.Count > 1)
         {
             ImGui.SetCursorPosX(PadX);
             ImGui.TextColored(UiColors.Muted, Loc.T("news.progress", _unseenIndex + 1, _unseenQueue.Count));
@@ -413,7 +499,12 @@ public sealed class NewsScreen : IDisposable
         ImGui.Spacing();
         if (back)
         {
-            DrawBackRow(() => _router.Navigate(Screen.Settings), Loc.T("news.back_to_settings"));
+            ImGui.SetCursorPosX(PadX);
+            if (DrawBackButton(Loc.T("profile.back_to_my")))
+            {
+                NavigateBack();
+            }
+            ImGui.Spacing();
         }
         DrawHeading(Loc.T("news.title"));
         ImGui.Spacing();
@@ -421,16 +512,6 @@ public sealed class NewsScreen : IDisposable
         ImGui.PushTextWrapPos(winW - PadX);
         ImGui.TextColored(UiColors.Body, text);
         ImGui.PopTextWrapPos();
-    }
-
-    private static void DrawBackRow(Action onBack, string label)
-    {
-        ImGui.SetCursorPosX(PadX);
-        if (ImGui.Selectable(label, false, ImGuiSelectableFlags.None, ImGui.CalcTextSize(label) + new Vector2(Px(6f), 0f)))
-        {
-            onBack();
-        }
-        ImGui.Spacing();
     }
 
     private static void DrawHeading(string heading)

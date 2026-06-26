@@ -50,6 +50,7 @@ public sealed class Plugin : IDalamudPlugin
         Configuration = (PluginInterface.GetPluginConfig() as Configuration) ?? new Configuration();
 
         UiScale.Apply(Configuration.PhoneSize);
+        MiniScale.Apply(Configuration.MiniPhoneSize);
         ThemeService.Initialise(Configuration);
         LanguageProvider.Initialise(Configuration);
         EmojiService = new EmojiService();
@@ -59,6 +60,9 @@ public sealed class Plugin : IDalamudPlugin
         {
             Directory.CreateDirectory(configDir);
         }
+
+        // Clear image caches left by a prior session (a crash skips the shutdown purge) before anything repopulates them.
+        ImageCacheCleaner.PurgeAll();
 
         _host = new HostBuilder()
             .UseContentRoot(configDir)
@@ -156,6 +160,7 @@ public sealed class Plugin : IDalamudPlugin
         services.AddSingleton<ModeratorMessageScreen>();
         services.AddSingleton<PassphraseUnlockScreen>();
         services.AddSingleton<EncryptionRecoveryScreen>();
+        services.AddSingleton<EncryptionVerificationScreen>();
         services.AddSingleton<NewsScreen>();
         services.AddSingleton<OfflineScreen>();
         services.AddSingleton<OutdatedScreen>();
@@ -182,6 +187,7 @@ public sealed class Plugin : IDalamudPlugin
         finally
         {
             _host.Dispose();
+            ImageCacheCleaner.PurgeAll();
         }
     }
 }

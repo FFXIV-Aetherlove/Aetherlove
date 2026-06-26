@@ -27,7 +27,10 @@ public partial class OnboardingScreen
         var scrollH = ImGui.GetContentRegionAvail().Y - Px(50f);
         using (var scroll = ImRaii.Child("##imgDisclaimer", new Vector2(0f, scrollH), false))
         {
-            if (!scroll.Success) return;
+            if (!scroll.Success)
+            {
+                return;
+            }
 
             DrawSectionHeading(Loc.T("onboarding.disclaimer_general_heading"), t);
             ImGui.TextWrapped(Loc.T("onboarding.disclaimer_general_body"));
@@ -60,6 +63,14 @@ public partial class OnboardingScreen
             ImGui.TextWrapped(Loc.T("onboarding.disclaimer_nsfw_body2"));
             ImGui.Spacing();
 
+            DrawSectionHeading(Loc.T("onboarding.disclaimer_nsfl_heading"), t);
+            ImGui.TextWrapped(Loc.T("onboarding.disclaimer_nsfl_body"));
+            ImGui.Spacing();
+            ImGui.PushStyleColor(ImGuiCol.Text, red);
+            ImGui.TextWrapped(Loc.T("onboarding.disclaimer_nsfl_zero_tolerance"));
+            ImGui.PopStyleColor();
+            ImGui.Spacing();
+
             DrawSectionHeading(Loc.T("onboarding.disclaimer_ai_heading"), t);
             ImGui.TextWrapped(Loc.T("onboarding.disclaimer_ai_body"));
             ImGui.Spacing();
@@ -79,7 +90,9 @@ public partial class OnboardingScreen
         ImGui.SetCursorPosX((cx - BtnW) * 0.5f);
         PushThemeButton(t);
         if (ImGui.Button(Loc.T("onboarding.disclaimer_continue"), new Vector2(BtnW, Px(30f))))
+        {
             _imageDisclaimerAcknowledged = true;
+        }
         PopThemeButton();
     }
 }

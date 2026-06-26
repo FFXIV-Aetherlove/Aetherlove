@@ -7,22 +7,37 @@ internal static class SettingsDe
         // ===== Settings =====
         ["settings.title"] = "Einstellungen",
 
-        // Section labels
+        // Section labels + hub menu
+        ["settings.section_plugin_settings"] = "Plugin-Einstellungen",
         ["settings.section_appearance"] = "Darstellung",
         ["settings.section_phone_size"] = "Telefongröße",
         ["settings.section_plugin_language"] = "Plugin-Sprache",
         ["settings.section_privacy"] = "Privatsphäre",
-        ["settings.section_general"] = "Allgemein",
+        ["settings.section_general"] = "Allgemeine Einstellungen",
         ["settings.section_notifications"] = "Benachrichtigungen",
         ["settings.section_moderation"] = "Moderation",
         ["settings.section_other"] = "Sonstiges",
         ["settings.section_danger_zone"] = "Gefahrenzone",
+        ["settings.menu_language_theme"] = "Sprache & Design",
+        ["settings.menu_appearance"] = "Telefon-Darstellung",
+        ["settings.menu_chat_colors"] = "Chat-Darstellung",
+        ["settings.section_theme"] = "Design",
+        ["settings.back_arrow"] = "← Zurück",
+        ["settings.chat_own_bg"] = "Eigener Chat-Hintergrund",
+        ["settings.chat_own_fg"] = "Eigener Chat-Text",
+        ["settings.chat_peer_bg"] = "Chat-Hintergrund des Partners",
+        ["settings.chat_peer_fg"] = "Chat-Text des Partners",
+        ["settings.chat_reset"] = "Zurücksetzen",
 
         // Phone size picker (AppearancePicker)
         ["settings.phone_size_small"] = "Klein",
         ["settings.phone_size_medium"] = "Mittel",
         ["settings.phone_size_large"] = "Groß",
-        ["settings.phone_size_caption"] = "Skaliert das gesamte Telefon. Größere Größen eignen sich für höher auflösende Bildschirme; Groß passt möglicherweise nicht auf ein 1080p-Display.",
+        ["settings.phone_size_xl"] = "XL",
+        ["settings.phone_size_xxl"] = "XXL",
+        ["settings.phone_size_caption"] = "Skaliert das gesamte Telefon. Größere Größen eignen sich für höher auflösende Bildschirme; XL und XXL sind für 4K ausgelegt und passen möglicherweise nicht auf kleinere Displays.",
+        ["settings.section_mini_phone_size"] = "Größe des Mini-Telefons",
+        ["settings.mini_phone_size_caption"] = "Größe der minimierten Blase (wird angezeigt, wenn das Telefon minimiert ist). Die Vorschau unten zeigt die gewählte Größe.",
 
         // General
         ["settings.disable_startup_heartbeat"] = "Herzschlag-Sound beim Start deaktivieren",
@@ -83,7 +98,7 @@ internal static class SettingsDe
         // Warnings
         ["settings.warnings_button_unseen"] = "Verwarnungen ({0} ungesehen / {1})",
         ["settings.warnings_button"] = "Verwarnungen ({0})",
-        ["settings.warnings_title"] = "Verwarnungen",
+        ["settings.warnings_title"] = "Kontoverwarnungen",
         ["settings.no_warnings"] = "Keine Verwarnungen vorhanden.",
 
         // Moderator messages

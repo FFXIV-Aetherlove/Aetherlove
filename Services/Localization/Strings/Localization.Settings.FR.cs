@@ -7,20 +7,35 @@ internal static class SettingsFr
         // ===== Settings =====
         ["settings.title"] = "Paramètres",
 
+        ["settings.section_plugin_settings"] = "Paramètres du plugin",
         ["settings.section_appearance"] = "Apparence",
         ["settings.section_phone_size"] = "Taille du téléphone",
         ["settings.section_plugin_language"] = "Langue du plugin",
         ["settings.section_privacy"] = "Confidentialité",
-        ["settings.section_general"] = "Général",
+        ["settings.section_general"] = "Paramètres généraux",
         ["settings.section_notifications"] = "Notifications",
         ["settings.section_moderation"] = "Modération",
         ["settings.section_other"] = "Autre",
         ["settings.section_danger_zone"] = "Zone de danger",
+        ["settings.menu_language_theme"] = "Langue et thème",
+        ["settings.menu_appearance"] = "Apparence du téléphone",
+        ["settings.menu_chat_colors"] = "Apparence du chat",
+        ["settings.section_theme"] = "Thème",
+        ["settings.back_arrow"] = "← Retour",
+        ["settings.chat_own_bg"] = "Fond de vos messages",
+        ["settings.chat_own_fg"] = "Texte de vos messages",
+        ["settings.chat_peer_bg"] = "Fond des messages du contact",
+        ["settings.chat_peer_fg"] = "Texte des messages du contact",
+        ["settings.chat_reset"] = "Réinitialiser",
 
         ["settings.phone_size_small"] = "Petite",
         ["settings.phone_size_medium"] = "Moyenne",
         ["settings.phone_size_large"] = "Grande",
-        ["settings.phone_size_caption"] = "Met à l'échelle l'ensemble du téléphone. Les grandes tailles conviennent aux écrans haute résolution ; la taille Grande peut ne pas tenir sur un écran 1080p.",
+        ["settings.phone_size_xl"] = "XL",
+        ["settings.phone_size_xxl"] = "XXL",
+        ["settings.phone_size_caption"] = "Met à l'échelle l'ensemble du téléphone. Les grandes tailles conviennent aux écrans haute résolution ; XL et XXL sont prévus pour la 4K et peuvent ne pas tenir sur des écrans plus petits.",
+        ["settings.section_mini_phone_size"] = "Taille du téléphone miniature",
+        ["settings.mini_phone_size_caption"] = "Taille de la bulle réduite (affichée lorsque le téléphone est réduit). L'aperçu ci-dessous montre la taille sélectionnée.",
 
         ["settings.disable_startup_heartbeat"] = "Désactiver le son de battement de cœur au démarrage",
         ["settings.confirm_before_close"] = "Confirmer avant de fermer AetherLove",
@@ -74,7 +89,7 @@ internal static class SettingsFr
 
         ["settings.warnings_button_unseen"] = "Avertissements ({0} non lus / {1})",
         ["settings.warnings_button"] = "Avertissements ({0})",
-        ["settings.warnings_title"] = "Avertissements",
+        ["settings.warnings_title"] = "Avertissements du compte",
         ["settings.no_warnings"] = "Aucun avertissement enregistré.",
 
         // Moderator messages

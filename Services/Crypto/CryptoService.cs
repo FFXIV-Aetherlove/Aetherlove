@@ -149,6 +149,24 @@ public sealed class CryptoService
         return salt;
     }
 
+    private static readonly byte[] VerificationDomain =
+        Encoding.UTF8.GetBytes("AetherLove-verify-v1");
+
+    /// <summary>Full 32-byte domain-separated fingerprint of a conversation's two public keys, ordered by raw bytes so both peers compute an identical value. Drives the verification weave image and safety code.</summary>
+    public static byte[] VerificationFingerprint(byte[] publicKeyA, byte[] publicKeyB)
+    {
+        var aFirst = CompareBytes(publicKeyA, publicKeyB) <= 0;
+        var first = aFirst ? publicKeyA : publicKeyB;
+        var second = aFirst ? publicKeyB : publicKeyA;
+
+        var buf = new byte[VerificationDomain.Length + first.Length + second.Length];
+        Buffer.BlockCopy(VerificationDomain, 0, buf, 0, VerificationDomain.Length);
+        Buffer.BlockCopy(first, 0, buf, VerificationDomain.Length, first.Length);
+        Buffer.BlockCopy(second, 0, buf, VerificationDomain.Length + first.Length, second.Length);
+
+        return SHA256.HashData(buf);
+    }
+
     private static int CompareBytes(byte[] a, byte[] b)
     {
         var n = Math.Min(a.Length, b.Length);

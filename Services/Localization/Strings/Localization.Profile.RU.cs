@@ -66,6 +66,17 @@ internal static class ProfileRu
         ["profile.tab_edit"] = "Настроить",
         ["profile.tab_images"] = "Фото",
 
+        // MyProfileScreen hub: stats + menu
+        ["profile.section_myprofile"] = "Мой профиль",
+        ["profile.section_service"] = "Сервис",
+        ["profile.menu_view"] = "Мой профиль",
+        ["profile.menu_edit"] = "Изменить профиль",
+        ["profile.menu_images"] = "Фото профиля",
+        ["profile.stat_loves_you"] = "любят вас",
+        ["profile.stat_matches"] = "Пары",
+        ["profile.stat_match_rate"] = "Доля пар",
+        ["profile.back_to_my"] = "← Назад",
+
         ["profile.load_profile_failed"] = "Не удалось загрузить ваш профиль: {0}",
         ["profile.retry"] = "Повторить",
         ["profile.save_failed"] = "Не удалось сохранить: {0}",
@@ -73,7 +84,6 @@ internal static class ProfileRu
         ["profile.saved"] = "Сохранено  ✓",
         ["profile.save_changes"] = "Сохранить изменения",
 
-        ["profile.heading_identity"] = "Личность",
         ["profile.heading_character"] = "Персонаж",
         ["profile.heading_location"] = "Местоположение",
         ["profile.heading_languages"] = "Языки, на которых я говорю",

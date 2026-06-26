@@ -104,7 +104,7 @@ public sealed class MiniWindow : Window, IDisposable
     public override void PreDraw()
     {
         // Pin out Dalamud's global font scale so the mini phone stays its fixed size (see MainPluginWindow).
-        Size = Px(85f, 153f);
+        Size = MiniScale.Px(85f, 153f);
         var io = ImGui.GetIO();
         _savedFontGlobalScale = io.FontGlobalScale;
         io.FontGlobalScale = 1f;
@@ -131,10 +131,10 @@ public sealed class MiniWindow : Window, IDisposable
 
         _shell.DrawBackground(pos, size);
 
-        var LogoSize = Px(64f);
-        var LogoTopMargin = Px(18f);
-        var IconAreaH = Px(28f);
-        var IconBottomMargin = Px(28f);
+        var LogoSize = MiniScale.Px(64f);
+        var LogoTopMargin = MiniScale.Px(18f);
+        var IconAreaH = MiniScale.Px(28f);
+        var IconBottomMargin = MiniScale.Px(28f);
 
         EnsureLogo();
         var logoTL = pos + new Vector2((size.X - LogoSize) * 0.5f, LogoTopMargin);
@@ -154,21 +154,25 @@ public sealed class MiniWindow : Window, IDisposable
             ImGui.SetTooltip("Open AetherLove");
         }
 
-        var DotR = Px(9f);
-        var dotCenter = pos + new Vector2(size.X - DotR - Px(3f), DotR + Px(3f));
+        var DotR = MiniScale.Px(9f);
+        var dotCenter = pos + new Vector2(size.X - DotR - MiniScale.Px(3f), DotR + MiniScale.Px(3f));
+        // Draw the badge label at an explicit mini-scaled size, not the main-phone-scaled body font.
+        var badgeFont = ImGui.GetFont();
+        var badgePx = MiniScale.Px(13f);
+        var badgeScale = badgePx / ImGui.GetFontSize();
         if (_notifications.HasPendingWarning)
         {
             dl.AddCircleFilled(dotCenter, DotR, ImGui.ColorConvertFloat4ToU32(UiColors.Amber));
-            var warnSz = ImGui.CalcTextSize("!");
-            dl.AddText(dotCenter - warnSz * 0.5f, 0xFF111111u, "!");
+            var warnSz = ImGui.CalcTextSize("!") * badgeScale;
+            dl.AddText(badgeFont, badgePx, dotCenter - warnSz * 0.5f, 0xFF111111u, "!");
         }
         else if (_notifications.TotalBadge > 0)
         {
             var badgeCount = _notifications.TotalBadge;
             dl.AddCircleFilled(dotCenter, DotR, UiColors.UnreadBadge);
             var badgeLabel = badgeCount > 9 ? "9+" : badgeCount.ToString();
-            var badgeSz = ImGui.CalcTextSize(badgeLabel);
-            dl.AddText(dotCenter - badgeSz * 0.5f, 0xFFFFFFFF, badgeLabel);
+            var badgeSz = ImGui.CalcTextSize(badgeLabel) * badgeScale;
+            dl.AddText(badgeFont, badgePx, dotCenter - badgeSz * 0.5f, 0xFFFFFFFF, badgeLabel);
         }
 
         var iconBoxTL = pos + new Vector2(0f, size.Y - IconAreaH - IconBottomMargin);
@@ -187,7 +191,7 @@ public sealed class MiniWindow : Window, IDisposable
         ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
         var iconStr = FontAwesomeIcon.PowerOff.ToIconString();
         var iconBaseSize = ImGui.GetFontSize();
-        var iconRenderSz = iconBaseSize * 1.4f;
+        var iconRenderSz = iconBaseSize * 1.4f * MiniScale.S;
         var iconGlyphSz = ImGui.CalcTextSize(iconStr) * (iconRenderSz / iconBaseSize);
         var iconGlyphPos = iconBoxTL + (iconBoxSize - iconGlyphSz) * 0.5f;
         dl.AddText(ImGui.GetFont(), iconRenderSz, iconGlyphPos, iconCol, iconStr);
