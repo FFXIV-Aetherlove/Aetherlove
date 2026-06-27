@@ -38,6 +38,7 @@ public sealed class SessionBootstrapper
     private readonly Configuration _config;
     private readonly NotificationCenter _notifications;
     private readonly Crypto.KeyStorageService _keys;
+    private readonly ScreenRouter _router;
 
     private readonly object _gate = new();
     private Task<SessionBootstrapResult>? _inflight;
@@ -53,7 +54,8 @@ public sealed class SessionBootstrapper
         AetherLoveHubClient hub,
         Configuration config,
         NotificationCenter notifications,
-        Crypto.KeyStorageService keys)
+        Crypto.KeyStorageService keys,
+        ScreenRouter router)
     {
         _log = log;
         _tokens = tokens;
@@ -62,6 +64,7 @@ public sealed class SessionBootstrapper
         _config = config;
         _notifications = notifications;
         _keys = keys;
+        _router = router;
     }
 
     public SessionBootstrapResult LastResult => _lastResult;
@@ -88,7 +91,9 @@ public sealed class SessionBootstrapper
 
     /// <summary>Re-fetches the connection snapshot (warnings, new-match count, lifecycle/ban state) after a
     /// (re)connect, back-filling a snapshot the startup bootstrap missed on a flaky link. Best-effort: a
-    /// failed fetch leaves the previous snapshot in place. Refreshes the cache only — it does not re-route.</summary>
+    /// failed fetch leaves the previous snapshot in place. If the server rejects the client's API version (it
+    /// bumped while the client was connected), this drops the connection and routes to the terminal update
+    /// screen, so a reconnected old client is evicted instead of lingering unprompted.</summary>
     public async Task RefreshConnectionInfoAsync(CancellationToken ct = default)
     {
         try
@@ -96,6 +101,13 @@ public sealed class SessionBootstrapper
             var status = await _hub.GetConnectionInfoAsync(ct).ConfigureAwait(false);
             _lastConnection = status;
             _notifications.NewMatches = status.NewMatchCount;
+        }
+        catch (OutdatedClientException)
+        {
+            _log.Warning("[SessionBootstrapper] Server rejected plugin API version on refresh; client is outdated.");
+            await _signal.DisconnectAsync().ConfigureAwait(false);
+            Settle(SessionBootstrapResult.OutdatedClient, null);
+            _router.Navigate(Screen.Outdated);
         }
         catch (Exception ex)
         {
