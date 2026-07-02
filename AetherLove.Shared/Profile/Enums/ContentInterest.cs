@@ -24,4 +24,8 @@ public enum ContentInterest : int
     RoleplayingVenues = 32768,
     TripleTriad = 65536,
     StoryAndLore = 131072,
+    UltimateRaiding = 262144,
+    FieldOperations = 524288,
+    DeepDungeons = 1048576,
+    VariantCriterionDungeons = 2097152,
 }

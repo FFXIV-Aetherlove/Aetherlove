@@ -33,5 +33,9 @@ internal static class HubErrorsDe
         ["huberror.report_target_gone"] = "Dieses Profil existiert nicht mehr.",
         ["huberror.report_duplicate"] = "Du hast diesen Nutzer kürzlich bereits gemeldet. Unser Team prüft den Fall.",
         ["huberror.feedback_required"] = "Bitte gib vor dem Senden eine Nachricht ein.",
+        // added after update (1.3.1)
+        ["huberror.reswipe_nothing_to_undo"] = "Es gibt nichts rückgängig zu machen.",
+        ["huberror.reswipe_already_matched"] = "Bei einem Match kannst du nicht rückgängig machen.",
+        ["huberror.reswipe_quota_exhausted"] = "Du hast dein Rückgängig für heute bereits genutzt.",
     };
 }

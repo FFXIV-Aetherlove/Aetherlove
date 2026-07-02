@@ -18,7 +18,6 @@ internal static class ProfileRu
         ["profile.favourite_job"] = "Любимая профессия",
         ["profile.favourite_location"] = "Любимое место",
         ["profile.favourite_expansion"] = "Любимое дополнение",
-        ["profile.favourite_spotify_song"] = "Любимая песня в Spotify",
         ["profile.favourite_song"] = "Любимая песня",
         ["music.fetching"] = "Получение названия песни…",
         ["music.saved"] = "Ссылка сохранена (название ожидается)",
@@ -28,15 +27,10 @@ internal static class ProfileRu
         ["profile.favourite_anime"] = "Любимое аниме",
         ["profile.favourite_ff_character"] = "Любимый персонаж FF",
         ["profile.sync_tool"] = "Плагин для синхронизации",
-        ["profile.uses_sync_tool"] = "Пользуется плагином",
-        ["profile.preferred"] = "Предпочтительно",
-        ["profile.yes"] = "Да",
-        ["profile.no"] = "Нет",
         ["profile.weekday_playtimes"] = "Время игры в будни  (Пн–Пт)",
         ["profile.weekend_playtimes"] = "Время игры в выходные  (Сб–Вс)",
         ["profile.timezone_value"] = "{0} (текущее время: {1})",
 
-        ["profile.spotify_open_tooltip"] = "Нажмите, чтобы открыть в Spotify",
         ["profile.nsfw_reveal"] = "Нажмите, чтобы показать NSFW-изображение",
 
         ["profile.back_to_chat"] = "Назад в чат",
@@ -62,10 +56,6 @@ internal static class ProfileRu
         ["profile.copy_warning_body"] = "Вы скопировали чужой текст. Будьте осторожны, переходя по любым содержащимся в нём ссылкам, — вы делаете это на свой страх и риск.",
         ["profile.copy_warning_agree"] = "Я понимаю и соглашаюсь",
 
-        ["profile.tab_view"] = "Профиль",
-        ["profile.tab_edit"] = "Настроить",
-        ["profile.tab_images"] = "Фото",
-
         // MyProfileScreen hub: stats + menu
         ["profile.section_myprofile"] = "Мой профиль",
         ["profile.section_service"] = "Сервис",
@@ -79,7 +69,6 @@ internal static class ProfileRu
 
         ["profile.load_profile_failed"] = "Не удалось загрузить ваш профиль: {0}",
         ["profile.retry"] = "Повторить",
-        ["profile.save_failed"] = "Не удалось сохранить: {0}",
         ["profile.saving"] = "Сохранение…",
         ["profile.saved"] = "Сохранено  ✓",
         ["profile.save_changes"] = "Сохранить изменения",
@@ -97,7 +86,6 @@ internal static class ProfileRu
         ["profile.heading_match_prefs"] = "Предпочтения для пар",
 
         ["profile.display_name"] = "Отображаемое имя",
-        ["profile.display_name_hint"] = "Имя или псевдоним, без пробелов.",
         ["profile.about_me"] = "Обо мне",
         ["profile.char_count"] = "{0} / 500 символов",
         ["profile.preview"] = "Предпросмотр",
@@ -111,9 +99,6 @@ internal static class ProfileRu
         ["profile.nsfw_explainer"] = "NSFW означает «Not Safe For Work»: контент, содержащий наготу или сексуальный подтекст. Включите, чтобы видеть NSFW-профили и находить пары с ними.",
         ["profile.nsfw_optin"] = "NSFW-профили: ДА",
         ["profile.favourite_job_tooltip"] = "Профессия или роль, которая вам нравится больше всего. Введите, чтобы отфильтровать.",
-        ["profile.favourite_spotify"] = "Любимая песня в Spotify",
-        ["profile.spotify_tooltip"] = "Вставьте URL трека Spotify или ID трека.",
-        ["profile.track_id"] = "ID трека: {0}",
         ["profile.favourite_ff_character_full"] = "Любимый персонаж Final Fantasy",
         ["profile.weekday_playtimes_edit"] = "Время игры в будни (Пн–Пт)",
         ["profile.weekend_playtimes_edit"] = "Время игры в выходные (Сб–Вс)",

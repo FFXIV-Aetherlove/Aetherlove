@@ -6,7 +6,6 @@ internal static class CommonEn
     {
         // Generic
         ["common.ok"] = "OK",
-        ["common.confirm"] = "Confirm",
         ["common.cancel"] = "Cancel",
         ["common.loading"] = "Loading…",
         ["common.try_again"] = "Try Again",
@@ -30,7 +29,6 @@ internal static class CommonEn
         ["common.offline_title"] = "AetherLove is offline",
         ["common.offline_body"] = "The server is most likely offline due to updates or maintenance. This shouldn't take more than 2 minutes!",
         ["common.offline_reconnecting"] = "Reconnecting…",
-        ["common.offline_keep_trying"] = "We'll keep trying automatically.",
         ["common.offline_taking_long"] = "This is taking longer than usual. Join our Discord for the latest status.",
         ["common.offline_join_discord"] = "Join the Discord",
 
@@ -138,5 +136,8 @@ internal static class CommonEn
         ["common.sfw_gate_b6"] = "Sexual gestures, poses, or visual references that imply or simulate sexual acts, including oral sex, masturbation, or other sexual activity.",
         ["common.sfw_gate_secondary"] = "You can still upload NSFW material in your secondary profile images.",
         ["common.sfw_gate_ack"] = "I understand the rules for SFW",
+
+        // added after update (1.3.1)
+        ["common.sfw_gate_race_gender"] = "Please make sure your main upload shows your character's race and gender exactly as set in your profile.",
     };
 }

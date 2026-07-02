@@ -4,7 +4,7 @@ internal static class ProfileDe
 {
     public static readonly System.Collections.Generic.Dictionary<string, string> Strings = new()
     {
-        // ===== Profile =====
+        // Profile
         // ProfileScreen — load / empty states
         ["profile.load_failed"] = "Profil konnte nicht geladen werden: {0}",
         ["profile.none_loaded"] = "Kein Profil geladen.",
@@ -21,7 +21,6 @@ internal static class ProfileDe
         ["profile.favourite_job"] = "Lieblingsjob",
         ["profile.favourite_location"] = "Lieblingsort",
         ["profile.favourite_expansion"] = "Lieblingserweiterung",
-        ["profile.favourite_spotify_song"] = "Spotify-Lieblingslied",
         ["profile.favourite_song"] = "Lieblingslied",
         ["music.fetching"] = "Songname wird abgerufen…",
         ["music.saved"] = "Link gespeichert (Name ausstehend)",
@@ -31,16 +30,11 @@ internal static class ProfileDe
         ["profile.favourite_anime"] = "Lieblings-Anime",
         ["profile.favourite_ff_character"] = "Lieblings-FF-Charakter",
         ["profile.sync_tool"] = "Sync-Tool",
-        ["profile.uses_sync_tool"] = "Nutzt Sync-Tool",
-        ["profile.preferred"] = "Bevorzugt",
-        ["profile.yes"] = "Ja",
-        ["profile.no"] = "Nein",
         ["profile.weekday_playtimes"] = "Spielzeiten unter der Woche  (Mo–Fr)",
         ["profile.weekend_playtimes"] = "Spielzeiten am Wochenende  (Sa–So)",
         ["profile.timezone_value"] = "{0} (aktuelle Zeit: {1})",
 
         // ProfileScreen — Spotify / NSFW pill
-        ["profile.spotify_open_tooltip"] = "Klicken, um in Spotify zu öffnen",
         ["profile.nsfw_reveal"] = "Klicken, um NSFW-Bild anzuzeigen",
 
         // ProfileScreen — back pill
@@ -68,11 +62,6 @@ internal static class ProfileDe
         ["profile.copy_warning_body"] = "Du hast den Text einer anderen Person kopiert. Sei vorsichtig, wenn du darin enthaltene Links anklickst oder ihnen folgst — das geschieht auf eigene Gefahr.",
         ["profile.copy_warning_agree"] = "Ich habe verstanden und stimme zu",
 
-        // MyProfileScreen — tabs
-        ["profile.tab_view"] = "Profil ansehen",
-        ["profile.tab_edit"] = "Profil bearbeiten",
-        ["profile.tab_images"] = "Bilder ändern",
-
         // MyProfileScreen hub: stats + menu
         ["profile.section_myprofile"] = "Mein Profil",
         ["profile.section_service"] = "Service",
@@ -87,7 +76,6 @@ internal static class ProfileDe
         // MyProfileScreen — edit tab load / save
         ["profile.load_profile_failed"] = "Dein Profil konnte nicht geladen werden: {0}",
         ["profile.retry"] = "Erneut versuchen",
-        ["profile.save_failed"] = "Speichern fehlgeschlagen: {0}",
         ["profile.saving"] = "Wird gespeichert…",
         ["profile.saved"] = "Gespeichert  ✓",
         ["profile.save_changes"] = "Änderungen speichern",
@@ -107,7 +95,6 @@ internal static class ProfileDe
 
         // MyProfileScreen — edit form labels / hints
         ["profile.display_name"] = "Anzeigename",
-        ["profile.display_name_hint"] = "Vorname oder Alias, keine Leerzeichen.",
         ["profile.about_me"] = "Über mich",
         ["profile.char_count"] = "{0} / 500 Zeichen",
         ["profile.preview"] = "Vorschau",
@@ -121,9 +108,6 @@ internal static class ProfileDe
         ["profile.nsfw_explainer"] = "NSFW steht für \"Not Safe For Work\": Inhalte mit Nacktheit oder sexuellen Themen. Aktiviere dies, um NSFW-Profile zu sehen und mit ihnen gematcht zu werden.",
         ["profile.nsfw_optin"] = "NSFW-Profile: JA",
         ["profile.favourite_job_tooltip"] = "Der Job oder die Rolle, die dir am meisten Spaß macht. Tippe zum Filtern.",
-        ["profile.favourite_spotify"] = "Spotify-Lieblingslied",
-        ["profile.spotify_tooltip"] = "Füge eine Spotify-Track-URL oder Track-ID ein.",
-        ["profile.track_id"] = "Track-ID: {0}",
         ["profile.favourite_ff_character_full"] = "Lieblings-Final-Fantasy-Charakter",
         ["profile.weekday_playtimes_edit"] = "Spielzeiten unter der Woche (Mo–Fr)",
         ["profile.weekend_playtimes_edit"] = "Spielzeiten am Wochenende (Sa–So)",

@@ -4,16 +4,11 @@ internal static class SettingsEs
 {
     public static readonly System.Collections.Generic.Dictionary<string, string> Strings = new()
     {
-        ["settings.title"] = "Ajustes",
-
         ["settings.section_plugin_settings"] = "Ajustes del plugin",
-        ["settings.section_appearance"] = "Apariencia",
         ["settings.section_phone_size"] = "Tamaño del teléfono",
         ["settings.section_plugin_language"] = "Idioma del plugin",
-        ["settings.section_privacy"] = "Privacidad",
         ["settings.section_general"] = "Ajustes generales",
         ["settings.section_notifications"] = "Notificaciones",
-        ["settings.section_moderation"] = "Moderación",
         ["settings.section_other"] = "Otros",
         ["settings.section_danger_zone"] = "Zona de peligro",
         ["settings.menu_language_theme"] = "Idioma y tema",
@@ -86,14 +81,10 @@ internal static class SettingsEs
         ["settings.deleted_title"] = "Cuenta eliminada",
         ["settings.deleted_body"] = "Tu cuenta se ha eliminado, tus datos y fotos se han borrado, y se han deshecho tus coincidencias. Ahora puedes desinstalar el plugin, o completar el registro y crear un perfil nuevo.",
 
-        ["settings.warnings_button_unseen"] = "Advertencias ({0} sin ver / {1})",
-        ["settings.warnings_button"] = "Advertencias ({0})",
         ["settings.warnings_title"] = "Advertencias de la cuenta",
         ["settings.no_warnings"] = "No hay advertencias registradas.",
 
         // Moderator messages
-        ["settings.modmsg_button_unseen"] = "Mensajes del moderador ({0} sin ver / {1})",
-        ["settings.modmsg_button"] = "Mensajes del moderador ({0})",
         ["settings.modmsg_title"] = "Mensajes del moderador",
         ["settings.no_modmsg"] = "No hay mensajes registrados.",
         ["settings.back_to_settings_arrow"] = "← Volver a los ajustes",
@@ -123,5 +114,9 @@ internal static class SettingsEs
         ["settings.contributors_punish"] = "Puni.sh",
         ["settings.contributors_dalamud"] = "The Dalamud project",
         ["settings.contributors_testers"] = "Todos los maravillosos beta testers de Eorzea.",
+
+        // added after update 1.4.0
+        ["settings.lock_position"] = "Bloquear posición",
+        ["settings.lock_position_caption"] = "Al bloquear la posición no podrás mover el teléfono (grande y mini); quedarán fijos en su sitio.",
     };
 }

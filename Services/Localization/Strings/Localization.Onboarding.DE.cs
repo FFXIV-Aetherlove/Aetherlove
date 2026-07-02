@@ -4,7 +4,7 @@ internal static class OnboardingDe
 {
     public static readonly System.Collections.Generic.Dictionary<string, string> Strings = new()
     {
-        // ===== Onboarding =====
+        // Onboarding
         // Header / navigation
         ["onboarding.header_welcome"] = "Willkommen!",
         ["onboarding.header_how_it_works"] = "So funktioniert's",
@@ -20,7 +20,6 @@ internal static class OnboardingDe
         ["onboarding.header_all_set"] = "Alles bereit!",
         ["onboarding.header_default"] = "AetherLove",
 
-        ["onboarding.save_failed"] = "Speichern fehlgeschlagen: {0}",
         ["onboarding.back"] = "← Zurück",
         ["onboarding.saving"] = "Wird gespeichert…",
         ["onboarding.start_swiping"] = "Los geht's →",
@@ -110,7 +109,6 @@ internal static class OnboardingDe
         ["onboarding.region_eu"] = "Europa (EU)",
         ["onboarding.region_oceania"] = "Ozeanien",
         ["onboarding.region_japan"] = "Japan",
-        ["onboarding.region_prefer_not_to_say"] = "Keine Angabe",
         ["onboarding.race_hyur"] = "Hyur",
         ["onboarding.race_elezen"] = "Elezen",
         ["onboarding.race_lalafell"] = "Lalafell",
@@ -241,7 +239,6 @@ internal static class OnboardingDe
 
         // Step 7 — Optional
         ["onboarding.expansion_none"] = "(Keine)",
-        ["onboarding.sync_none"] = "Ich nutze kein Sync-Tool",
         ["onboarding.opt_heading"] = "Erzähl uns mehr über dich",
         ["onboarding.opt_intro"] = "Alle Felder auf dieser Seite sind optional. Fülle so viel oder so wenig aus, wie du möchtest — diese Angaben erscheinen auf deiner Profilkarte und helfen anderen, dich zu finden.",
         ["onboarding.opt_fav_job"] = "Lieblingsjob",
@@ -306,5 +303,13 @@ internal static class OnboardingDe
         ["onboarding.prefs_intro"] = "Mach AetherLove zu deinem — wähle ein Farbschema und eine Telefongröße. Du kannst beides jederzeit in den Einstellungen ändern.",
         ["onboarding.prefs_theme"] = "Design",
         ["onboarding.prefs_phone_size"] = "Telefongröße",
+
+        // added after update (1.3.1)
+        ["onboarding.content_ultimate_raiding"] = "Fatale Raids",
+        ["onboarding.content_deep_dungeons"] = "Tiefe Gewölbe",
+        ["onboarding.content_variant_criterion"] = "Varianten-/Kriterium-Dungeons",
+        ["onboarding.content_field_operations"] = "Feldoperationen (Bozja, Eureka)",
+        ["onboarding.race_gender_warning"] = "Bitte wähle die Rasse und das Geschlecht deines FFXIV-Charakters, nicht dein Geschlecht im echten Leben!",
+        ["onboarding.tos_race_gender"] = "Ich stimme zu, bei der Einrichtung die richtige Rasse und das richtige Geschlecht für meinen Final-Fantasy-XIV-Charakter zu wählen, und mir ist bewusst, dass mein Hauptprofilbild diesen Charakter widerspiegeln muss.",
     };
 }

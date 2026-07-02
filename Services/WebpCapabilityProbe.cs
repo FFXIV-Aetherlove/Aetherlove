@@ -30,9 +30,6 @@ public sealed class WebpCapabilityProbe
         _log = log;
     }
 
-    /// <summary>This session's probe result, or null while it's still resolving.</summary>
-    public bool? SessionResult => _tcs.Task.IsCompletedSuccessfully ? _tcs.Task.Result : null;
-
     /// <summary>Drives the probe; call every frame from the draw thread. Starts the decode on the first call,
     /// then resolves once the texture loads (supported) or the timeout elapses with it still blank (unsupported).</summary>
     public void Tick(float deltaSeconds)

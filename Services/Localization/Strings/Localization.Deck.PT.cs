@@ -43,6 +43,14 @@ internal static class DeckPt
         ["deck.no_pool_heading"] = "Sem novos matches para você com base nas suas preferências",
         ["deck.no_pool_body"] = "Durante o beta, isto é esperado",
         ["deck.next_deck"] = "Próximo deck: {0}",
-        ["deck.no_pool_footer"] = "Tente novamente mais tarde! <3",
+        // added after update (1.3.1)
+        ["deck.reswipe_tooltip"] = "Desfazer seu último deslize",
+        ["deck.reswipe_cooldown"] = "Desfazer disponível em {0} h {1} min",
+        ["deck.reswipe_matched_title"] = "Já deu match!",
+        ["deck.reswipe_matched"] = "Você não pode desfazer em um perfil com quem já deu match.",
+        ["deck.decide_later_tooltip"] = "Decidir depois",
+        ["deck.decide_later_disabled"] = "Esta é a última carta do seu deck.",
+        ["deck.reswipe_intro_title"] = "Desfazer seu último deslize",
+        ["deck.reswipe_intro"] = "Isto desfaz seu último deslize e traz aquele perfil de volta ao topo. Você pode usar uma vez a cada 24 horas. Fechar este aviso não gasta seu desfazer, então toque no botão novamente quando quiser usá-lo.",
     };
 }

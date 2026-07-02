@@ -153,7 +153,7 @@ public partial class OnboardingScreen
                     3 => 1, // Europe
                     4 => 2, // Oceania
                     1 => 3, // Japan
-                    _ => 4, // Prefer not to say
+                    _ => 0, // default to North America when the region can't be detected
                 };
             }
         }
@@ -284,6 +284,9 @@ public partial class OnboardingScreen
         ImGui.Combo("##gender", ref _genderIdx, Genders, Genders.Length);
 
         ImGui.Spacing();
+        DrawWarningCard(Loc.T("onboarding.race_gender_warning"), ImGui.GetContentRegionAvail().X);
+
+        ImGui.Spacing();
         ImGui.Spacing();
 
         DrawSectionHeading(Loc.T("onboarding.profile_languages_speak"), t);
@@ -324,7 +327,6 @@ public partial class OnboardingScreen
         {
             if (lalafell && LookingForValues[i] == LookingFor.Erp)
             {
-                // Adult RP option is not available to Lalafell characters.
                 continue;
             }
 

@@ -11,6 +11,38 @@ public static class ChangelogRegistry
     private static readonly List<ChangelogEntry> _entries =
     [
         new(
+            Version: new Version(1, 4, 0),
+            ReleaseDate: new DateOnly(2026, 07, 02),
+            NewFeatures:
+            [
+                "Reswipe: accidentally swiped your future wife into the no pile? You can now undo your last swipe once every 24 hours!",
+                "Decide later: send the card you're on to the back of your deck so you can come back and decide on it later.",
+                "You can now quote messages, add emoji reactions, and pin messages in chat.",
+                "Chats load faster, and searching is now instantaneous!",
+                "Emoji reactions now surface your favorite and most-used reactions, just like Discord!",
+                "Two new emoji collections: Memes, and Pepe and Friends.",
+                "New content interests for matching: Ultimate, Field Operations, Deep Dungeon, and Variant/Criterion.",
+                "Retired the \"Prefer not to say\" region option, which was causing problems with matching.",
+                "New matches you haven't opened yet are highlighted with a subtle shine on the matches screen until you open them.",
+                "The matches list no longer rearranges when you open a conversation, reply, and go back; it is much more fluid now.",
+                "You can now lock the AetherLove phone in place from Settings, so it can't be moved by accident."
+            ],
+            BugFixes:
+            [
+                "Fixed an issue where Japanese characters could be cut off in the wrong places. AetherLove で素敵なご縁を！",
+                "When your new deck of profiles appears, the profile you're currently looking at can still be swiped, so it is never lost.",
+                "Improvements have been made to the notification system; let's hope this fixes some reported errors.",
+                "Fixed situations where deleting an account wouldn't properly work and left accounts in half-deleted states.",
+                "Optimized performance, queries, and indexes after you all decided to send hundreds of thousands of messages."
+            ],
+            Important:
+            [
+                "Time for a rather big update! We've listened to your feedback and added a bunch of new and fun things, plus performance improvements in several places. There is a lot to go over, so enjoy!",
+                "New Terms of Service rules on race and gender: you must select your main race and gender, and your first profile picture must reflect them as set on your profile. The relevant screens now emphasize this. Breaking this rule can lead to a warning, and repeat offenses to a ban. See the Terms of Service for details.",
+                "Thank you all for your continued support, your feedback, and your swipes. This update is for you!"
+            ]
+        ),
+        new(
             Version: new Version(1, 3, 0),
             ReleaseDate: new DateOnly(2026, 06, 26),
             NewFeatures:

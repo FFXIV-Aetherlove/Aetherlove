@@ -33,5 +33,9 @@ internal static class HubErrorsPt
         ["huberror.report_target_gone"] = "Este perfil não existe mais.",
         ["huberror.report_duplicate"] = "Já denuncias-te este usuário recentemente. Nossa equipa está analisando.",
         ["huberror.feedback_required"] = "Digita uma mensagem antes de enviar.",
+        // added after update (1.3.1)
+        ["huberror.reswipe_nothing_to_undo"] = "Não há nada para desfazer.",
+        ["huberror.reswipe_already_matched"] = "Você não pode desfazer em um perfil com quem já deu match.",
+        ["huberror.reswipe_quota_exhausted"] = "Você já usou seu desfazer de hoje.",
     };
 }

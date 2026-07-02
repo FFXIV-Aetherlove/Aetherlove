@@ -27,7 +27,7 @@ public partial class OnboardingScreen
 
         _raceIdx       = IndexOf(RaceValues, b.Race, fallback: 0);
         _genderIdx     = IndexOf(GenderValues, b.Gender, fallback: 0);
-        _regionIdx     = IndexOf(RegionValues, b.Region, fallback: RegionValues.Length - 1);
+        _regionIdx     = IndexOf(RegionValues, b.Region, fallback: 0);
         _expansionIdx  = IndexOf(ExpansionValues, b.FavoriteExpansion, fallback: 0);
         _jobComboIdx   = IndexOf(JobValues, b.FavoriteJob, fallback: 0);
 
@@ -65,7 +65,6 @@ public partial class OnboardingScreen
             (a, m) => ((short)a & (short)m) != 0, _filterRaces);
         MaskToBools(GenderValues, f.WantedGenderMask,
             (a, m) => ((short)a & (short)m) != 0, _filterGenders);
-        // _filterRegions excludes "Prefer not to say" (last entry).
         for (int i = 0; i < _filterRegions.Length; i++)
         {
             _filterRegions[i] = ((short)RegionValues[i] & (short)f.WantedRegionMask) != 0;

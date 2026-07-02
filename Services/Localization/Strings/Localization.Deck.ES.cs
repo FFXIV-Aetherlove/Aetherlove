@@ -43,5 +43,14 @@ internal static class DeckEs
         ["deck.no_pool_heading"] = "Sin más coincidencias",
         ["deck.no_pool_body"] = "No se encontraron más coincidencias para ti con tus criterios actuales. Amplía tus criterios e inténtalo de nuevo más tarde.",
         ["deck.next_deck"] = "Próximo mazo: {0}",
+        // added after update (1.3.1)
+        ["deck.reswipe_tooltip"] = "Deshacer tu último deslizamiento",
+        ["deck.reswipe_cooldown"] = "Podrás deshacer en {0} h {1} min",
+        ["deck.reswipe_matched_title"] = "¡Ya es un match!",
+        ["deck.reswipe_matched"] = "No puedes deshacer en un perfil con el que ya tienes match.",
+        ["deck.decide_later_tooltip"] = "Decidir luego",
+        ["deck.decide_later_disabled"] = "Esta es la última carta de tu mazo.",
+        ["deck.reswipe_intro_title"] = "Deshacer tu último deslizamiento",
+        ["deck.reswipe_intro"] = "Esto deshace tu último deslizamiento y devuelve ese perfil al principio. Puedes usarlo una vez cada 24 horas. Cerrar este aviso no gasta tu deshacer, así que toca el botón de nuevo cuando quieras usarlo.",
     };
 }

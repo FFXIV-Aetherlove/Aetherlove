@@ -4,17 +4,12 @@ internal static class SettingsEn
 {
     public static readonly System.Collections.Generic.Dictionary<string, string> Strings = new()
     {
-        ["settings.title"] = "Settings",
-
         // Section labels + hub menu
         ["settings.section_plugin_settings"] = "Plugin settings",
-        ["settings.section_appearance"] = "Appearance",
         ["settings.section_phone_size"] = "Phone size",
         ["settings.section_plugin_language"] = "Plugin language",
-        ["settings.section_privacy"] = "Privacy",
         ["settings.section_general"] = "General settings",
         ["settings.section_notifications"] = "Notifications",
-        ["settings.section_moderation"] = "Moderation",
         ["settings.section_other"] = "Other",
         ["settings.section_danger_zone"] = "Danger zone",
         ["settings.menu_language_theme"] = "Language & Theme",
@@ -95,14 +90,10 @@ internal static class SettingsEn
         ["settings.deleted_body"] = "Your account has been deleted, your data and pictures have been removed, and your matches have been unmatched. You can now remove the plugin, or onboard and create a new profile.",
 
         // Warnings
-        ["settings.warnings_button_unseen"] = "Warnings ({0} unseen / {1})",
-        ["settings.warnings_button"] = "Warnings ({0})",
         ["settings.warnings_title"] = "Account Warnings",
         ["settings.no_warnings"] = "No warnings on file.",
 
         // Moderator messages
-        ["settings.modmsg_button_unseen"] = "Moderator messages ({0} unseen / {1})",
-        ["settings.modmsg_button"] = "Moderator messages ({0})",
         ["settings.modmsg_title"] = "Moderator messages",
         ["settings.no_modmsg"] = "No messages on file.",
         ["settings.back_to_settings_arrow"] = "← Back to settings",
@@ -133,5 +124,9 @@ internal static class SettingsEn
         ["settings.contributors_punish"] = "Puni.sh",
         ["settings.contributors_dalamud"] = "The Dalamud project",
         ["settings.contributors_testers"] = "All the wonderful beta testers across Eorzea.",
+
+        // added after update 1.4.0
+        ["settings.lock_position"] = "Lock position",
+        ["settings.lock_position_caption"] = "By locking the position you will be unable to move the phone (large and mini), they will be stuck in place.",
     };
 }

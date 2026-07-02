@@ -18,7 +18,6 @@ internal static class OnboardingRu
         ["onboarding.header_all_set"] = "Всё готово!",
         ["onboarding.header_default"] = "AetherLove",
 
-        ["onboarding.save_failed"] = "Не удалось сохранить: {0}",
         ["onboarding.back"] = "← Назад",
         ["onboarding.saving"] = "Сохранение…",
         ["onboarding.start_swiping"] = "Начать листать →",
@@ -108,7 +107,6 @@ internal static class OnboardingRu
         ["onboarding.region_eu"] = "Европа (EU)",
         ["onboarding.region_oceania"] = "Океания",
         ["onboarding.region_japan"] = "Япония",
-        ["onboarding.region_prefer_not_to_say"] = "Предпочитаю не указывать",
         ["onboarding.race_hyur"] = "Хьюр (Hyur)",
         ["onboarding.race_elezen"] = "Элезен (Elezen)",
         ["onboarding.race_lalafell"] = "Лалафель (Lalafell)",
@@ -239,7 +237,6 @@ internal static class OnboardingRu
 
         // Step 7 — Optional
         ["onboarding.expansion_none"] = "(Нет)",
-        ["onboarding.sync_none"] = "Я не использую плагины для синхронизации",
         ["onboarding.opt_heading"] = "Расскажите о себе подробнее",
         ["onboarding.opt_intro"] = "Все поля на этой странице необязательны. Заполните столько, сколько пожелаете — эти сведения отображаются на вашей карточке профиля и помогают другим вас найти.",
         ["onboarding.opt_fav_job"] = "Любимая профессия",
@@ -304,5 +301,13 @@ internal static class OnboardingRu
         ["onboarding.prefs_intro"] = "Настройте AetherLove под себя — выберите цветовую тему и размер телефона. Оба параметра можно изменить в любой момент в настройках.",
         ["onboarding.prefs_theme"] = "Тема",
         ["onboarding.prefs_phone_size"] = "Размер телефона",
+
+        // added after update (1.3.1)
+        ["onboarding.content_ultimate_raiding"] = "Ультимейты",
+        ["onboarding.content_deep_dungeons"] = "Глубокие подземелья",
+        ["onboarding.content_variant_criterion"] = "Вариативные / критериальные подземелья",
+        ["onboarding.content_field_operations"] = "Полевые операции (Bozja, Eureka)",
+        ["onboarding.race_gender_warning"] = "Пожалуйста, выбирайте расу и пол вашего персонажа FFXIV, а не ваш пол в реальной жизни!",
+        ["onboarding.tos_race_gender"] = "Я соглашаюсь выбрать правильные расу и пол для моего персонажа Final Fantasy XIV при настройке профиля и понимаю, что моё основное фото профиля должно соответствовать этому персонажу.",
     };
 }

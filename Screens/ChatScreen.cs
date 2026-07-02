@@ -11,6 +11,7 @@ using AetherLove.Emoji.Segments;
 using AetherLove.Navigation;
 using AetherLove.Services;
 using AetherLove.Services.Crypto;
+using AetherLove.Services.Chat;
 using AetherLove.Services.Hub;
 using AetherLove.Services.Localization;
 using AetherLove.Shared.Messaging;
@@ -25,7 +26,7 @@ using Dalamud.Interface.Utility.Raii;
 namespace AetherLove.Screens;
 
 /// <summary>E2E-encrypted chat conversation.</summary>
-public class ChatScreen
+public partial class ChatScreen
 {
     private readonly ScreenRouter _router;
     private readonly ChatListScreen _chatListScreen;
@@ -35,6 +36,7 @@ public class ChatScreen
     private readonly CryptoService _crypto;
     private readonly KeyStorageService _keys;
     private readonly ChatEventBus _events;
+    private readonly ChatSyncService _sync;
 
     private sealed record DisplayedMessage(
         Guid Id,
@@ -70,7 +72,16 @@ public class ChatScreen
     private ISharedImmediateTexture? _headerAvatarTex;
     private volatile bool _loading;
     private volatile string? _loadError;
+    private double _loadStartedAt;
+    /// <summary>Only surface the "loading" hint once the async load has run this long, so an instant cache-backed
+    /// open never flashes a spinner.</summary>
+    private const double LoadIndicatorDelay = 0.25;
     private CancellationTokenSource _cts = new();
+
+    /// <summary>Reset to -1 on show; the whole chat page eases in over <see cref="OpenFadeDuration"/> from the
+    /// first drawn frame, so an instant cache-backed open fades in instead of snapping onto screen.</summary>
+    private double _openFadeAt = -1;
+    private const double OpenFadeDuration = 0.20;
 
     private float _scrollToBottom;
 
@@ -110,7 +121,8 @@ public class ChatScreen
         CryptoService crypto,
         KeyStorageService keys,
         ChatEventBus events,
-        NotificationCenter notifications)
+        NotificationCenter notifications,
+        ChatSyncService sync)
     {
         _router = router;
         _chatListScreen = chatListScreen;
@@ -121,6 +133,7 @@ public class ChatScreen
         _keys = keys;
         _events = events;
         _notifications = notifications;
+        _sync = sync;
     }
 
     public void OnShow()
@@ -129,6 +142,8 @@ public class ChatScreen
         _events.MessageRead += OnMessageRead;
         _events.Unmatched += OnUnmatched;
         _events.BlockedByPeer += OnBlockedByPeer;
+        _events.ReactionsChanged += OnReactionsChanged;
+        _events.PinChanged += OnPinChanged;
 
         _cts.Cancel();
         _cts.Dispose();
@@ -147,12 +162,19 @@ public class ChatScreen
         _peerPublicKey = null;
         _messageKey = null;
         _inputText = string.Empty;
+        ResetEnhancements();
         _scrollTargetMessageId = _chatListScreen.SelectedScrollMessageId;
         _scrollToMessageTimer = 0f;
         _flashTimer = 0f;
         _scrollToBottom = _scrollTargetMessageId == Guid.Empty ? 1f : 0f;
         _systemNoticeDismissed = false;
+        _openFadeAt = -1;
         _notifications.ActiveChatPeerId = _peerId;
+        // Opening a chat acknowledges the match: drop its "needs a first hello" highlight from the list.
+        if (_peerId != Guid.Empty && Plugin.Configuration.OpenedChats.Add(_peerId))
+        {
+            Plugin.Configuration.Save();
+        }
         LoadHeaderAvatar();
         StartLoadConversation();
     }
@@ -163,10 +185,13 @@ public class ChatScreen
         _events.MessageRead -= OnMessageRead;
         _events.Unmatched -= OnUnmatched;
         _events.BlockedByPeer -= OnBlockedByPeer;
+        _events.ReactionsChanged -= OnReactionsChanged;
+        _events.PinChanged -= OnPinChanged;
         if (_notifications.ActiveChatPeerId == _peerId)
         {
             _notifications.ActiveChatPeerId = Guid.Empty;
         }
+        SaveReactionUsageIfDirty();
         _cts.Cancel();
     }
 
@@ -190,21 +215,34 @@ public class ChatScreen
             _loading = false;
             return;
         }
+        // Instant render from the persisted ciphertext cache, then a cheap delta sync (no full history refetch).
+        HydrateConversationFromCache();
+
         _loading = true;
+        _loadStartedAt = ImGui.GetTime();
         _loadError = null;
         var ct = _cts.Token;
         _ = Task.Run(async () =>
         {
             try
             {
-                var dto = await _hub.GetConversationAsync(_peerId, ct).ConfigureAwait(false);
+                await _sync.SyncAsync(ct).ConfigureAwait(false);
                 if (ct.IsCancellationRequested)
                 {
                     return;
                 }
-                _peerPublicKey = dto.PeerPublicKey;
-                EnsureMessageKey();
-                DecryptAndAppend(dto.Messages);
+                if (!_sync.Cache.HasConversation(_peerId))
+                {
+                    // Not covered by the delta yet (e.g. a brand-new match): one-shot full fetch, then cache it.
+                    var dto = await _hub.GetConversationAsync(_peerId, ct).ConfigureAwait(false);
+                    if (ct.IsCancellationRequested)
+                    {
+                        return;
+                    }
+                    _peerPublicKey = dto.PeerPublicKey;
+                    _sync.Cache.SeedConversation(_peerId, dto.Messages);
+                }
+                HydrateConversationFromCache();
                 if (_scrollTargetMessageId != Guid.Empty)
                 {
                     _scrollToMessageTimer = 0.6f;
@@ -230,13 +268,35 @@ public class ChatScreen
                     return;
                 }
                 _loadError = HubErrorText.Localize(ex);
-                Plugin.Log.Warning(ex, "[ChatScreen] GetConversationAsync failed.");
+                Plugin.Log.Warning(ex, "[ChatScreen] conversation load failed.");
             }
             finally
             {
                 _loading = false;
             }
         }, ct);
+    }
+
+    /// <summary>Rebuilds the message list from the local ciphertext cache (decrypted in memory). Message-list and
+    /// entry-anim state are guarded by the message lock; enhancement reset + reseed are marshalled to the UI thread
+    /// via the action queue so they never race the draw.</summary>
+    private void HydrateConversationFromCache()
+    {
+        var pub = _sync.Cache.GetPeerPublicKey(_peerId) ?? _peerPublicKey;
+        if (pub is null)
+        {
+            return;
+        }
+        _peerPublicKey = pub;
+        EnsureMessageKey();
+        var msgs = _sync.Cache.GetConversation(_peerId);
+        lock (_messagesLock)
+        {
+            _messages.Clear();
+            _entryAnim.Clear();
+        }
+        _uiActions.Enqueue(ResetEnhancements);
+        DecryptAndAppend(msgs);
     }
 
     private void EnsureMessageKey()
@@ -272,6 +332,8 @@ public class ChatScreen
                 if (d is not null)
                 {
                     _messages.Add(d);
+                    var dto = m;
+                    _uiActions.Enqueue(() => SeedEnhancements(dto));
                 }
             }
         }
@@ -315,6 +377,10 @@ public class ChatScreen
             {
                 _messages.Add(new DisplayedMessage(p.MessageId, text, false, p.CreatedAtUtc, null));
                 _entryAnim[p.MessageId] = 0f;
+            }
+            if (p.ReplyToMessageId is { } replyId)
+            {
+                _uiActions.Enqueue(() => _replyTo[p.MessageId] = replyId);
             }
             _scrollToBottom = 1f;
             _ = _hub.MarkConversationReadAsync(_peerId, CancellationToken.None);
@@ -370,21 +436,66 @@ public class ChatScreen
             return;
         }
 
+        DrainUiActions();
+        DrainIdMigrations();
+
+        if (_pendingReactionPickerId is { } reactRid)
+        {
+            _pendingReactionPickerId = null;
+            _chatEmojiPicker.Open(name => ToggleMyReaction(reactRid, name));
+        }
+        if (_pinnedListPendingOpen)
+        {
+            _pinnedListPendingOpen = false;
+            ImGui.OpenPopup("##pinnedOverlay");
+        }
+
         if (_reportSubmittedTimer > 0f)
         {
             _reportSubmittedTimer -= ImGui.GetIO().DeltaTime;
         }
 
+        var contentTL = ImGui.GetCursorScreenPos();
+        var contentSize = ImGui.GetContentRegionAvail();
+
         DrawHeader();
         DrawReportSubmittedToast();
         DrawMessages();
         DrawInput();
+        DrawPinnedOverlay();
+
+        DrawOpenFade(contentTL, contentSize);
 
         if (_reportPendingOpen)
         {
             _reportPendingOpen = false;
             Widgets.ModalHost.Instance?.Open(310f, DrawReportBody);
         }
+    }
+
+    /// <summary>Eases the whole chat page in on open: covers the content with the window background and fades that
+    /// cover out over <see cref="OpenFadeDuration"/>, so an instant cache-backed open fades in rather than
+    /// flashing. Drawn last so it sits above the chat content; the bottom nav (drawn afterwards) stays crisp.
+    /// No-op under reduce-motion.</summary>
+    private void DrawOpenFade(Vector2 contentTL, Vector2 contentSize)
+    {
+        if (AccessibilityService.ReduceMotion)
+        {
+            return;
+        }
+        if (_openFadeAt < 0)
+        {
+            _openFadeAt = ImGui.GetTime();
+        }
+        var t = (ImGui.GetTime() - _openFadeAt) / OpenFadeDuration;
+        if (t >= 1.0)
+        {
+            return;
+        }
+        var a = (uint)(Math.Clamp(1.0 - t, 0.0, 1.0) * 255.0);
+        var bg = ImGui.GetColorU32(ImGuiCol.WindowBg) & 0x00FFFFFFu;
+        var col = bg | (a << 24);
+        ImGui.GetWindowDrawList().AddRectFilled(contentTL, contentTL + contentSize, col);
     }
 
     private void DrawReportSubmittedToast()
@@ -523,6 +634,12 @@ public class ChatScreen
                 ImGui.CloseCurrentPopup();
                 OpenVerify();
             }
+            if (DrawIconMenuItem(FontAwesomeIcon.Thumbtack, Loc.T("chat.pinned_messages_menu", _pinned.Count),
+                    enabled: _pinned.Count > 0))
+            {
+                ImGui.CloseCurrentPopup();
+                _pinnedListPendingOpen = true;
+            }
             var pinned = _chatListScreen.IsPinned(_peerId);
             if (DrawIconMenuItem(pinned ? FontAwesomeIcon.ThumbtackSlash : FontAwesomeIcon.Thumbtack,
                     pinned ? Loc.T("chat.menu_unpin") : Loc.T("chat.menu_pin")))
@@ -622,6 +739,7 @@ public class ChatScreen
 
         // Plaintext snapshot only included on explicit consent; chats are E2E encrypted otherwise.
         ConversationSnapshotEntry[]? snapshot = null;
+        byte[]? convKey = null;
         if (includeConvo)
         {
             lock (_messagesLock)
@@ -633,13 +751,18 @@ public class ChatScreen
                         SentAtUtc: m.SentAt.ToUniversalTime()))
                     .ToArray();
             }
+            // Disclose the per-conversation key so the server can produce a tamper-evident transcript by
+            // decrypting its own stored ciphertext (a forged key simply fails to decrypt). Used once, never stored.
+            EnsureMessageKey();
+            convKey = _messageKey;
         }
 
         var req = new ReportUserRequest(
             ReportedProfileId: peer,
             Reason: reason,
             IncludeConversation: includeConvo,
-            ConversationSnapshot: snapshot);
+            ConversationSnapshot: snapshot,
+            ConversationKey: convKey);
 
         _ = Task.Run(async () =>
         {
@@ -687,7 +810,9 @@ public class ChatScreen
                 DrawSystemNotice();
             }
 
-            if (_loading)
+            // Deferred + content-aware: only hint at loading when nothing is rendered yet and the fetch is
+            // actually taking a moment, so an instant cache-backed open never flashes the indicator.
+            if (_loading && messages.Length == 0 && ImGui.GetTime() - _loadStartedAt > LoadIndicatorDelay)
             {
                 ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.T("chat.loading_messages"));
             }
@@ -870,9 +995,19 @@ public class ChatScreen
         var innerH = MathF.Max(contentH, ImGui.GetTextLineHeight());
         var bubbleH = innerH + padding.Y * 2f;
 
-        var bubbleTL = new Vector2(bubbleLeft, cursorPos.Y + entryDy);
+        var quoteH = ReplyQuoteHeight(msg.Id);
+        if (quoteH > 0f)
+        {
+            DrawReplyQuote(msg.Id, bubbleLeft, cursorPos.Y + entryDy, maxBubW);
+        }
+
+        var bubbleTL = new Vector2(bubbleLeft, cursorPos.Y + entryDy + quoteH);
         var corners = BubbleCorners(msg.IsOwn, isGroupStart, isGroupEnd);
         drawList.AddRectFilled(bubbleTL, bubbleTL + new Vector2(maxBubW, bubbleH), bubbleColor, Px(10f), corners);
+        if (_pinned.Contains(msg.Id))
+        {
+            DrawPinMarker(bubbleTL, maxBubW, msg.Id, msg.IsOwn);
+        }
         if (msg.Id == _scrollTargetMessageId && _flashTimer > 0f)
         {
             // Border flash on a search jump (the bubble keeps its own colour): |sin| peaks FlashPulses times, each at full alpha.
@@ -900,15 +1035,13 @@ public class ChatScreen
         }
         ImGui.PopStyleVar();
 
-        if (ImGui.BeginPopupContextItem($"##msgCopyCtx{msg.Id}", ImGuiPopupFlags.MouseButtonRight))
+        if (ImGui.BeginPopupContextItem($"##msgCtx{msg.Id}", ImGuiPopupFlags.MouseButtonRight))
         {
-            if (DrawIconMenuItem(FontAwesomeIcon.Copy, Loc.T("chat.menu_copy_message")))
-            {
-                ImGui.CloseCurrentPopup();
-                CopyTextWithLinkWarning(msg.Text);
-            }
+            DrawMessageContextMenu(msg);
             ImGui.EndPopup();
         }
+
+        var reactionsH = DrawReactions(msg, bubbleLeft, bubbleTL.Y + bubbleH, maxBubW);
 
         if (isGroupEnd)
         {
@@ -918,14 +1051,14 @@ public class ChatScreen
             var timeStr = local.ToString("HH:mm") + seenSuffix;
             var timeSize = ImGui.CalcTextSize(timeStr);
             var timeX = msg.IsOwn ? bubbleTL.X + maxBubW - timeSize.X : bubbleTL.X;
-            ImGui.SetCursorScreenPos(new Vector2(timeX, cursorPos.Y + entryDy + bubbleH + Px(2f)));
+            ImGui.SetCursorScreenPos(new Vector2(timeX, bubbleTL.Y + bubbleH + reactionsH + Px(2f)));
             ImGui.TextColored(new Vector4(0.75f, 0.75f, 0.75f, 0.40f), timeStr);
-            ImGui.SetCursorScreenPos(cursorPos + new Vector2(0, bubbleH + timeSize.Y + Px(8f)));
+            ImGui.SetCursorScreenPos(cursorPos + new Vector2(0, quoteH + bubbleH + reactionsH + timeSize.Y + Px(8f)));
         }
         else
         {
             // Tight gap to the next bubble in the same group; no timestamp.
-            ImGui.SetCursorScreenPos(cursorPos + new Vector2(0, bubbleH + Px(2f)));
+            ImGui.SetCursorScreenPos(cursorPos + new Vector2(0, quoteH + bubbleH + reactionsH + Px(2f)));
         }
 
         if (fading)
@@ -984,6 +1117,7 @@ public class ChatScreen
         var rowH = isGroupEnd
             ? bubbleH + lineH + Px(8f)
             : bubbleH + Px(2f);
+        rowH += ReplyQuoteHeight(msg.Id) + ReactionsHeight(msg.Id);
         if (needsDivider)
         {
             rowH += lineH + Px(16f);
@@ -1038,7 +1172,15 @@ public class ChatScreen
 
     // Space reserved for the input bar: separator + spacing + the frame-height input row. Derived from
     // the live frame height so the row stays fully visible at every UI scale and font size.
-    private static float InputBarHeight() => ImGui.GetFrameHeight() + Px(14f);
+    private float InputBarHeight()
+    {
+        var h = ImGui.GetFrameHeight() + Px(14f);
+        if (_replyingToId is not null)
+        {
+            h += ImGui.GetTextLineHeight() + Px(12f);
+        }
+        return h;
+    }
 
     private void DrawInput()
     {
@@ -1051,6 +1193,8 @@ public class ChatScreen
         ImGui.SetCursorPosY(ImGui.GetWindowSize().Y - InputBarHeight());
         ImGui.Separator();
         ImGui.Spacing();
+
+        DrawReplyComposeBar();
 
         {
             var frameH = ImGui.GetFrameHeight();
@@ -1105,6 +1249,8 @@ public class ChatScreen
         var text = _inputText;
         _inputText = string.Empty;
         _scrollToBottom = 1f;
+        var replyTarget = _replyingToId;
+        _replyingToId = null;
 
         var key = _messageKey;
         var peer = _peerId;
@@ -1119,13 +1265,21 @@ public class ChatScreen
             _messages.Add(new DisplayedMessage(tempId, text, true, nowLocal, null));
             _entryAnim[tempId] = 0f;
         }
+        _unsentTempIds.Add(tempId);
+        if (replyTarget is { } rt)
+        {
+            _replyTo[tempId] = rt;
+        }
+        // Don't send a not-yet-acknowledged target id to the server (it wouldn't resolve for the peer); the
+        // local quote still shows for this user, and DrainIdMigrations rewrites the value once it lands.
+        var replyForServer = replyTarget is { } target && !_unsentTempIds.Contains(target) ? replyTarget : null;
 
         _ = Task.Run(async () =>
         {
             try
             {
                 var response = await _hub.SendMessageAsync(
-                    new SendMessageRequest(peer, ciphertext, nonce), CancellationToken.None)
+                    new SendMessageRequest(peer, ciphertext, nonce, replyForServer), CancellationToken.None)
                     .ConfigureAwait(false);
                 lock (_messagesLock)
                 {
@@ -1138,6 +1292,7 @@ public class ChatScreen
                             {
                                 _entryAnim[response.MessageId] = entryP;
                             }
+                            _pendingIdMigrations.Add((tempId, response.MessageId));
                             break;
                         }
                     }
@@ -1151,6 +1306,12 @@ public class ChatScreen
                     _messages.RemoveAll(m => m.Id == tempId);
                     _entryAnim.Remove(tempId);
                 }
+                _uiActions.Enqueue(() =>
+                {
+                    _unsentTempIds.Remove(tempId);
+                    _deferredByTempId.Remove(tempId);
+                    _replyTo.Remove(tempId);
+                });
             }
         });
     }
@@ -1255,7 +1416,7 @@ public class ChatScreen
     }
 
     internal static bool DrawIconMenuItem(FontAwesomeIcon icon, string label,
-                                         uint textColor = 0xFFEEEEEE)
+                                         uint textColor = 0xFFEEEEEE, bool enabled = true)
     {
         var dl = ImGui.GetWindowDrawList();
         var itemH = ImGui.GetFrameHeight();
@@ -1265,24 +1426,25 @@ public class ChatScreen
         const float IconOffX = 10f;
         const float IconAreaW = 20f;
         ImGui.InvisibleButton($"##mi_{label}", new Vector2(Px(ItemW), itemH));
-        var clicked = ImGui.IsItemClicked();
-        if (ImGui.IsItemHovered())
+        var clicked = enabled && ImGui.IsItemClicked();
+        if (enabled && ImGui.IsItemHovered())
         {
             dl.AddRectFilled(cursor, cursor + new Vector2(Px(ItemW), itemH), 0x30FFFFFF);
         }
+        var drawColor = enabled ? textColor : 0x66AAAAAAu;
         ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
         var iconStr = icon.ToIconString();
         var iconSz = ImGui.CalcTextSize(iconStr);
         dl.AddText(ImGui.GetFont(), fontSize,
             new Vector2(cursor.X + Px(IconOffX) + (Px(IconAreaW) - iconSz.X) * 0.5f,
                         cursor.Y + (itemH - iconSz.Y) * 0.5f),
-            textColor, iconStr);
+            drawColor, iconStr);
         ImGui.PopFont();
         var labelSz = ImGui.CalcTextSize(label);
         dl.AddText(
             new Vector2(cursor.X + Px(IconOffX) + Px(IconAreaW) + Px(8f),
                         cursor.Y + (itemH - labelSz.Y) * 0.5f),
-            textColor, label);
+            drawColor, label);
         return clicked;
     }
 

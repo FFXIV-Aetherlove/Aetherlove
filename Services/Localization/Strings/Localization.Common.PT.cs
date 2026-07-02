@@ -6,7 +6,6 @@ internal static class CommonPt
     {
         // Generic
         ["common.ok"] = "OK",
-        ["common.confirm"] = "Confirmar",
         ["common.cancel"] = "Cancelar",
         ["common.loading"] = "Carregando…",
         ["common.try_again"] = "Tentar Novamente",
@@ -30,7 +29,6 @@ internal static class CommonPt
         ["common.offline_title"] = "O AetherLove está offline",
         ["common.offline_body"] = "O servidor provavelmente está offline por causa de atualizações ou manutenção. Isso não deve demorar mais de 2 minutos!",
         ["common.offline_reconnecting"] = "Reconectando…",
-        ["common.offline_keep_trying"] = "Continuamos a tentar automaticamente.",
         ["common.offline_taking_long"] = "Isso está demorando mais do que o normal. Entre no nosso Discord para saber o status mais recente.",
         ["common.offline_join_discord"] = "Entrar no Discord",
 
@@ -138,5 +136,8 @@ internal static class CommonPt
         ["common.sfw_gate_b6"] = "Gestos, poses ou referências visuais sexuais que impliquem ou simulem atos sexuais, incluindo sexo oral, masturbação ou outra atividade sexual.",
         ["common.sfw_gate_secondary"] = "Podes na mesma carregar conteúdo NSFW nas tuas imagens de perfil secundárias.",
         ["common.sfw_gate_ack"] = "Compreendo as regras de SFW",
+
+        // added after update (1.3.1)
+        ["common.sfw_gate_race_gender"] = "Certifica-te de que a tua imagem principal mostra a raça e o género do teu personagem tal como definidos no teu perfil.",
     };
 }

@@ -4,17 +4,13 @@ internal static class SettingsFr
 {
     public static readonly System.Collections.Generic.Dictionary<string, string> Strings = new()
     {
-        // ===== Settings =====
-        ["settings.title"] = "Paramètres",
+        // Settings
 
         ["settings.section_plugin_settings"] = "Paramètres du plugin",
-        ["settings.section_appearance"] = "Apparence",
         ["settings.section_phone_size"] = "Taille du téléphone",
         ["settings.section_plugin_language"] = "Langue du plugin",
-        ["settings.section_privacy"] = "Confidentialité",
         ["settings.section_general"] = "Paramètres généraux",
         ["settings.section_notifications"] = "Notifications",
-        ["settings.section_moderation"] = "Modération",
         ["settings.section_other"] = "Autre",
         ["settings.section_danger_zone"] = "Zone de danger",
         ["settings.menu_language_theme"] = "Langue et thème",
@@ -87,14 +83,10 @@ internal static class SettingsFr
         ["settings.deleted_title"] = "Compte supprimé",
         ["settings.deleted_body"] = "Votre compte a été supprimé, vos données et vos photos ont été retirées, et vos correspondances ont été annulées. Vous pouvez maintenant supprimer le plugin, ou recommencer la configuration et créer un nouveau profil.",
 
-        ["settings.warnings_button_unseen"] = "Avertissements ({0} non lus / {1})",
-        ["settings.warnings_button"] = "Avertissements ({0})",
         ["settings.warnings_title"] = "Avertissements du compte",
         ["settings.no_warnings"] = "Aucun avertissement enregistré.",
 
         // Moderator messages
-        ["settings.modmsg_button_unseen"] = "Messages du modérateur ({0} non lus / {1})",
-        ["settings.modmsg_button"] = "Messages du modérateur ({0})",
         ["settings.modmsg_title"] = "Messages du modérateur",
         ["settings.no_modmsg"] = "Aucun message enregistré.",
         ["settings.back_to_settings_arrow"] = "← Retour aux paramètres",
@@ -124,5 +116,9 @@ internal static class SettingsFr
         ["settings.contributors_punish"] = "Puni.sh",
         ["settings.contributors_dalamud"] = "The Dalamud project",
         ["settings.contributors_testers"] = "Tous les merveilleux bêta-testeurs à travers Éorzéa.",
+
+        // added after update 1.4.0
+        ["settings.lock_position"] = "Verrouiller la position",
+        ["settings.lock_position_caption"] = "En verrouillant la position, vous ne pourrez plus déplacer le téléphone (grand et mini) ; ils resteront figés en place.",
     };
 }

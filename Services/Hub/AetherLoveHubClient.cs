@@ -123,6 +123,9 @@ public sealed class AetherLoveHubClient
     public async Task<SwipeResultDto> SwipeAsync(Guid targetProfileId, SwipeDirection direction, CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync<SwipeResultDto>("SwipeAsync", targetProfileId, direction, ct).ConfigureAwait(false);
 
+    public async Task<ReswipeResultDto> UndoLastSwipeAsync(CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<ReswipeResultDto>("UndoLastSwipeAsync", ct).ConfigureAwait(false);
+
     public async Task MarkMatchListSeenAsync(CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync("MarkMatchListSeenAsync", ct).ConfigureAwait(false);
 
@@ -147,6 +150,9 @@ public sealed class AetherLoveHubClient
     public async Task<MatchListDto> GetMyMatchesAsync(CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync<MatchListDto>("GetMyMatchesAsync", ct).ConfigureAwait(false);
 
+    public async Task<ChatDeltaDto> GetChatDeltaAsync(ChatDeltaRequest req, CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<ChatDeltaDto>("GetChatDeltaAsync", req, ct).ConfigureAwait(false);
+
     public async Task UnmatchAsync(Guid peerId, CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync("UnmatchAsync", peerId, ct).ConfigureAwait(false);
 
@@ -155,6 +161,16 @@ public sealed class AetherLoveHubClient
 
     public async Task SetMatchPinnedAsync(Guid peerId, bool pinned, CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync("SetMatchPinnedAsync", peerId, pinned, ct).ConfigureAwait(false);
+
+    public async Task<MessageReactionsChangedPushDto> ReactToMessageAsync(
+        ReactToMessageRequest req, CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<MessageReactionsChangedPushDto>("ReactToMessageAsync", req, ct)
+            .ConfigureAwait(false);
+
+    public async Task<MessagePinChangedPushDto> SetMessagePinnedAsync(
+        SetMessagePinnedRequest req, CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<MessagePinChangedPushDto>("SetMessagePinnedAsync", req, ct)
+            .ConfigureAwait(false);
 
     public async Task<ProfileDetailDto> GetProfileDetailAsync(Guid peerId, CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync<ProfileDetailDto>("GetProfileDetailAsync", peerId, ct).ConfigureAwait(false);

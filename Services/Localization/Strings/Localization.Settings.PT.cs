@@ -4,17 +4,12 @@ internal static class SettingsPt
 {
     public static readonly System.Collections.Generic.Dictionary<string, string> Strings = new()
     {
-        ["settings.title"] = "Configurações",
-
         // Section labels + hub menu
         ["settings.section_plugin_settings"] = "Configurações do plugin",
-        ["settings.section_appearance"] = "Aparência",
         ["settings.section_phone_size"] = "Tamanho do telefone",
         ["settings.section_plugin_language"] = "Idioma do plugin",
-        ["settings.section_privacy"] = "Privacidade",
         ["settings.section_general"] = "Configurações gerais",
         ["settings.section_notifications"] = "Notificações",
-        ["settings.section_moderation"] = "Moderação",
         ["settings.section_other"] = "Outros",
         ["settings.section_danger_zone"] = "Zona de perigo",
         ["settings.menu_language_theme"] = "Idioma e tema",
@@ -95,14 +90,10 @@ internal static class SettingsPt
         ["settings.deleted_body"] = "A tua conta foi excluída, dados e fotos foram removidos, e matches foram desfeitos. Agora podes remover o plugin ou seguir para criar um novo perfil.",
 
         // Warnings
-        ["settings.warnings_button_unseen"] = "Advertências ({0} não vistas / {1})",
-        ["settings.warnings_button"] = "Advertências ({0})",
         ["settings.warnings_title"] = "Advertências da conta",
         ["settings.no_warnings"] = "Nenhuma advertência registrada.",
 
         // Moderator messages
-        ["settings.modmsg_button_unseen"] = "Mensagens do moderador ({0} não lidas / {1})",
-        ["settings.modmsg_button"] = "Mensagens do moderador ({0})",
         ["settings.modmsg_title"] = "Mensagens do moderador",
         ["settings.no_modmsg"] = "Nenhuma mensagem registrada.",
         ["settings.back_to_settings_arrow"] = "← Voltar às configurações",
@@ -134,5 +125,9 @@ internal static class SettingsPt
         ["settings.contributors_punish"] = "Puni.sh",
         ["settings.contributors_dalamud"] = "O projeto Dalamud",
         ["settings.contributors_testers"] = "Todos os maravilhosos beta testers por toda a Eorzea.",
+
+        // added after update 1.4.0
+        ["settings.lock_position"] = "Bloquear posição",
+        ["settings.lock_position_caption"] = "Ao bloquear a posição, não será possível mover o telefone (grande e mini); eles ficarão fixos no lugar.",
     };
 }

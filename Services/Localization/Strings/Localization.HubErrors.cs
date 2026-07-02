@@ -33,5 +33,9 @@ internal static class HubErrorsEn
         ["huberror.report_target_gone"] = "That profile no longer exists.",
         ["huberror.report_duplicate"] = "You've already reported this user recently. Our team is reviewing it.",
         ["huberror.feedback_required"] = "Please enter a message before sending.",
+        // added after update (1.3.1)
+        ["huberror.reswipe_nothing_to_undo"] = "There's nothing to undo.",
+        ["huberror.reswipe_already_matched"] = "You cannot reswipe on a matched profile.",
+        ["huberror.reswipe_quota_exhausted"] = "You've used your reswipe for today.",
     };
 }

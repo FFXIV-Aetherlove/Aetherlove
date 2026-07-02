@@ -12,10 +12,14 @@ public sealed class ChatEventBus
     public event Action<UnmatchedPushDto>? Unmatched;
     public event Action<BlockedByPeerPushDto>? BlockedByPeer;
     public event Action<MatchCreatedPushDto>? MatchCreated;
+    public event Action<MessageReactionsChangedPushDto>? ReactionsChanged;
+    public event Action<MessagePinChangedPushDto>? PinChanged;
 
     public void RaiseMessageReceived(MessageReceivedPushDto p) => MessageReceived?.Invoke(p);
     public void RaiseMessageRead(MessageReadPushDto p) => MessageRead?.Invoke(p);
     public void RaiseUnmatched(UnmatchedPushDto p) => Unmatched?.Invoke(p);
     public void RaiseBlockedByPeer(BlockedByPeerPushDto p) => BlockedByPeer?.Invoke(p);
     public void RaiseMatchCreated(MatchCreatedPushDto p) => MatchCreated?.Invoke(p);
+    public void RaiseReactionsChanged(MessageReactionsChangedPushDto p) => ReactionsChanged?.Invoke(p);
+    public void RaisePinChanged(MessagePinChangedPushDto p) => PinChanged?.Invoke(p);
 }

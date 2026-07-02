@@ -11,9 +11,9 @@ using static AetherLove.Screens.MatchFx;
 
 namespace AetherLove.Screens;
 
-/// <summary>Match effect — Slot Machine: a gilded Vegas cabinet whose three reels
+/// <summary>Match effect (Slot Machine): a gilded Vegas cabinet whose three reels
 /// spin in a vertical blur of symbols then snap to the left avatar, a heart, and the right avatar;
-/// "JACKPOT!" flashes, marquee bulbs chase around the frame, and gold coins rain and bounce.
+/// "JACKPOT!" flashes and marquee bulbs chase around the frame.
 ///</summary>
 public sealed class MatchSlotMachineScreen : IMatchEffect
 {
@@ -22,21 +22,7 @@ public sealed class MatchSlotMachineScreen : IMatchEffect
     private float _spin;
     private float _settle;
     private readonly ConfettiBurst _confetti = new();
-    private readonly Random _rng = new();
-
-    private const int CoinCount = 22;
-    private readonly Coin[] _coins = new Coin[CoinCount];
     private bool _ready;
-
-    private struct Coin
-    {
-        public float Nx;
-        public float StartDelay;
-        public float Vy;
-        public float Bounce;
-        public float Phase;
-        public float R;
-    }
 
     public MatchSlotMachineScreen(ScreenRouter router)
     {
@@ -48,18 +34,6 @@ public sealed class MatchSlotMachineScreen : IMatchEffect
         _spin = 0f;
         _settle = 0f;
         _confetti.Reset();
-        for (int i = 0; i < _coins.Length; i++)
-        {
-            _coins[i] = new Coin
-            {
-                Nx = 0.10f + _rng.NextSingle() * 0.80f,
-                StartDelay = _rng.NextSingle() * 0.6f,
-                Vy = 0.9f + _rng.NextSingle() * 0.7f,
-                Bounce = 0.55f + _rng.NextSingle() * 0.30f,
-                Phase = _rng.NextSingle() * MathF.Tau,
-                R = Px(5f) + _rng.NextSingle() * Px(4f),
-            };
-        }
         _ready = true;
     }
 
@@ -432,49 +406,6 @@ public sealed class MatchSlotMachineScreen : IMatchEffect
             CenterText(dl, cx, pos.Y + size.Y * 0.16f, Loc.T("deck.match_fx_slot"),
                 U32(Rgba(t.AccentLight, alpha * 0.9f)));
         }
-    }
-
-    private void DrawCoins(ImDrawListPtr dl, Vector2 pos, Vector2 size, float time)
-    {
-        dl.PushClipRect(pos, pos + size, true);
-        var t0 = _settle;
-        var floorY = pos.Y + size.Y - Px(78f);
-        foreach (var coin in _coins)
-        {
-            var local = t0 - coin.StartDelay;
-            if (local <= 0f)
-            {
-                continue;
-            }
-            var fall = local * coin.Vy * size.Y * 0.9f;
-            var x = pos.X + coin.Nx * size.X;
-            var topY = pos.Y + Px(40f);
-            var y = topY + fall;
-
-            if (y > floorY)
-            {
-                var over = y - floorY;
-                var damp = MathF.Exp(-over * 0.012f);
-                y = floorY - MathF.Abs(MathF.Sin(over * 0.05f)) * Px(40f) * damp * coin.Bounce;
-            }
-
-            var wob = MathF.Abs(MathF.Sin(time * 6f + coin.Phase));
-            var rx = coin.R * (0.35f + 0.65f * wob);
-            DrawCoin(dl, new Vector2(x, y), rx, coin.R);
-        }
-        dl.PopClipRect();
-    }
-
-    private static void DrawCoin(ImDrawListPtr dl, Vector2 c, float rx, float ry)
-    {
-        var a = new Vector2(c.X, c.Y - ry);
-        var b = new Vector2(c.X + rx, c.Y);
-        var d = new Vector2(c.X, c.Y + ry);
-        var e = new Vector2(c.X - rx, c.Y);
-        dl.AddQuadFilled(a, b, d, e, U32(GoldMid));
-        var hi = new Vector2(c.X - rx * 0.35f, c.Y);
-        dl.AddQuadFilled(a, new Vector2(c.X, c.Y - ry * 0.3f), d, hi, U32(GoldHi));
-        dl.AddLine(a, d, U32(CoinEdge), Px(1f));
     }
 
     private static void DrawHeart(ImDrawListPtr dl, Vector2 c, float r, uint col)

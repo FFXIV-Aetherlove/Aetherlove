@@ -25,13 +25,19 @@ public sealed record MatchDeckDto(
     DeckCardDto[] Cards,
     DateTimeOffset NextPullAtUtc,
     int RemainingInSlot,
-    bool NoPoolForPreferences = false);
+    bool NoPoolForPreferences = false,
+    int ReswipesRemaining = 0);
 
 /// <summary>Server's response to a single swipe.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record SwipeResultDto(
     bool IsMatch,
     Guid? MatchedProfileId);
+
+/// <summary>Server's response to an undo-last-swipe (reswipe), carrying the caller's updated daily allowance.</summary>
+[MessagePackObject(keyAsPropertyName: true)]
+public sealed record ReswipeResultDto(
+    int ReswipesRemaining);
 
 /// <summary>SignalR push to the other side of a fresh match.</summary>
 [MessagePackObject(keyAsPropertyName: true)]

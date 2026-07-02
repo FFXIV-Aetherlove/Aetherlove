@@ -38,6 +38,8 @@ public sealed class SfwImageGateModal
         DrawBullet(Loc.T("common.sfw_gate_b6"), bulletColor);
 
         ImGui.Spacing();
+        DrawWarningCard(Loc.T("common.sfw_gate_race_gender"), availW);
+        ImGui.Spacing();
         DrawSecondaryCallout(availW);
         ImGui.Spacing();
         ImGui.Spacing();

@@ -57,6 +57,9 @@ public class Configuration : IPluginConfiguration
     /// <summary>Minimised-bubble size preset; Medium is the bubble's authored (current) size.</summary>
     public PhoneScalePreset MiniPhoneSize { get; set; } = PhoneScalePreset.Medium;
 
+    /// <summary>When set, the user can't drag either phone window; a programmatic recenter still works.</summary>
+    public bool LockPhonePosition { get; set; } = false;
+
     /// <summary>Chat-bubble colour overrides; null means "use the theme default" (see <see cref="ChatColors"/>).</summary>
     public Vector4? OwnChatBg { get; set; }
     public Vector4? OwnChatFg { get; set; }
@@ -125,8 +128,16 @@ public class Configuration : IPluginConfiguration
     /// another player's profile text, so it appears only once.</summary>
     public bool AcknowledgedProfileCopyTextWarning { get; set; } = false;
 
+    /// <summary>Set once the reswipe (undo) intro popup has been shown, the first time the player taps the
+    /// undo pill, so it appears only once. Showing it does not consume the daily reswipe allowance.</summary>
+    public bool SeenReswipeIntro { get; set; } = false;
+
     /// <summary>Changelog versions ("Major.Minor.Build") whose "What's New" window has already been shown.</summary>
     public HashSet<string> ShownChangelogVersions { get; set; } = [];
+
+    /// <summary>Peer profile ids of matches whose chat the user has opened at least once. Client-side only;
+    /// clears the "needs a first hello" highlight on an empty match once it has been acknowledged.</summary>
+    public HashSet<Guid> OpenedChats { get; set; } = [];
 
     /// <summary>Peer profile ids of matches the user has archived. Client-side only (per install). Replaced
     /// wholesale on change so it serializes as a consistent snapshot; <see cref="ChatArchiveStore"/>
@@ -138,6 +149,10 @@ public class Configuration : IPluginConfiguration
 
     /// <summary>Background presence cadence state.</summary>
     public PulseState Pulse { get; set; } = new();
+
+    /// <summary>Per-install tally of how often each emoji shortcode was used as a reaction; powers the
+    /// "most-used" quick-react bar. Client-side only.</summary>
+    public Dictionary<string, int> ReactionUsage { get; set; } = new();
 
     public void Save() => Plugin.PluginInterface.SavePluginConfig(this);
 }

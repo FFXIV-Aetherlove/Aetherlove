@@ -53,6 +53,10 @@ public static class HubErrors
     public const string ReportDuplicate = "report_duplicate";
     public const string FeedbackRequired = "feedback_required";
 
+    public const string ReswipeNothingToUndo = "reswipe_nothing_to_undo";
+    public const string ReswipeAlreadyMatched = "reswipe_already_matched";
+    public const string ReswipeQuotaExhausted = "reswipe_quota_exhausted";
+
     /// <summary>Builds the wire payload. Args are serialized invariant-culture; they must not contain '|'.</summary>
     public static string Format(string code, params object?[] args)
     {

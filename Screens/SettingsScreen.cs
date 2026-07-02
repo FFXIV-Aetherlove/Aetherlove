@@ -303,6 +303,16 @@ public class SettingsScreen
             var dl = ImGui.GetWindowDrawList();
 
             ImGui.Spacing();
+            SettingCheckbox(Loc.T("settings.lock_position"),
+                () => Plugin.Configuration.LockPhonePosition,
+                v => Plugin.Configuration.LockPhonePosition = v);
+            ImGui.SetCursorPosX(Px(PadX));
+            ImGui.PushTextWrapPos(winW - Px(PadX));
+            ImGui.TextColored(new Vector4(0.60f, 0.60f, 0.60f, 1f), Loc.T("settings.lock_position_caption"));
+            ImGui.PopTextWrapPos();
+            ImGui.Spacing();
+            Divider(dl, winW);
+
             SectionLabel(Loc.T("settings.section_phone_size"), t);
             ImGui.Spacing();
             Widgets.AppearancePicker.DrawPhoneSizeButtons(winW, PadX, t);

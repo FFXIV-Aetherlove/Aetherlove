@@ -4,7 +4,7 @@ internal static class NewsPt
 {
     public static readonly System.Collections.Generic.Dictionary<string, string> Strings = new()
     {
-        // ===== News =====
+        // News
         ["news.title"] = "Novidades",
         ["news.empty"] = "Ainda não há novidades.",
         ["news.unavailable"] = "Este anúncio não está mais disponível.",
@@ -15,7 +15,6 @@ internal static class NewsPt
         ["news.progress"] = "{0} / {1}",
         ["news.preview_badge"] = "PRÉVIA",
         ["news.settings_button"] = "Novidades",
-        ["news.settings_button_unseen"] = "Novidades ({0} novas)",
         ["news.notif_available"] = "Novo anúncio: {0}",
         ["news.notif_link"] = "Ler novidades",
     };

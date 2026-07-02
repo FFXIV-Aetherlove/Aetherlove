@@ -265,8 +265,7 @@ public sealed class AetherLoveBootstrap : IHostedService
         {
             if (_config.CombatBehavior == CombatBehavior.Minimize && _mainWindow.IsOpen)
             {
-                _mainWindow.IsOpen = false;
-                _miniWindow.IsOpen = true;
+                _mainWindow.Minimize();
             }
             // Hide is handled by DrawConditions; LeaveOpen does nothing.
         }

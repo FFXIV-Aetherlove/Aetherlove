@@ -4,18 +4,14 @@ internal static class SettingsDe
 {
     public static readonly System.Collections.Generic.Dictionary<string, string> Strings = new()
     {
-        // ===== Settings =====
-        ["settings.title"] = "Einstellungen",
+        // Settings
 
         // Section labels + hub menu
         ["settings.section_plugin_settings"] = "Plugin-Einstellungen",
-        ["settings.section_appearance"] = "Darstellung",
         ["settings.section_phone_size"] = "Telefongröße",
         ["settings.section_plugin_language"] = "Plugin-Sprache",
-        ["settings.section_privacy"] = "Privatsphäre",
         ["settings.section_general"] = "Allgemeine Einstellungen",
         ["settings.section_notifications"] = "Benachrichtigungen",
-        ["settings.section_moderation"] = "Moderation",
         ["settings.section_other"] = "Sonstiges",
         ["settings.section_danger_zone"] = "Gefahrenzone",
         ["settings.menu_language_theme"] = "Sprache & Design",
@@ -96,14 +92,10 @@ internal static class SettingsDe
         ["settings.deleted_body"] = "Dein Konto wurde gelöscht, deine Daten und Bilder wurden entfernt und deine Matches wurden aufgelöst. Du kannst das Plugin jetzt entfernen oder die Einrichtung durchlaufen und ein neues Profil erstellen.",
 
         // Warnings
-        ["settings.warnings_button_unseen"] = "Verwarnungen ({0} ungesehen / {1})",
-        ["settings.warnings_button"] = "Verwarnungen ({0})",
         ["settings.warnings_title"] = "Kontoverwarnungen",
         ["settings.no_warnings"] = "Keine Verwarnungen vorhanden.",
 
         // Moderator messages
-        ["settings.modmsg_button_unseen"] = "Moderator-Nachrichten ({0} ungelesen / {1})",
-        ["settings.modmsg_button"] = "Moderator-Nachrichten ({0})",
         ["settings.modmsg_title"] = "Moderator-Nachrichten",
         ["settings.no_modmsg"] = "Keine Nachrichten vorhanden.",
         ["settings.back_to_settings_arrow"] = "← Zurück zu den Einstellungen",
@@ -134,5 +126,9 @@ internal static class SettingsDe
         ["settings.contributors_punish"] = "Puni.sh",
         ["settings.contributors_dalamud"] = "The Dalamud project",
         ["settings.contributors_testers"] = "Allen wunderbaren Betatestern in ganz Eorzea.",
+
+        // added after update 1.4.0
+        ["settings.lock_position"] = "Position sperren",
+        ["settings.lock_position_caption"] = "Wenn du die Position sperrst, kannst du das Telefon (groß und mini) nicht mehr bewegen; sie bleiben an ihrem Platz.",
     };
 }

@@ -34,6 +34,9 @@ public class ProfileScreen
     private string _photoSubtitle = string.Empty;
     private ProfileSource _source = ProfileSource.Deck;
 
+    /// <summary>Where this profile view was opened from; a Deck-sourced view is part of the deck's browse flow.</summary>
+    public ProfileSource Source => _source;
+
     private Guid _loadingProfileId;
     private volatile bool _loading;
     private volatile string? _loadError;
@@ -1018,7 +1021,6 @@ public class ProfileScreen
         ImGui.Spacing();
     }
 
-    /// <summary>Trims text with a trailing ellipsis so it fits within <paramref name="maxWidth"/> px at the current font.</summary>
     private void DrawFavoriteMovie(float winW, ImDrawListPtr dl)
     {
         if (string.IsNullOrEmpty(_profile!.FavoriteMovie))

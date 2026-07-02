@@ -4,7 +4,7 @@ internal static class DeckDe
 {
     public static readonly System.Collections.Generic.Dictionary<string, string> Strings = new()
     {
-        // ===== Deck =====
+        // Deck
         ["deck.cooldown_heading"] = "Du bist auf dem neuesten Stand!",
         ["deck.cooldown_body"] = "AetherLove gibt dir alle paar Stunden eine frische Auswahl an Profilen, damit jeder eine faire Chance bekommt. Schau bald wieder vorbei für neue potenzielle Matches!",
         ["deck.new_matches_ready"] = "Neue Matches sind bereit!",
@@ -44,5 +44,14 @@ internal static class DeckDe
         ["deck.no_pool_heading"] = "Keine Matches mehr",
         ["deck.no_pool_body"] = "Mit deinen aktuellen Kriterien wurden keine weiteren Matches für dich gefunden. Erweitere deine Kriterien und versuche es später noch einmal.",
         ["deck.next_deck"] = "Nächstes Deck: {0}",
+        // added after update (1.3.1)
+        ["deck.reswipe_tooltip"] = "Letztes Wischen rückgängig machen",
+        ["deck.reswipe_cooldown"] = "Rückgängig möglich in {0} Std. {1} Min.",
+        ["deck.reswipe_matched_title"] = "Schon ein Match!",
+        ["deck.reswipe_matched"] = "Bei einem Match kannst du nicht rückgängig machen.",
+        ["deck.decide_later_tooltip"] = "Später entscheiden",
+        ["deck.decide_later_disabled"] = "Dies ist die letzte Karte in deinem Deck.",
+        ["deck.reswipe_intro_title"] = "Letztes Wischen rückgängig machen",
+        ["deck.reswipe_intro"] = "Damit holst du dein letztes Wischen zurück und das Profil erscheint wieder ganz oben. Du kannst das einmal alle 24 Stunden nutzen. Wenn du diesen Hinweis schließt, wird dein Rückgängig nicht verbraucht. Tippe also einfach noch einmal auf die Schaltfläche, wenn du bereit bist.",
     };
 }

@@ -5,7 +5,6 @@ internal static class CommonRu
     public static readonly System.Collections.Generic.Dictionary<string, string> Strings = new()
     {
         ["common.ok"] = "ОК",
-        ["common.confirm"] = "Подтвердить",
         ["common.cancel"] = "Отмена",
         ["common.loading"] = "Загрузка…",
         ["common.try_again"] = "Попробовать снова",
@@ -27,7 +26,6 @@ internal static class CommonRu
         ["common.offline_title"] = "AetherLove - не в сети",
         ["common.offline_body"] = "Сервер, скорее всего, недоступен из-за обновления или технических работ. Это не займёт больше двух минут!",
         ["common.offline_reconnecting"] = "Повторное подключение…",
-        ["common.offline_keep_trying"] = "Мы будем продолжать попытки автоматически.",
         ["common.offline_taking_long"] = "Это занимает больше времени, чем обычно. Заходите в наш Discord, чтобы узнать актуальный статус.",
         ["common.offline_join_discord"] = "Зайти в Discord",
 
@@ -130,5 +128,8 @@ internal static class CommonRu
         ["common.sfw_gate_b6"] = "Сексуальные жесты, позы или визуальные отсылки, которые подразумевают или имитируют половые акты, включая оральный секс, мастурбацию или иную сексуальную активность.",
         ["common.sfw_gate_secondary"] = "Материалы NSFW по-прежнему можно загружать во второстепенные изображения профиля.",
         ["common.sfw_gate_ack"] = "Я понимаю правила SFW",
+
+        // added after update (1.3.1)
+        ["common.sfw_gate_race_gender"] = "Пожалуйста, убедитесь, что на вашем главном изображении раса и пол персонажа совпадают с указанными в профиле.",
     };
 }

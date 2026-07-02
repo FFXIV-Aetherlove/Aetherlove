@@ -4,7 +4,7 @@ internal static class OnboardingFr
 {
     public static readonly System.Collections.Generic.Dictionary<string, string> Strings = new()
     {
-        // ===== Onboarding =====
+        // Onboarding
         ["onboarding.header_welcome"] = "Bienvenue !",
         ["onboarding.header_how_it_works"] = "Comment ça marche",
         ["onboarding.header_terms_of_service"] = "Conditions d'utilisation",
@@ -19,7 +19,6 @@ internal static class OnboardingFr
         ["onboarding.header_all_set"] = "Tout est prêt !",
         ["onboarding.header_default"] = "AetherLove",
 
-        ["onboarding.save_failed"] = "Échec de l'enregistrement : {0}",
         ["onboarding.back"] = "← Retour",
         ["onboarding.saving"] = "Enregistrement…",
         ["onboarding.start_swiping"] = "Commencer à swiper →",
@@ -109,7 +108,6 @@ internal static class OnboardingFr
         ["onboarding.region_eu"] = "Europe (EU)",
         ["onboarding.region_oceania"] = "Océanie",
         ["onboarding.region_japan"] = "Japon",
-        ["onboarding.region_prefer_not_to_say"] = "Je préfère ne pas le dire",
         ["onboarding.race_hyur"] = "Hyur",
         ["onboarding.race_elezen"] = "Elezen",
         ["onboarding.race_lalafell"] = "Lalafell",
@@ -240,7 +238,6 @@ internal static class OnboardingFr
 
         // Step 7 — Optional
         ["onboarding.expansion_none"] = "(Aucune)",
-        ["onboarding.sync_none"] = "Je n'utilise pas d'outil de synchronisation",
         ["onboarding.opt_heading"] = "Parlez-nous davantage de vous",
         ["onboarding.opt_intro"] = "Tous les champs de cette page sont facultatifs. Remplissez-en autant ou aussi peu que vous le souhaitez — ces détails apparaissent sur votre fiche de profil et aident les autres à vous trouver.",
         ["onboarding.opt_fav_job"] = "Job favori",
@@ -305,5 +302,13 @@ internal static class OnboardingFr
         ["onboarding.prefs_intro"] = "Personnalisez AetherLove — choisissez un thème de couleur et une taille de téléphone. Vous pouvez modifier les deux à tout moment dans les paramètres.",
         ["onboarding.prefs_theme"] = "Thème",
         ["onboarding.prefs_phone_size"] = "Taille du téléphone",
+
+        // added after update (1.3.1)
+        ["onboarding.content_ultimate_raiding"] = "Raids fatals",
+        ["onboarding.content_deep_dungeons"] = "Donjons sans fond",
+        ["onboarding.content_variant_criterion"] = "Donjons variants / critères",
+        ["onboarding.content_field_operations"] = "Opérations sur le terrain (Bozja, Eureka)",
+        ["onboarding.race_gender_warning"] = "Veuillez choisir la race et le genre de votre personnage FFXIV, et non votre genre dans la vie réelle !",
+        ["onboarding.tos_race_gender"] = "J'accepte de choisir la race et le genre corrects pour mon personnage Final Fantasy XIV lors de la configuration, et je comprends que ma photo de profil principale doit représenter ce personnage.",
     };
 }

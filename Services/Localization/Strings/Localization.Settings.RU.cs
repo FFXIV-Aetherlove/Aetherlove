@@ -4,16 +4,11 @@ internal static class SettingsRu
 {
     public static readonly System.Collections.Generic.Dictionary<string, string> Strings = new()
     {
-        ["settings.title"] = "Настройки",
-
         ["settings.section_plugin_settings"] = "Настройки плагина",
-        ["settings.section_appearance"] = "Внешний вид",
         ["settings.section_phone_size"] = "Размер телефона",
         ["settings.section_plugin_language"] = "Язык плагина",
-        ["settings.section_privacy"] = "Конфиденциальность",
         ["settings.section_general"] = "Общие настройки",
         ["settings.section_notifications"] = "Уведомления",
-        ["settings.section_moderation"] = "Уведомления от администрации",
         ["settings.section_other"] = "Прочее",
         ["settings.section_danger_zone"] = "Опасная зона",
         ["settings.menu_language_theme"] = "Язык и тема",
@@ -86,14 +81,10 @@ internal static class SettingsRu
         ["settings.deleted_title"] = "Аккаунт удалён",
         ["settings.deleted_body"] = "Ваш аккаунт удалён, ваши данные и фотографии удалены, а ваши пары отменены. Теперь вы можете удалить плагин или пройти регистрацию и создать новый профиль.",
 
-        ["settings.warnings_button_unseen"] = "Предупреждения ({0} непросмотренных: / {1})",
-        ["settings.warnings_button"] = "Предупреждения ({0})",
         ["settings.warnings_title"] = "Предупреждения аккаунта",
         ["settings.no_warnings"] = "Предупреждений нет.",
 
         // Moderator messages
-        ["settings.modmsg_button_unseen"] = "Сообщения модератора ({0} новых / {1})",
-        ["settings.modmsg_button"] = "Сообщения модератора ({0})",
         ["settings.modmsg_title"] = "Сообщения модератора",
         ["settings.no_modmsg"] = "Сообщений нет.",
         ["settings.back_to_settings_arrow"] = "← Назад к настройкам",
@@ -123,5 +114,9 @@ internal static class SettingsRu
         ["settings.contributors_punish"] = "Puni.sh",
         ["settings.contributors_dalamud"] = "The Dalamud project",
         ["settings.contributors_testers"] = "Всем замечательным бета-тестерам по всей Эорзее.",
+
+        // added after update 1.4.0
+        ["settings.lock_position"] = "Зафиксировать положение",
+        ["settings.lock_position_caption"] = "Зафиксировав положение, вы не сможете перемещать телефон (большой и мини); они останутся на месте.",
     };
 }

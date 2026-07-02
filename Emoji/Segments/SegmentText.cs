@@ -55,10 +55,7 @@ public sealed class SegmentText : ISegment
             }
 
             var start = i;
-            while (i < line.Length && line[i] != ' ')
-            {
-                i++;
-            }
+            i = ParsedMessage.WrapTokenEnd(line, i);
             var word = line.Substring(start, i - start);
             var wordW = ImGui.CalcTextSize(word).X;
             if (ImGui.GetContentRegionAvail().X < wordW + ParsedMessage.WrapSlack)

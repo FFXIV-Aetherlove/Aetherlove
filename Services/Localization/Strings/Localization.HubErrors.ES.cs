@@ -33,5 +33,9 @@ internal static class HubErrorsEs
         ["huberror.report_target_gone"] = "Ese perfil ya no existe.",
         ["huberror.report_duplicate"] = "Ya has denunciado a este usuario recientemente. Nuestro equipo lo está revisando.",
         ["huberror.feedback_required"] = "Escribe un mensaje antes de enviar.",
+        // added after update (1.3.1)
+        ["huberror.reswipe_nothing_to_undo"] = "No hay nada que deshacer.",
+        ["huberror.reswipe_already_matched"] = "No puedes deshacer en un perfil con el que ya tienes match.",
+        ["huberror.reswipe_quota_exhausted"] = "Ya has usado tu deshacer de hoy.",
     };
 }

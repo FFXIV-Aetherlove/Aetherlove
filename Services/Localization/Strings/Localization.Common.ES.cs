@@ -5,7 +5,6 @@ internal static class CommonEs
     public static readonly System.Collections.Generic.Dictionary<string, string> Strings = new()
     {
         ["common.ok"] = "Aceptar",
-        ["common.confirm"] = "Confirmar",
         ["common.cancel"] = "Cancelar",
         ["common.loading"] = "Cargando…",
         ["common.try_again"] = "Intentar de nuevo",
@@ -27,7 +26,6 @@ internal static class CommonEs
         ["common.offline_title"] = "AetherLove está fuera de línea",
         ["common.offline_body"] = "El servidor seguramente está fuera de línea por actualizaciones o mantenimiento. ¡Esto no debería tardar más de 2 minutos!",
         ["common.offline_reconnecting"] = "Reconectando…",
-        ["common.offline_keep_trying"] = "Seguiremos intentándolo automáticamente.",
         ["common.offline_taking_long"] = "Esto está tardando más de lo normal. Únete a nuestro Discord para ver el estado más reciente.",
         ["common.offline_join_discord"] = "Únete a Discord",
 
@@ -129,5 +127,8 @@ internal static class CommonEs
         ["common.sfw_gate_b6"] = "Gestos, posturas o referencias visuales de carácter sexual que impliquen o simulen actos sexuales, incluidos el sexo oral, la masturbación u otra actividad sexual.",
         ["common.sfw_gate_secondary"] = "Aún puedes subir material NSFW en tus imágenes de perfil secundarias.",
         ["common.sfw_gate_ack"] = "Entiendo las reglas para SFW",
+
+        // added after update (1.3.1)
+        ["common.sfw_gate_race_gender"] = "Asegúrate de que tu imagen principal muestre la raza y el género de tu personaje tal como aparecen en tu perfil.",
     };
 }

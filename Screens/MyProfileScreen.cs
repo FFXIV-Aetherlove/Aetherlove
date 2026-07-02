@@ -80,7 +80,7 @@ public partial class MyProfileScreen
     private readonly bool[] _filterRaces = new bool[Races.Length];
     private readonly bool[] _filterGenders = new bool[Genders.Length];
     // Excludes "Prefer not to say" from the filter list.
-    private readonly bool[] _filterRegions = new bool[Regions.Length - 1];
+    private readonly bool[] _filterRegions = new bool[RegionValues.Length];
     private readonly bool[] _filterLanguages = new bool[Languages.Length];
 
 
@@ -237,7 +237,8 @@ public partial class MyProfileScreen
 
         _raceIdx = IndexOf(RaceValues, b.Race, fallback: 0);
         _genderIdx = IndexOf(GenderValues, b.Gender, fallback: 0);
-        _regionIdx = IndexOf(RegionValues, b.Region, fallback: RegionValues.Length - 1);
+        // "Prefer not to say" is retired: a profile still set to it falls back to NA and migrates off it on save.
+        _regionIdx = IndexOf(RegionValues, b.Region, fallback: 0);
         _expansionIdx = IndexOf(ExpansionValues, b.FavoriteExpansion, fallback: 0);
         _jobComboIdx = IndexOf(JobValues, b.FavoriteJob, fallback: 0);
 
@@ -273,7 +274,6 @@ public partial class MyProfileScreen
             (a, m) => ((short)a & (short)m) != 0, _filterRaces);
         MaskToBools(GenderValues, f.WantedGenderMask,
             (a, m) => ((short)a & (short)m) != 0, _filterGenders);
-        // _filterRegions excludes "Prefer not to say" (last entry).
         for (int i = 0; i < _filterRegions.Length; i++)
         {
             _filterRegions[i] = ((short)RegionValues[i] & (short)f.WantedRegionMask) != 0;
@@ -577,7 +577,6 @@ public partial class MyProfileScreen
             _displayName = _displayName.Replace(" ", "");
         }
         ImGui.TextColored(UiColors.Hint, Loc.T("onboarding.profile_display_name_hint"));
-        ImGui.TextColored(muted, Loc.T("profile.display_name_hint"));
         ImGui.Spacing();
 
         DrawFieldLabel(Loc.T("profile.about_me"), t);
@@ -646,6 +645,9 @@ public partial class MyProfileScreen
         ImGui.SameLine(Px(130f));
         ImGui.SetNextItemWidth(Px(180f));
         ImGui.Combo("##edGender", ref _genderIdx, Genders, Genders.Length);
+
+        ImGui.Spacing();
+        DrawWarningCard(Loc.T("onboarding.race_gender_warning"), ImGui.GetContentRegionAvail().X);
         ImGui.Spacing();
 
         DrawSectionHeading(Loc.T("profile.heading_location"), t);

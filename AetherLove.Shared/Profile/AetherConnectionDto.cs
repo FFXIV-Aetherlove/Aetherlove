@@ -14,6 +14,16 @@ public enum ProfileLifecycle : short
     Deleted = 4,
 }
 
+/// <summary>Mirror of the server's <c>ProfileRole</c> exposed over the wire, so the client can tell staff from
+/// regular users. The server still authorizes every privileged action itself; this is for display/UX only.</summary>
+public enum UserRole : short
+{
+    User = 0,
+    Moderator = 1,
+    Admin = 2,
+    Translator = 3,
+}
+
 /// <summary>One moderation warning issued against a profile.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record WarningDto(
@@ -35,6 +45,7 @@ public sealed record ModeratorMessageDto(
 public sealed record AetherConnectionDto(
     ProfileLifecycle Status,
     string DisplayName,
+    UserRole Role,
     string? BanReason,
     WarningDto[] Warnings,
     ModeratorMessageDto[] ModeratorMessages,

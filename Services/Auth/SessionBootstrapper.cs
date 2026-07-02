@@ -71,8 +71,6 @@ public sealed class SessionBootstrapper
 
     public string? LastDisplayName => _lastDisplayName;
 
-    public OnboardingStateDto? LastOnboardingState => _lastOnboardingState;
-
     /// <summary>One-shot read: returns the cached state and nulls the slot.</summary>
     public OnboardingStateDto? ConsumeOnboardingState()
     {

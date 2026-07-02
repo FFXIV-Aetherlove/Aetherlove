@@ -33,5 +33,9 @@ internal static class HubErrorsRu
         ["huberror.report_target_gone"] = "Этот профиль больше не существует.",
         ["huberror.report_duplicate"] = "Вы уже недавно жаловались на этого пользователя. Команда модераторов сейчас в процессе ее расмотра.",
         ["huberror.feedback_required"] = "Пожалуйста, введите сообщение перед отправкой.",
+        // added after update (1.3.1)
+        ["huberror.reswipe_nothing_to_undo"] = "Отменять нечего.",
+        ["huberror.reswipe_already_matched"] = "Нельзя отменить свайп по профилю, с которым у вас уже есть пара.",
+        ["huberror.reswipe_quota_exhausted"] = "Вы уже использовали отмену на сегодня.",
     };
 }

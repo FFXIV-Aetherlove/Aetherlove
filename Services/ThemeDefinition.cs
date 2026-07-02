@@ -26,8 +26,6 @@ public sealed class ThemeDefinition
     public uint AccentU32 => ToU32(Accent);
     public uint AccentLightU32 => ToU32(AccentLight);
     public uint AccentDarkU32 => ToU32(AccentDark);
-    public uint ChipFillU32 => ToU32(ChipFill);
-    public uint ChipBorderU32 => AccentU32;
 
     public Vector4 SecondaryFillStart => Dark(SecondaryStart);
     public Vector4 SecondaryFillEnd => Dark(SecondaryEnd);
@@ -38,6 +36,11 @@ public sealed class ThemeDefinition
 
     public uint AccentLightRgb => AccentLightU32 & 0x00FFFFFF;
     public uint AccentDarkRgb => AccentDarkU32 & 0x00FFFFFF;
+
+    /// <summary>Secondary gradient endpoints darkened for a small filled pill: vivid two-tone yet keeps a white
+    /// glyph legible (mirrors how <see cref="AccentDarkRgb"/> backs the primary pills). Alpha applied at draw time.</summary>
+    public uint SecondaryPillStartRgb => ToU32(PillDark(SecondaryStart)) & 0x00FFFFFF;
+    public uint SecondaryPillEndRgb => ToU32(PillDark(SecondaryEnd)) & 0x00FFFFFF;
 
     public Vector4 ScrollbarGrab => Accent with { W = 0.85f };
     public Vector4 ScrollbarGrabHovered => AccentLight with { W = 1.00f };
@@ -59,4 +62,7 @@ public sealed class ThemeDefinition
 
     /// <summary>Dark, legible chip-fill tint for a bright secondary colour (keeps white text readable).</summary>
     private static Vector4 Dark(Vector4 c) => new(c.X * 0.22f, c.Y * 0.22f, c.Z * 0.22f, 1f);
+
+    /// <summary>Moderate darkening for a small pill fill: vivid enough to read the secondary hue, dark enough for a white glyph.</summary>
+    private static Vector4 PillDark(Vector4 c) => new(c.X * 0.55f, c.Y * 0.55f, c.Z * 0.55f, 1f);
 }

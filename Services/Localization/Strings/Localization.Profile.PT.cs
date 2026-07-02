@@ -20,7 +20,6 @@ internal static class ProfilePt
         ["profile.favourite_job"] = "Job favorito",
         ["profile.favourite_location"] = "Lugar favorito",
         ["profile.favourite_expansion"] = "Expansão favorita",
-        ["profile.favourite_spotify_song"] = "Música favorita no Spotify",
         ["profile.favourite_song"] = "Música favorita",
         ["music.fetching"] = "Obtendo o nome da música…",
         ["music.saved"] = "Link salvo (nome pendente)",
@@ -30,16 +29,11 @@ internal static class ProfilePt
         ["profile.favourite_anime"] = "Anime favorito",
         ["profile.favourite_ff_character"] = "Personagem favorito de FF",
         ["profile.sync_tool"] = "Ferramenta de sync",
-        ["profile.uses_sync_tool"] = "Usa ferramenta de sync",
-        ["profile.preferred"] = "Preferido",
-        ["profile.yes"] = "Sim",
-        ["profile.no"] = "Não",
         ["profile.weekday_playtimes"] = "Horários de jogo nos dias de semana  (Seg–Sex)",
         ["profile.weekend_playtimes"] = "Horários de jogo no fim de semana  (Sáb–Dom)",
         ["profile.timezone_value"] = "{0} (hora atual: {1})",
 
         // ProfileScreen — Spotify / NSFW pill
-        ["profile.spotify_open_tooltip"] = "Clique para abrir no Spotify",
         ["profile.nsfw_reveal"] = "Clique para ver a imagem NSFW",
 
         // ProfileScreen — back pill
@@ -67,11 +61,6 @@ internal static class ProfilePt
         ["profile.copy_warning_body"] = "Você copiou o texto de outra pessoa. Tenha cuidado ao clicar ou acessar qualquer link que ele contenha — você faz isso por sua conta e risco.",
         ["profile.copy_warning_agree"] = "Entendi e concordo",
 
-        // MyProfileScreen — tabs
-        ["profile.tab_view"] = "Ver Perfil",
-        ["profile.tab_edit"] = "Editar Perfil",
-        ["profile.tab_images"] = "Trocar Imagens",
-
         // MyProfileScreen hub: stats + menu
         ["profile.section_myprofile"] = "Meu perfil",
         ["profile.section_service"] = "Serviço",
@@ -86,7 +75,6 @@ internal static class ProfilePt
         // MyProfileScreen — edit tab load / save
         ["profile.load_profile_failed"] = "Não foi possível carregar seu perfil: {0}",
         ["profile.retry"] = "Tentar de novo",
-        ["profile.save_failed"] = "Falha ao guardar: {0}",
         ["profile.saving"] = "Guardando…",
         ["profile.saved"] = "Guardado  ✓",
         ["profile.save_changes"] = "guardar Alterações",
@@ -106,7 +94,6 @@ internal static class ProfilePt
 
         // MyProfileScreen — edit form labels / hints
         ["profile.display_name"] = "Nome de Exibição",
-        ["profile.display_name_hint"] = "Primeiro nome ou apelido, sem espaços.",
         ["profile.about_me"] = "Sobre Mim",
         ["profile.char_count"] = "{0} / 500 caracteres",
         ["profile.preview"] = "pré-visualizar",
@@ -120,9 +107,6 @@ internal static class ProfilePt
         ["profile.nsfw_explainer"] = "NSFW significa \"Not Safe For Work\" (impróprio para o trabalho): conteúdo que contém nudez ou temas sexuais. Adira para ver e dar match com perfis NSFW.",
         ["profile.nsfw_optin"] = "Perfis NSFW: SIM",
         ["profile.favourite_job_tooltip"] = "O job ou papel que você mais curte. Digite para filtrar.",
-        ["profile.favourite_spotify"] = "Música Favorita no Spotify",
-        ["profile.spotify_tooltip"] = "Cole a URL de uma faixa do Spotify ou o ID da faixa.",
-        ["profile.track_id"] = "ID da faixa: {0}",
         ["profile.favourite_ff_character_full"] = "Personagem Favorito de Final Fantasy",
         ["profile.weekday_playtimes_edit"] = "Horários de Jogo nos Dias de Semana (Seg–Sex)",
         ["profile.weekend_playtimes_edit"] = "Horários de Jogo no Fim de Semana (Sáb–Dom)",

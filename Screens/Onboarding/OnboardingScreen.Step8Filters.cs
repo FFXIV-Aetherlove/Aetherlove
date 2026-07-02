@@ -12,7 +12,7 @@ public partial class OnboardingScreen
 {
     private readonly bool[] _filterRaces = new bool[Races.Length];
     private readonly bool[] _filterGenders = new bool[Genders.Length];
-    private readonly bool[] _filterRegions = new bool[Regions.Length - 1]; // excludes "Prefer not to say"
+    private readonly bool[] _filterRegions = new bool[RegionValues.Length];
     private readonly bool[] _filterLanguages = new bool[LanguageEntries.Length];
 
     private void ResetFilters()

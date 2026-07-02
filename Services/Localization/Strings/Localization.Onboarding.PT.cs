@@ -19,7 +19,6 @@ internal static class OnboardingPt
         ["onboarding.header_all_set"] = "Pronto!",
         ["onboarding.header_default"] = "AetherLove",
 
-        ["onboarding.save_failed"] = "Falha ao salvar: {0}",
         ["onboarding.back"] = "← Voltar",
         ["onboarding.saving"] = "Gravando…",
         ["onboarding.start_swiping"] = "Começar a Deslizar →",
@@ -109,7 +108,6 @@ internal static class OnboardingPt
         ["onboarding.region_eu"] = "Europa (EU)",
         ["onboarding.region_oceania"] = "Oceania",
         ["onboarding.region_japan"] = "Japão",
-        ["onboarding.region_prefer_not_to_say"] = "Prefiro não dizer",
         ["onboarding.race_hyur"] = "Hyur",
         ["onboarding.race_elezen"] = "Elezen",
         ["onboarding.race_lalafell"] = "Lalafell",
@@ -240,7 +238,6 @@ internal static class OnboardingPt
 
         // Step 7 — Optional
         ["onboarding.expansion_none"] = "(Nenhuma)",
-        ["onboarding.sync_none"] = "Não uso ferramenta de sync",
         ["onboarding.opt_heading"] = "Conta mais sobre ti",
         ["onboarding.opt_intro"] = "Todos os campos desta página são opcionais. Preenche quanto quiser — estes detalhes aparecem no seu cartão de perfil e ajudam os outros a encontrar você.",
         ["onboarding.opt_fav_job"] = "Job Favorito",
@@ -305,5 +302,13 @@ internal static class OnboardingPt
         ["onboarding.prefs_intro"] = "Deixa o AetherLove personalizado — escolhe um tema de cores e um tamanho de telefone. Podes mudar ambos a qualquer momento nas Configurações.",
         ["onboarding.prefs_theme"] = "Tema",
         ["onboarding.prefs_phone_size"] = "Tamanho do telefone",
+
+        // added after update (1.3.1)
+        ["onboarding.content_ultimate_raiding"] = "Raid Ultimate",
+        ["onboarding.content_deep_dungeons"] = "Deep Dungeons",
+        ["onboarding.content_variant_criterion"] = "Variant / Criterion Dungeons",
+        ["onboarding.content_field_operations"] = "Field Operations (Bozja, Eureka)",
+        ["onboarding.race_gender_warning"] = "Escolhe a raça e o género do teu personagem de FFXIV, não o teu género na vida real!",
+        ["onboarding.tos_race_gender"] = "Concordo em escolher a raça e o género corretos para o meu personagem de Final Fantasy XIV durante a configuração, e compreendo que a minha foto de perfil principal deve refletir esse personagem.",
     };
 }

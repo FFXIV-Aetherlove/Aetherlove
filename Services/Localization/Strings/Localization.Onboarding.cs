@@ -19,7 +19,6 @@ internal static class OnboardingEn
         ["onboarding.header_all_set"] = "You're All Set!",
         ["onboarding.header_default"] = "AetherLove",
 
-        ["onboarding.save_failed"] = "Save failed: {0}",
         ["onboarding.back"] = "← Back",
         ["onboarding.saving"] = "Saving…",
         ["onboarding.start_swiping"] = "Start Swiping →",
@@ -109,7 +108,6 @@ internal static class OnboardingEn
         ["onboarding.region_eu"] = "Europe (EU)",
         ["onboarding.region_oceania"] = "Oceania",
         ["onboarding.region_japan"] = "Japan",
-        ["onboarding.region_prefer_not_to_say"] = "Prefer not to say",
         ["onboarding.race_hyur"] = "Hyur",
         ["onboarding.race_elezen"] = "Elezen",
         ["onboarding.race_lalafell"] = "Lalafell",
@@ -240,7 +238,6 @@ internal static class OnboardingEn
 
         // Step 7 — Optional
         ["onboarding.expansion_none"] = "(None)",
-        ["onboarding.sync_none"] = "I don't use a sync tool",
         ["onboarding.opt_heading"] = "Tell us more about yourself",
         ["onboarding.opt_intro"] = "All fields on this page are optional. Fill in as much or as little as you like — these details appear on your profile card and help others find you.",
         ["onboarding.opt_fav_job"] = "Favourite Job",
@@ -305,5 +302,13 @@ internal static class OnboardingEn
         ["onboarding.prefs_intro"] = "Make AetherLove yours — pick a colour theme and a phone size. You can change both any time in Settings.",
         ["onboarding.prefs_theme"] = "Theme",
         ["onboarding.prefs_phone_size"] = "Phone size",
+
+        // added after update (1.3.1)
+        ["onboarding.content_ultimate_raiding"] = "Ultimate raiding",
+        ["onboarding.content_deep_dungeons"] = "Deep dungeons",
+        ["onboarding.content_variant_criterion"] = "Variant / Criterion dungeons",
+        ["onboarding.content_field_operations"] = "Field operations (Bozja, Eureka)",
+        ["onboarding.race_gender_warning"] = "Please choose your FFXIV character's race and gender, not your gender in real life!",
+        ["onboarding.tos_race_gender"] = "I agree to choose the correct race and gender for my Final Fantasy XIV character during onboarding, and I understand that my main profile picture must reflect that character.",
     };
 }

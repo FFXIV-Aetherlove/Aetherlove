@@ -4,7 +4,7 @@ internal static class DeckFr
 {
     public static readonly System.Collections.Generic.Dictionary<string, string> Strings = new()
     {
-        // ===== Deck =====
+        // Deck
         ["deck.cooldown_heading"] = "Vous avez tout vu !",
         ["deck.cooldown_body"] = "AetherLove vous propose un nouveau lot de profils toutes les quelques heures, afin que chacun ait une chance équitable. Revenez bientôt pour découvrir de nouvelles correspondances potentielles !",
         ["deck.new_matches_ready"] = "De nouvelles correspondances sont prêtes !",
@@ -44,5 +44,14 @@ internal static class DeckFr
         ["deck.no_pool_heading"] = "Plus aucune correspondance",
         ["deck.no_pool_body"] = "Aucune autre correspondance n'a été trouvée selon vos critères actuels. Élargissez vos critères et réessayez plus tard.",
         ["deck.next_deck"] = "Prochain deck : {0}",
+        // added after update (1.3.1)
+        ["deck.reswipe_tooltip"] = "Annuler votre dernier swipe",
+        ["deck.reswipe_cooldown"] = "Annulation possible dans {0} h {1} min",
+        ["deck.reswipe_matched_title"] = "Déjà un match !",
+        ["deck.reswipe_matched"] = "Vous ne pouvez pas annuler sur un profil avec lequel vous avez déjà un match.",
+        ["deck.decide_later_tooltip"] = "Décider plus tard",
+        ["deck.decide_later_disabled"] = "C'est la dernière carte de votre deck.",
+        ["deck.reswipe_intro_title"] = "Annuler votre dernier swipe",
+        ["deck.reswipe_intro"] = "Cela annule votre dernier swipe et ramène ce profil tout en haut. Vous pouvez l'utiliser une fois toutes les 24 heures. Fermer cette note n'utilise pas votre annulation, alors appuyez de nouveau sur le bouton lorsque vous êtes prêt.",
     };
 }

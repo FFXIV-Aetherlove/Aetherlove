@@ -223,7 +223,7 @@ public sealed class MiniWindow : Window, IDisposable
                 _dragThresholdMet = true;
             }
 
-            if (_dragThresholdMet)
+            if (_dragThresholdMet && !Plugin.Configuration.LockPhonePosition)
             {
                 ImGui.SetWindowPos(_windowPosAtDown + delta);
             }

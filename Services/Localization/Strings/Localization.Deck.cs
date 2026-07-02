@@ -43,5 +43,14 @@ internal static class DeckEn
         ["deck.no_pool_heading"] = "You're out of matches",
         ["deck.no_pool_body"] = "No more matches were found for you with your current criteria. Broaden your criteria, and try again later.",
         ["deck.next_deck"] = "Next deck: {0}",
+        // added after update (1.3.1)
+        ["deck.reswipe_tooltip"] = "Undo your last swipe",
+        ["deck.reswipe_cooldown"] = "Reswipe available in {0}h:{1:00}m",
+        ["deck.reswipe_matched_title"] = "Already a match!",
+        ["deck.reswipe_matched"] = "You cannot reswipe on a matched profile.",
+        ["deck.decide_later_tooltip"] = "Decide later",
+        ["deck.decide_later_disabled"] = "This is the last card in your deck.",
+        ["deck.reswipe_intro_title"] = "Undo your last swipe",
+        ["deck.reswipe_intro"] = "This takes back your last swipe and brings that profile right back to the top. You can use it once every 24 hours. Closing this note won't use up your undo, so tap the button again when you're ready.",
     };
 }

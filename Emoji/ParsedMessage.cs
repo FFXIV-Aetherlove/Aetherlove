@@ -23,6 +23,43 @@ public sealed class ParsedMessage
     // authorities can't disagree at a sub-pixel boundary and force a word to break mid-glyph at line end.
     internal const float WrapSlack = 2f;
 
+    /// <summary>End of the wrap token starting at <paramref name="i"/> (a non-space): a single Japanese
+    /// character (Japanese allows a line break between any two characters), or the run up to the next
+    /// space or Japanese character. Shared by <see cref="SegmentText"/>'s renderer and
+    /// <see cref="MeasureHeight"/> so their line breaks can't diverge; without the per-character split a
+    /// spaceless Japanese sentence is one giant "word" whose modelled wrap height underestimates ImGui's
+    /// real wrap, and the bubble clips the tail.</summary>
+    internal static int WrapTokenEnd(string line, int i)
+    {
+        if (IsJapanese(line, i, out var len))
+        {
+            return i + len;
+        }
+        while (i < line.Length && line[i] != ' ' && !IsJapanese(line, i, out _))
+        {
+            i++;
+        }
+        return i;
+    }
+
+    private static bool IsJapanese(string s, int i, out int len)
+    {
+        len = 1;
+        int cp = s[i];
+        if (char.IsHighSurrogate(s[i]) && i + 1 < s.Length && char.IsLowSurrogate(s[i + 1]))
+        {
+            cp = char.ConvertToUtf32(s[i], s[i + 1]);
+            len = 2;
+        }
+        return cp is (>= 0x3000 and <= 0x30FF)  // CJK punctuation, hiragana, katakana
+            or (>= 0x31F0 and <= 0x31FF)        // katakana phonetic extensions
+            or (>= 0x3400 and <= 0x4DBF)        // CJK ideographs extension A
+            or (>= 0x4E00 and <= 0x9FFF)        // CJK unified ideographs
+            or (>= 0xF900 and <= 0xFAFF)        // CJK compatibility ideographs
+            or (>= 0xFF00 and <= 0xFFEF)        // full-width forms, half-width katakana
+            or (>= 0x20000 and <= 0x2FA1F);     // CJK ideographs extensions B and beyond
+    }
+
     public static ParsedMessage Parse(string text)
     {
         var key = text.Trim();
@@ -146,10 +183,7 @@ public sealed class ParsedMessage
                         }
 
                         var wordStart = i;
-                        while (i < line.Length && line[i] != ' ')
-                        {
-                            i++;
-                        }
+                        i = WrapTokenEnd(line, i);
                         var word = line.Substring(wordStart, i - wordStart);
                         var wordW = ImGui.CalcTextSize(word).X;
                         if (x > 0f && width - x < wordW + WrapSlack)

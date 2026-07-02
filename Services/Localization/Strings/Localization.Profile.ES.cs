@@ -18,7 +18,6 @@ internal static class ProfileEs
         ["profile.favourite_job"] = "Trabajo favorito",
         ["profile.favourite_location"] = "Lugar favorito",
         ["profile.favourite_expansion"] = "Expansión favorita",
-        ["profile.favourite_spotify_song"] = "Canción favorita de Spotify",
         ["profile.favourite_song"] = "Canción favorita",
         ["music.fetching"] = "Obteniendo el nombre de la canción…",
         ["music.saved"] = "Enlace guardado (nombre pendiente)",
@@ -28,15 +27,10 @@ internal static class ProfileEs
         ["profile.favourite_anime"] = "Anime favorito",
         ["profile.favourite_ff_character"] = "Personaje favorito de FF",
         ["profile.sync_tool"] = "Herramienta de sincronización",
-        ["profile.uses_sync_tool"] = "Usa herramienta de sincronización",
-        ["profile.preferred"] = "Preferido",
-        ["profile.yes"] = "Sí",
-        ["profile.no"] = "No",
         ["profile.weekday_playtimes"] = "Horarios de juego entre semana  (lun–vie)",
         ["profile.weekend_playtimes"] = "Horarios de juego en fin de semana  (sáb–dom)",
         ["profile.timezone_value"] = "{0} (hora actual: {1})",
 
-        ["profile.spotify_open_tooltip"] = "Haz clic para abrir en Spotify",
         ["profile.nsfw_reveal"] = "Haz clic para mostrar la imagen NSFW",
 
         ["profile.back_to_chat"] = "Volver al chat",
@@ -62,10 +56,6 @@ internal static class ProfileEs
         ["profile.copy_warning_body"] = "Has copiado el texto de otra persona. Ten cuidado al hacer clic o seguir cualquier enlace que contenga — lo haces bajo tu propia responsabilidad.",
         ["profile.copy_warning_agree"] = "Lo entiendo y estoy de acuerdo",
 
-        ["profile.tab_view"] = "Ver perfil",
-        ["profile.tab_edit"] = "Editar perfil",
-        ["profile.tab_images"] = "Cambiar imágenes",
-
         // MyProfileScreen hub: stats + menu
         ["profile.section_myprofile"] = "Mi perfil",
         ["profile.section_service"] = "Servicio",
@@ -79,7 +69,6 @@ internal static class ProfileEs
 
         ["profile.load_profile_failed"] = "No se pudo cargar tu perfil: {0}",
         ["profile.retry"] = "Reintentar",
-        ["profile.save_failed"] = "Error al guardar: {0}",
         ["profile.saving"] = "Guardando…",
         ["profile.saved"] = "Guardado  ✓",
         ["profile.save_changes"] = "Guardar cambios",
@@ -97,7 +86,6 @@ internal static class ProfileEs
         ["profile.heading_match_prefs"] = "Preferencias de coincidencia",
 
         ["profile.display_name"] = "Nombre visible",
-        ["profile.display_name_hint"] = "Nombre de pila o alias, sin espacios.",
         ["profile.about_me"] = "Sobre mí",
         ["profile.char_count"] = "{0} / 500 caracteres",
         ["profile.preview"] = "Vista previa",
@@ -111,9 +99,6 @@ internal static class ProfileEs
         ["profile.nsfw_explainer"] = "NSFW significa \"Not Safe For Work\" (no apto para el trabajo): contenido con desnudos o temática sexual. Actívalo para ver perfiles NSFW y coincidir con ellos.",
         ["profile.nsfw_optin"] = "Perfiles NSFW: SÍ",
         ["profile.favourite_job_tooltip"] = "El trabajo o rol que más disfrutas. Escribe para filtrar.",
-        ["profile.favourite_spotify"] = "Canción favorita de Spotify",
-        ["profile.spotify_tooltip"] = "Pega la URL de una pista de Spotify o el ID de la pista.",
-        ["profile.track_id"] = "ID de pista: {0}",
         ["profile.favourite_ff_character_full"] = "Personaje favorito de Final Fantasy",
         ["profile.weekday_playtimes_edit"] = "Horarios de juego entre semana (lun–vie)",
         ["profile.weekend_playtimes_edit"] = "Horarios de juego en fin de semana (sáb–dom)",

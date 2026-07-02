@@ -104,6 +104,8 @@ public sealed class Plugin : IDalamudPlugin
         services.AddSingleton<Services.Crypto.CryptoService>();
         services.AddSingleton<Services.Crypto.KeyStorageService>();
         services.AddSingleton<ChatEventBus>();
+        services.AddSingleton<Services.Chat.ChatCacheStore>();
+        services.AddSingleton<Services.Chat.ChatSyncService>();
         services.AddSingleton<WebpCapabilityProbe>();
 
         services.AddHttpClient<TokenService>(c =>

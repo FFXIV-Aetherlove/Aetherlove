@@ -200,6 +200,15 @@ public class MainPluginWindow : Window, IDisposable
         // zero effect inside the phone.
         Size = Px(UiScale.Design);
 
+        if (Plugin.Configuration.LockPhonePosition)
+        {
+            Flags |= ImGuiWindowFlags.NoMove;
+        }
+        else
+        {
+            Flags &= ~ImGuiWindowFlags.NoMove;
+        }
+
         var io = ImGui.GetIO();
         _savedFontGlobalScale = io.FontGlobalScale;
         io.FontGlobalScale = 1f;
@@ -214,6 +223,12 @@ public class MainPluginWindow : Window, IDisposable
                 if (_lastScreen.HasValue)
                 {
                     OnScreenHidden(_lastScreen.Value);
+                    // Leaving the deck's browse context (the deck itself or its view-profile page) for anything
+                    // else drops the pinned card, so returning to the deck later shows fresh profiles.
+                    if (IsDeckEngaged(_lastScreen.Value) && !IsDeckEngaged(newScreen))
+                    {
+                        _deckScreen.MarkDeckLeft();
+                    }
                 }
                 _lastScreen = newScreen;
                 OnScreenChanged(newScreen);
@@ -253,6 +268,13 @@ public class MainPluginWindow : Window, IDisposable
         _phoneShell.DrawBackground(ImGui.GetWindowPos(), ImGui.GetWindowSize());
 
         DrawHiddenCloseAffordance();
+
+        // While the deck isn't the active screen, let it fetch the next deck in the background once the slot
+        // elapses, so returning to it shows fresh profiles with no visible swap of the old card.
+        if (_router.Current != Screen.Deck)
+        {
+            _deckScreen.MaybeBackgroundRefresh();
+        }
 
         var winSize = ImGui.GetWindowSize();
         var contentW = winSize.X - Px(BezelLeft) - Px(BezelRight);
@@ -409,7 +431,7 @@ public class MainPluginWindow : Window, IDisposable
                     color, iconStr);
                 if (isActive && !AccessibilityService.ReduceMotion)
                 {
-                    GradientText(drawList, iconVtx, gradA, gradB, gradPhase);
+                    GradientSweepVertices(drawList, iconVtx, gradA, gradB, gradPhase);
                 }
                 ImGui.PopFont();
 
@@ -437,7 +459,7 @@ public class MainPluginWindow : Window, IDisposable
                 {
                     if (!AccessibilityService.ReduceMotion)
                     {
-                        GradientText(drawList, labelVtx, gradA, gradB, gradPhase);
+                        GradientSweepVertices(drawList, labelVtx, gradA, gradB, gradPhase);
                     }
                     var dotY = labelY + fontSize + Px(3f);
                     drawList.AddCircleFilled(new Vector2(slotCenterX, dotY), Px(2.5f), accentCol);
@@ -523,21 +545,6 @@ public class MainPluginWindow : Window, IDisposable
             var col = ImGui.ColorConvertFloat4ToU32(Vector4.Lerp(colorA, colorB, blend));
             dl.AddLine(prev, pt, col, thickness);
             prev = pt;
-        }
-    }
-
-    /// <summary>Recolours the text vertices added since <paramref name="vtxStart"/> with a horizontal
-    /// accent gradient anchored to screen-x and scrolled by <paramref name="phase"/> — the animated
-    /// sheen on the selected nav button's icon and label.</summary>
-    private static void GradientText(ImDrawListPtr dl, int vtxStart, Vector4 a, Vector4 b, float phase)
-    {
-        var k = MathF.Tau / Px(70f);
-        for (int v = vtxStart; v < dl.VtxBuffer.Size; v++)
-        {
-            var vert = dl.VtxBuffer[v];
-            var blend = 0.5f + 0.5f * MathF.Sin(vert.Pos.X * k - phase);
-            vert.Col = ImGui.ColorConvertFloat4ToU32(Vector4.Lerp(a, b, blend));
-            dl.VtxBuffer[v] = vert;
         }
     }
 
@@ -730,14 +737,25 @@ public class MainPluginWindow : Window, IDisposable
 
     /// <summary>Hides the phone and shows the minimised bubble: the bottom-nav minimise action, also
     /// triggered by double-clicking the phone bezel.</summary>
-    private void Minimize()
+    public void Minimize()
     {
+        // Minimising while browsing the deck (or its view-profile page) counts as leaving it, so an elapsed
+        // slot yields a fresh deck on return rather than the pinned stale card.
+        if (IsDeckEngaged(_router.Current))
+        {
+            _deckScreen.MarkDeckLeft();
+        }
         IsOpen = false;
         if (_miniWindow != null)
         {
             _miniWindow.IsOpen = true;
         }
     }
+
+    /// <summary>True while the given screen is part of the deck's browse flow: the deck itself, or a profile
+    /// view opened from the deck. Used to decide whether leaving keeps or drops the current deck card.</summary>
+    private bool IsDeckEngaged(Screen screen) =>
+        screen == Screen.Deck || (screen == Screen.Profile && _profileScreen.Source == ProfileSource.Deck);
 
     /// <summary>Double-clicking the phone bezel (the frame around the content area) minimises, mirroring the
     /// bottom-nav button. Ignores double-clicks over the content area or any bezel widget, so it never steals input.</summary>
@@ -770,8 +788,13 @@ public class MainPluginWindow : Window, IDisposable
 
     private void PerformClose()
     {
-        // Closing only hides the UI; the hub connection lives for the plugin's lifetime, so
-        // notifications keep arriving while it's enabled.
+        // Closing keeps the hub connected (it lives for the plugin's lifetime), so notifications keep arriving.
+        // Closing while browsing the deck counts as leaving it, so a slot that elapses while closed yields a
+        // fresh deck on reopen rather than the pinned stale card.
+        if (IsDeckEngaged(_router.Current))
+        {
+            _deckScreen.MarkDeckLeft();
+        }
         if (_miniWindow is not null)
         {
             _miniWindow.IsOpen = false;

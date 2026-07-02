@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using AetherLove.Navigation;
 using AetherLove.Services;
 using AetherLove.Services.Crypto;
+using AetherLove.Services.Chat;
 using AetherLove.Services.Hub;
 using AetherLove.Services.Localization;
 using AetherLove.Shared.Matching;
@@ -32,6 +33,7 @@ public class ChatListScreen
     private readonly KeyStorageService _keys;
     private readonly NotificationCenter _notifications;
     private readonly ChatArchiveStore _archive;
+    private readonly ChatSyncService _sync;
 
     private readonly List<MatchSummaryDto> _matches = new();
     // Guards _matches: mutated off the UI thread (fetch Task, push handlers) while Draw() enumerates it.
@@ -40,8 +42,6 @@ public class ChatListScreen
     // Decrypted last-message previews, keyed by peer. Derived keys cached so re-renders don't re-do ECDH.
     private readonly ConcurrentDictionary<Guid, string> _previewByPeer = new();
     private readonly ConcurrentDictionary<Guid, byte[]> _keyByPeer = new();
-    // Per-peer conversation cache for content search; an entry is dropped when a message arrives or its chat opens.
-    private readonly ConcurrentDictionary<Guid, ConversationHistoryDto> _convoCache = new();
     private volatile bool _fetching;
     private volatile string? _fetchError;
     private volatile bool _connectivityError;
@@ -62,11 +62,6 @@ public class ChatListScreen
     private volatile string _appliedQuery = string.Empty;
     private volatile Dictionary<Guid, SearchHit> _searchHits = new();
     private CancellationTokenSource _searchCts = new();
-    // Shown under the search box while a large content search runs (an ETA) or after one fails (rate-limited).
-    private volatile string? _searchEstimate;
-    private volatile string? _searchError;
-    // Above this many conversations to fetch, a content search is slow enough to warrant an on-screen ETA.
-    private const int SearchEstimateThreshold = 25;
 
     /// <summary>Fixed height of one match row; shared by the list's virtualization and the row draw.</summary>
     private const float MatchRowHeight = 80f;
@@ -78,7 +73,8 @@ public class ChatListScreen
         CryptoService crypto,
         KeyStorageService keys,
         NotificationCenter notifications,
-        ChatArchiveStore archive)
+        ChatArchiveStore archive,
+        ChatSyncService sync)
     {
         _router = router;
         _hub = hub;
@@ -87,12 +83,8 @@ public class ChatListScreen
         _keys = keys;
         _notifications = notifications;
         _archive = archive;
-
-        // Singleton screen: stay subscribed for the whole session so a peer's cache drops even while it's hidden.
-        _events.MessageReceived += InvalidateConvoCache;
+        _sync = sync;
     }
-
-    private void InvalidateConvoCache(MessageReceivedPushDto p) => _convoCache.TryRemove(p.FromProfileId, out _);
 
     public Guid SelectedPeerId => _selectedPeerId;
     public string SelectedPeerName => _selectedPeerName;
@@ -127,6 +119,8 @@ public class ChatListScreen
 
     private void StartFetch()
     {
+        // Instant render from the persisted cache, then a cheap delta sync (no full match-list refetch).
+        HydrateMatchesFromCache();
         if (_fetching)
         {
             return;
@@ -139,21 +133,38 @@ public class ChatListScreen
         {
             try
             {
-                var dto = await _hub.GetMyMatchesAsync(ct).ConfigureAwait(false);
+                await _sync.SyncAsync(ct).ConfigureAwait(false);
                 if (ct.IsCancellationRequested)
                 {
                     return;
                 }
-                lock (_matchesLock)
+                HydrateMatchesFromCache();
+                if (_sync.Cache.GetMatches().Count == 0)
                 {
-                    _matches.Clear();
-                    _matches.AddRange(dto.Matches);
-                    SortMatches();
+                    if (_hub.IsConnected)
+                    {
+                        // Resilience: the delta yielded nothing (transient error / partial rollout); fall back to
+                        // the direct list so the screen is never stuck empty.
+                        var dto = await _hub.GetMyMatchesAsync(ct).ConfigureAwait(false);
+                        if (ct.IsCancellationRequested)
+                        {
+                            return;
+                        }
+                        lock (_matchesLock)
+                        {
+                            _matches.Clear();
+                            _matches.AddRange(dto.Matches);
+                            SortMatches();
+                        }
+                        CacheAvatars(dto.Matches);
+                        BuildPreviews(dto.Matches);
+                        _notifications.UnreadChatMessages = dto.Matches.Sum(m => m.UnreadCount);
+                    }
+                    else
+                    {
+                        _connectivityError = true;
+                    }
                 }
-                CacheAvatars(dto.Matches);
-                BuildPreviews(dto.Matches);
-                // Resync the unread badge to the server's authoritative per-conversation counts.
-                _notifications.UnreadChatMessages = dto.Matches.Sum(m => m.UnreadCount);
             }
             catch (OperationCanceledException) { }
             catch (Exception ex)
@@ -170,13 +181,28 @@ public class ChatListScreen
                 {
                     _fetchError = HubErrorText.Localize(ex);
                 }
-                Plugin.Log.Warning(ex, "[ChatListScreen] GetMyMatchesAsync failed.");
+                Plugin.Log.Warning(ex, "[ChatListScreen] chat sync failed.");
             }
             finally
             {
                 _fetching = false;
             }
         });
+    }
+
+    private void HydrateMatchesFromCache()
+    {
+        var cached = _sync.Cache.GetMatches();
+        lock (_matchesLock)
+        {
+            _matches.Clear();
+            _matches.AddRange(cached);
+            SortMatches();
+        }
+        CacheAvatars(cached);
+        BuildPreviews(cached);
+        // Resync the unread badge to the cached per-conversation counts.
+        _notifications.UnreadChatMessages = cached.Sum(m => m.UnreadCount);
     }
 
     private void CacheAvatars(IEnumerable<MatchSummaryDto> matches)
@@ -519,19 +545,6 @@ public class ChatListScreen
             ImGui.SameLine();
             ImGui.AlignTextToFramePadding();
             ImGui.TextColored(UiColors.Subtle, Loc.T("chat.searching"));
-
-            if (_searchEstimate is { } est)
-            {
-                ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
-                ImGui.TextColored(UiColors.Subtle, est);
-                ImGui.PopTextWrapPos();
-            }
-        }
-        else if (_searchError is { } err)
-        {
-            ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
-            ImGui.TextColored(UiColors.Amber, err);
-            ImGui.PopTextWrapPos();
         }
         ImGui.Spacing();
     }
@@ -555,13 +568,11 @@ public class ChatListScreen
         _searchHits = new Dictionary<Guid, SearchHit>();
         _appliedQuery = string.Empty;
         _searchQuery = string.Empty;
-        _searchEstimate = null;
-        _searchError = null;
     }
 
-    /// <summary>Runs the current query over names and, by fetching + decrypting each conversation, message
-    /// contents. Builds the per-peer hit map the list filters on. Content search is client-side because the
-    /// server only ever holds ciphertext.</summary>
+    /// <summary>Runs the current query over names and, by decrypting each conversation from the local cache,
+    /// message contents. Builds the per-peer hit map the list filters on. Fully offline: the server only ever
+    /// holds ciphertext, so content search reads the cached ciphertext and decrypts in memory.</summary>
     private void RunSearch()
     {
         var query = _searchQuery.Trim();
@@ -576,7 +587,6 @@ public class ChatListScreen
         _searchCts = new CancellationTokenSource();
         var ct = _searchCts.Token;
         _searching = true;
-        _searchError = null;
 
         MatchSummaryDto[] snapshot;
         lock (_matchesLock)
@@ -584,13 +594,7 @@ public class ChatListScreen
             snapshot = _matches.Where(m => !_archive.IsArchived(m.PeerProfileId)).ToArray();
         }
 
-        // Only un-cached conversations cost a round-trip; warn with an ETA when enough of them remain to be slow.
-        var toFetch = snapshot.Count(m => !_convoCache.ContainsKey(m.PeerProfileId));
-        _searchEstimate = toFetch > SearchEstimateThreshold
-            ? Loc.T("chat.search_estimate", (int)MathF.Ceiling(toFetch * 0.3f), (int)MathF.Ceiling(toFetch * 0.8f))
-            : null;
-
-        _ = Task.Run(async () =>
+        _ = Task.Run(() =>
         {
             var hits = new Dictionary<Guid, SearchHit>();
             try
@@ -602,7 +606,7 @@ public class ChatListScreen
                         return;
                     }
                     var nameMatch = m.PeerDisplayName.Contains(query, StringComparison.OrdinalIgnoreCase);
-                    var contentMsg = await FindContentMatchAsync(m, query, ct).ConfigureAwait(false);
+                    var contentMsg = FindContentMatch(m, query);
                     if (nameMatch || contentMsg != Guid.Empty)
                     {
                         hits[m.PeerProfileId] = new SearchHit(nameMatch, contentMsg);
@@ -618,10 +622,6 @@ public class ChatListScreen
                 _searchActive = true;
             }
             catch (OperationCanceledException) { }
-            catch (RateLimitException)
-            {
-                _searchError = Loc.T("chat.search_rate_limited");
-            }
             catch (Exception ex)
             {
                 Plugin.Log.Warning(ex, "[ChatListScreen] search failed.");
@@ -629,55 +629,34 @@ public class ChatListScreen
             finally
             {
                 _searching = false;
-                _searchEstimate = null;
             }
         }, ct);
     }
 
-    /// <summary>Id of the first message in the peer's conversation whose text contains <paramref name="query"/>,
-    /// or Empty. Decrypts locally with the per-conversation key.</summary>
-    private async Task<Guid> FindContentMatchAsync(MatchSummaryDto m, string query, CancellationToken ct)
+    /// <summary>Id of the first message in the peer's cached conversation whose text contains
+    /// <paramref name="query"/>, or Empty. Reads ciphertext from the local cache and decrypts in memory with
+    /// the per-conversation key; no server round-trip.</summary>
+    private Guid FindContentMatch(MatchSummaryDto m, string query)
     {
         var key = KeyForPeer(m);
         if (key is null)
         {
             return Guid.Empty;
         }
-        try
+        foreach (var em in _sync.Cache.GetConversation(m.PeerProfileId))
         {
-            if (!_convoCache.TryGetValue(m.PeerProfileId, out var convo))
+            try
             {
-                convo = await _hub.GetConversationAsync(m.PeerProfileId, ct).ConfigureAwait(false);
-                _convoCache[m.PeerProfileId] = convo;
-            }
-            foreach (var em in convo.Messages)
-            {
-                try
+                var text = Encoding.UTF8.GetString(_crypto.Decrypt(key, em.Nonce, em.Ciphertext));
+                if (text.Contains(query, StringComparison.OrdinalIgnoreCase))
                 {
-                    var text = Encoding.UTF8.GetString(_crypto.Decrypt(key, em.Nonce, em.Ciphertext));
-                    if (text.Contains(query, StringComparison.OrdinalIgnoreCase))
-                    {
-                        return em.Id;
-                    }
-                }
-                catch
-                {
-                    // Skip an undecryptable message; keep scanning the rest.
+                    return em.Id;
                 }
             }
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (RateLimitException)
-        {
-            // Bubble up so the whole search stops and the user can retry, rather than returning partial results.
-            throw;
-        }
-        catch (Exception ex)
-        {
-            Plugin.Log.Warning(ex, $"[ChatListScreen] search fetch failed for {m.PeerProfileId}.");
+            catch
+            {
+                // Skip an undecryptable message; keep scanning the rest.
+            }
         }
         return Guid.Empty;
     }
@@ -982,6 +961,17 @@ public class ChatListScreen
         var isHovered = ImGui.IsItemHovered();
         var isClicked = ImGui.IsItemClicked();
 
+        // A match with no messages yet still needs the first hello: tint it with the theme accent and
+        // sweep a periodic shine across it so it stands out as needing attention. Both clear as soon as
+        // either side sends a message, or once the user has opened the chat (acknowledged it).
+        if (!archivedView && m.LastMessageAtUtc is null
+            && !Plugin.Configuration.OpenedChats.Contains(m.PeerProfileId))
+        {
+            var rowMax = cursorStart + new Vector2(windowWidth, rowHeight);
+            drawList.AddRectFilled(cursorStart, rowMax, ThemeService.Current.AccentWithAlpha(0.14f));
+            DrawAttentionShine(drawList, cursorStart, rowMax);
+        }
+
         if (isHovered)
         {
             drawList.AddRectFilled(
@@ -996,8 +986,6 @@ public class ChatListScreen
             _selectedPeerName = m.PeerDisplayName;
             _selectedPeerAvatar = m.PeerAvatarWebp;
             _selectedScrollMessageId = hit?.ContentMessageId ?? Guid.Empty;
-            // Drop this peer's cache: opening the chat may add sent messages, so a later search re-syncs just this one.
-            _convoCache.TryRemove(m.PeerProfileId, out _);
             _router.Navigate(Screen.Chat);
         }
 
@@ -1117,6 +1105,37 @@ public class ChatListScreen
         }
 
         ImGui.SetCursorScreenPos(cursorStart + new Vector2(0, rowHeight));
+    }
+
+    /// <summary>A theme-tinted glint that sweeps across an attention row every few seconds (skipped under
+    /// reduce-motion). Driven by the global clock, so every awaiting-reply row shines in unison.</summary>
+    private static void DrawAttentionShine(ImDrawListPtr dl, Vector2 min, Vector2 max)
+    {
+        if (AccessibilityService.ReduceMotion)
+        {
+            return;
+        }
+        const double period = 3.5; // seconds between shines
+        const double sweep = 0.9;  // seconds the glint takes to cross the row
+        var phase = ImGui.GetTime() % period;
+        if (phase > sweep)
+        {
+            return;
+        }
+
+        var t = (float)(phase / sweep);
+        var rowH = max.Y - min.Y;
+        var bandW = rowH * 1.3f;
+        var centerX = min.X - bandW + t * (max.X - min.X + bandW * 2f);
+
+        var theme = ThemeService.Current;
+        var peak = theme.AccentLightWithAlpha(0.30f);
+        var edge = theme.AccentLightWithAlpha(0f);
+
+        dl.PushClipRect(min, max, true);
+        dl.AddRectFilledMultiColor(new Vector2(centerX - bandW, min.Y), new Vector2(centerX, max.Y), edge, peak, peak, edge);
+        dl.AddRectFilledMultiColor(new Vector2(centerX, min.Y), new Vector2(centerX + bandW, max.Y), peak, edge, edge, peak);
+        dl.PopClipRect();
     }
 
     private static string GetTimeAgo(DateTime time)

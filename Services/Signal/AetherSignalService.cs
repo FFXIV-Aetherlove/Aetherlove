@@ -333,6 +333,16 @@ public sealed class AetherSignalService : IAsyncDisposable
             _log.Information($"[AetherSignalService] BlockedByPeer push from {payload.OtherProfileId}.");
         });
 
+        hub.On<MessageReactionsChangedPushDto>("MessageReactionsChanged", payload =>
+        {
+            _chatEvents.RaiseReactionsChanged(payload);
+        });
+
+        hub.On<MessagePinChangedPushDto>("MessagePinChanged", payload =>
+        {
+            _chatEvents.RaisePinChanged(payload);
+        });
+
         hub.On<WarningIssuedPushDto>("WarningIssued", payload =>
         {
             _log.Information($"[AetherSignalService] WarningIssued push: {payload.Warning.Id}.");

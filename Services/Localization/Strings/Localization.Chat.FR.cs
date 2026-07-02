@@ -4,7 +4,7 @@ internal static class ChatFr
 {
     public static readonly System.Collections.Generic.Dictionary<string, string> Strings = new()
     {
-        // ===== Chat =====
+        // Chat
         ["chat.no_conversation_selected"] = "Aucune conversation sélectionnée.",
         ["chat.unreadable_message"] = "[message illisible]",
         ["chat.report_submitted_toast"] = "Signalement envoyé. Notre équipe de modération l'examinera.",
@@ -25,7 +25,6 @@ internal static class ChatFr
         ["chat.block_confirm"] = "Bloquer",
         ["chat.cancel"] = "Annuler",
         ["chat.loading_messages"] = "Chargement des messages…",
-        ["chat.error"] = "Erreur : {0}",
         ["chat.e2e_self_broken"] = "Un problème est survenu avec votre configuration E2E, veuillez contacter le support.",
         ["chat.seen_suffix"] = " · vu",
         ["chat.send"] = "Envoyer",
@@ -58,14 +57,11 @@ internal static class ChatFr
         ["chat.hide_search"] = "Masquer la recherche",
         ["chat.search_hint"] = "Nom ou message",
         ["chat.searching"] = "Recherche en cours…",
-        ["chat.search_estimate"] = "Cela peut prendre {0}-{1} secondes en raison du nombre de conversations.",
-        ["chat.search_rate_limited"] = "Trop de conversations à rechercher d'un coup. Réessayez dans une minute.",
         ["chat.search_no_results"] = "Aucun résultat trouvé",
         ["chat.menu_archive"] = "Archiver le chat",
         ["chat.menu_unarchive"] = "Désarchiver le chat",
         ["chat.no_archived"] = "Aucun chat archivé",
         ["chat.all_archived"] = "Tous vos chats sont archivés",
-        ["chat.loading"] = "Chargement…",
         ["chat.matches_load_error"] = "Impossible de charger les correspondances : {0}",
         ["chat.connectivity_error"] = "Impossible de se connecter au serveur AetherLove. Veuillez réessayer ou consulter Discord pour voir l'état du serveur.",
         ["chat.empty_state"] = "Vous n'avez pas encore de correspondances — mais cela changera bientôt. Continuez à swiper !",
@@ -74,5 +70,19 @@ internal static class ChatFr
         ["chat.time_ago_minutes"] = "il y a {0} min",
         ["chat.time_ago_hours"] = "il y a {0} h",
         ["chat.time_ago_days"] = "il y a {0} j",
+
+        // added after update (1.3.1)
+        ["chat.you"] = "Vous",
+        ["chat.reply"] = "Répondre",
+        ["chat.pin_message"] = "Épingler le message",
+        ["chat.unpin_message"] = "Détacher le message",
+        ["chat.pinned_messages"] = "Messages épinglés",
+        ["chat.pinned_messages_menu"] = "Messages épinglés ({0})",
+        ["chat.quote_unavailable"] = "(message d'origine indisponible)",
+        ["chat.quote_generic"] = "(message)",
+        ["chat.replying_to"] = "Réponse à {0}",
+        ["chat.reaction_remove_hint"] = "cliquez pour retirer",
+        ["chat.jump"] = "Aller",
+        ["chat.unpin"] = "Détacher",
     };
 }

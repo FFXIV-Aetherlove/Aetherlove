@@ -37,7 +37,6 @@ internal static class ProfileFields
         Region.Europe,
         Region.Oceania,
         Region.Japan,
-        Region.PreferNotToSay,
     ];
 
     internal static readonly Language[] LanguageValues =
@@ -63,6 +62,10 @@ internal static class ProfileFields
         ContentInterest.RegularContent,
         ContentInterest.ExtremeTrials,
         ContentInterest.SavageRaiding,
+        ContentInterest.UltimateRaiding,
+        ContentInterest.DeepDungeons,
+        ContentInterest.VariantCriterionDungeons,
+        ContentInterest.FieldOperations,
         ContentInterest.Pvp,
         ContentInterest.BlueMage,
         ContentInterest.TripleTriad,
@@ -154,7 +157,6 @@ internal static class ProfileFields
         Loc.T("onboarding.region_eu"),
         Loc.T("onboarding.region_oceania"),
         Loc.T("onboarding.region_japan"),
-        Loc.T("onboarding.region_prefer_not_to_say"),
     ];
 
     internal static string[] Races =>
@@ -195,6 +197,10 @@ internal static class ProfileFields
         Loc.T("onboarding.content_regular"),
         Loc.T("onboarding.content_extreme_trials"),
         Loc.T("onboarding.content_savage"),
+        Loc.T("onboarding.content_ultimate_raiding"),
+        Loc.T("onboarding.content_deep_dungeons"),
+        Loc.T("onboarding.content_variant_criterion"),
+        Loc.T("onboarding.content_field_operations"),
         Loc.T("onboarding.content_pvp"),
         Loc.T("onboarding.content_blue_mage"),
         Loc.T("onboarding.content_triple_triad"),

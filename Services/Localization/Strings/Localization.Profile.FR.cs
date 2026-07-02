@@ -4,7 +4,7 @@ internal static class ProfileFr
 {
     public static readonly System.Collections.Generic.Dictionary<string, string> Strings = new()
     {
-        // ===== Profile =====
+        // Profile
         ["profile.load_failed"] = "Impossible de charger le profil : {0}",
         ["profile.none_loaded"] = "Aucun profil chargé.",
 
@@ -19,7 +19,6 @@ internal static class ProfileFr
         ["profile.favourite_job"] = "Job favori",
         ["profile.favourite_location"] = "Lieu favori",
         ["profile.favourite_expansion"] = "Extension favorite",
-        ["profile.favourite_spotify_song"] = "Chanson Spotify favorite",
         ["profile.favourite_song"] = "Chanson favorite",
         ["music.fetching"] = "Récupération du nom de la chanson…",
         ["music.saved"] = "Lien enregistré (nom en attente)",
@@ -29,15 +28,10 @@ internal static class ProfileFr
         ["profile.favourite_anime"] = "Anime favori",
         ["profile.favourite_ff_character"] = "Personnage FF favori",
         ["profile.sync_tool"] = "Outil de synchronisation",
-        ["profile.uses_sync_tool"] = "Utilise un outil de synchronisation",
-        ["profile.preferred"] = "Préféré",
-        ["profile.yes"] = "Oui",
-        ["profile.no"] = "Non",
         ["profile.weekday_playtimes"] = "Heures de jeu en semaine  (lun.–ven.)",
         ["profile.weekend_playtimes"] = "Heures de jeu le week-end  (sam.–dim.)",
         ["profile.timezone_value"] = "{0} (heure actuelle : {1})",
 
-        ["profile.spotify_open_tooltip"] = "Cliquez pour ouvrir dans Spotify",
         ["profile.nsfw_reveal"] = "Cliquez pour afficher l'image NSFW",
 
         ["profile.back_to_chat"] = "Retour au chat",
@@ -63,10 +57,6 @@ internal static class ProfileFr
         ["profile.copy_warning_body"] = "Vous venez de copier le texte de quelqu'un. Faites attention avant de cliquer sur les liens qu'il pourrait contenir ou de les suivre — vous le faites à vos propres risques.",
         ["profile.copy_warning_agree"] = "J'ai compris et j'accepte",
 
-        ["profile.tab_view"] = "Voir le profil",
-        ["profile.tab_edit"] = "Modifier le profil",
-        ["profile.tab_images"] = "Changer les images",
-
         // MyProfileScreen hub: stats + menu
         ["profile.section_myprofile"] = "Mon profil",
         ["profile.section_service"] = "Service",
@@ -80,7 +70,6 @@ internal static class ProfileFr
 
         ["profile.load_profile_failed"] = "Impossible de charger votre profil : {0}",
         ["profile.retry"] = "Réessayer",
-        ["profile.save_failed"] = "Échec de l'enregistrement : {0}",
         ["profile.saving"] = "Enregistrement…",
         ["profile.saved"] = "Enregistré  ✓",
         ["profile.save_changes"] = "Enregistrer les modifications",
@@ -98,7 +87,6 @@ internal static class ProfileFr
         ["profile.heading_match_prefs"] = "Préférences de correspondance",
 
         ["profile.display_name"] = "Nom affiché",
-        ["profile.display_name_hint"] = "Prénom ou pseudonyme, sans espaces.",
         ["profile.about_me"] = "À propos de moi",
         ["profile.char_count"] = "{0} / 500 caractères",
         ["profile.preview"] = "Aperçu",
@@ -112,9 +100,6 @@ internal static class ProfileFr
         ["profile.nsfw_explainer"] = "NSFW signifie « Not Safe For Work » : du contenu comportant de la nudité ou des thèmes sexuels. Activez cette option pour voir des profils NSFW et y correspondre.",
         ["profile.nsfw_optin"] = "Profils NSFW : OUI",
         ["profile.favourite_job_tooltip"] = "Le job ou le rôle que vous appréciez le plus. Tapez pour filtrer.",
-        ["profile.favourite_spotify"] = "Chanson Spotify favorite",
-        ["profile.spotify_tooltip"] = "Collez l'URL ou l'identifiant d'un titre Spotify.",
-        ["profile.track_id"] = "Identifiant du titre : {0}",
         ["profile.favourite_ff_character_full"] = "Personnage de Final Fantasy favori",
         ["profile.weekday_playtimes_edit"] = "Heures de jeu en semaine (lun.–ven.)",
         ["profile.weekend_playtimes_edit"] = "Heures de jeu le week-end (sam.–dim.)",

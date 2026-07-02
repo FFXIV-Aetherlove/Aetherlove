@@ -342,12 +342,49 @@ internal static class SharedUiHelpers
         }
     }
 
+    /// <summary>Draws a full-width amber caution callout containing the wrapped <paramref name="text"/>, the
+    /// standard warning card sitting beside a form field. Advances the cursor to just below the box.</summary>
+    internal static void DrawWarningCard(string text, float width)
+    {
+        var dl = ImGui.GetWindowDrawList();
+        var boxTL = ImGui.GetCursorScreenPos();
+        var pad = Px(10f, 8f);
+        var textW = width - pad.X * 2f;
+
+        ImGui.SetCursorScreenPos(boxTL + pad);
+        ImGui.PushTextWrapPos(ImGui.GetCursorPos().X + textW);
+        var preY = ImGui.GetCursorScreenPos().Y;
+        ImGui.TextColored(UiColors.Amber, text);
+        ImGui.PopTextWrapPos();
+        var boxH = (ImGui.GetCursorScreenPos().Y - preY) + pad.Y * 2f;
+
+        dl.AddRectFilled(boxTL, boxTL + new Vector2(width, boxH), UiColors.WarningBoxFill, Px(6f));
+        dl.AddRect(boxTL, boxTL + new Vector2(width, boxH), UiColors.WarningBoxBorder, Px(6f), ImDrawFlags.None, 1.5f);
+        ImGui.SetCursorScreenPos(new Vector2(boxTL.X, boxTL.Y + boxH));
+    }
+
+    /// <summary>Recolours the draw-list vertices added since <paramref name="vtxStart"/> with a horizontal
+    /// accent gradient anchored to screen-x and scrolled by <paramref name="phase"/> — the shared animated
+    /// sheen used by the selected nav button and the decide-later pill. Callers guard on reduce-motion.</summary>
+    internal static void GradientSweepVertices(ImDrawListPtr dl, int vtxStart, Vector4 a, Vector4 b, float phase)
+    {
+        var k = MathF.Tau / Px(70f);
+        for (int v = vtxStart; v < dl.VtxBuffer.Size; v++)
+        {
+            var vert = dl.VtxBuffer[v];
+            var blend = 0.5f + 0.5f * MathF.Sin(vert.Pos.X * k - phase);
+            vert.Col = ImGui.ColorConvertFloat4ToU32(Vector4.Lerp(a, b, blend));
+            dl.VtxBuffer[v] = vert;
+        }
+    }
+
     /// <summary>The Terms of Service paragraphs, shared by the onboarding ToS step and the Settings ToS view.</summary>
     internal static string[] TermsOfServiceParagraphs() =>
     [
         Loc.T("onboarding.tos_p1"),
         Loc.T("onboarding.tos_p2"),
         Loc.T("onboarding.tos_ownership"),
+        Loc.T("onboarding.tos_race_gender"),
         Loc.T("onboarding.tos_p3"),
         Loc.T("onboarding.tos_nsfl"),
         Loc.T("onboarding.tos_p4"),

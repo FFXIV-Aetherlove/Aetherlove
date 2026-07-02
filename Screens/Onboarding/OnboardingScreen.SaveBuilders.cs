@@ -16,7 +16,7 @@ public partial class OnboardingScreen
             Bio: _bio,
             Race: ValueAt(RaceValues, _raceIdx, Race.Hyur),
             Gender: ValueAt(GenderValues, _genderIdx, Gender.Male),
-            Region: ValueAt(RegionValues, _regionIdx, Region.PreferNotToSay),
+            Region: ValueAt(RegionValues, _regionIdx, Region.NorthAmerica),
             LanguageMask: MaskOr(LanguageValues, _langSelected, (a, b) => (Language)((short)a | (short)b)),
             ContentInterestMask: MaskOr(ContentInterestValues, _contentInterests, (a, b) => (ContentInterest)((int)a | (int)b)),
             LookingForMask: MaskOr(LookingForValues, _lookingFor, (a, b) => (LookingFor)((short)a | (short)b)),

@@ -18,7 +18,6 @@ internal static class OnboardingEs
         ["onboarding.header_all_set"] = "¡Todo listo!",
         ["onboarding.header_default"] = "AetherLove",
 
-        ["onboarding.save_failed"] = "Error al guardar: {0}",
         ["onboarding.back"] = "← Atrás",
         ["onboarding.saving"] = "Guardando…",
         ["onboarding.start_swiping"] = "Empezar a deslizar →",
@@ -108,7 +107,6 @@ internal static class OnboardingEs
         ["onboarding.region_eu"] = "Europa (EU)",
         ["onboarding.region_oceania"] = "Oceanía",
         ["onboarding.region_japan"] = "Japón",
-        ["onboarding.region_prefer_not_to_say"] = "Prefiero no decirlo",
         ["onboarding.race_hyur"] = "Hyur",
         ["onboarding.race_elezen"] = "Elezen",
         ["onboarding.race_lalafell"] = "Lalafell",
@@ -239,7 +237,6 @@ internal static class OnboardingEs
 
         // Step 7 — Optional
         ["onboarding.expansion_none"] = "(Ninguna)",
-        ["onboarding.sync_none"] = "No uso ninguna herramienta de sincronización",
         ["onboarding.opt_heading"] = "Cuéntanos más sobre ti",
         ["onboarding.opt_intro"] = "Todos los campos de esta página son opcionales. Rellena tanto o tan poco como quieras — estos datos aparecen en la tarjeta de tu perfil y ayudan a otros a encontrarte.",
         ["onboarding.opt_fav_job"] = "Trabajo favorito",
@@ -304,5 +301,13 @@ internal static class OnboardingEs
         ["onboarding.prefs_intro"] = "Haz que AetherLove sea tuyo — elige un tema de color y un tamaño de teléfono. Puedes cambiar ambos en cualquier momento en los Ajustes.",
         ["onboarding.prefs_theme"] = "Tema",
         ["onboarding.prefs_phone_size"] = "Tamaño del teléfono",
+
+        // added after update (1.3.1)
+        ["onboarding.content_ultimate_raiding"] = "Incursiones Ultimate",
+        ["onboarding.content_deep_dungeons"] = "Mazmorras profundas",
+        ["onboarding.content_variant_criterion"] = "Mazmorras variantes / de criterio",
+        ["onboarding.content_field_operations"] = "Operaciones de campo (Bozja, Eureka)",
+        ["onboarding.race_gender_warning"] = "¡Elige la raza y el género de tu personaje de FFXIV, no tu género en la vida real!",
+        ["onboarding.tos_race_gender"] = "Acepto elegir la raza y el género correctos para mi personaje de Final Fantasy XIV durante la configuración, y entiendo que mi foto de perfil principal debe reflejar a ese personaje.",
     };
 }

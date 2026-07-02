@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,6 +16,7 @@ using AetherLove.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Textures;
+using Dalamud.Interface.Utility.Raii;
 
 namespace AetherLove.Screens;
 
@@ -41,6 +43,16 @@ public class DeckScreen : IDisposable
     private volatile string? _refreshError;
     /// <summary>Set by a server DeckRefresh push; consumed on the next Draw.</summary>
     private volatile bool _forceRefresh;
+    /// <summary>Set when the user leaves the deck (or minimises) while the slot is running, so the next deck
+    /// apply drops the stale card instead of pinning it. Cleared once settled back on the deck or after apply.</summary>
+    private bool _discardCurrentOnRefresh;
+    /// <summary>Throttles the off-screen background pre-fetch so a failing server isn't hammered per frame; a
+    /// successful pre-fetch stops the loop on its own (a pending deck is then in hand).</summary>
+    private DateTimeOffset _lastBackgroundRefreshUtc = DateTimeOffset.MinValue;
+    private static readonly TimeSpan BackgroundRefreshRetry = TimeSpan.FromSeconds(5);
+    /// <summary>A fetched deck waiting to be applied on the UI thread (never mid-gesture). Pinning the card in
+    /// hand happens at apply time so a refresh only ever swaps the queue behind the current card.</summary>
+    private volatile MatchDeckDto? _pendingDeck;
     private CancellationTokenSource _cts = new();
 
     private volatile bool _pendingMatchNav;
@@ -72,6 +84,25 @@ public class DeckScreen : IDisposable
     private float _nopeHover;
     private float _likeHover;
 
+    // Reswipe (undo last swipe): the card is held in memory so undo survives new pulls (not a restart).
+    private DeckCardDto? _lastSwipedCard;
+    private bool _lastSwipeWasLike;
+    private bool _lastSwipeWasMatch;
+    private volatile int _reswipesRemaining;
+
+    private bool _isUndoing;
+    private float _undoProgress;
+    private bool _undoFromRight;
+    private const float UndoSpeed = 2.85f;
+
+    // One-time in-page overlay explaining the reswipe button; panel height is re-measured each frame.
+    private bool _showReswipeIntro;
+    private float _reswipeIntroHeight;
+
+    private bool _isDeferring;
+    private float _deferProgress;
+    private const float DeferSpeed = 2.85f;
+
     private const float CardHeight = 560f;
     private const float SwipeThreshold = 100f;
 
@@ -98,11 +129,35 @@ public class DeckScreen : IDisposable
 
     private void OnDeckRefreshRequested() => _forceRefresh = true;
 
+    /// <summary>Called when the user navigates away from the deck (or minimises) to anything other than the
+    /// deck's own view-profile page, so the current card is dropped and a fresh deck is shown on the next
+    /// return instead of the pinned stale card.</summary>
+    public void MarkDeckLeft() => _discardCurrentOnRefresh = true;
+
+    /// <summary>Runs each frame while the deck is NOT the active screen: once the user has left the deck and the
+    /// slot elapses, fetch the next deck in the background so it is already in hand (no visible swap of the old
+    /// card) when they return. StartRefresh stashes the result; ApplyPendingDeckIfReady applies it on return.</summary>
+    public void MaybeBackgroundRefresh()
+    {
+        var now = DateTimeOffset.UtcNow;
+        if (_discardCurrentOnRefresh
+            && !_refreshInFlight
+            && _pendingDeck is null
+            && _nextPullAtUtc.HasValue
+            && now >= _nextPullAtUtc.Value
+            && now - _lastBackgroundRefreshUtc >= BackgroundRefreshRetry)
+        {
+            _lastBackgroundRefreshUtc = now;
+            StartRefresh();
+        }
+    }
+
     public void OnShow()
     {
         _dragX = _dragY = 0;
-        _isThrowingCard = _isSnappingBack = false;
-        _throwProgress = _snapProgress = 0f;
+        _isThrowingCard = _isSnappingBack = _isUndoing = _isDeferring = false;
+        _throwProgress = _snapProgress = _undoProgress = _deferProgress = 0f;
+        _showReswipeIntro = false;
         _cooldownScene.Reset();
 
         _cts.Cancel();
@@ -117,6 +172,13 @@ public class DeckScreen : IDisposable
         // Only hit the server when we have no deck in hand or the next-pull window has elapsed; an
         // emptied deck is re-pulled by Draw() once NextPullAtUtc passes.
         var pullDue = _nextPullAtUtc.HasValue && DateTimeOffset.UtcNow >= _nextPullAtUtc.Value;
+        if (_discardCurrentOnRefresh && pullDue)
+        {
+            // Returned after leaving the deck while the slot elapsed: drop the stale deck now so the old card
+            // never flashes. The fresh deck (pre-fetched in the background, or fetched here) replaces it.
+            _cards.Clear();
+            _processedThisPeriod.Clear();
+        }
         if (_cards.Count == 0 || pullDue)
         {
             StartRefresh();
@@ -131,6 +193,8 @@ public class DeckScreen : IDisposable
             StartRefresh();
         }
 
+        ApplyPendingDeckIfReady();
+
         if (_pendingMatchNav)
         {
             _pendingMatchNav = false;
@@ -138,10 +202,26 @@ public class DeckScreen : IDisposable
             return;
         }
 
-        if (_cards.Count == 0 && !_refreshInFlight &&
-            _nextPullAtUtc.HasValue && DateTimeOffset.UtcNow >= _nextPullAtUtc.Value)
+        // Pull the next deck when the slot elapses. On the deck the current card is kept on top and the fresh
+        // deck loads behind it; if the user was on another screen or minimised when the slot elapsed,
+        // _discardCurrentOnRefresh was set so ApplyPendingDeckIfReady drops the stale card instead.
+        var pullDue = _nextPullAtUtc.HasValue && DateTimeOffset.UtcNow >= _nextPullAtUtc.Value;
+        if (!_refreshInFlight && pullDue)
         {
+            if (_discardCurrentOnRefresh)
+            {
+                // Slot elapsed while the deck wasn't the visible screen and we resumed onto it without an OnShow
+                // (e.g. reopened straight to the deck): drop the stale deck so the old card doesn't flash.
+                _cards.Clear();
+                _processedThisPeriod.Clear();
+            }
             StartRefresh();
+        }
+        else if (!pullDue && _pendingDeck is null && _cards.Count > 0)
+        {
+            // Settled on the deck with the slot still running: the user is engaged with the current card, so a
+            // later on-deck refresh keeps it.
+            _discardCurrentOnRefresh = false;
         }
 
         var dt = (float)ImGui.GetIO().DeltaTime;
@@ -162,6 +242,24 @@ public class DeckScreen : IDisposable
             {
                 _dragX = _dragY = 0f;
                 _isSnappingBack = false;
+            }
+        }
+        else if (_isUndoing)
+        {
+            AnimationHelper.ClampedProgress(ref _undoProgress, dt, UndoSpeed, forward: true);
+            if (_undoProgress >= 1f)
+            {
+                _isUndoing = false;
+                _undoProgress = 0f;
+                _dragX = _dragY = 0f;
+            }
+        }
+        else if (_isDeferring)
+        {
+            AnimationHelper.ClampedProgress(ref _deferProgress, dt, DeferSpeed, forward: true);
+            if (_deferProgress >= 1f)
+            {
+                CompleteDeferral();
             }
         }
 
@@ -191,6 +289,8 @@ public class DeckScreen : IDisposable
         DrawActionButtons(centerX, windowPos.Y + usableHeight - Px(BottomMargin) - Px(ButtonAreaHeight) + Px(10f));
 
         DrawDeckExpiryWarning(windowPos, windowSize);
+
+        DrawReswipeIntroOverlay(windowPos, windowSize);
     }
 
     /// <summary>Top pill nudging the player to swipe the remaining cards before the next pull. Shown when the
@@ -246,7 +346,7 @@ public class DeckScreen : IDisposable
 
     private void StartRefresh()
     {
-        if (_refreshInFlight)
+        if (_refreshInFlight || _pendingDeck is not null)
         {
             return;
         }
@@ -265,13 +365,11 @@ public class DeckScreen : IDisposable
                     return;
                 }
 
-                _processedThisPeriod.Clear();
-                _cards.Clear();
-                _cards.AddRange(deck.Cards);
-                _nextPullAtUtc = deck.NextPullAtUtc;
-                _noPoolForPreferences = deck.NoPoolForPreferences;
-
                 CachePortraits(deck.Cards);
+
+                // Hand the result to the UI thread; Draw applies it at a safe point (never mid-gesture) and
+                // pins the card in hand, so a refresh only ever swaps the queue behind the current card.
+                _pendingDeck = deck;
             }
             catch (OperationCanceledException) { }
             catch (Exception ex)
@@ -288,6 +386,45 @@ public class DeckScreen : IDisposable
                 _refreshInFlight = false;
             }
         }, ct);
+    }
+
+    /// <summary>Applies a fetched deck on the UI thread, but only when the user isn't mid-gesture, and pins the
+    /// card currently in hand: a refresh replaces the queue behind it, never the card being looked at or acted
+    /// on. The pinned card stays until the user swipes it, then the fresh deck takes over.</summary>
+    private void ApplyPendingDeckIfReady()
+    {
+        var pending = _pendingDeck;
+        if (pending is null)
+        {
+            return;
+        }
+        if (_isDragging || _isThrowingCard || _isSnappingBack || _isUndoing || _isDeferring || _dragX != 0f || _dragY != 0f)
+        {
+            return;
+        }
+        _pendingDeck = null;
+
+        // Keep the card in hand on top, unless the user left the deck (or minimised) while the slot elapsed, in
+        // which case the stale card is dropped so a fresh deck is shown on return.
+        var pinned = (!_discardCurrentOnRefresh && _cards.Count > 0) ? _cards[0] : null;
+        _discardCurrentOnRefresh = false;
+        _processedThisPeriod.Clear();
+        _cards.Clear();
+        if (pinned is not null)
+        {
+            // The just-fetched deck wiped the portrait cache, and the pinned card isn't in the fresh deck, so
+            // rebuild its image from the in-memory bytes or it renders blank.
+            EnsurePortraitCached(pinned);
+            _cards.Add(pinned);
+            _cards.AddRange(pending.Cards.Where(c => c.ProfileId != pinned.ProfileId));
+        }
+        else
+        {
+            _cards.AddRange(pending.Cards);
+        }
+        _nextPullAtUtc = pending.NextPullAtUtc;
+        _noPoolForPreferences = pending.NoPoolForPreferences;
+        _reswipesRemaining = pending.ReswipesRemaining;
     }
 
     private void CachePortraits(IEnumerable<DeckCardDto> cards)
@@ -319,6 +456,32 @@ public class DeckScreen : IDisposable
             {
                 Plugin.Log.Warning(ex, $"[DeckScreen] Failed to cache portrait for {c.ProfileId}.");
             }
+        }
+    }
+
+    /// <summary>Rewrites a single card's portrait into the deck cache from its in-memory bytes if the file is
+    /// gone. A reswiped card can come from an earlier deck whose portraits were cleared on the last pull, so
+    /// this restores its image before it is re-dealt.</summary>
+    private void EnsurePortraitCached(DeckCardDto card)
+    {
+        if (card.PortraitWebp is null || card.PortraitWebp.Length == 0)
+        {
+            return;
+        }
+        try
+        {
+            var cacheDir = ImageCacheCleaner.DeckCacheDir;
+            Directory.CreateDirectory(cacheDir);
+            var path = Path.Combine(cacheDir, $"{card.ProfileId}{ImageFormat.ExtensionFor(card.PortraitWebp)}");
+            if (!File.Exists(path))
+            {
+                File.WriteAllBytes(path, card.PortraitWebp);
+                _portraitTextures[card.ProfileId] = Plugin.TextureProvider.GetFromFile(path);
+            }
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Warning(ex, $"[DeckScreen] Failed to re-cache reswiped portrait for {card.ProfileId}.");
         }
     }
 
@@ -374,6 +537,20 @@ public class DeckScreen : IDisposable
                 cardTopLeft.Y += Math.Abs(throwOffset) * 0.3f;
                 alpha *= 1f - _throwProgress;
             }
+            else if (_isUndoing)
+            {
+                // Reverse of the throw: the card flies back in from the side it left.
+                var undoOffset = (_undoFromRight ? 1 : -1) * windowSize.X * (1f - _undoProgress);
+                cardTopLeft.X += undoOffset;
+                cardTopLeft.Y += Math.Abs(undoOffset) * 0.3f;
+                alpha *= _undoProgress;
+            }
+            else if (_isDeferring)
+            {
+                // Decide later: slides straight down and fades, distinct from the horizontal swipe-throw.
+                cardTopLeft.Y += windowSize.Y * _deferProgress;
+                alpha *= 1f - _deferProgress;
+            }
             else
             {
                 cardTopLeft.X += _dragX;
@@ -384,13 +561,17 @@ public class DeckScreen : IDisposable
         var cardBottomRight = cardTopLeft + new Vector2(scaledWidth, scaledHeight);
 
         var rotation = 0f;
-        if (isTopCard && !_isThrowingCard)
-        {
-            rotation = (_dragX / windowSize.X) * 25f;
-        }
-        else if (isTopCard && _isThrowingCard)
+        if (isTopCard && _isThrowingCard)
         {
             rotation = (_throwRight ? 1 : -1) * 25f * _throwProgress;
+        }
+        else if (isTopCard && _isUndoing)
+        {
+            rotation = (_undoFromRight ? 1 : -1) * 25f * (1f - _undoProgress);
+        }
+        else if (isTopCard)
+        {
+            rotation = (_dragX / windowSize.X) * 25f;
         }
 
         var drawList = ImGui.GetWindowDrawList();
@@ -420,7 +601,6 @@ public class DeckScreen : IDisposable
             }
         }
 
-        // Neutral gray placeholder when a candidate has no portrait.
         const uint fallbackColor = 0xFF3A3A3Au;
 
         if (Math.Abs(rotation) < 0.01f)
@@ -476,7 +656,15 @@ public class DeckScreen : IDisposable
         var viewPillBR = Vector2.Zero;
         var isOverPill = false;
 
-        if (isTopCard && !_isThrowingCard)
+        var undoPillTL = Vector2.Zero;
+        var undoPillBR = Vector2.Zero;
+        var undoPillShown = false;
+
+        var laterPillTL = Vector2.Zero;
+        var laterPillBR = Vector2.Zero;
+        var laterPillShown = false;
+
+        if (isTopCard && !_isThrowingCard && !_isUndoing && !_isDeferring)
         {
             var cardCenter = (cardTopLeft + cardBottomRight) * 0.5f;
             var radians = rotation * MathF.PI / 180f;
@@ -567,6 +755,10 @@ public class DeckScreen : IDisposable
                 ? FontAwesomeIcon.Venus.ToIconString()
                 : FontAwesomeIcon.Mars.ToIconString();
             var genderRawW = ImGui.CalcTextSize(genderIcon).X;
+            var undoIconStr = FontAwesomeIcon.Undo.ToIconString();
+            var undoIconRawW = ImGui.CalcTextSize(undoIconStr).X;
+            var laterIconStr = FontAwesomeIcon.Clock.ToIconString();
+            var laterIconRawW = ImGui.CalcTextSize(laterIconStr).X;
             ImGui.PopFont();
 
             void AddRotatedText(Vector2 pos, uint col, string text, float wrap, ImFontPtr useFont, float size)
@@ -586,6 +778,25 @@ public class DeckScreen : IDisposable
             {
                 var vtxStart = drawList.VtxBuffer.Size;
                 drawList.AddRectFilled(tl, tl + size, col, rounding);
+                var vtxEnd = drawList.VtxBuffer.Size;
+                for (int vi = vtxStart; vi < vtxEnd; vi++)
+                {
+                    var vtx = drawList.VtxBuffer[vi];
+                    vtx.Pos = Rot(vtx.Pos);
+                    drawList.VtxBuffer[vi] = vtx;
+                }
+            }
+
+            // Rounded capsule with a left-to-right two-tone fill (solid caps + gradient middle), then rotated.
+            void AddRotatedPillGradient(Vector2 tl, Vector2 size, uint colLeft, uint colRight)
+            {
+                var r = size.Y * 0.5f;
+                var vtxStart = drawList.VtxBuffer.Size;
+                drawList.AddCircleFilled(new Vector2(tl.X + r, tl.Y + r), r, colLeft, 24);
+                drawList.AddCircleFilled(new Vector2(tl.X + size.X - r, tl.Y + r), r, colRight, 24);
+                drawList.AddRectFilledMultiColor(
+                    new Vector2(tl.X + r, tl.Y), new Vector2(tl.X + size.X - r, tl.Y + size.Y),
+                    colLeft, colRight, colRight, colLeft);
                 var vtxEnd = drawList.VtxBuffer.Size;
                 for (int vi = vtxStart; vi < vtxEnd; vi++)
                 {
@@ -690,6 +901,71 @@ public class DeckScreen : IDisposable
                     alphaU32 | 0x00FFFFFF, PillLabel, 0f, font, fontSize);
             }
 
+            // Reswipe (undo) pill, top-left. Only shown once there's a card to undo (never on the first card).
+            if (_lastSwipedCard is not null)
+            {
+                var undoW = undoIconRawW * (fontSize / iconNatSize) + Px(PillPadX) * 2f;
+                undoPillTL = new Vector2(cardTopLeft.X + Px(14f), cardTopLeft.Y + Px(14f));
+                undoPillBR = undoPillTL + new Vector2(undoW, pillH);
+                undoPillShown = true;
+                if (mp.X >= undoPillTL.X && mp.X <= undoPillBR.X && mp.Y >= undoPillTL.Y && mp.Y <= undoPillBR.Y)
+                {
+                    isOverPill = true;
+                }
+
+                var undoEnabled = _reswipesRemaining > 0;
+                // Greyed pill background once the daily reswipe is spent.
+                var undoBg = undoEnabled
+                    ? ((uint)(alpha * 220f) << 24 | t.AccentDarkRgb)
+                    : ((uint)(alpha * 170f) << 24 | 0x00262626u);
+                var undoCol = undoEnabled
+                    ? (alphaU32 | 0x00FFFFFFu)
+                    : (alphaU32 | (UiColors.TextMuted & 0x00FFFFFFu));
+                AddRotatedRectFilled(undoPillTL, undoPillBR - undoPillTL, undoBg, pillH * 0.5f);
+                AddRotatedText(new Vector2(undoPillTL.X + Px(PillPadX), undoPillTL.Y + Px(PillPadY)),
+                    undoCol, undoIconStr, 0f, iconFontPtr, fontSize);
+            }
+
+            // Decide-later pill, top-right. Always shown; greyed on the last card (nothing behind it to defer to).
+            {
+                var laterW = laterIconRawW * (fontSize / iconNatSize) + Px(PillPadX) * 2f;
+                laterPillTL = new Vector2(cardTopLeft.X + scaledWidth - Px(14f) - laterW, cardTopLeft.Y + Px(14f));
+                laterPillBR = laterPillTL + new Vector2(laterW, pillH);
+                laterPillShown = true;
+                if (mp.X >= laterPillTL.X && mp.X <= laterPillBR.X && mp.Y >= laterPillTL.Y && mp.Y <= laterPillBR.Y)
+                {
+                    isOverPill = true;
+                }
+
+                var laterEnabled = _cards.Count > 1;
+                if (laterEnabled)
+                {
+                    var pillVtx = drawList.VtxBuffer.Size;
+                    AddRotatedPillGradient(laterPillTL, laterPillBR - laterPillTL,
+                        (uint)(alpha * 220f) << 24 | t.SecondaryPillStartRgb,
+                        (uint)(alpha * 220f) << 24 | t.SecondaryPillEndRgb);
+                    // Animated secondary-gradient sweep matching the selected nav button; reduce-motion keeps the static fill.
+                    if (!AccessibilityService.ReduceMotion)
+                    {
+                        var pillAlpha = alpha * (220f / 255f);
+                        GradientSweepVertices(drawList, pillVtx,
+                            t.SecondaryStart with { W = pillAlpha },
+                            t.SecondaryEnd with { W = pillAlpha },
+                            (float)ImGui.GetTime() * 1.6f);
+                    }
+                }
+                else
+                {
+                    AddRotatedRectFilled(laterPillTL, laterPillBR - laterPillTL,
+                        (uint)(alpha * 170f) << 24 | UiColors.DisabledPillFillRgb, pillH * 0.5f);
+                }
+                var laterCol = laterEnabled
+                    ? (alphaU32 | 0x00FFFFFFu)
+                    : (alphaU32 | (UiColors.TextMuted & 0x00FFFFFFu));
+                AddRotatedText(new Vector2(laterPillTL.X + Px(PillPadX), laterPillTL.Y + Px(PillPadY)),
+                    laterCol, laterIconStr, 0f, iconFontPtr, fontSize);
+            }
+
             if (_isDragging && !_isSnappingBack)
             {
                 if (_dragX > Px(30))
@@ -721,7 +997,7 @@ public class DeckScreen : IDisposable
             }
         }
 
-        if (isTopCard && !_isThrowingCard && !_isSnappingBack)
+        if (isTopCard && !_isThrowingCard && !_isSnappingBack && !_isUndoing && !_isDeferring)
         {
             ImGui.SetCursorScreenPos(cardTopLeft);
             if (!isOverPill)
@@ -767,6 +1043,44 @@ public class DeckScreen : IDisposable
                 {
                     _profileScreen.SetProfile(profile.ProfileId, ProfileSource.Deck);
                     _router.Navigate(Screen.Profile);
+                }
+            }
+
+            if (undoPillShown)
+            {
+                ImGui.SetCursorScreenPos(undoPillTL);
+                if (ImGui.InvisibleButton("##reswipe", undoPillBR - undoPillTL))
+                {
+                    OnReswipeClicked();
+                }
+                if (ImGui.IsItemHovered())
+                {
+                    string tip;
+                    if (_reswipesRemaining > 0)
+                    {
+                        tip = Loc.T("deck.reswipe_tooltip");
+                    }
+                    else
+                    {
+                        var remaining = ReswipeCooldownRemaining();
+                        tip = Loc.T("deck.reswipe_cooldown", (int)remaining.TotalHours, remaining.Minutes);
+                    }
+                    ImGui.SetTooltip(tip);
+                }
+            }
+
+            if (laterPillShown)
+            {
+                ImGui.SetCursorScreenPos(laterPillTL);
+                if (ImGui.InvisibleButton("##decideLater", laterPillBR - laterPillTL))
+                {
+                    OnDecideLaterClicked();
+                }
+                if (ImGui.IsItemHovered())
+                {
+                    ImGui.SetTooltip(_cards.Count > 1
+                        ? Loc.T("deck.decide_later_tooltip")
+                        : Loc.T("deck.decide_later_disabled"));
                 }
             }
         }
@@ -873,6 +1187,9 @@ public class DeckScreen : IDisposable
         var liked = _throwRight;
         _cards.RemoveAt(0);
         _processedThisPeriod.Add(swipedCard.ProfileId);
+        _lastSwipedCard = swipedCard;
+        _lastSwipeWasLike = liked;
+        _lastSwipeWasMatch = false;
         _pulse.MarkActivity();
 
         _isThrowingCard = false;
@@ -889,6 +1206,11 @@ public class DeckScreen : IDisposable
                     CancellationToken.None).ConfigureAwait(false);
                 if (result.IsMatch)
                 {
+                    // Mark this card un-reswipeable, but only if it's still the last swipe (guards a fast double-swipe).
+                    if (_lastSwipedCard?.ProfileId == swipedCard.ProfileId)
+                    {
+                        _lastSwipeWasMatch = true;
+                    }
                     _pendingMatch.Set(
                         swipedCard.ProfileId,
                         swipedCard.DisplayName,
@@ -901,5 +1223,160 @@ public class DeckScreen : IDisposable
                 Plugin.Log.Warning(ex, $"[DeckScreen] SwipeAsync failed for {swipedCard.ProfileId}.");
             }
         });
+    }
+
+    /// <summary>Handles a tap on the top-left reswipe pill: a matched card shows a popup, a spent quota does
+    /// nothing (the tooltip shows the cooldown), the first tap that would actually undo shows a one-time intro
+    /// popup without spending the use, otherwise the last-swiped card flies back in and is re-dealt.</summary>
+    private void OnReswipeClicked()
+    {
+        if (_lastSwipedCard is null || _isThrowingCard || _isSnappingBack || _isUndoing)
+        {
+            return;
+        }
+        if (_lastSwipeWasMatch)
+        {
+            ShowReswipeMatchedPopup();
+            return;
+        }
+        if (_reswipesRemaining <= 0)
+        {
+            return;
+        }
+        if (!Plugin.Configuration.SeenReswipeIntro)
+        {
+            Plugin.Configuration.SeenReswipeIntro = true;
+            Plugin.Configuration.Save();
+            _showReswipeIntro = true;
+            return;
+        }
+
+        var card = _lastSwipedCard;
+        _lastSwipedCard = null;
+        _cards.Insert(0, card);
+        // The card may be from an earlier deck whose portraits were wiped on the last pull; rebuild its image.
+        EnsurePortraitCached(card);
+        _processedThisPeriod.Remove(card.ProfileId);
+        _undoFromRight = _lastSwipeWasLike;
+        _isUndoing = true;
+        _undoProgress = 0f;
+        _reswipesRemaining = Math.Max(0, _reswipesRemaining - 1);
+        _pulse.MarkActivity();
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var result = await _hubClient.UndoLastSwipeAsync(CancellationToken.None).ConfigureAwait(false);
+                _reswipesRemaining = result.ReswipesRemaining;
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.Warning(ex, "[DeckScreen] UndoLastSwipeAsync failed.");
+                _forceRefresh = true;
+            }
+        });
+    }
+
+    /// <summary>Sends the current card to the back of the in-memory deck so the player can decide on it later.
+    /// Disabled on the last card (nothing behind to defer to). Pure client reorder, no server call.</summary>
+    private void OnDecideLaterClicked()
+    {
+        if (_isThrowingCard || _isSnappingBack || _isUndoing || _isDeferring || _cards.Count <= 1)
+        {
+            return;
+        }
+        _dragX = _dragY = 0f;
+        _isDeferring = true;
+        _deferProgress = 0f;
+        _pulse.MarkActivity();
+    }
+
+    private void CompleteDeferral()
+    {
+        _isDeferring = false;
+        _deferProgress = 0f;
+        if (_cards.Count > 0)
+        {
+            var card = _cards[0];
+            _cards.RemoveAt(0);
+            _cards.Add(card);
+        }
+    }
+
+    private static void ShowReswipeMatchedPopup()
+    {
+        ModalHost.Instance?.Open(300f, availW =>
+        {
+            ModalUi.Header(availW, FontAwesomeIcon.Heart, Loc.T("deck.reswipe_matched_title"), ThemeService.Current.AccentLight);
+            ImGui.PushTextWrapPos(0f);
+            ImGui.TextColored(UiColors.Body, Loc.T("deck.reswipe_matched"));
+            ImGui.PopTextWrapPos();
+            ImGui.Spacing();
+            ImGui.Spacing();
+            if (ModalUi.Button($"{Loc.T("common.ok")}##reswipeMatchedOk", availW))
+            {
+                ModalHost.Instance?.Close();
+            }
+        });
+    }
+
+    /// <summary>One-time in-page overlay explaining the reswipe (undo) button, shown the first time it is
+    /// tapped while usable. Dims only the phone content and blocks taps to the cards until dismissed.</summary>
+    private void DrawReswipeIntroOverlay(Vector2 windowPos, Vector2 windowSize)
+    {
+        if (!_showReswipeIntro)
+        {
+            return;
+        }
+        var dl = ImGui.GetWindowDrawList();
+        dl.AddRectFilled(windowPos, windowPos + windowSize,
+            ImGui.ColorConvertFloat4ToU32(new Vector4(0f, 0f, 0f, 0.55f)));
+
+        // Full-content scrim: swallows taps to the deck behind, and dismisses when tapped outside the panel.
+        ImGui.SetCursorScreenPos(windowPos);
+        if (ImGui.InvisibleButton("##reswipeIntroScrim", windowSize))
+        {
+            _showReswipeIntro = false;
+        }
+
+        var w = Px(272f);
+        var pad = Px(16f, 16f);
+        var h = _reswipeIntroHeight > 0f ? _reswipeIntroHeight : Px(180f);
+        var panelPos = windowPos + (windowSize - new Vector2(w, h)) * 0.5f;
+
+        ImGui.SetCursorScreenPos(panelPos);
+        ImGui.PushStyleColor(ImGuiCol.ChildBg, new Vector4(0.11f, 0.10f, 0.13f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.Border, new Vector4(0.32f, 0.30f, 0.38f, 0.65f));
+        ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, Px(12f));
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, pad);
+        using (var child = ImRaii.Child("##reswipeIntroPanel", new Vector2(w, h), true,
+                   ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.AlwaysUseWindowPadding))
+        {
+            if (child.Success)
+            {
+                var innerW = ImGui.GetContentRegionAvail().X;
+                ImGui.PushTextWrapPos(innerW);
+                ModalUi.Header(innerW, FontAwesomeIcon.Undo, Loc.T("deck.reswipe_intro_title"), ThemeService.Current.AccentLight);
+                ImGui.TextColored(UiColors.Body, Loc.T("deck.reswipe_intro"));
+                ImGui.Spacing();
+                ImGui.Spacing();
+                if (ModalUi.Button($"{Loc.T("common.ok")}##reswipeIntroOk", innerW))
+                {
+                    _showReswipeIntro = false;
+                }
+                ImGui.PopTextWrapPos();
+                _reswipeIntroHeight = ImGui.GetCursorPosY() + pad.Y;
+            }
+        }
+        ImGui.PopStyleVar(2);
+        ImGui.PopStyleColor(2);
+    }
+
+    /// <summary>Time until the daily reswipe allowance resets (next UTC midnight).</summary>
+    private static TimeSpan ReswipeCooldownRemaining()
+    {
+        var now = DateTime.UtcNow;
+        return now.Date.AddDays(1) - now;
     }
 }

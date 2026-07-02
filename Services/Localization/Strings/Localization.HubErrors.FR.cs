@@ -33,5 +33,9 @@ internal static class HubErrorsFr
         ["huberror.report_target_gone"] = "Ce profil n'existe plus.",
         ["huberror.report_duplicate"] = "Vous avez déjà signalé cet utilisateur récemment. Notre équipe examine le cas.",
         ["huberror.feedback_required"] = "Veuillez saisir un message avant d'envoyer.",
+        // added after update (1.3.1)
+        ["huberror.reswipe_nothing_to_undo"] = "Il n'y a rien à annuler.",
+        ["huberror.reswipe_already_matched"] = "Vous ne pouvez pas annuler sur un profil avec lequel vous avez déjà un match.",
+        ["huberror.reswipe_quota_exhausted"] = "Vous avez déjà utilisé votre annulation pour aujourd'hui.",
     };
 }

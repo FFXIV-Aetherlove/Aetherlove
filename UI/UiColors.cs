@@ -101,6 +101,9 @@ internal static class UiColors
     /// <summary>Opaque dark fill for the deck-expiry warning banner; it overlays a card photo, so it can't be translucent.</summary>
     internal const uint DeckExpiryWarnFill = 0xE0181818u;
 
+    /// <summary>Dark fill (0x00BBGGRR; alpha applied at draw time) for a disabled/greyed deck-card pill.</summary>
+    internal const uint DisabledPillFillRgb = 0x00262626u;
+
     /// <summary>Festive confetti palette (0x00BBGGRR; per-particle alpha is applied at draw time).</summary>
     internal static readonly uint[] ConfettiPalette =
     [
