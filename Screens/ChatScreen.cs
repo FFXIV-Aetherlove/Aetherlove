@@ -162,6 +162,8 @@ public partial class ChatScreen
         _peerPublicKey = null;
         _messageKey = null;
         _inputText = string.Empty;
+        // Drop the previous chat's queued work here; ResetEnhancements must not, since hydrate enqueues it ahead of the per-message seed actions.
+        _uiActions.Clear();
         ResetEnhancements();
         _scrollTargetMessageId = _chatListScreen.SelectedScrollMessageId;
         _scrollToMessageTimer = 0f;

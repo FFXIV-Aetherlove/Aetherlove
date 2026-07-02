@@ -78,7 +78,6 @@ public partial class ChatScreen
         _rxExit.Clear();
         _unsentTempIds.Clear();
         _deferredByTempId.Clear();
-        _uiActions.Clear();
         lock (_messagesLock)
         {
             _pendingIdMigrations.Clear();
