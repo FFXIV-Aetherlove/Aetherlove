@@ -305,8 +305,10 @@ public sealed class AetherSignalService : IAsyncDisposable
 
             _chatEvents.RaiseMessageReceived(payload);
 
-            // Suppress badge and notifications when already viewing this conversation.
-            if (payload.FromProfileId == _notifications.ActiveChatPeerId)
+            // Suppress badge and notifications only while the phone is open on this conversation. Minimizing or
+            // closing leaves ActiveChatPeerId set (neither navigates the router), so gate on the window too.
+            var phoneOpen = _services.GetRequiredService<MainPluginWindow>().IsOpen;
+            if (phoneOpen && payload.FromProfileId == _notifications.ActiveChatPeerId)
             {
                 return;
             }
