@@ -487,26 +487,17 @@ public class ProfileScreen
             }
         }
 
-        if (_source != ProfileSource.Self && !_reportedThisProfile)
+        var reportHovered = false;
+        if (_source != ProfileSource.Self && !_reportedThisProfile && !HasNpcFlair())
         {
-            DrawReportTriangleButton(photoTL, photoSz, dl);
+            reportHovered = DrawReportTriangleButton(photoTL, photoSz, dl);
         }
 
         ImGui.Dummy(photoSz);
 
-        // NSFW reveal hit target. Submitted before the arrows so they claim edge clicks.
-        if (currentBlurred && _fadeAlpha >= 0.95f)
-        {
-            ImGui.SetCursorScreenPos(photoTL);
-            ImGui.InvisibleButton("##nsfwReveal", photoSz);
-            if (ImGui.IsItemClicked())
-            {
-                _revealedNsfw.Add((_profile.ProfileId, currentOrder));
-            }
-            var hovered = ImGui.IsItemHovered();
-            DrawNsfwRevealPill(dl, photoTL, photoSz, hovered);
-        }
-
+        // Arrows first so their hover is captured before the reveal hit-test below: the reveal button covers
+        // the whole photo and overlaps the edge arrows, so a click on an arrow must not also reveal the photo.
+        var overArrow = false;
         if (photoCount > 1)
         {
             var arrowScreenY = photoTL.Y + PhotoHeight * 0.5f - Px(20f);
@@ -518,16 +509,29 @@ public class ProfileScreen
             {
                 ManualNavigate(-1, photoCount);
             }
-            DrawArrowPill(dl, leftBtnScreen, Px(40f), isLeft: true, hovered: ImGui.IsItemHovered());
+            var leftHovered = ImGui.IsItemHovered();
+            DrawArrowPill(dl, leftBtnScreen, Px(40f), isLeft: true, hovered: leftHovered);
 
             ImGui.SetCursorScreenPos(rightBtnScreen);
             if (ImGui.InvisibleButton("##photoNext", Px(40f, 40f)))
             {
                 ManualNavigate(+1, photoCount);
             }
-            DrawArrowPill(dl, rightBtnScreen, Px(40f), isLeft: false, hovered: ImGui.IsItemHovered());
+            var rightHovered = ImGui.IsItemHovered();
+            DrawArrowPill(dl, rightBtnScreen, Px(40f), isLeft: false, hovered: rightHovered);
 
-            ImGui.SetCursorPosY(photoLocalY + PhotoHeight);
+            overArrow = leftHovered || rightHovered;
+        }
+
+        if (currentBlurred && _fadeAlpha >= 0.95f)
+        {
+            ImGui.SetCursorScreenPos(photoTL);
+            ImGui.InvisibleButton("##nsfwReveal", photoSz);
+            if (ImGui.IsItemClicked() && !overArrow && !reportHovered)
+            {
+                _revealedNsfw.Add((_profile.ProfileId, currentOrder));
+            }
+            DrawNsfwRevealPill(dl, photoTL, photoSz, ImGui.IsItemHovered() && !overArrow && !reportHovered);
         }
 
         ImGui.SetCursorPosY(photoLocalY + PhotoHeight);
@@ -1199,7 +1203,9 @@ public class ProfileScreen
 
 
     /// <summary>Warning triangle in the photo header's top-right corner; opens the report modal.</summary>
-    private void DrawReportTriangleButton(Vector2 photoTL, Vector2 photoSz, ImDrawListPtr dl)
+    /// <summary>Draws the top-corner report button over the photo. Returns whether it is hovered, so the NSFW
+    /// reveal underneath can exclude the button's rect from its own click.</summary>
+    private bool DrawReportTriangleButton(Vector2 photoTL, Vector2 photoSz, ImDrawListPtr dl)
     {
         var BtnSize = Px(36f);
         var Margin = Px(14f);
@@ -1244,6 +1250,7 @@ public class ProfileScreen
         }
 
         ImGui.SetCursorScreenPos(saveCursor);
+        return hovered;
     }
 
     private void DrawReportBody(float availW)
@@ -1634,6 +1641,24 @@ public class ProfileScreen
     private bool IsPhotoNsfw(int order) =>
         _profile is not null
         && _profile.Photos.Any(p => p.Order == order && p.IsNsfw);
+
+    /// <summary>True when the profile carries the "NPC" flair, matched on its English text.</summary>
+    private bool HasNpcFlair()
+    {
+        if (_profile?.FlairIds is not { Length: > 0 })
+        {
+            return false;
+        }
+        foreach (var fid in _profile.FlairIds)
+        {
+            if (_flairCatalog.Get(fid) is { } f
+                && string.Equals(f.TextEnglish.Trim(), "NPC", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
 
     /// <summary>True when an NSFW extra photo should be blurred until the viewer reveals it.</summary>
     private bool ShouldBlur(int order) =>
