@@ -58,12 +58,34 @@ public sealed class SegmentText : ISegment
             i = ParsedMessage.WrapTokenEnd(line, i);
             var word = line.Substring(start, i - start);
             var wordW = ImGui.CalcTextSize(word).X;
-            if (ImGui.GetContentRegionAvail().X < wordW + ParsedMessage.WrapSlack)
+            var lineW = ImGui.GetContentRegionMax().X;
+            var avail = ImGui.GetContentRegionAvail().X;
+            // Wrap to a new line only when we're mid-line and the token doesn't fit (mirrors MeasureHeight;
+            // an over-wide token on a fresh line must NOT get a spurious blank line before it).
+            if (avail < lineW - 0.5f && avail < wordW + ParsedMessage.WrapSlack)
             {
                 ImGui.NewLine();
             }
-            ImGui.TextUnformatted(word);
-            ImGui.SameLine(0, 0); // keep following content inline; a following space run widens the gap
+            if (wordW <= lineW || lineW < 1f)
+            {
+                ImGui.TextUnformatted(word);
+                ImGui.SameLine(0, 0); // keep following content inline; a following space run widens the gap
+            }
+            else
+            {
+                // A single unbroken token wider than the whole line (e.g. a long URL with no spaces):
+                // break it by character so it wraps down the bubble instead of overflowing and clipping.
+                var chunks = ParsedMessage.BreakToken(word, lineW);
+                for (int c = 0; c < chunks.Count; c++)
+                {
+                    if (c > 0)
+                    {
+                        ImGui.NewLine();
+                    }
+                    ImGui.TextUnformatted(chunks[c]);
+                    ImGui.SameLine(0, 0);
+                }
+            }
         }
     }
 }

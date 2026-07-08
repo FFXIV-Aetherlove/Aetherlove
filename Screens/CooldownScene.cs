@@ -40,8 +40,9 @@ public sealed class CooldownScene
         _settle = 0f;
     }
 
-    public void Draw(Vector2 pos, Vector2 size, string heading, string body, string? timer, string? error)
+    public bool Draw(Vector2 pos, Vector2 size, string heading, string body, string? timer, string? error, string? reswipe)
     {
+        var reswipeClicked = false;
         var reduce = AccessibilityService.ReduceMotion;
         var dt = (float)ImGui.GetIO().DeltaTime;
         var time = (float)ImGui.GetTime();
@@ -79,20 +80,30 @@ public sealed class CooldownScene
         DrawStardust(dl, horseCenter, time, reduce, settle);
         DrawHorse(dl, horseCenter, flap, time, reduce, settle);
 
+        var showReswipe = !string.IsNullOrEmpty(reswipe);
+
         DrawHeading(dl, cx, pos.Y + Px(44f), heading, reduce, time, settle);
-        DrawBody(dl, cx, max.Y - Px(106f), size.X - Px(72f), body, settle);
+        DrawBody(dl, cx, max.Y - (showReswipe ? Px(134f) : Px(106f)), size.X - Px(72f), body, settle);
+
+        if (showReswipe)
+        {
+            reswipeClicked = DrawReswipePill(dl, cx, max.Y - Px(86f), reswipe!, anim, settle);
+        }
 
         if (!string.IsNullOrEmpty(timer))
         {
-            DrawTimerPill(dl, cx, max.Y - Px(58f), timer, anim, settle);
+            DrawTimerPill(dl, cx, max.Y - (showReswipe ? Px(42f) : Px(58f)), timer, anim, settle);
         }
 
-        if (!string.IsNullOrEmpty(error))
+        // The refresh error and the reswipe CTA compete for the same bottom slot; reswipe wins (errors here
+        // are transient refresh failures and clear on the next tick).
+        if (!string.IsNullOrEmpty(error) && !showReswipe)
         {
             DrawError(dl, cx, max.Y - Px(28f), size.X - Px(72f), error, settle);
         }
 
         dl.PopClipRect();
+        return reswipeClicked;
     }
 
     private void DrawSky(ImDrawListPtr dl, Vector2 min, Vector2 max)
@@ -445,6 +456,47 @@ public sealed class CooldownScene
             result.Add(line);
         }
         return result;
+    }
+
+    /// <summary>An interactive "reswipe your last card" pill, shown on the cooldown screen when the player
+    /// still has an undoable last swipe and a reswipe left. Styled in the scene's violet palette to stand
+    /// apart from the gold countdown. Returns true on click.</summary>
+    private bool DrawReswipePill(ImDrawListPtr dl, float cx, float y, string label, float anim, float settle)
+    {
+        float iconPx = Px(15f);
+        ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
+        var iconFont = ImGui.GetFont();
+        var icon = FontAwesomeIcon.Undo.ToIconString();
+        var iconSz = ImGui.CalcTextSize(icon) * (iconPx / ImGui.GetFontSize());
+        ImGui.PopFont();
+
+        var textSz = ImGui.CalcTextSize(label);
+        var gap = Px(9f);
+        var padX = Px(18f);
+        var padY = Px(10f);
+        var contentW = iconSz.X + gap + textSz.X;
+        var pillW = contentW + padX * 2f;
+        var pillH = MathF.Max(textSz.Y, iconSz.Y) + padY * 2f;
+        var pillMin = new Vector2(cx - pillW * 0.5f, y - pillH * 0.5f);
+        var pillMax = pillMin + new Vector2(pillW, pillH);
+
+        ImGui.SetCursorScreenPos(pillMin);
+        var clicked = ImGui.InvisibleButton("##cooldownReswipe", new Vector2(pillW, pillH));
+        var hovered = ImGui.IsItemHovered();
+
+        var round = pillH * 0.5f;
+        var pulse = 0.5f + 0.5f * MathF.Sin(anim * 1.8f);
+        dl.AddRectFilled(pillMin - new Vector2(Px(5f), Px(5f)), pillMax + new Vector2(Px(5f), Px(5f)),
+            U32(Rgba(Violet, (hovered ? 0.34f : 0.22f) * pulse * settle)), (pillH + Px(10f)) * 0.5f);
+        var fill = hovered ? new Vector4(0.27f, 0.21f, 0.45f, 1f) : new Vector4(0.20f, 0.16f, 0.36f, 1f);
+        dl.AddRectFilled(pillMin, pillMax, U32(Rgba(fill, settle)), round);
+        dl.AddRect(pillMin, pillMax, U32(Rgba(Violet, (hovered ? 0.95f : 0.72f) * settle)), round, ImDrawFlags.None, Px(1.5f));
+
+        var startX = cx - contentW * 0.5f;
+        var midY = (pillMin.Y + pillMax.Y) * 0.5f;
+        dl.AddText(iconFont, iconPx, new Vector2(startX, midY - iconSz.Y * 0.5f), U32(Rgba(Cream, settle)), icon);
+        dl.AddText(new Vector2(startX + iconSz.X + gap, midY - textSz.Y * 0.5f), U32(Rgba(Cream, settle)), label);
+        return clicked;
     }
 
     private void DrawTimerPill(ImDrawListPtr dl, float cx, float y, string timer, float anim, float settle)

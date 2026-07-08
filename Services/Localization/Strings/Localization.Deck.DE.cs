@@ -53,5 +53,8 @@ internal static class DeckDe
         ["deck.decide_later_disabled"] = "Dies ist die letzte Karte in deinem Deck.",
         ["deck.reswipe_intro_title"] = "Letztes Wischen rückgängig machen",
         ["deck.reswipe_intro"] = "Damit holst du dein letztes Wischen zurück und das Profil erscheint wieder ganz oben. Du kannst das einmal alle 24 Stunden nutzen. Wenn du diesen Hinweis schließt, wird dein Rückgängig nicht verbraucht. Tippe also einfach noch einmal auf die Schaltfläche, wenn du bereit bist.",
+
+        // added after update 1.5.0
+        ["deck.cooldown_reswipe_btn"] = "Letzte Karte zurückholen",
     };
 }

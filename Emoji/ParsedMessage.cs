@@ -60,6 +60,41 @@ public sealed class ParsedMessage
             or (>= 0x20000 and <= 0x2FA1F);     // CJK ideographs extensions B and beyond
     }
 
+    /// <summary>Greedily splits an over-wide, unbroken token (e.g. a long URL with no spaces) into chunks
+    /// that each fit within <paramref name="lineW"/>, so it wraps down across lines instead of overflowing
+    /// off the right edge and clipping. Surrogate-pair aware; a single glyph wider than the line is emitted
+    /// alone. Shared by <see cref="SegmentText"/>'s renderer and <see cref="MeasureHeight"/> so their line
+    /// counts stay identical.</summary>
+    internal static List<string> BreakToken(string token, float lineW)
+    {
+        var chunks = new List<string>();
+        if (lineW < 1f || token.Length == 0)
+        {
+            chunks.Add(token);
+            return chunks;
+        }
+
+        var start = 0;
+        while (start < token.Length)
+        {
+            var end = start;
+            while (end < token.Length)
+            {
+                var step = char.IsHighSurrogate(token[end]) && end + 1 < token.Length
+                           && char.IsLowSurrogate(token[end + 1]) ? 2 : 1;
+                // Always keep at least one glyph; stop once adding this one would overflow the line.
+                if (end > start && ImGui.CalcTextSize(token.Substring(start, end + step - start)).X > lineW)
+                {
+                    break;
+                }
+                end += step;
+            }
+            chunks.Add(token.Substring(start, end - start));
+            start = end;
+        }
+        return chunks;
+    }
+
     public static ParsedMessage Parse(string text)
     {
         var key = text.Trim();
@@ -192,13 +227,14 @@ public sealed class ParsedMessage
                         }
                         if (wordW > width)
                         {
-                            // Word wider than the line wraps mid-word (via PushTextWrapPos).
-                            var rows = (int)MathF.Ceiling(wordW / width);
-                            for (var r = 1; r < rows; r++)
+                            // Over-wide unbroken token: mirror the renderer's per-character break so the
+                            // reserved height matches the number of wrapped lines exactly.
+                            var chunks = BreakToken(word, width);
+                            for (var r = 1; r < chunks.Count; r++)
                             {
                                 Break();
                             }
-                            x = wordW - (rows - 1) * width;
+                            x = ImGui.CalcTextSize(chunks[^1]).X;
                         }
                         else
                         {

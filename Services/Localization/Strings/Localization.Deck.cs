@@ -52,5 +52,8 @@ internal static class DeckEn
         ["deck.decide_later_disabled"] = "This is the last card in your deck.",
         ["deck.reswipe_intro_title"] = "Undo your last swipe",
         ["deck.reswipe_intro"] = "This takes back your last swipe and brings that profile right back to the top. You can use it once every 24 hours. Closing this note won't use up your undo, so tap the button again when you're ready.",
+
+        // added after update 1.5.0
+        ["deck.cooldown_reswipe_btn"] = "Reswipe your last card",
     };
 }

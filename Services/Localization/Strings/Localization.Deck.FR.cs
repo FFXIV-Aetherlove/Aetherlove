@@ -53,5 +53,8 @@ internal static class DeckFr
         ["deck.decide_later_disabled"] = "C'est la dernière carte de votre deck.",
         ["deck.reswipe_intro_title"] = "Annuler votre dernier swipe",
         ["deck.reswipe_intro"] = "Cela annule votre dernier swipe et ramène ce profil tout en haut. Vous pouvez l'utiliser une fois toutes les 24 heures. Fermer cette note n'utilise pas votre annulation, alors appuyez de nouveau sur le bouton lorsque vous êtes prêt.",
+
+        // added after update 1.5.0
+        ["deck.cooldown_reswipe_btn"] = "Récupérer votre dernière carte",
     };
 }

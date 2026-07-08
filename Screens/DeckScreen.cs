@@ -512,7 +512,20 @@ public class DeckScreen : IDisposable
         }
 
         var error = _refreshError is not null ? Loc.T("deck.server_error", _refreshError) : null;
-        _cooldownScene.Draw(windowPos, windowSize, heading, body, timer, error);
+
+        // Offer a reswipe on the cooldown screen when the last swipe can still be undone (a held card that
+        // wasn't a match, with quota left) — tapping it re-deals that last card and returns to the deck.
+        var reswipeLabel = _lastSwipedCard is not null && !_lastSwipeWasMatch && _reswipesRemaining > 0
+            ? Loc.T("deck.cooldown_reswipe_btn")
+            : null;
+        if (_cooldownScene.Draw(windowPos, windowSize, heading, body, timer, error, reswipeLabel))
+        {
+            OnReswipeClicked();
+        }
+
+        // The first-use intro overlay is normally drawn in the card view; host it here too so a first reswipe
+        // from the cooldown screen still shows it (the empty-state path returns before the card-view overlay).
+        DrawReswipeIntroOverlay(windowPos, windowSize);
     }
 
     public void Dispose()

@@ -70,7 +70,9 @@ public static class AppearancePicker
             dl.AddText(new Vector2(nameX, nameY), (nameA << 24) | 0x00FFFFFF, def.Name);
         }
 
-        ImGui.SetCursorPos(new Vector2(originLocal.X, originLocal.Y + CardH + Px(6f)));
+        // Advance past the WHOLE grid, not one row — otherwise extra theme rows overlap the next section.
+        var gridH = rows * CardH + (rows - 1) * Gap;
+        ImGui.SetCursorPos(new Vector2(originLocal.X, originLocal.Y + gridH + Px(6f)));
     }
 
     public static void DrawPhoneSizeButtons(float winW, float padX, ThemeDefinition t)

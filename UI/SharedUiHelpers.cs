@@ -9,6 +9,7 @@ using AetherLove.Shared.Profile;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Textures;
+using Dalamud.Interface.Utility.Raii;
 
 namespace AetherLove.UI;
 
@@ -428,6 +429,62 @@ internal static class SharedUiHelpers
     {
         ImGui.PopStyleVar();
         ImGui.PopStyleColor(4);
+    }
+
+    /// <summary>Shared in-page (in-phone) overlay shell: dims only the current window/content rect, centres a
+    /// measured bordered panel, and returns true on a scrim tap (outside the panel). Drawn as a late child so
+    /// it layers above the screen's content. <paramref name="panelH"/> is remembered across frames so the
+    /// panel settles to its content height. This is the default popup surface (never the screen-locking
+    /// ModalHost); model confirms/editors on it.</summary>
+    internal static bool DrawPageOverlayPanel(string id, Vector2 winPos, Vector2 winSize, ref float panelH,
+                                              float fallbackH, Action<float> drawContent)
+    {
+        var dismissed = false;
+        ImGui.SetCursorScreenPos(winPos);
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Vector2.Zero);
+        ImGui.PushStyleColor(ImGuiCol.ChildBg, Vector4.Zero);
+        using (var overlay = ImRaii.Child($"##overlay_{id}", winSize, false,
+                   ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse))
+        {
+            ImGui.PopStyleColor();
+            ImGui.PopStyleVar();
+            if (!overlay.Success)
+            {
+                return false;
+            }
+
+            var dl = ImGui.GetWindowDrawList();
+            dl.AddRectFilled(winPos, winPos + winSize, ImGui.ColorConvertFloat4ToU32(new Vector4(0f, 0f, 0f, 0.55f)));
+
+            ImGui.SetCursorScreenPos(winPos);
+            if (ImGui.InvisibleButton($"##scrim_{id}", winSize))
+            {
+                dismissed = true;
+            }
+
+            var w = Px(300f);
+            var pad = Px(16f, 16f);
+            var h = panelH > 0f ? panelH : fallbackH;
+            var panelPos = winPos + (winSize - new Vector2(w, h)) * 0.5f;
+
+            ImGui.SetCursorScreenPos(panelPos);
+            ImGui.PushStyleColor(ImGuiCol.ChildBg, new Vector4(0.11f, 0.10f, 0.13f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.Border, new Vector4(0.32f, 0.30f, 0.38f, 0.65f));
+            ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, Px(12f));
+            ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, pad);
+            using (var panel = ImRaii.Child($"##panel_{id}", new Vector2(w, h), true,
+                       ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.AlwaysUseWindowPadding))
+            {
+                if (panel.Success)
+                {
+                    drawContent(ImGui.GetContentRegionAvail().X);
+                    panelH = ImGui.GetCursorPosY() + pad.Y;
+                }
+            }
+            ImGui.PopStyleVar(2);
+            ImGui.PopStyleColor(2);
+        }
+        return dismissed;
     }
 
     /// <summary>Index of <paramref name="value"/> in <paramref name="arr"/>, or <paramref name="fallback"/>

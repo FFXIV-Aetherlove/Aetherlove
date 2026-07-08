@@ -795,59 +795,6 @@ public partial class ChatListScreen
         _editorPendingMovePeer = Guid.Empty;
     }
 
-    /// <summary>Shared in-page overlay shell: dims the window, centres a measured bordered panel, and reports a
-    /// scrim click (tap outside the panel). Drawn as a late child so it layers above the list child.</summary>
-    private static bool DrawPageOverlayPanel(string id, Vector2 winPos, Vector2 winSize, ref float panelH,
-                                             float fallbackH, Action<float> drawContent)
-    {
-        var dismissed = false;
-        ImGui.SetCursorScreenPos(winPos);
-        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Vector2.Zero);
-        ImGui.PushStyleColor(ImGuiCol.ChildBg, Vector4.Zero);
-        using (var overlay = ImRaii.Child($"##overlay_{id}", winSize, false,
-                   ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse))
-        {
-            ImGui.PopStyleColor();
-            ImGui.PopStyleVar();
-            if (!overlay.Success)
-            {
-                return false;
-            }
-
-            var dl = ImGui.GetWindowDrawList();
-            dl.AddRectFilled(winPos, winPos + winSize, ImGui.ColorConvertFloat4ToU32(new Vector4(0f, 0f, 0f, 0.55f)));
-
-            ImGui.SetCursorScreenPos(winPos);
-            if (ImGui.InvisibleButton($"##scrim_{id}", winSize))
-            {
-                dismissed = true;
-            }
-
-            var w = Px(300f);
-            var pad = Px(16f, 16f);
-            var h = panelH > 0f ? panelH : fallbackH;
-            var panelPos = winPos + (winSize - new Vector2(w, h)) * 0.5f;
-
-            ImGui.SetCursorScreenPos(panelPos);
-            ImGui.PushStyleColor(ImGuiCol.ChildBg, new Vector4(0.11f, 0.10f, 0.13f, 1f));
-            ImGui.PushStyleColor(ImGuiCol.Border, new Vector4(0.32f, 0.30f, 0.38f, 0.65f));
-            ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, Px(12f));
-            ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, pad);
-            using (var panel = ImRaii.Child($"##panel_{id}", new Vector2(w, h), true,
-                       ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.AlwaysUseWindowPadding))
-            {
-                if (panel.Success)
-                {
-                    drawContent(ImGui.GetContentRegionAvail().X);
-                    panelH = ImGui.GetCursorPosY() + pad.Y;
-                }
-            }
-            ImGui.PopStyleVar(2);
-            ImGui.PopStyleColor(2);
-        }
-        return dismissed;
-    }
-
     /// <summary>In-page create/edit overlay: the name field and the colour palette in a centred panel.</summary>
     private void DrawCategoryEditor(Vector2 winPos, Vector2 winSize)
     {

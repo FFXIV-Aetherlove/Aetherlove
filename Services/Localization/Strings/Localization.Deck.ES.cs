@@ -52,5 +52,8 @@ internal static class DeckEs
         ["deck.decide_later_disabled"] = "Esta es la última carta de tu mazo.",
         ["deck.reswipe_intro_title"] = "Deshacer tu último deslizamiento",
         ["deck.reswipe_intro"] = "Esto deshace tu último deslizamiento y devuelve ese perfil al principio. Puedes usarlo una vez cada 24 horas. Cerrar este aviso no gasta tu deshacer, así que toca el botón de nuevo cuando quieras usarlo.",
+
+        // added after update 1.5.0
+        ["deck.cooldown_reswipe_btn"] = "Recuperar tu última carta",
     };
 }

@@ -126,7 +126,7 @@ public partial class ChatScreen
     private bool _systemNoticeDismissed;
 
     private readonly EmojiPickerPopup _chatEmojiPicker = new();
-    private readonly ConfirmModal _modal = new();
+    private readonly PeerActionConfirm _peerConfirm = new();
 
     private bool _reportPendingOpen;
     private string _reportReason = string.Empty;
@@ -523,6 +523,19 @@ public partial class ChatScreen
         // Hosts the category create overlay so "New category…" from the overflow menu works inside the chat.
         _chatListScreen.DrawCategoryEditorOverlay();
 
+        _peerConfirm.Draw(ImGui.GetWindowPos(), ImGui.GetWindowSize(),
+            (action, _) =>
+            {
+                if (action == PeerAction.Unmatch)
+                {
+                    FireUnmatch();
+                }
+                else
+                {
+                    FireBlock();
+                }
+            });
+
         if (_reportPendingOpen)
         {
             _reportPendingOpen = false;
@@ -714,18 +727,12 @@ public partial class ChatScreen
             if (DrawIconMenuItem(FontAwesomeIcon.Unlink, Loc.T("chat.menu_unmatch")))
             {
                 ImGui.CloseCurrentPopup();
-                _modal.Open(Loc.T("chat.unmatch_title"),
-                    Loc.T("chat.unmatch_body"),
-                    Loc.T("chat.unmatch_confirm"), Loc.T("chat.cancel"),
-                    () => FireUnmatch());
+                _peerConfirm.Open(PeerAction.Unmatch, _peerId);
             }
-            if (DrawIconMenuItem(FontAwesomeIcon.Times, Loc.T("chat.menu_block")))
+            if (DrawIconMenuItem(FontAwesomeIcon.Ban, Loc.T("chat.menu_block")))
             {
                 ImGui.CloseCurrentPopup();
-                _modal.Open(Loc.T("chat.block_title"),
-                    Loc.T("chat.block_body"),
-                    Loc.T("chat.block_confirm"), Loc.T("chat.cancel"),
-                    () => FireBlock());
+                _peerConfirm.Open(PeerAction.Block, _peerId);
             }
             ImGui.Separator();
             if (DrawIconMenuItem(FontAwesomeIcon.ExclamationTriangle, Loc.T("chat.menu_report_user"), 0xFF23A6F5u))

@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AetherLove.Navigation;
 using AetherLove.Services;
+using AetherLove.Services.Auth;
 using AetherLove.Services.Hub;
 using AetherLove.Services.Localization;
 using AetherLove.Shared.Moderation;
@@ -29,6 +30,7 @@ public class ProfileScreen
     private readonly ScreenRouter _router;
     private readonly AetherLoveHubClient _hub;
     private readonly FlairCatalog _flairCatalog;
+    private readonly SessionBootstrapper _bootstrap;
 
     private ProfileDetailDto? _profile;
     private string _photoSubtitle = string.Empty;
@@ -94,11 +96,13 @@ public class ProfileScreen
     private const uint TextSecondary = UiColors.TextMuted;
     private const uint GraphInactive = 0xFF2D2D2D;
 
-    public ProfileScreen(ScreenRouter router, AetherLoveHubClient hub, FlairCatalog flairCatalog)
+    public ProfileScreen(ScreenRouter router, AetherLoveHubClient hub, FlairCatalog flairCatalog,
+                         SessionBootstrapper bootstrap)
     {
         _router = router;
         _hub = hub;
         _flairCatalog = flairCatalog;
+        _bootstrap = bootstrap;
     }
 
     public void SetProfile(Guid profileId, ProfileSource source)
@@ -831,9 +835,27 @@ public class ProfileScreen
     /// <summary>"Characters" section: one closed-by-default card per RP character (monogram + name + chevron),
     /// expanding to the rich-text bio and an optional left-aligned image (NSFW blur + click-to-show; clicking
     /// the revealed image opens the in-phone fullscreen view).</summary>
+    /// <summary>Whether the current viewer has consented to see NSFW content, read from the connection
+    /// snapshot. Defaults to false when absent (e.g. an older server that doesn't send the flag), so we err
+    /// toward hiding rather than exposing.</summary>
+    private bool ViewerSeesNsfw => _bootstrap.LastConnection?.NsfwEnabled ?? false;
+
+    /// <summary>The RP characters visible to the current viewer. On someone else's profile a viewer who has
+    /// not consented to NSFW never sees characters whose image is NSFW; viewing your own profile always shows
+    /// all of yours.</summary>
+    private ProfileCharacterDto[] VisibleCharacters()
+    {
+        var all = _profile?.Characters ?? [];
+        if (_source == ProfileSource.Self || ViewerSeesNsfw)
+        {
+            return all;
+        }
+        return all.Where(c => !c.ImageIsNsfw).ToArray();
+    }
+
     private void DrawCharacters(float winW, ImDrawListPtr dl)
     {
-        if (_profile!.Characters is not { Length: > 0 } characters)
+        if (VisibleCharacters() is not { Length: > 0 } characters)
         {
             return;
         }
@@ -1009,7 +1031,7 @@ public class ProfileScreen
     /// back pill returning to the profile (scroll position is retained by the scroll child's id).</summary>
     private void DrawCharacterFullscreen(Guid characterId)
     {
-        var ch = (_profile!.Characters ?? []).FirstOrDefault(c => c.Id == characterId);
+        var ch = VisibleCharacters().FirstOrDefault(c => c.Id == characterId);
         if (ch is null
             || !_characterTextures.TryGetValue(characterId, out var tex)
             || tex?.GetWrapOrDefault() is not { } wrap)

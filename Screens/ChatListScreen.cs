@@ -16,6 +16,7 @@ using AetherLove.Services.Localization;
 using AetherLove.Shared.Matching;
 using AetherLove.Shared.Messaging;
 using AetherLove.UI;
+using AetherLove.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Textures;
@@ -34,6 +35,9 @@ public partial class ChatListScreen
     private readonly NotificationCenter _notifications;
     private readonly ChatCategoryStore _categories;
     private readonly ChatSyncService _sync;
+
+    // Shared in-page confirm for unmatch/block, opened from a match row's right-click menu.
+    private readonly PeerActionConfirm _peerConfirm = new();
 
     private readonly List<MatchSummaryDto> _matches = new();
     // Guards _matches: mutated off the UI thread (fetch Task, push handlers) while Draw() enumerates it.
@@ -243,6 +247,32 @@ public partial class ChatListScreen
         _categories.RemovePeer(peerId);
     }
 
+    /// <summary>Fires the confirmed destructive action against a peer, then optimistically drops the row so
+    /// it disappears immediately (the server also pushes the removal). Shared by the match row's right-click
+    /// unmatch/block, using the same in-page confirm as the chat screen.</summary>
+    private void ConfirmPeerAction(PeerAction action, Guid peerId)
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                if (action == PeerAction.Unmatch)
+                {
+                    await _hub.UnmatchAsync(peerId).ConfigureAwait(false);
+                }
+                else
+                {
+                    await _hub.BlockUserAsync(peerId).ConfigureAwait(false);
+                }
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.Warning(ex, "[ChatListScreen] Peer action failed.");
+            }
+        });
+        RemovePeer(peerId);
+    }
+
     /// <summary>Pinned first, then most-recent activity within each group. Call under <see cref="_matchesLock"/>.</summary>
     private void SortMatches()
     {
@@ -426,6 +456,7 @@ public partial class ChatListScreen
         DrawDragOverlays(winPos, winSize);
         DrawCategoryEditor(winPos, winSize);
         DrawCategoryDeleteConfirm(winPos, winSize);
+        _peerConfirm.Draw(winPos, winSize, ConfirmPeerAction);
     }
 
     public void DrawCategoryView()
@@ -446,6 +477,7 @@ public partial class ChatListScreen
         DrawCategoryOpenFade(contentTL, contentSize);
         DrawCategoryEditor(winPos, winSize);
         DrawCategoryDeleteConfirm(winPos, winSize);
+        _peerConfirm.Draw(winPos, winSize, ConfirmPeerAction);
     }
 
     /// <summary>Centred title with an arrow + label back button in the top left, matching the app's usual
@@ -1142,6 +1174,17 @@ public partial class ChatListScreen
                 }
                 DrawCategoryMenuItems(m.PeerProfileId, ctx,
                     cursorStart + new Vector2(Px(40f), rowHeight * 0.5f));
+                ImGui.Separator();
+                if (ChatScreen.DrawIconMenuItem(FontAwesomeIcon.Unlink, Loc.T("chat.menu_unmatch")))
+                {
+                    ImGui.CloseCurrentPopup();
+                    _peerConfirm.Open(PeerAction.Unmatch, m.PeerProfileId);
+                }
+                if (ChatScreen.DrawIconMenuItem(FontAwesomeIcon.Ban, Loc.T("chat.menu_block")))
+                {
+                    ImGui.CloseCurrentPopup();
+                    _peerConfirm.Open(PeerAction.Block, m.PeerProfileId);
+                }
                 ImGui.EndPopup();
             }
         }

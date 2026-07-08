@@ -51,4 +51,8 @@ public sealed record AetherConnectionDto(
     ModeratorMessageDto[] ModeratorMessages,
     int NewMatchCount,
     bool HasKeyBundle,
-    NewsSummaryDto[] UnseenNews);
+    NewsSummaryDto[] UnseenNews,
+    // Trailing default keeps this wire-safe: the map-keyed MessagePack payload simply carries an extra key
+    // that older clients ignore. The caller's consent to see NSFW content, used client-side to hide NSFW
+    // RP characters from non-consenting viewers.
+    bool NsfwEnabled = false);

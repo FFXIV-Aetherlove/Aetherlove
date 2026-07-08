@@ -52,5 +52,8 @@ internal static class DeckPt
         ["deck.decide_later_disabled"] = "Esta é a última carta do seu deck.",
         ["deck.reswipe_intro_title"] = "Desfazer seu último deslize",
         ["deck.reswipe_intro"] = "Isto desfaz seu último deslize e traz aquele perfil de volta ao topo. Você pode usar uma vez a cada 24 horas. Fechar este aviso não gasta seu desfazer, então toque no botão novamente quando quiser usá-lo.",
+
+        // added after update 1.5.0
+        ["deck.cooldown_reswipe_btn"] = "Recuperar sua última carta",
     };
 }
