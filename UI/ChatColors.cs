@@ -5,12 +5,12 @@ namespace AetherLove.UI;
 
 /// <summary>Resolves the chat-bubble colours: the user's overrides from the configuration when set, otherwise
 /// the live theme defaults. Own bubbles default to the theme accent; peer bubbles to a neutral grey; bubble text
-/// defaults to white (near-black on Vanilla Sunrise's light accent so it stays readable).</summary>
+/// defaults to white (near-black on the light-accent themes so it stays readable).</summary>
 public static class ChatColors
 {
     public static Vector4 OwnBgDefault => ThemeService.Current.Accent;
 
-    public static Vector4 OwnFgDefault => ThemeService.CurrentTheme == AppTheme.VanillaSunrise
+    public static Vector4 OwnFgDefault => ThemeService.CurrentTheme is AppTheme.VanillaSunrise or AppTheme.YorhaTypeAe
         ? new Vector4(0.13f, 0.10f, 0.03f, 1f)
         : new Vector4(1f, 1f, 1f, 1f);
 

@@ -37,5 +37,10 @@ internal static class HubErrorsEn
         ["huberror.reswipe_nothing_to_undo"] = "There's nothing to undo.",
         ["huberror.reswipe_already_matched"] = "You cannot reswipe on a matched profile.",
         ["huberror.reswipe_quota_exhausted"] = "You've used your reswipe for today.",
+
+        // added after update 1.4.3
+        ["huberror.character_limit_reached"] = "You can have at most {0} RP characters.",
+        ["huberror.character_name_invalid"] = "Character names must be 3-50 characters.",
+        ["huberror.character_not_found"] = "That character no longer exists. Reload and try again.",
     };
 }

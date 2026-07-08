@@ -130,5 +130,19 @@ internal static class CommonEs
 
         // added after update (1.3.1)
         ["common.sfw_gate_race_gender"] = "Asegúrate de que tu imagen principal muestre la raza y el género de tu personaje tal como aparecen en tu perfil.",
+
+        // added after update 1.4.3
+        ["common.img_cloud_title"] = "Archivo no descargado",
+        ["common.img_cloud_unavailable"] = "Esta imagen está guardada solo en línea en la nube (por ejemplo, OneDrive) y no se ha descargado a tu PC, así que no se puede abrir. En el Explorador de archivos, haz clic derecho sobre ella, elige 'Mantener siempre en este dispositivo', espera a que aparezca la marca verde e inténtalo de nuevo. O elige un archivo guardado localmente en tu PC.",
+        ["common.emoji_favorites"] = "Favoritos",
+        ["common.emoji_favorite_hint"] = "clic derecho para marcar o quitar de favoritos",
+        ["common.emoji_add_favorite"] = "Añadir a favoritos",
+        ["common.emoji_remove_favorite"] = "Quitar de favoritos",
+        ["common.selfie"] = "Selfie",
+        ["common.selfie_instructions"] = "Arrastra o ajusta el marco sobre tu personaje y luego haz la foto.",
+        ["common.selfie_take"] = "Hacer foto",
+        ["common.selfie_capturing"] = "Capturando...",
+        ["common.offline_maintenance"] = "El servidor está en mantenimiento.",
+        ["common.back"] = "Atrás",
     };
 }

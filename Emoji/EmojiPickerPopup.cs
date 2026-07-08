@@ -25,6 +25,7 @@ public sealed class EmojiPickerPopup
     private string _search = "";
     private Action<string>? _onInsert;
     private string? _pendingInsert;
+    private string? _favMenuName;
 
     private int _columns = 1;
     private float _gapX;
@@ -85,6 +86,21 @@ public sealed class EmojiPickerPopup
 
         ImGui.PopStyleVar();
 
+        if (ImGui.BeginPopup("##emojiFavMenu"))
+        {
+            if (_favMenuName is { } fav)
+            {
+                var label = EmojiFavorites.Contains(fav)
+                    ? Loc.T("common.emoji_remove_favorite")
+                    : Loc.T("common.emoji_add_favorite");
+                if (ImGui.MenuItem(label) && EmojiFavorites.Toggle(fav))
+                {
+                    EmojiFavoriteFx.Trigger(ImGui.GetMousePos());
+                }
+            }
+            ImGui.EndPopup();
+        }
+
         if (_pendingInsert != null)
         {
             _onInsert?.Invoke(_pendingInsert);
@@ -97,6 +113,26 @@ public sealed class EmojiPickerPopup
     {
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var col = 0;
+
+        // Favorites first (still shown in their normal category below, so they aren't added to `seen`).
+        if (EmojiFavorites.Any)
+        {
+            var favHeaderPrinted = false;
+            foreach (var name in EmojiFavorites.All)
+            {
+                var favTex = Plugin.EmojiService.GetEmoji(name);
+                if (favTex == null)
+                {
+                    continue;
+                }
+                if (!favHeaderPrinted)
+                {
+                    StartHeader(Loc.T("common.emoji_favorites"), ref col);
+                    favHeaderPrinted = true;
+                }
+                DrawCell(name, favTex, ref col);
+            }
+        }
 
         foreach (var cat in EmojiCategories.All)
         {
@@ -223,11 +259,16 @@ public sealed class EmojiPickerPopup
         if (ImGui.IsItemHovered())
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            ImGui.SetTooltip($":{name}:");
+            ImGui.SetTooltip($":{name}:  ({Loc.T("common.emoji_favorite_hint")})");
 
             if (ImGui.IsMouseReleased(ImGuiMouseButton.Left))
             {
                 _pendingInsert = name;
+            }
+            if (ImGui.IsMouseReleased(ImGuiMouseButton.Right))
+            {
+                _favMenuName = name;
+                ImGui.OpenPopup("##emojiFavMenu");
             }
         }
 

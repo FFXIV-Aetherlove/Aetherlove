@@ -120,5 +120,11 @@ internal static class SettingsFr
         // added after update 1.4.0
         ["settings.lock_position"] = "Verrouiller la position",
         ["settings.lock_position_caption"] = "En verrouillant la position, vous ne pourrez plus déplacer le téléphone (grand et mini) ; ils resteront figés en place.",
+
+        // added after update 1.4.3
+        ["settings.show_during_gpose"] = "Afficher AetherLove pendant la pose de groupe",
+        ["settings.show_during_gpose_tooltip"] = "Garde AetherLove visible pendant la pose de groupe (/gpose) et remplace le réglage de Dalamud qui masque les fenêtres des plugins pendant la pose de groupe.",
+        ["settings.hide_during_cutscene"] = "Masquer AetherLove pendant les cinématiques",
+        ["settings.hide_during_cutscene_tooltip"] = "Masque AetherLove pendant une cinématique (par défaut). Désactivez cette option pour le garder visible pendant les cinématiques.",
     };
 }

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
-    <Version>1.4.3.0</Version>
+    <Version>1.5.0.0</Version>
     <Authors>Astraea, Nihal</Authors>
     <Company>Astraea</Company>
     <Copyright>Copyright © 2026 Astraea</Copyright>
@@ -45,6 +45,14 @@
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.9" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="10.0.9" />
     <PackageReference Include="BouncyCastle.Cryptography" Version="2.6.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- D3D11/DXGI interop for the in-game screen capture; ships with Dalamud (used by FFXIVClientStructs),
+         referenced compile-time only so we bind against the runtime copy. -->
+    <Reference Include="TerraFX.Interop.Windows">
+      <HintPath>$(DalamudLibPath)TerraFX.Interop.Windows.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\AetherLove.Shared\AetherLove.Shared.csproj" />

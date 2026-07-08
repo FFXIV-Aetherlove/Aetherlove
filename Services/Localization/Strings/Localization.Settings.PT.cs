@@ -129,5 +129,11 @@ internal static class SettingsPt
         // added after update 1.4.0
         ["settings.lock_position"] = "Bloquear posição",
         ["settings.lock_position_caption"] = "Ao bloquear a posição, não será possível mover o telefone (grande e mini); eles ficarão fixos no lugar.",
+
+        // added after update 1.4.3
+        ["settings.show_during_gpose"] = "Mostrar o AetherLove durante a pose de grupo",
+        ["settings.show_during_gpose_tooltip"] = "Mantém o AetherLove visível durante a pose de grupo (/gpose), substituindo a definição do Dalamud que oculta as janelas dos plugins durante a pose de grupo.",
+        ["settings.hide_during_cutscene"] = "Ocultar o AetherLove durante as cenas",
+        ["settings.hide_during_cutscene_tooltip"] = "Oculta o AetherLove enquanto uma cena está a decorrer (predefinição). Desativa isto para o manter visível durante as cenas.",
     };
 }

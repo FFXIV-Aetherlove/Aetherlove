@@ -258,7 +258,6 @@ public class SettingsScreen
             SettingCheckbox(Loc.T("settings.confirm_before_close"),
                 () => !Plugin.Configuration.SkipCloseConfirmation,
                 v => Plugin.Configuration.SkipCloseConfirmation = !v);
-            DrawPulseOptOut(winW);
             ImGui.Spacing();
         }
     }
@@ -280,6 +279,7 @@ public class SettingsScreen
 
             ImGui.Spacing();
             DrawNotificationSettings(winW);
+            DrawPulseOptOut(winW);
             ImGui.Spacing();
         }
     }
@@ -967,6 +967,27 @@ public class SettingsScreen
                 Plugin.Configuration.Save();
             }
         }
+
+        ImGui.Spacing();
+        SettingCheckbox(Loc.T("settings.show_during_gpose"),
+            () => Plugin.Configuration.ShowDuringGpose,
+            v =>
+            {
+                Plugin.Configuration.ShowDuringGpose = v;
+                Plugin.PluginInterface.UiBuilder.DisableGposeUiHide = v;
+            });
+        ImGui.SameLine();
+        HelpMarker(Loc.T("settings.show_during_gpose_tooltip"));
+
+        SettingCheckbox(Loc.T("settings.hide_during_cutscene"),
+            () => Plugin.Configuration.HideDuringCutscenes,
+            v =>
+            {
+                Plugin.Configuration.HideDuringCutscenes = v;
+                Plugin.PluginInterface.UiBuilder.DisableCutsceneUiHide = !v;
+            });
+        ImGui.SameLine();
+        HelpMarker(Loc.T("settings.hide_during_cutscene_tooltip"));
     }
 
     private static void DrawNotificationSoundCombo(float winW)

@@ -78,12 +78,21 @@ public partial class OnboardingScreen
 
             PushThemeButton(t);
             if (ImGui.Button(Loc.T("onboarding.avatar_browse"), Px(100f, 28f)))
-            { _pickerTarget = -1; OpenFilePicker(); }
+            {
+                _pickerTarget = -1;
+                OpenFilePicker();
+            }
+            ImGui.SameLine();
+            if (ImGui.Button(Loc.T("common.selfie"), Px(90f, 28f)))
+            {
+                _pickerTarget = -1;
+                OpenSelfie();
+            }
             PopThemeButton();
 
             if (_avatarPath.Length > 0)
             {
-                ImGui.SameLine();
+                ImGui.Spacing();
                 ImGui.TextColored(UiColors.SuccessSoft, Path.GetFileName(_avatarPath));
                 ImGui.Spacing();
                 ImGui.TextColored(muted, Loc.T("onboarding.avatar_crop_hint"));

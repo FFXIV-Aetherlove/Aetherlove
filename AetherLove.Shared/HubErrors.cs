@@ -57,6 +57,11 @@ public static class HubErrors
     public const string ReswipeAlreadyMatched = "reswipe_already_matched";
     public const string ReswipeQuotaExhausted = "reswipe_quota_exhausted";
 
+    /// <summary>Arg 0: the caller's max RP characters.</summary>
+    public const string CharacterLimitReached = "character_limit_reached";
+    public const string CharacterNameInvalid = "character_name_invalid";
+    public const string CharacterNotFound = "character_not_found";
+
     /// <summary>Builds the wire payload. Args are serialized invariant-culture; they must not contain '|'.</summary>
     public static string Format(string code, params object?[] args)
     {

@@ -17,6 +17,14 @@ namespace AetherLove.UI;
 /// multi-select list. They live here, not on a screen, because both screens build the same profile data.</summary>
 internal static class SharedUiHelpers
 {
+    /// <summary>Red destructive-action button colours; pop 3 after the button.</summary>
+    internal static void PushDangerButton()
+    {
+        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.32f, 0.10f, 0.10f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.55f, 0.15f, 0.15f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.22f, 0.06f, 0.06f, 1f));
+    }
+
     /// <summary>Draws a faint "(?)" that shows <paramref name="text"/> as a tooltip while hovered — an
     /// inline explanation for the field it sits next to.</summary>
     internal static void HelpTooltip(string text)
@@ -713,6 +721,33 @@ internal static class SharedUiHelpers
             return (r, g, b);
         }
         return (88, 101, 242);
+    }
+
+    /// <summary>True when the picked file is a cloud placeholder whose contents aren't on disk (OneDrive
+    /// "online-only" / Files On-Demand, and other providers using the same attributes). Such a file may fail
+    /// to read if hydration doesn't complete, so callers reject the pick and ask for a locally-available file.
+    /// A probing failure returns false so a genuine read error still surfaces through the normal path.</summary>
+    internal static bool IsUnavailableCloudFile(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return false;
+        }
+        try
+        {
+            // Raw Win32 recall bits, not named in the .NET FileAttributes enum. Reading attributes is
+            // metadata-only, so it never triggers a download or blocks.
+            const FileAttributes recallOnOpen = (FileAttributes)0x00040000;
+            const FileAttributes recallOnDataAccess = (FileAttributes)0x00400000;
+            var attrs = File.GetAttributes(path);
+            return (attrs & (FileAttributes.Offline | recallOnOpen | recallOnDataAccess)) != 0;
+        }
+        catch
+        {
+            // Fail open on any error (incl. Wine / Windows 7-8, where these markers aren't supported): treat
+            // the file as available so the pick proceeds as before and never crashes.
+            return false;
+        }
     }
 
     /// <summary>Loads a just-picked source image for preview/cropping. WIC (notably on Wine) has no WebP

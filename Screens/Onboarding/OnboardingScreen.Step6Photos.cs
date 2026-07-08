@@ -262,21 +262,18 @@ public partial class OnboardingScreen
             PushThemeButton(t);
             if (ImGui.Button($"{Loc.T("onboarding.photos_browse")}##br{_activePhotoSlot}", Px(100f, 28f)))
             {
-                if (AnyConfirmedExtraIsUndeclared())
-                {
-                    _undeclaredModalPending = true;
-                }
-                else
-                {
-                    _pickerTarget = _activePhotoSlot;
-                    OpenFilePicker();
-                }
+                TryPickPhoto(OpenFilePicker);
+            }
+            ImGui.SameLine();
+            if (ImGui.Button($"{Loc.T("common.selfie")}##sf{_activePhotoSlot}", Px(90f, 28f)))
+            {
+                TryPickPhoto(OpenSelfie);
             }
             PopThemeButton();
 
             if (active.Path.Length > 0)
             {
-                ImGui.SameLine();
+                ImGui.Spacing();
                 ImGui.TextColored(UiColors.SuccessSoft, Path.GetFileName(active.Path));
                 ImGui.Spacing();
                 ImGui.TextColored(UiColors.Hint,

@@ -11,6 +11,40 @@ public static class ChangelogRegistry
     private static readonly List<ChangelogEntry> _entries =
     [
         new(
+            Version: new Version(1, 5, 0),
+            ReleaseDate: new DateOnly(2026, 07, 08),
+            NewFeatures:
+            [
+                "You can now create multiple roleplay character profiles (OCs), each with its own bio and image, shown on your profile.",
+                "Organize your matches into custom named, colored categories: drag chats into a category or right-click to move them, and reorder categories however you like.",
+                "Take a profile or gallery photo straight from the game with the new in-game selfie tool; frame your shot with a live viewfinder while nameplates and hotbars hide automatically for a clean picture.",
+                "A new phone appearance is available: the YoRHa Æ theme.",
+                "Right-click an emoji to mark it as a favorite, and a Favorites row appears at the top of every emoji picker.",
+                "Start typing an emoji shortcode in chat to get suggestions and autocomplete it.",
+                "You can now search within a single conversation, not just across the matches list.",
+                "Whenever we are doing planned server maintenance, the offline screen now relays the expected end time so you know what to expect.",
+                "The chat message box now wraps and grows to multiple lines as you type.",
+                "New settings let you keep AetherLove visible during group pose and cutscenes.",
+                "Unsent chat text is now remembered when you navigate away and come back, and across reconnects.",
+                "AetherLove now restores the phone to where you left off after a plugin update or restart."
+            ],
+            BugFixes:
+            [
+                "Picking a OneDrive-hosted file that hasn't been downloaded to your PC now shows a clear message instead of a wall of error text.",
+                "The emoji hover tooltip is now legible on light-accent themes such as Yellow.",
+                "AetherLove no longer changes other Dalamud plugins' font sizes, hopefully, we think.",
+                "Switching phone size now shows a brief loader instead of a flash of wrong-sized text.",
+                "Pressing Escape no longer unexpectedly closes the AetherLove windows.",
+                "Moved the novelty notification opt-out into notification settings, a more logical place for it."
+            ],
+            Important:
+            [
+                "Thank you for updating to 1.5.0, one of our bigger UX updates yet!",
+                "With this update we will be celebrating 3,500,000 swipes and over 100,000 matches made.",
+                "This update focuses on adding multiple OC profiles and further improvements to chat and the organization of chats."
+            ]
+        ),
+        new(
             Version: new Version(1, 4, 0),
             ReleaseDate: new DateOnly(2026, 07, 02),
             NewFeatures:

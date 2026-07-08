@@ -3,6 +3,7 @@ using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
 using AetherLove.Config;
+using AetherLove.Emoji;
 using AetherLove.Navigation;
 using AetherLove.Screens;
 using AetherLove.Services;
@@ -27,7 +28,7 @@ public class MainPluginWindow : Window, IDisposable
     private readonly DeckScreen _deckScreen;
     private readonly MatchScreen _matchScreen;
     private readonly ChatListScreen _chatListScreen;
-    private readonly ChatArchiveScreen _chatArchiveScreen;
+    private readonly ChatCategoryScreen _chatCategoryScreen;
     private readonly ChatScreen _chatScreen;
     private readonly ProfileScreen _profileScreen;
     private readonly SettingsScreen _settingsScreen;
@@ -60,7 +61,7 @@ public class MainPluginWindow : Window, IDisposable
         DeckScreen deckScreen,
         MatchScreen matchScreen,
         ChatListScreen chatListScreen,
-        ChatArchiveScreen chatArchiveScreen,
+        ChatCategoryScreen chatCategoryScreen,
         ChatScreen chatScreen,
         ProfileScreen profileScreen,
         SettingsScreen settingsScreen,
@@ -93,7 +94,7 @@ public class MainPluginWindow : Window, IDisposable
         _deckScreen = deckScreen;
         _matchScreen = matchScreen;
         _chatListScreen = chatListScreen;
-        _chatArchiveScreen = chatArchiveScreen;
+        _chatCategoryScreen = chatCategoryScreen;
         _chatScreen = chatScreen;
         _profileScreen = profileScreen;
         _settingsScreen = settingsScreen;
@@ -187,17 +188,14 @@ public class MainPluginWindow : Window, IDisposable
     /// DrawConditions; Minimize / LeaveOpen = always visible (bootstrap handles the explicit swap).</summary>
     public override bool DrawConditions()
         => Plugin.ClientState.IsLoggedIn
+           && !Widgets.SelfieCaptureOverlay.Active
            && (Plugin.Configuration.CombatBehavior != CombatBehavior.Hide
                || !Plugin.Condition[ConditionFlag.InCombat]);
 
-    private float _savedFontGlobalScale;
+    private float _savedFontGlobalScale = 1f;
 
     public override void PreDraw()
     {
-        // The phone is authored at a fixed canvas × our own size preset. Dalamud's global font scale would
-        // multiply every glyph (and font-derived widget heights) on top of that and overflow the fixed
-        // window — so pin it to 1 for our draw and restore it in PostDraw. Dalamud's scale slider then has
-        // zero effect inside the phone.
         Size = Px(UiScale.Design);
 
         if (Plugin.Configuration.LockPhonePosition)
@@ -208,10 +206,6 @@ public class MainPluginWindow : Window, IDisposable
         {
             Flags &= ~ImGuiWindowFlags.NoMove;
         }
-
-        var io = ImGui.GetIO();
-        _savedFontGlobalScale = io.FontGlobalScale;
-        io.FontGlobalScale = 1f;
 
         if (_router.NavigationOccurred)
         {
@@ -241,6 +235,14 @@ public class MainPluginWindow : Window, IDisposable
         _transitionAlpha = Math.Clamp(_transitionAlpha + dt * TransitionSpeed, 0f, 1f);
 
         ImGui.PushStyleVar(ImGuiStyleVar.Alpha, _transitionAlpha);
+
+        // The phone is authored at a fixed canvas × our own size preset. Dalamud's global font scale would
+        // multiply every glyph (and font-derived widget heights) on top of that and overflow the fixed
+        // window — so pin it to 1 for our draw and restore it in PostDraw. Dalamud's scale slider then has
+        // zero effect inside the phone. Pinned last so no fallible PreDraw code runs between pin and restore.
+        var io = ImGui.GetIO();
+        _savedFontGlobalScale = io.FontGlobalScale;
+        io.FontGlobalScale = 1f;
     }
 
     private const float NavBarHeight = 70f;
@@ -252,14 +254,22 @@ public class MainPluginWindow : Window, IDisposable
 
     public override void Draw()
     {
-        using var bodyFont = UiFonts.Body?.Push();
-
         if (_recenterRequested)
         {
             _recenterRequested = false;
             var vp = ImGui.GetMainViewport();
             ImGui.SetWindowPos(vp.Pos + (vp.Size - ImGui.GetWindowSize()) * 0.5f);
         }
+
+        // While a size-preset change rebuilds the fonts, drawing would fall back to the default font at the
+        // wrong size — show the phone shell with a spinner until every handle is ready.
+        if (!UiFonts.Ready)
+        {
+            DrawFontRebuildLoader();
+            return;
+        }
+
+        using var bodyFont = UiFonts.Body?.Push();
 
         // Pin the modal host over the phone so its dim backdrop follows us onto whatever viewport/monitor
         // the window is on (Dalamud's "Enable multiple screens").
@@ -279,7 +289,7 @@ public class MainPluginWindow : Window, IDisposable
         var winSize = ImGui.GetWindowSize();
         var contentW = winSize.X - Px(BezelLeft) - Px(BezelRight);
         var contentH = winSize.Y - Px(BezelTop) - Px(BezelBottom);
-        var isMainScreen = _router.Current is Screen.Deck or Screen.ChatList or Screen.ChatArchive or Screen.Chat
+        var isMainScreen = _router.Current is Screen.Deck or Screen.ChatList or Screen.ChatCategory or Screen.Chat
                                                            or Screen.Settings or Screen.MyProfile;
         var isSplash = _router.Current is Screen.Splash;
 
@@ -313,8 +323,8 @@ public class MainPluginWindow : Window, IDisposable
             case Screen.ChatList:
                 _chatListScreen.Draw();
                 break;
-            case Screen.ChatArchive:
-                _chatArchiveScreen.Draw();
+            case Screen.ChatCategory:
+                _chatCategoryScreen.Draw();
                 break;
             case Screen.Chat:
                 _chatScreen.Draw();
@@ -375,7 +385,7 @@ public class MainPluginWindow : Window, IDisposable
 
     private static bool IsNavActive(Screen navTarget, Screen current) => navTarget switch
     {
-        Screen.ChatList => current is Screen.ChatList or Screen.ChatArchive or Screen.Chat,
+        Screen.ChatList => current is Screen.ChatList or Screen.ChatCategory or Screen.Chat,
         _ => current == navTarget,
     };
 
@@ -552,6 +562,15 @@ public class MainPluginWindow : Window, IDisposable
     {
         ImGui.GetIO().FontGlobalScale = _savedFontGlobalScale;
         ImGui.PopStyleVar();
+        EmojiFavoriteFx.Draw();
+    }
+
+    private void DrawFontRebuildLoader()
+    {
+        var pos = ImGui.GetWindowPos();
+        var size = ImGui.GetWindowSize();
+        _phoneShell.DrawBackground(pos, size);
+        LoadingSpinner.Draw(pos + size * 0.5f, Px(16f), Px(3.5f), ThemeService.Current.AccentU32);
     }
 
     private void OnScreenChanged(Screen newScreen)
@@ -574,8 +593,8 @@ public class MainPluginWindow : Window, IDisposable
                 _chatListScreen.OnShow();
                 MarkChatListSeen();
                 break;
-            case Screen.ChatArchive:
-                _chatArchiveScreen.OnShow();
+            case Screen.ChatCategory:
+                _chatCategoryScreen.OnShow();
                 break;
             case Screen.Chat:
                 _chatScreen.OnShow();
@@ -626,8 +645,8 @@ public class MainPluginWindow : Window, IDisposable
             case Screen.ChatList:
                 _chatListScreen.OnHide();
                 break;
-            case Screen.ChatArchive:
-                _chatArchiveScreen.OnHide();
+            case Screen.ChatCategory:
+                _chatCategoryScreen.OnHide();
                 break;
             case Screen.Chat:
                 _chatScreen.OnHide();

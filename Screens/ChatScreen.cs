@@ -67,6 +67,26 @@ public partial class ChatScreen
     private byte[]? _peerPublicKey;
     private byte[]? _messageKey;
     private string _inputText = string.Empty;
+
+    /// <summary>Per-peer unsent input, so a typed draft survives leaving and returning to a conversation
+    /// (including the offline round-trip during maintenance). In-memory for the session only.</summary>
+    private readonly Dictionary<Guid, string> _drafts = new();
+
+    /// <summary>Inner width of the chat input box, refreshed each frame for the wrap callback to measure.</summary>
+    private float _chatWrapWidth;
+
+    private const int ChatInputMaxLines = 5;
+
+    /// <summary>Emoji whose favorite menu is open (right-clicked in a message); drives ##chatEmojiFavMenu.</summary>
+    private string? _chatFavName;
+
+    private const int AutocompleteMax = 5;
+    private const float AutocompleteRowH = 40f;
+
+    /// <summary>Emoji shortcodes matching the in-progress ":query" at the input; drives the autocomplete strip.</summary>
+    private List<string>? _acMatches;
+    private string? _acQuery;
+    private bool _acCursorToEnd;
     private bool _reclaimInputFocus;
 
     private ISharedImmediateTexture? _headerAvatarTex;
@@ -92,6 +112,16 @@ public partial class ChatScreen
     private float _flashTimer;
     private const float FlashDuration = 3.0f;
     private const int FlashPulses = 3;
+
+    private bool _msgSearchOpen;
+    private bool _msgSearchFocus;
+    private string _msgSearchQuery = string.Empty;
+    private string _msgSearchApplied = string.Empty;
+    private readonly List<Guid> _msgSearchHits = new();
+    private int _msgSearchIndex;
+    private bool _msgSearchArmed;
+    private const float SearchBarH = 34f;
+    private const int MinSearchLen = 3;
 
     private bool _systemNoticeDismissed;
 
@@ -161,13 +191,14 @@ public partial class ChatScreen
         _msgRowH.Clear();
         _peerPublicKey = null;
         _messageKey = null;
-        _inputText = string.Empty;
+        _inputText = _drafts.TryGetValue(_peerId, out var draft) ? draft : string.Empty;
         // Drop the previous chat's queued work here; ResetEnhancements must not, since hydrate enqueues it ahead of the per-message seed actions.
         _uiActions.Clear();
         ResetEnhancements();
         _scrollTargetMessageId = _chatListScreen.SelectedScrollMessageId;
         _scrollToMessageTimer = 0f;
         _flashTimer = 0f;
+        CloseMsgSearch();
         _scrollToBottom = _scrollTargetMessageId == Guid.Empty ? 1f : 0f;
         _systemNoticeDismissed = false;
         _openFadeAt = -1;
@@ -183,6 +214,7 @@ public partial class ChatScreen
 
     public void OnHide()
     {
+        StashDraft();
         _events.MessageReceived -= OnMessageReceived;
         _events.MessageRead -= OnMessageRead;
         _events.Unmatched -= OnUnmatched;
@@ -194,7 +226,26 @@ public partial class ChatScreen
             _notifications.ActiveChatPeerId = Guid.Empty;
         }
         SaveReactionUsageIfDirty();
+        _chatListScreen.CloseCategoryEditor();
         _cts.Cancel();
+    }
+
+    /// <summary>Remembers the active peer's unsent input (or forgets it when empty) so returning to the
+    /// conversation restores the draft. In-memory for the session only.</summary>
+    private void StashDraft()
+    {
+        if (_peerId == Guid.Empty)
+        {
+            return;
+        }
+        if (string.IsNullOrEmpty(_inputText))
+        {
+            _drafts.Remove(_peerId);
+        }
+        else
+        {
+            _drafts[_peerId] = _inputText;
+        }
     }
 
     private void LoadHeaderAvatar()
@@ -418,7 +469,7 @@ public partial class ChatScreen
         {
             return;
         }
-        _router.Navigate(Screen.ChatList);
+        _router.Navigate(_chatListScreen.ChatBackTarget);
     }
 
     private void OnBlockedByPeer(BlockedByPeerPushDto p)
@@ -427,7 +478,7 @@ public partial class ChatScreen
         {
             return;
         }
-        _router.Navigate(Screen.ChatList);
+        _router.Navigate(_chatListScreen.ChatBackTarget);
     }
 
     public void Draw()
@@ -462,11 +513,15 @@ public partial class ChatScreen
 
         DrawHeader();
         DrawReportSubmittedToast();
+        RefreshAutocomplete();
         DrawMessages();
         DrawInput();
         DrawPinnedOverlay();
 
         DrawOpenFade(contentTL, contentSize);
+
+        // Hosts the category create overlay so "New category…" from the overflow menu works inside the chat.
+        _chatListScreen.DrawCategoryEditorOverlay();
 
         if (_reportPendingOpen)
         {
@@ -547,7 +602,7 @@ public partial class ChatScreen
         }
         if (ImGui.IsItemClicked())
         {
-            _router.Navigate(Screen.ChatList);
+            _router.Navigate(_chatListScreen.ChatBackTarget);
         }
         ImGui.PushFont(iconFont);
         var backIcon = FontAwesomeIcon.ArrowLeft.ToIconString();
@@ -636,6 +691,11 @@ public partial class ChatScreen
                 ImGui.CloseCurrentPopup();
                 OpenVerify();
             }
+            if (DrawIconMenuItem(FontAwesomeIcon.Search, Loc.T("chat.menu_search")))
+            {
+                ImGui.CloseCurrentPopup();
+                OpenMsgSearch();
+            }
             if (DrawIconMenuItem(FontAwesomeIcon.Thumbtack, Loc.T("chat.pinned_messages_menu", _pinned.Count),
                     enabled: _pinned.Count > 0))
             {
@@ -649,13 +709,7 @@ public partial class ChatScreen
                 ImGui.CloseCurrentPopup();
                 _chatListScreen.SetPinned(_peerId, !pinned);
             }
-            var archived = _chatListScreen.IsArchived(_peerId);
-            if (DrawIconMenuItem(archived ? FontAwesomeIcon.BoxOpen : FontAwesomeIcon.Archive,
-                    archived ? Loc.T("chat.menu_unarchive") : Loc.T("chat.menu_archive")))
-            {
-                ImGui.CloseCurrentPopup();
-                _chatListScreen.SetArchived(_peerId, !archived);
-            }
+            _chatListScreen.DrawChatOverflowCategoryItems(_peerId);
             ImGui.Separator();
             if (DrawIconMenuItem(FontAwesomeIcon.Unlink, Loc.T("chat.menu_unmatch")))
             {
@@ -700,7 +754,7 @@ public partial class ChatScreen
             try { await _hub.UnmatchAsync(peer); }
             catch (Exception ex) { Plugin.Log.Warning(ex, "[ChatScreen] UnmatchAsync failed."); }
         });
-        _router.Navigate(Screen.ChatList);
+        _router.Navigate(_chatListScreen.ChatBackTarget);
     }
 
     private void FireBlock()
@@ -711,7 +765,7 @@ public partial class ChatScreen
             try { await _hub.BlockUserAsync(peer); }
             catch (Exception ex) { Plugin.Log.Warning(ex, "[ChatScreen] BlockUserAsync failed."); }
         });
-        _router.Navigate(Screen.ChatList);
+        _router.Navigate(_chatListScreen.ChatBackTarget);
     }
 
     private void OpenPeerProfile()
@@ -786,9 +840,135 @@ public partial class ChatScreen
 
     private volatile bool _closeReportPopup;
 
+    private void OpenMsgSearch()
+    {
+        _msgSearchOpen = true;
+        _msgSearchFocus = true;
+    }
+
+    private void CloseMsgSearch()
+    {
+        _msgSearchOpen = false;
+        _msgSearchFocus = false;
+        _msgSearchQuery = string.Empty;
+        _msgSearchApplied = string.Empty;
+        _msgSearchHits.Clear();
+        _msgSearchIndex = 0;
+        _msgSearchArmed = false;
+    }
+
+    /// <summary>Recomputes the in-chat search hits (this conversation only) whenever the query changes.</summary>
+    private void RecomputeMsgSearch()
+    {
+        var q = _msgSearchQuery.Trim();
+        if (q == _msgSearchApplied)
+        {
+            return;
+        }
+        _msgSearchApplied = q;
+        _msgSearchHits.Clear();
+        if (q.Length >= MinSearchLen)
+        {
+            lock (_messagesLock)
+            {
+                foreach (var m in _messages)
+                {
+                    if (!string.IsNullOrEmpty(m.Text) && m.Text.Contains(q, StringComparison.OrdinalIgnoreCase))
+                    {
+                        _msgSearchHits.Add(m.Id);
+                    }
+                }
+            }
+        }
+        _msgSearchIndex = _msgSearchHits.Count - 1;
+        _msgSearchArmed = _msgSearchHits.Count > 0;
+    }
+
+    /// <summary>Jumps to a search hit; <paramref name="dir"/> is -1 for older, +1 for newer. The first
+    /// navigation after a query lands on the most recent hit.</summary>
+    private void MsgSearchNavigate(int dir)
+    {
+        if (_msgSearchHits.Count == 0)
+        {
+            return;
+        }
+        if (_msgSearchArmed)
+        {
+            _msgSearchArmed = false;
+        }
+        else
+        {
+            _msgSearchIndex = (_msgSearchIndex + dir + _msgSearchHits.Count) % _msgSearchHits.Count;
+        }
+        JumpToMessage(_msgSearchHits[_msgSearchIndex]);
+    }
+
+    /// <summary>Search bar shown between the header and the messages: a query field, a hit count, older/newer
+    /// nav, and a close button. Consumes exactly <see cref="SearchBarH"/> so the message area sizing matches.</summary>
+    private void DrawMessageSearchBar()
+    {
+        if (!_msgSearchOpen)
+        {
+            return;
+        }
+        var start = ImGui.GetCursorPos();
+        var t = ThemeService.Current;
+        var iconFont = Plugin.PluginInterface.UiBuilder.FontIcon;
+        var avail = ImGui.GetContentRegionAvail().X;
+        var btnW = Px(28f);
+        var spacing = ImGui.GetStyle().ItemSpacing.X;
+        var countW = Px(52f);
+        var inputW = MathF.Max(Px(60f), avail - Px(16f) - btnW * 3f - countW - spacing * 4f);
+
+        ImGui.SetCursorPos(new Vector2(Px(8f), start.Y + Px(4f)));
+        if (_msgSearchFocus)
+        {
+            ImGui.SetKeyboardFocusHere();
+            _msgSearchFocus = false;
+        }
+        ImGui.SetNextItemWidth(inputW);
+        var submit = ImGui.InputTextWithHint("##msgSearchInput", Loc.T("chat.search_messages_hint"),
+            ref _msgSearchQuery, 100, ImGuiInputTextFlags.EnterReturnsTrue);
+
+        RecomputeMsgSearch();
+
+        var hits = _msgSearchHits.Count;
+        ImGui.SameLine();
+        ImGui.AlignTextToFramePadding();
+        ImGui.TextColored(hits > 0 ? UiColors.Body : UiColors.Muted, $"{(hits > 0 ? _msgSearchIndex + 1 : 0)}/{hits}");
+
+        ImGui.SameLine();
+        PushThemeButton(t);
+        ImGui.PushFont(iconFont);
+        var prev = ImGui.Button(FontAwesomeIcon.ChevronUp.ToIconString() + "##msgSearchPrev", new Vector2(btnW, 0f));
+        ImGui.SameLine();
+        var next = ImGui.Button(FontAwesomeIcon.ChevronDown.ToIconString() + "##msgSearchNext", new Vector2(btnW, 0f));
+        ImGui.SameLine();
+        var close = ImGui.Button(FontAwesomeIcon.Times.ToIconString() + "##msgSearchClose", new Vector2(btnW, 0f));
+        ImGui.PopFont();
+        PopThemeButton();
+
+        if (submit || prev)
+        {
+            MsgSearchNavigate(-1);
+        }
+        if (next)
+        {
+            MsgSearchNavigate(+1);
+        }
+        if (close)
+        {
+            CloseMsgSearch();
+        }
+
+        ImGui.SetCursorPos(new Vector2(start.X, start.Y + Px(SearchBarH)));
+    }
+
     private void DrawMessages()
     {
-        var availableHeight = ImGui.GetWindowSize().Y - Px(HeaderH + 20f) - InputBarHeight();
+        DrawMessageSearchBar();
+        var availableHeight = ImGui.GetWindowSize().Y - Px(HeaderH + 20f) - InputBarHeight()
+            - (_msgSearchOpen ? Px(SearchBarH) : 0f);
         PushScrollbarStyle();
 
         using (var child = ImRaii.Child("MessageArea", new Vector2(0, availableHeight), false))
@@ -805,6 +985,11 @@ public partial class ChatScreen
             {
                 messages = _messages.ToArray();
             }
+
+            // Reset the emoji right-click capture before drawing bubbles (covers the no-bubbles frame and any
+            // cross-screen leak); each bubble arms it around its own text and consumes it right after.
+            SegmentEmoji.CaptureRightClick = false;
+            SegmentEmoji.RightClickedName = null;
 
             if (!_systemNoticeDismissed && !_loading && _loadError is null
                 && !messages.Any(m => m.IsOwn))
@@ -874,6 +1059,21 @@ public partial class ChatScreen
                 }
                 DrawMessageBubble(msg, windowWidth, drawnSlot++, isGroupStart, isGroupEnd);
                 _msgRowH[msg.Id] = ImGui.GetCursorPosY() - y0; // exact drawn advance
+            }
+
+            if (ImGui.BeginPopup("##chatEmojiFavMenu"))
+            {
+                if (_chatFavName is { } cfav)
+                {
+                    var label = EmojiFavorites.Contains(cfav)
+                        ? Loc.T("common.emoji_remove_favorite")
+                        : Loc.T("common.emoji_add_favorite");
+                    if (ImGui.MenuItem(label) && EmojiFavorites.Toggle(cfav))
+                    {
+                        EmojiFavoriteFx.Trigger(ImGui.GetMousePos());
+                    }
+                }
+                ImGui.EndPopup();
             }
 
             // A manual wheel scroll takes over immediately instead of fighting the post-open auto-scroll.
@@ -1030,14 +1230,25 @@ public partial class ChatScreen
             {
                 ImGui.PushStyleColor(ImGuiCol.Text, msg.IsOwn ? ChatColors.OwnFg : ChatColors.PeerFg);
                 ImGui.PushTextWrapPos(innerW);
+                SegmentEmoji.CaptureRightClick = true;
                 parsed.Draw();
+                SegmentEmoji.CaptureRightClick = false;
                 ImGui.PopTextWrapPos();
                 ImGui.PopStyleColor();
             }
         }
         ImGui.PopStyleVar();
 
-        if (ImGui.BeginPopupContextItem($"##msgCtx{msg.Id}", ImGuiPopupFlags.MouseButtonRight))
+        // A right-click that landed on an emoji favorites it and suppresses the bubble menu; anywhere else on
+        // the bubble opens the normal message menu.
+        var emojiClicked = SegmentEmoji.RightClickedName;
+        if (emojiClicked != null)
+        {
+            SegmentEmoji.RightClickedName = null;
+            _chatFavName = emojiClicked;
+            ImGui.OpenPopup("##chatEmojiFavMenu");
+        }
+        else if (ImGui.BeginPopupContextItem($"##msgCtx{msg.Id}", ImGuiPopupFlags.MouseButtonRight))
         {
             DrawMessageContextMenu(msg);
             ImGui.EndPopup();
@@ -1176,12 +1387,153 @@ public partial class ChatScreen
     // the live frame height so the row stays fully visible at every UI scale and font size.
     private float InputBarHeight()
     {
-        var h = ImGui.GetFrameHeight() + Px(14f);
+        var h = ChatInputBoxHeight() + Px(14f);
         if (_replyingToId is not null)
         {
             h += ImGui.GetTextLineHeight() + Px(12f);
         }
+        if (_acMatches is { Count: > 0 })
+        {
+            h += Px(AutocompleteRowH);
+        }
         return h;
+    }
+
+    /// <summary>Chat input box height, grown per wrapped line up to a cap so the bar rises with the text.</summary>
+    private float ChatInputBoxHeight()
+    {
+        var lines = 1;
+        for (var i = 0; i < _inputText.Length; i++)
+        {
+            if (_inputText[i] == '\n')
+            {
+                lines++;
+            }
+        }
+        lines = Math.Clamp(lines, 1, ChatInputMaxLines);
+        return lines * ImGui.GetTextLineHeight() + ImGui.GetStyle().FramePadding.Y * 2f;
+    }
+
+    /// <summary>Refreshes the emoji autocomplete matches from the in-progress ":query" at the input; cached
+    /// until the query changes. Prefix matches rank ahead of substring matches, shorter names first.</summary>
+    private void RefreshAutocomplete()
+    {
+        if (!TryDetectShortcode(_inputText, out var query))
+        {
+            _acMatches = null;
+            _acQuery = null;
+            return;
+        }
+        if (query == _acQuery)
+        {
+            return;
+        }
+        _acQuery = query;
+
+        var starts = new List<string>();
+        var contains = new List<string>();
+        foreach (var name in Plugin.EmojiService.All.Keys)
+        {
+            if (name.StartsWith(query, StringComparison.OrdinalIgnoreCase))
+            {
+                starts.Add(name);
+            }
+            else if (name.Contains(query, StringComparison.OrdinalIgnoreCase))
+            {
+                contains.Add(name);
+            }
+        }
+        starts.Sort(RankShortcode);
+        contains.Sort(RankShortcode);
+        var top = starts.Concat(contains).Take(AutocompleteMax).ToList();
+        _acMatches = top.Count > 0 ? top : null;
+    }
+
+    private static int RankShortcode(string a, string b)
+        => a.Length != b.Length ? a.Length - b.Length : string.CompareOrdinal(a, b);
+
+    /// <summary>Detects an in-progress ":query" at the input: a colon starting the text or following
+    /// whitespace, then one or more shortcode characters with no closing colon.</summary>
+    private static bool TryDetectShortcode(string text, out string query)
+    {
+        query = "";
+        var ci = text.LastIndexOf(':');
+        if (ci < 0 || (ci > 0 && !char.IsWhiteSpace(text[ci - 1])))
+        {
+            return false;
+        }
+        var q = text[(ci + 1)..];
+        if (q.Length == 0)
+        {
+            return false;
+        }
+        foreach (var c in q)
+        {
+            if (!char.IsAsciiLetterOrDigit(c) && c != '_' && c != '-')
+            {
+                return false;
+            }
+        }
+        query = q;
+        return true;
+    }
+
+    /// <summary>Replaces the in-progress ":query" with the picked emoji's full ":name: " and re-wraps.</summary>
+    private void CompleteShortcode(string fullName)
+    {
+        var ci = _inputText.LastIndexOf(':');
+        if (ci < 0)
+        {
+            return;
+        }
+        _inputText = _inputText[..ci] + $":{fullName}: ";
+        if (_chatWrapWidth > 0f)
+        {
+            _inputText = WrapForInput(_inputText, _chatWrapWidth);
+        }
+        _acMatches = null;
+        _acQuery = null;
+        _reclaimInputFocus = true;
+        _acCursorToEnd = true;
+    }
+
+    /// <summary>Row of up to five emoji suggestions above the input; clicking one completes the shortcode.</summary>
+    private void DrawEmojiAutocompleteRow()
+    {
+        if (_acMatches is not { Count: > 0 } matches)
+        {
+            return;
+        }
+        // Consume exactly the height InputBarHeight reserved, so the input bar stays put whether or not
+        // suggestions show (only the message area above makes room).
+        var start = ImGui.GetCursorPos();
+        var sz = Px(24f);
+        ImGui.SetCursorPos(new Vector2(Px(8f), start.Y + Px(3f)));
+        ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, Px(3f, 3f));
+        ImGui.PushStyleColor(ImGuiCol.Button, 0u);
+        for (var i = 0; i < matches.Count; i++)
+        {
+            var name = matches[i];
+            var tex = Plugin.EmojiService.GetEmoji(name)?.GetWrapOrDefault();
+            ImGui.PushID(i);
+            var clicked = tex != null
+                ? ImGui.ImageButton(tex.Handle, new Vector2(sz))
+                : ImGui.Button(name, new Vector2(sz + Px(6f)));
+            ImGui.PopID();
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+                ImGui.SetTooltip($":{name}:");
+            }
+            if (clicked)
+            {
+                CompleteShortcode(name);
+            }
+            ImGui.SameLine(0f, Px(4f));
+        }
+        ImGui.PopStyleColor();
+        ImGui.PopStyleVar();
+        ImGui.SetCursorPos(new Vector2(start.X, start.Y + Px(AutocompleteRowH)));
     }
 
     private void DrawInput()
@@ -1193,6 +1545,7 @@ public partial class ChatScreen
         var inputWidth = windowWidth - Px(EmojiBtn) - Px(SendBtn) - Px(Gap * 3f);
 
         ImGui.SetCursorPosY(ImGui.GetWindowSize().Y - InputBarHeight());
+        DrawEmojiAutocompleteRow();
         ImGui.Separator();
         ImGui.Spacing();
 
@@ -1209,7 +1562,15 @@ public partial class ChatScreen
             _chatEmojiPicker.Draw();
             if (clicked)
             {
-                _chatEmojiPicker.Open(name => _inputText += $":{name}: ");
+                _chatEmojiPicker.Open(name =>
+                {
+                    // The edit callback never sees this external append, so wrap it by hand.
+                    _inputText += $":{name}: ";
+                    if (_chatWrapWidth > 0f)
+                    {
+                        _inputText = WrapForInput(_inputText, _chatWrapWidth);
+                    }
+                });
             }
         }
 
@@ -1221,15 +1582,97 @@ public partial class ChatScreen
             ImGui.SetKeyboardFocusHere();
             _reclaimInputFocus = false;
         }
-        ImGui.SetNextItemWidth(inputWidth);
-        var enterPressed = ImGui.InputText("##messageInput", ref _inputText, 500,
-            ImGuiInputTextFlags.EnterReturnsTrue);
+        _chatWrapWidth = inputWidth - ImGui.GetStyle().FramePadding.X * 2f;
+        var enterPressed = ImGui.InputTextMultiline("##messageInput", ref _inputText, 500,
+            new Vector2(inputWidth, ChatInputBoxHeight()),
+            ImGuiInputTextFlags.EnterReturnsTrue | ImGuiInputTextFlags.CtrlEnterForNewLine
+            | ImGuiInputTextFlags.CallbackEdit | ImGuiInputTextFlags.CallbackAlways,
+            ChatWrapCallback);
         ImGui.SameLine(0, Px(Gap));
         if ((ImGui.Button(Loc.T("chat.send"), new Vector2(Px(SendBtn), 0)) || enterPressed) && _inputText.Length > 0)
         {
             SendMessage();
             _reclaimInputFocus = true;
         }
+    }
+
+    /// <summary>Reflows the chat input on each edit so long text wraps to the box width. Swapping only spaces
+    /// and newlines keeps the length (and cursor) stable; the breaks become spaces again on send.</summary>
+    private unsafe int ChatWrapCallback(ImGuiInputTextCallbackDataPtr data)
+    {
+        try
+        {
+            ImGuiInputTextCallbackData* p = data;
+            if (p->EventFlag == ImGuiInputTextFlags.CallbackAlways)
+            {
+                // After an autocomplete insert we re-focus the input, which parks the cursor at the start;
+                // move it to the end so the user keeps typing after the shortcode.
+                if (_acCursorToEnd)
+                {
+                    _acCursorToEnd = false;
+                    p->CursorPos = p->BufTextLen;
+                    p->SelectionStart = p->BufTextLen;
+                    p->SelectionEnd = p->BufTextLen;
+                }
+                return 0;
+            }
+            if (_chatWrapWidth <= 0f || p->BufTextLen <= 0)
+            {
+                return 0;
+            }
+            var current = Encoding.UTF8.GetString(p->Buf, p->BufTextLen);
+            var wrapped = WrapForInput(current, _chatWrapWidth);
+            if (wrapped == current)
+            {
+                return 0;
+            }
+            var bytes = Encoding.UTF8.GetBytes(wrapped);
+            if (bytes.Length != p->BufTextLen)
+            {
+                return 0;
+            }
+            for (var i = 0; i < bytes.Length; i++)
+            {
+                p->Buf[i] = bytes[i];
+            }
+            p->BufDirty = 1;
+        }
+        catch
+        {
+            // A managed exception must not cross into the native ImGui call.
+        }
+        return 0;
+    }
+
+    /// <summary>Greedy word-wrap by swapping spaces and newlines only (length-preserving): flattens stale
+    /// breaks, then breaks the last space on any line wider than <paramref name="width"/>. Long words aren't split.</summary>
+    private static string WrapForInput(string text, float width)
+    {
+        var chars = text.ToCharArray();
+        for (var i = 0; i < chars.Length; i++)
+        {
+            if (chars[i] == '\n')
+            {
+                chars[i] = ' ';
+            }
+        }
+        var lineStart = 0;
+        var lastSpace = -1;
+        for (var i = 0; i < chars.Length; i++)
+        {
+            if (chars[i] == ' ')
+            {
+                lastSpace = i;
+            }
+            var line = new string(chars, lineStart, i - lineStart + 1);
+            if (ImGui.CalcTextSize(line).X > width && lastSpace > lineStart)
+            {
+                chars[lastSpace] = '\n';
+                lineStart = lastSpace + 1;
+                lastSpace = -1;
+            }
+        }
+        return new string(chars);
     }
 
     private void SendMessage()
@@ -1248,8 +1691,9 @@ public partial class ChatScreen
             Plugin.Log.Warning("[ChatScreen] Cannot send: message key not derived yet.");
             return;
         }
-        var text = _inputText;
+        var text = _inputText.Replace('\n', ' ');
         _inputText = string.Empty;
+        _drafts.Remove(_peerId);
         _scrollToBottom = 1f;
         var replyTarget = _replyingToId;
         _replyingToId = null;

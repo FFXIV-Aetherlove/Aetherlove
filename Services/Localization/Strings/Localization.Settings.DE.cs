@@ -130,5 +130,11 @@ internal static class SettingsDe
         // added after update 1.4.0
         ["settings.lock_position"] = "Position sperren",
         ["settings.lock_position_caption"] = "Wenn du die Position sperrst, kannst du das Telefon (groß und mini) nicht mehr bewegen; sie bleiben an ihrem Platz.",
+
+        // added after update 1.4.3
+        ["settings.show_during_gpose"] = "AetherLove während der Gruppenpose anzeigen",
+        ["settings.show_during_gpose_tooltip"] = "Hält AetherLove während der Gruppenpose (/gpose) sichtbar und überschreibt Dalamuds Einstellung, die Plugin-Fenster in der Gruppenpose ausblendet.",
+        ["settings.hide_during_cutscene"] = "AetherLove in Zwischensequenzen ausblenden",
+        ["settings.hide_during_cutscene_tooltip"] = "Blendet AetherLove während einer Zwischensequenz aus (Standard). Deaktiviere dies, um es in Zwischensequenzen sichtbar zu halten.",
     };
 }

@@ -21,8 +21,8 @@ namespace AetherLove.Screens;
 public partial class MyProfileScreen
 {
     /// <summary>Which slice of the "My" area is showing: the hub (stats + menu), the profile detail (the
-    /// view/edit/images tabs), or one of the moderation lists.</summary>
-    private enum Section { Hub, Detail, Warnings, ModMessages }
+    /// view/edit/images tabs), the RP-characters editor, or one of the moderation lists.</summary>
+    private enum Section { Hub, Detail, RpCharacters, Warnings, ModMessages }
 
     private Section _section = Section.Hub;
 
@@ -86,6 +86,7 @@ public partial class MyProfileScreen
             new(FontAwesomeIcon.User, t.Accent, Loc.T("profile.menu_view"), 0, false, () => OpenDetail(Tab.View)),
             new(FontAwesomeIcon.Edit, t.Accent, Loc.T("profile.menu_edit"), 0, false, () => OpenDetail(Tab.Edit)),
             new(FontAwesomeIcon.Images, t.Accent, Loc.T("profile.menu_images"), 0, false, () => OpenDetail(Tab.Images)),
+            new(FontAwesomeIcon.TheaterMasks, t.Accent, Loc.T("profile.menu_rp"), 0, false, OpenRpCharacters),
         });
 
         ImGui.Spacing();
@@ -190,7 +191,12 @@ public partial class MyProfileScreen
 
     private void DrawDetail()
     {
-        DrawHubBackButton();
+        // The fullscreen character-image overlay covers the whole content; hiding the back button keeps its
+        // hit-target from lurking under the overlay's own back pill.
+        if (!(_activeTab == Tab.View && _profileScreen.IsCharacterFullscreenOpen))
+        {
+            DrawHubBackButton();
+        }
         switch (_activeTab)
         {
             case Tab.View:

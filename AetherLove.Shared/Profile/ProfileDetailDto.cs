@@ -53,4 +53,5 @@ public sealed record ProfileDetailDto(
     SyncTool SyncTool,
 
     ProfilePhotoDto[] Photos,
-    Guid[] FlairIds);
+    Guid[] FlairIds,
+    ProfileCharacterDto[]? Characters = null);

@@ -29,13 +29,13 @@ internal static class SettingsRu
         ["settings.phone_size_xxl"] = "XXL",
         ["settings.phone_size_caption"] = "Масштабирует весь телефон. Большие размеры подходят для экранов с высоким разрешением; XL и XXL рассчитаны на 4K и могут не поместиться на экранах меньшего размера.",
         ["settings.section_mini_phone_size"] = "Размер мини-телефона",
-        ["settings.mini_phone_size_caption"] = "Размер свёрнутого пузырька (показывается, когда телефон свёрнут). Предпросмотр ниже показывает выбранный размер.",
+        ["settings.mini_phone_size_caption"] = "Размер свёрнутого пузырька-виджета (показывается, когда телефон свёрнут). Предпросмотр ниже показывает выбранный размер.",
 
         ["settings.disable_startup_heartbeat"] = "Отключить звук сердцебиения при запуске",
-        ["settings.confirm_before_close"] = "Подтверждать перед закрытием AetherLove",
+        ["settings.confirm_before_close"] = "Запрашивать подтверждение перед закрытием AetherLove",
 
         ["settings.view_changelog"] = "Просмотреть список изменений",
-        ["settings.send_feedback"] = "Отправить отзыв",
+        ["settings.send_feedback"] = "Обратная связь",
         ["settings.terms_of_service"] = "Условия использования",
         ["settings.delete_account"] = "Удалить аккаунт",
         ["settings.create_new_profile"] = "Создать новый профиль",
@@ -55,12 +55,12 @@ internal static class SettingsRu
         ["settings.announce_messages_chat"] = "Объявлять о новых сообщениях в игровом чате",
         ["settings.announce_matches_chat"] = "Объявлять о новых парах в игровом чате",
         ["settings.popup_messages"] = "Показывать всплывающее окно для новых сообщений",
-        ["settings.popup_matches"] = "Показывать всплывающее окно для новых совпадений",
+        ["settings.popup_matches"] = "Показывать всплывающее окно для новых пар",
         ["settings.hide_notifications_in_combat"] = "Скрывать уведомления в бою",
         ["settings.hide_notifications_in_combat_tooltip"] = "Когда включено, вы не будете получать никаких уведомлений — объявлений в игровом чате, всплывающих окон и звуков — пока находитесь в бою.",
         ["settings.auto_open_minimized"] = "Открывать свёрнутым автоматически при входе в игру",
-        ["settings.pulse_optout"] = "Получайте потрясающие сообщения от команды Aethernet, напоминающие свайпать",
-        ["settings.pulse_optout_tooltip"] = "Время от времени AetherLove может оставлять шутливое сообщение в игровом чате. Отключите, чтобы прекратить.",
+        ["settings.pulse_optout"] = "Получайте потрясающие сообщения от команды Aethernet, напоминающие проверить анкеты",
+        ["settings.pulse_optout_tooltip"] = "Время от времени AetherLove может оставлять шутливое сообщение в игровом чате. Отключите, чтобы они больше не появлялись.",
         ["settings.combat_behavior"] = "В бою",
         ["settings.combat_behavior_hide"] = "Скрыть AetherLove",
         ["settings.combat_behavior_minimize"] = "Свернуть в виджет",
@@ -81,18 +81,18 @@ internal static class SettingsRu
         ["settings.deleted_title"] = "Аккаунт удалён",
         ["settings.deleted_body"] = "Ваш аккаунт удалён, ваши данные и фотографии удалены, а ваши пары отменены. Теперь вы можете удалить плагин или пройти регистрацию и создать новый профиль.",
 
-        ["settings.warnings_title"] = "Предупреждения аккаунта",
+        ["settings.warnings_title"] = "Предупреждения для аккаунта",
         ["settings.no_warnings"] = "Предупреждений нет.",
 
         // Moderator messages
-        ["settings.modmsg_title"] = "Сообщения модератора",
+        ["settings.modmsg_title"] = "Сообщения от модераторов",
         ["settings.no_modmsg"] = "Сообщений нет.",
         ["settings.back_to_settings_arrow"] = "← Назад к настройкам",
 
         ["settings.back_to_settings"] = "Назад к настройкам",
         ["settings.feedback_thanks"] = "Спасибо! Ваш отзыв отправлен команде AetherLove.",
         ["settings.feedback_intro"] = "Нашли баг, есть идея или хотите что-то предложить? Дайте нам знать.",
-        ["settings.feedback_note"] = "Обратите внимание: отзыв нельзя использовать для обжалования бана или предупреждения.",
+        ["settings.feedback_note"] = "Обратите внимание: форму для обратной связи нельзя использовать для обжалования блокировки или предупреждения.",
         ["settings.feedback_type"] = "Тип",
         ["settings.feedback_kind_bug"] = "Баг",
         ["settings.feedback_kind_improvement"] = "Улучшение",
@@ -117,6 +117,12 @@ internal static class SettingsRu
 
         // added after update 1.4.0
         ["settings.lock_position"] = "Зафиксировать положение",
-        ["settings.lock_position_caption"] = "Зафиксировав положение, вы не сможете перемещать телефон (большой и мини); они останутся на месте.",
+        ["settings.lock_position_caption"] = "Зафиксировав положение, вы не сможете перемещать телефон (окно приложения и виджет) — они останутся на месте.",
+
+        // added after update 1.4.3
+        ["settings.show_during_gpose"] = "Показывать AetherLove во время GPose",
+        ["settings.show_during_gpose_tooltip"] = "Оставляет AetherLove видимым во время GPose (/gpose) и переопределяет настройку Dalamud'а, скрывающую окна плагинов во время GPose.",
+        ["settings.hide_during_cutscene"] = "Скрывать AetherLove во время катсцен",
+        ["settings.hide_during_cutscene_tooltip"] = "Скрывает AetherLove во время катсцен (по умолчанию). Отключите, чтобы приложение оставалось видимым во время катсцен.",
     };
 }

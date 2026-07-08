@@ -139,5 +139,19 @@ internal static class CommonPt
 
         // added after update (1.3.1)
         ["common.sfw_gate_race_gender"] = "Certifica-te de que a tua imagem principal mostra a raça e o género do teu personagem tal como definidos no teu perfil.",
+
+        // added after update 1.4.3
+        ["common.img_cloud_title"] = "Ficheiro não transferido",
+        ["common.img_cloud_unavailable"] = "Esta imagem está guardada apenas online na nuvem (por exemplo, OneDrive) e não foi transferida para o teu PC, por isso não pode ser aberta. No Explorador de Ficheiros, clica com o botão direito, escolhe 'Manter sempre neste dispositivo', aguarda o visto verde e tenta novamente. Ou escolhe um ficheiro guardado localmente no teu PC.",
+        ["common.emoji_favorites"] = "Favoritos",
+        ["common.emoji_favorite_hint"] = "clica com o botão direito para adicionar ou remover dos favoritos",
+        ["common.emoji_add_favorite"] = "Adicionar aos favoritos",
+        ["common.emoji_remove_favorite"] = "Remover dos favoritos",
+        ["common.selfie"] = "Selfie",
+        ["common.selfie_instructions"] = "Arrasta ou redimensiona o quadro sobre o teu personagem e depois tira a foto.",
+        ["common.selfie_take"] = "Tirar foto",
+        ["common.selfie_capturing"] = "A capturar...",
+        ["common.offline_maintenance"] = "O servidor está em manutenção.",
+        ["common.back"] = "Voltar",
     };
 }

@@ -30,17 +30,20 @@ public sealed class OfflineScreen
     private readonly AetherSignalService _signal;
     private readonly SessionBootstrapper _bootstrap;
     private readonly ScreenRouter _router;
+    private readonly MaintenanceNoticeService _maintenance;
 
     private float _elapsed;
     private float _retryTimer;
     private bool _startupMode;
     private bool _bootstrapRetryInFlight;
 
-    public OfflineScreen(AetherSignalService signal, SessionBootstrapper bootstrap, ScreenRouter router)
+    public OfflineScreen(AetherSignalService signal, SessionBootstrapper bootstrap, ScreenRouter router,
+                         MaintenanceNoticeService maintenance)
     {
         _signal = signal;
         _bootstrap = bootstrap;
         _router = router;
+        _maintenance = maintenance;
     }
 
     public void OnShow()
@@ -56,6 +59,7 @@ public sealed class OfflineScreen
     {
         var dt = (float)ImGui.GetIO().DeltaTime;
         _elapsed += dt;
+        _maintenance.Refresh();
         MaybeAutoRetry(dt);
 
         var pos = ImGui.GetWindowPos();
@@ -83,7 +87,11 @@ public sealed class OfflineScreen
         using (UiFonts.H3?.Push())
         {
             var lineH = ImGui.GetTextLineHeightWithSpacing();
-            var lines = WrapLines(Loc.T("common.offline_body"), size.X - Px(56f));
+            var notice = _maintenance.Notice;
+            var body = string.IsNullOrEmpty(notice)
+                ? Loc.T("common.offline_body")
+                : $"{Loc.T("common.offline_maintenance")} {notice}";
+            var lines = WrapLines(body, size.X - Px(56f));
             var y = bandTop + Px(34f);
             var col = U32(new Vector4(0.82f, 0.82f, 0.90f, 1f));
             for (var i = 0; i < lines.Count; i++)
@@ -249,22 +257,22 @@ public sealed class OfflineScreen
     private static List<string> WrapLines(string text, float wrap)
     {
         var result = new List<string>();
-        var line = string.Empty;
-        foreach (var word in text.Split(' '))
+        foreach (var paragraph in text.Replace("\r\n", "\n").Split('\n'))
         {
-            var probe = line.Length == 0 ? word : line + " " + word;
-            if (ImGui.CalcTextSize(probe).X > wrap && line.Length > 0)
+            var line = string.Empty;
+            foreach (var word in paragraph.Split(' '))
             {
-                result.Add(line);
-                line = word;
+                var probe = line.Length == 0 ? word : line + " " + word;
+                if (ImGui.CalcTextSize(probe).X > wrap && line.Length > 0)
+                {
+                    result.Add(line);
+                    line = word;
+                }
+                else
+                {
+                    line = probe;
+                }
             }
-            else
-            {
-                line = probe;
-            }
-        }
-        if (line.Length > 0)
-        {
             result.Add(line);
         }
         return result;

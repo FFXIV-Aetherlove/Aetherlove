@@ -5,7 +5,7 @@ internal static class DeckRu
     public static readonly System.Collections.Generic.Dictionary<string, string> Strings = new()
     {
         ["deck.cooldown_heading"] = "А на этом всё!",
-        ["deck.cooldown_body"] = "AetherLove выдаёт вам часть актуальных профилей каждые несколько часов, чтобы у всех был равный шанс. Загляните позже за новыми потенциальными парами!",
+        ["deck.cooldown_body"] = "AetherLove выдаёт вам часть актуальных анкет каждые несколько часов, чтобы у всех был равный шанс найти себе пару. Загляните позже за новыми потенциальными парами!",
         ["deck.new_matches_ready"] = "Новые пары готовы!",
         ["deck.server_error"] = "Не удалось подключиться к серверу: {0}",
         ["deck.view_profile"] = "Открыть профиль",
@@ -46,11 +46,11 @@ internal static class DeckRu
         // added after update (1.3.1)
         ["deck.reswipe_tooltip"] = "Отменить последний свайп",
         ["deck.reswipe_cooldown"] = "Отмена будет доступна через {0} ч {1} мин",
-        ["deck.reswipe_matched_title"] = "Это уже пара!",
+        ["deck.reswipe_matched_title"] = "У вас уже есть пара!",
         ["deck.reswipe_matched"] = "Нельзя отменить свайп по профилю, с которым у вас уже есть пара.",
         ["deck.decide_later_tooltip"] = "Решить позже",
-        ["deck.decide_later_disabled"] = "Это последняя карта в вашей колоде.",
+        ["deck.decide_later_disabled"] = "Это последняя анкета в вашей колоде.",
         ["deck.reswipe_intro_title"] = "Отменить последний свайп",
-        ["deck.reswipe_intro"] = "Это отменяет ваш последний свайп и возвращает профиль в начало. Использовать можно раз в 24 часа. Закрытие этого уведомления не расходует отмену, поэтому нажмите кнопку ещё раз, когда будете готовы.",
+        ["deck.reswipe_intro"] = "Это отменяет ваш последний свайп и возвращает профиль в начало. Использовать можно раз в 24 часа. Закрытие этого окна не расходует отмену, нажмите кнопку ещё раз, когда будете готовы.",
     };
 }

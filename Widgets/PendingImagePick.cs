@@ -1,4 +1,5 @@
 using System;
+using AetherLove.UI;
 using Dalamud.Interface.Textures;
 
 namespace AetherLove.Widgets;
@@ -16,6 +17,18 @@ public sealed class PendingImagePick
     private Action? _onReject;
 
     public PendingImagePick(ImageRequirementsModal modal) => _modal = modal;
+
+    /// <summary>When the picked file is an un-hydrated cloud placeholder (its bytes aren't on disk), shows the
+    /// requirements modal explaining it and returns true so the caller aborts before trying to load it.</summary>
+    public bool RejectUnavailableCloudFile(string path)
+    {
+        if (!SharedUiHelpers.IsUnavailableCloudFile(path))
+        {
+            return false;
+        }
+        _modal.ShowCloudUnavailable();
+        return true;
+    }
 
     /// <param name="onValid">Runs once the image decodes and meets the minimum size.</param>
     /// <param name="onReject">Runs when the image is invalid or too small — unload the pick here.</param>

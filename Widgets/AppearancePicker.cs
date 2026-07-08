@@ -21,9 +21,11 @@ public static class AppearancePicker
         var Gap = Px(8f);
         var Rounding = Px(8f);
 
+        const int Cols = 2;
         var themes = Enum.GetValues<AppTheme>();
+        var rows = (themes.Length + Cols - 1) / Cols;
         var usableW = winW - Px(padX) * 2f;
-        var cardW = (usableW - Gap * (themes.Length - 1)) / themes.Length;
+        var cardW = (usableW - Gap * (Cols - 1)) / Cols;
 
         ImGui.SetCursorPos(new Vector2(Px(padX), ImGui.GetCursorPosY()));
         var originLocal = ImGui.GetCursorPos();
@@ -35,10 +37,11 @@ public static class AppearancePicker
             var def = ThemeService.Themes[key];
             var selected = ThemeService.CurrentTheme == key;
 
-            var tl = new Vector2(originScreen.X + i * (cardW + Gap), originScreen.Y);
+            var offset = new Vector2((i % Cols) * (cardW + Gap), (i / Cols) * (CardH + Gap));
+            var tl = originScreen + offset;
             var br = tl + new Vector2(cardW, CardH);
 
-            ImGui.SetCursorPos(new Vector2(originLocal.X + i * (cardW + Gap), originLocal.Y));
+            ImGui.SetCursorPos(originLocal + offset);
             ImGui.InvisibleButton($"##themeCard{i}", new Vector2(cardW, CardH));
             if (ImGui.IsItemClicked())
             {

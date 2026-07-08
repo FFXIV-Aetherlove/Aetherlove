@@ -10,6 +10,7 @@ using AetherLove.Services.Auth;
 using AetherLove.Services.Signal;
 using AetherLove.UI;
 using AetherLove.Windows;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.Command;
 using Dalamud.Interface.Windowing;
@@ -37,11 +38,13 @@ public sealed class AetherLoveBootstrap : IHostedService
     private readonly ChangelogWindow _changelogWindow;
     private readonly DebugWindow _debugWindow;
     private readonly Widgets.ModalHost _modalHost = new();
+    private readonly Widgets.SelfieCaptureOverlay _selfieOverlay;
     private readonly ScreenRouter _router;
     private readonly Configuration _config;
     private readonly SessionBootstrapper _bootstrap;
     private readonly AetherSignalService _signal;
     private readonly PulseService _pulse;
+    private readonly ScreenCaptureService _capture;
 
     /// <summary>Guards the once-per-session changelog check so character switches don't re-run it.</summary>
     private bool _changelogShown;
@@ -67,7 +70,9 @@ public sealed class AetherLoveBootstrap : IHostedService
         Configuration config,
         SessionBootstrapper bootstrap,
         AetherSignalService signal,
-        PulseService pulse)
+        PulseService pulse,
+        ScreenCaptureService capture,
+        Widgets.SelfieCaptureOverlay selfieOverlay)
     {
         _log = log;
         _pluginInterface = pluginInterface;
@@ -83,6 +88,8 @@ public sealed class AetherLoveBootstrap : IHostedService
         _bootstrap = bootstrap;
         _signal = signal;
         _pulse = pulse;
+        _capture = capture;
+        _selfieOverlay = selfieOverlay;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -98,6 +105,13 @@ public sealed class AetherLoveBootstrap : IHostedService
         _windowSystem.AddWindow(_changelogWindow);
         _windowSystem.AddWindow(_debugWindow);
         _windowSystem.AddWindow(_modalHost);
+        _windowSystem.AddWindow(_selfieOverlay);
+
+        // Escape closes the focused Dalamud window by default; block it for every AetherLove window.
+        foreach (var window in _windowSystem.Windows)
+        {
+            window.RespectCloseHotkey = false;
+        }
 
         _commandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
@@ -108,12 +122,16 @@ public sealed class AetherLoveBootstrap : IHostedService
             HelpMessage = "Alias for /aetherlove."
         });
 
-        _pluginInterface.UiBuilder.Draw += _windowSystem.Draw;
+        _pluginInterface.UiBuilder.Draw += DrawWindowSystemGuarded;
         _pluginInterface.UiBuilder.OpenMainUi += OpenIfClosed;
         _pluginInterface.UiBuilder.OpenConfigUi += OpenConfig;
+        _pluginInterface.UiBuilder.DisableGposeUiHide = _config.ShowDuringGpose;
+        _pluginInterface.UiBuilder.DisableCutsceneUiHide = !_config.HideDuringCutscenes;
         _clientState.Login += OnLogin;
         Plugin.Framework.Update += OnCombatUpdate;
         _pulse.Start();
+        _capture.Initialize();
+        Widgets.SelfieCaptureOverlay.PurgeTempFiles();
 
         var changelogVersion = ChangelogRegistry.CurrentVersion;
         var changelogKey = changelogVersion is null
@@ -147,6 +165,12 @@ public sealed class AetherLoveBootstrap : IHostedService
         if (_clientState.IsLoggedIn)
         {
             MaybeShowChangelog();
+            // A mid-session (re)load — a Dalamud update that restarts the plugin, or reinstalling over an
+            // existing config — never fires Login, so restore the last window state instead of staying closed.
+            if (!_mainWindow.IsOpen && !_miniWindow.IsOpen)
+            {
+                RestoreLastWindowState();
+            }
         }
 
         _log.Information($"[AetherLove] Loaded. Use {CommandName} to open.");
@@ -155,7 +179,12 @@ public sealed class AetherLoveBootstrap : IHostedService
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        _pluginInterface.UiBuilder.Draw -= _windowSystem.Draw;
+        _config.LastWindowState = _mainWindow.IsOpen ? WindowOpenState.Full
+            : _miniWindow.IsOpen ? WindowOpenState.Minimized
+            : WindowOpenState.Closed;
+        _config.Save();
+
+        _pluginInterface.UiBuilder.Draw -= DrawWindowSystemGuarded;
         _pluginInterface.UiBuilder.OpenMainUi -= OpenIfClosed;
         Plugin.Framework.Update -= OnCombatUpdate;
         _pluginInterface.UiBuilder.OpenConfigUi -= OpenConfig;
@@ -166,6 +195,8 @@ public sealed class AetherLoveBootstrap : IHostedService
         _commandManager.RemoveHandler(AliasCommandName);
 
         _pulse.Stop();
+        _capture.Dispose();
+        Widgets.SelfieCaptureOverlay.PurgeTempFiles();
 
         _windowSystem.RemoveAllWindows();
         _mainWindow.Dispose();
@@ -173,6 +204,40 @@ public sealed class AetherLoveBootstrap : IHostedService
 
         // Host.Dispose() doesn't chain to singleton IAsyncDisposable on the sync path; drive it here.
         await _signal.DisposeAsync().ConfigureAwait(false);
+    }
+
+    private bool _fontScaleLeakLogged;
+
+    /// <summary>Draws the window system with ImGui's global font scale guarded: the phone windows pin it to 1
+    /// for their own draw, and this restore runs even if a window lifecycle callback throws, so the pin can
+    /// never bleed into other plugins' rendering.</summary>
+    private void DrawWindowSystemGuarded()
+    {
+        var io = ImGui.GetIO();
+        var savedScale = io.FontGlobalScale;
+        try
+        {
+            _windowSystem.Draw();
+            if (io.FontGlobalScale != savedScale && !_fontScaleLeakLogged)
+            {
+                _fontScaleLeakLogged = true;
+                _log.Warning($"[AetherLove] FontGlobalScale left at {io.FontGlobalScale} after draw " +
+                             $"(expected {savedScale}) on screen {_router.Current}; restored.");
+            }
+        }
+        catch (Exception ex)
+        {
+            if (!_fontScaleLeakLogged)
+            {
+                _fontScaleLeakLogged = true;
+                _log.Warning(ex, $"[AetherLove] Draw threw on screen {_router.Current}; font scale restored.");
+            }
+            throw;
+        }
+        finally
+        {
+            io.FontGlobalScale = savedScale;
+        }
     }
 
     /// <summary>Opens the full window only if neither window is already showing, so re-running the
@@ -185,6 +250,23 @@ public sealed class AetherLoveBootstrap : IHostedService
         }
         _mainWindow.IsOpen = true;
         _router.Navigate(Screen.Splash);
+    }
+
+    /// <summary>Reopens the plugin as it was at the last unload, for a mid-session (re)load that never fires
+    /// the Login event. A deliberately-closed plugin stays closed.</summary>
+    private void RestoreLastWindowState()
+    {
+        switch (_config.LastWindowState)
+        {
+            case WindowOpenState.Full:
+                _mainWindow.IsOpen = true;
+                _router.Navigate(Screen.Splash);
+                break;
+            case WindowOpenState.Minimized:
+                _miniWindow.IsOpen = true;
+                _ = _signal.EnsureConnectedAsync();
+                break;
+        }
     }
 
     /// <summary>Settings cog in the plugin installer: jumps to Settings for a signed-in user,

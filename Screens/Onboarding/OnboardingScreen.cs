@@ -26,6 +26,7 @@ public partial class OnboardingScreen
     private readonly RateLimitModal _rateLimitModal;
     private readonly SaveErrorModal _saveErrorModal;
     private readonly PendingImagePick _pendingPick;
+    private readonly SelfieCaptureOverlay _selfieOverlay;
 
     private volatile bool _saving;
     private volatile string? _saveError;
@@ -46,7 +47,8 @@ public partial class OnboardingScreen
                             Services.Crypto.KeyStorageService keyStorage,
                             RateLimitModal rateLimitModal,
                             SaveErrorModal saveErrorModal,
-                            ImageRequirementsModal imageReqModal)
+                            ImageRequirementsModal imageReqModal,
+                            SelfieCaptureOverlay selfieOverlay)
     {
         _router = router;
         _authService = authService;
@@ -57,6 +59,7 @@ public partial class OnboardingScreen
         _rateLimitModal = rateLimitModal;
         _saveErrorModal = saveErrorModal;
         _pendingPick = new PendingImagePick(imageReqModal);
+        _selfieOverlay = selfieOverlay;
     }
 
 
@@ -471,6 +474,35 @@ public partial class OnboardingScreen
         OpenFilePickerCore();
     }
 
+    private void OpenSelfie()
+    {
+        if (_pickerTarget is -1 or 0)
+        {
+            _sfwGate.Open(OpenSelfieCore);
+            return;
+        }
+        OpenSelfieCore();
+    }
+
+    private void OpenSelfieCore()
+    {
+        var aspect = _pickerTarget == -1 ? 1.0f : 1.6f;
+        var minW = _pickerTarget == -1 ? PhotoSpec.AvatarSize : PhotoSpec.PortraitWidth;
+        _selfieOverlay.Start(aspect, minW, (path, crop) => HandlePicked(path, crop));
+    }
+
+    /// <summary>Gates a photo-slot pick behind the "declare your extras" modal, then runs the picker or selfie.</summary>
+    private void TryPickPhoto(Action open)
+    {
+        if (AnyConfirmedExtraIsUndeclared())
+        {
+            _undeclaredModalPending = true;
+            return;
+        }
+        _pickerTarget = _activePhotoSlot;
+        open();
+    }
+
     private void OpenFilePickerCore()
     {
         _fileDialog.OpenFileDialog(
@@ -482,66 +514,89 @@ public partial class OnboardingScreen
                 {
                     return;
                 }
-                if (_pickerTarget == -1)
+                if (_pendingPick.RejectUnavailableCloudFile(path))
                 {
-                    var prevFromServer = _avatarFromServer;
-                    var handle = LoadPickedPreview(path);
-                    _avatarPath = path;
-                    _avatarConfirmed = false;
-                    _avatarFromServer = false;
-                    _avatarHandle = handle;
-
-                    void Unload()
-                    {
-                        _avatarPath = "";
-                        _avatarHandle = null;
-                        _avatarFromServer = prevFromServer;
-                    }
-
-                    _pendingPick.Begin(handle, PhotoSpec.AvatarSize, PhotoSpec.AvatarSize,
-                        onValid: () => _cropPopup.Open(
-                            Loc.T("onboarding.crop_avatar"),
-                            handle,
-                            1.0f,
-                            cropRect => { _avatarCropRect = cropRect; _avatarConfirmed = true; },
-                            onCancel: Unload),
-                        onReject: Unload);
+                    return;
                 }
-                else
-                {
-                    var target = _pickerTarget;
-                    var slot = _photos[target];
-                    var prevPath = slot.Path;
-                    var prevHandle = slot.Handle;
-                    var prevCropRect = slot.CropRect;
-                    var prevConfirmed = slot.Confirmed;
-                    var prevFromServer = slot.FromServer;
-                    var handle = LoadPickedPreview(path);
-                    slot.Path = path;
-                    slot.Confirmed = false;
-                    slot.FromServer = false;
-                    slot.Handle = handle;
-
-                    void Restore()
-                    {
-                        _photos[target].Path = prevPath;
-                        _photos[target].Handle = prevHandle;
-                        _photos[target].CropRect = prevCropRect;
-                        _photos[target].Confirmed = prevConfirmed;
-                        _photos[target].FromServer = prevFromServer;
-                    }
-
-                    var label = target == 0 ? Loc.T("onboarding.crop_main_photo") : Loc.T("onboarding.crop_extra_photo", target);
-                    _pendingPick.Begin(handle, PhotoSpec.PortraitWidth, PhotoSpec.PortraitHeight,
-                        onValid: () => _cropPopup.Open(
-                            label,
-                            handle,
-                            1.6f,
-                            cropRect => { _photos[target].CropRect = cropRect; _photos[target].Confirmed = true; },
-                            onCancel: Restore),
-                        onReject: Restore);
-                }
+                HandlePicked(path);
             });
+    }
+
+    private void HandlePicked(string path, Vector4? presetCrop = null)
+    {
+        if (_pickerTarget == -1)
+        {
+            var prevFromServer = _avatarFromServer;
+            var handle = LoadPickedPreview(path);
+            _avatarPath = path;
+            _avatarConfirmed = false;
+            _avatarFromServer = false;
+            _avatarHandle = handle;
+
+            if (presetCrop is { } avatarCrop)
+            {
+                _avatarCropRect = avatarCrop;
+                _avatarConfirmed = true;
+                return;
+            }
+
+            void Unload()
+            {
+                _avatarPath = "";
+                _avatarHandle = null;
+                _avatarFromServer = prevFromServer;
+            }
+
+            _pendingPick.Begin(handle, PhotoSpec.AvatarSize, PhotoSpec.AvatarSize,
+                onValid: () => _cropPopup.Open(
+                    Loc.T("onboarding.crop_avatar"),
+                    handle,
+                    1.0f,
+                    cropRect => { _avatarCropRect = cropRect; _avatarConfirmed = true; },
+                    onCancel: Unload),
+                onReject: Unload);
+        }
+        else
+        {
+            var target = _pickerTarget;
+            var slot = _photos[target];
+            var prevPath = slot.Path;
+            var prevHandle = slot.Handle;
+            var prevCropRect = slot.CropRect;
+            var prevConfirmed = slot.Confirmed;
+            var prevFromServer = slot.FromServer;
+            var handle = LoadPickedPreview(path);
+            slot.Path = path;
+            slot.Confirmed = false;
+            slot.FromServer = false;
+            slot.Handle = handle;
+
+            if (presetCrop is { } photoCrop)
+            {
+                slot.CropRect = photoCrop;
+                slot.Confirmed = true;
+                return;
+            }
+
+            void Restore()
+            {
+                _photos[target].Path = prevPath;
+                _photos[target].Handle = prevHandle;
+                _photos[target].CropRect = prevCropRect;
+                _photos[target].Confirmed = prevConfirmed;
+                _photos[target].FromServer = prevFromServer;
+            }
+
+            var label = target == 0 ? Loc.T("onboarding.crop_main_photo") : Loc.T("onboarding.crop_extra_photo", target);
+            _pendingPick.Begin(handle, PhotoSpec.PortraitWidth, PhotoSpec.PortraitHeight,
+                onValid: () => _cropPopup.Open(
+                    label,
+                    handle,
+                    1.6f,
+                    cropRect => { _photos[target].CropRect = cropRect; _photos[target].Confirmed = true; },
+                    onCancel: Restore),
+                onReject: Restore);
+        }
     }
 
 

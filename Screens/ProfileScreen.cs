@@ -50,6 +50,16 @@ public class ProfileScreen
     /// <summary>NSFW photos the viewer has explicitly chosen to reveal this session.</summary>
     private readonly HashSet<(Guid ProfileId, int Order)> _revealedNsfw = new();
 
+    /// <summary>NSFW RP-character images the viewer has explicitly chosen to reveal this session.</summary>
+    private readonly HashSet<(Guid ProfileId, Guid CharacterId)> _revealedNsfwChars = new();
+    private readonly Dictionary<Guid, ISharedImmediateTexture?> _characterTextures = new();
+    /// <summary>Set while the in-phone fullscreen view of an RP-character image is open.</summary>
+    private Guid? _fullscreenCharacterId;
+
+    /// <summary>True while the RP-character fullscreen image view is open, so surrounding chrome (e.g. the
+    /// My-Profile hub back button) can hide instead of catching clicks underneath the overlay.</summary>
+    public bool IsCharacterFullscreenOpen => _fullscreenCharacterId is not null;
+
     private int _photoIndex = 0;
     private int _prevPhotoIndex = -1;
     private float _fadeAlpha = 1f;
@@ -196,6 +206,10 @@ public class ProfileScreen
         _backPillPulseTimer = 0f;
         _photoTextures.Clear();
         _revealedNsfw.Clear();
+        _revealedNsfwChars.Clear();
+        _characterTextures.Clear();
+        _openCharacters.Clear();
+        _fullscreenCharacterId = null;
 
         _reportPendingOpen = false;
         _reportReason = string.Empty;
@@ -258,6 +272,26 @@ public class ProfileScreen
                     $"[ProfileScreen] Failed to cache photo {photo.Order} for {dto.ProfileId}.");
             }
         }
+
+        foreach (var ch in dto.Characters ?? [])
+        {
+            if (ch.ImageBytes is not { Length: > 0 })
+            {
+                continue;
+            }
+            try
+            {
+                var path = Path.Combine(cacheDir,
+                    $"{dto.ProfileId}_char_{ch.Id:N}{ImageFormat.ExtensionFor(ch.ImageBytes)}");
+                File.WriteAllBytes(path, ch.ImageBytes);
+                _characterTextures[ch.Id] = Plugin.TextureProvider.GetFromFile(path);
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.Warning(ex,
+                    $"[ProfileScreen] Failed to cache character image {ch.Id} for {dto.ProfileId}.");
+            }
+        }
     }
 
     public void OnShow()
@@ -299,6 +333,12 @@ public class ProfileScreen
             return;
         }
 
+        if (_fullscreenCharacterId is { } fullscreenId)
+        {
+            DrawCharacterFullscreen(fullscreenId);
+            return;
+        }
+
         var dt = ImGui.GetIO().DeltaTime;
         _backPillPulseTimer += dt;
         var winSize = ImGui.GetWindowSize();
@@ -323,6 +363,7 @@ public class ProfileScreen
 
                 DrawFlairs(winSize.X, dl);
                 DrawAbout(winSize.X, dl);
+                DrawCharacters(winSize.X, dl);
                 DrawLookingFor(winSize.X, dl);
                 DrawInfoSection(winSize.X, dl);
                 DrawContentInterests(winSize.X, dl);
@@ -782,6 +823,242 @@ public class ProfileScreen
         }
         ImGui.SetCursorPosY(curY + pillH + Px(4f));
         SpaceDivide(dl, winW);
+    }
+
+    /// <summary>Session-open accordion cards for the "Characters" section, keyed per character.</summary>
+    private readonly HashSet<Guid> _openCharacters = new();
+
+    /// <summary>"Characters" section: one closed-by-default card per RP character (monogram + name + chevron),
+    /// expanding to the rich-text bio and an optional left-aligned image (NSFW blur + click-to-show; clicking
+    /// the revealed image opens the in-phone fullscreen view).</summary>
+    private void DrawCharacters(float winW, ImDrawListPtr dl)
+    {
+        if (_profile!.Characters is not { Length: > 0 } characters)
+        {
+            return;
+        }
+
+        SectionLabel(Loc.T("profile.characters"));
+        for (var i = 0; i < characters.Length; i++)
+        {
+            DrawCharacterCard(characters[i], i, characters.Length, winW, dl);
+        }
+        SpaceDivide(dl, winW);
+    }
+
+    private void DrawCharacterCard(ProfileCharacterDto ch, int index, int count, float winW, ImDrawListPtr dl)
+    {
+        var id = ch.Id.ToString("N");
+        var open = _openCharacters.Contains(ch.Id);
+        var cardW = winW - PadX * 2f;
+        var innerPad = Px(10f);
+        var headerH = Px(40f);
+
+        ImGui.SetCursorPosX(PadX);
+        var cardTL = ImGui.GetCursorScreenPos();
+
+        // Content renders in the foreground channel; the card background is measured afterwards and drawn
+        // behind it in channel 0, so the rounded card hugs whatever the expanded body turned out to be.
+        dl.ChannelsSplit(2);
+        dl.ChannelsSetCurrent(1);
+
+        ImGui.InvisibleButton($"##rpHdr{id}", new Vector2(cardW, headerH));
+        var headerHovered = ImGui.IsItemHovered();
+        if (ImGui.IsItemClicked())
+        {
+            if (!_openCharacters.Remove(ch.Id))
+            {
+                _openCharacters.Add(ch.Id);
+            }
+            open = !open;
+        }
+
+        var circleR = Px(13f);
+        var circleC = new Vector2(cardTL.X + innerPad + circleR, cardTL.Y + headerH * 0.5f);
+        dl.AddCircleFilled(circleC, circleR, MonogramColor(index, count), 24);
+        var initial = ch.Name.Length > 0 ? char.ToUpperInvariant(ch.Name[0]).ToString() : "?";
+        var initialSz = ImGui.CalcTextSize(initial);
+        dl.AddText(circleC - initialSz * 0.5f, 0xFFFFFFFFu, initial);
+
+        var nameX = circleC.X + circleR + Px(9f);
+        var nameSz = ImGui.CalcTextSize(ch.Name);
+        dl.AddText(new Vector2(nameX, cardTL.Y + (headerH - nameSz.Y) * 0.5f), 0xFFF2F2F5u, ch.Name);
+
+        ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
+        var chevron = (open ? FontAwesomeIcon.ChevronDown : FontAwesomeIcon.ChevronRight).ToIconString();
+        var chevSz = ImGui.CalcTextSize(chevron);
+        dl.AddText(new Vector2(cardTL.X + cardW - innerPad - chevSz.X, cardTL.Y + (headerH - chevSz.Y) * 0.5f),
+            0xFF8A8A96u, chevron);
+        ImGui.PopFont();
+
+        var contentBottom = cardTL.Y + headerH;
+        if (open)
+        {
+            ImGui.SetCursorScreenPos(new Vector2(cardTL.X + innerPad, cardTL.Y + headerH));
+            var bodyW = cardW - innerPad * 2f;
+            using (UiFonts.H3?.Push())
+            {
+                ImGui.TextColored(ThemeService.Current.Accent, Loc.T("profile.rp_details"));
+            }
+            ImGui.Spacing();
+            ImGui.SetCursorPosX(PadX + innerPad);
+            if (!string.IsNullOrWhiteSpace(ch.Bio))
+            {
+                ImGui.PushStyleColor(ImGuiCol.Text, UiColors.BioText);
+                AetherLove.Emoji.ParsedMessage.Parse(ch.Bio).DrawWrapped($"##rpcharBio{id}", bodyW);
+                ImGui.PopStyleColor();
+                if (_source != ProfileSource.Self
+                    && ImGui.BeginPopupContextItem($"##rpcharCopy{id}", ImGuiPopupFlags.MouseButtonRight))
+                {
+                    if (ChatScreen.DrawIconMenuItem(FontAwesomeIcon.Copy, Loc.T("profile.copy_text")))
+                    {
+                        ImGui.CloseCurrentPopup();
+                        CopyTextWithLinkWarning(ch.Bio);
+                    }
+                    ImGui.EndPopup();
+                }
+                ImGui.Spacing();
+            }
+            ImGui.SetCursorPosX(PadX + innerPad);
+            DrawCharacterImage(ch, dl);
+            contentBottom = ImGui.GetCursorScreenPos().Y + Px(4f);
+        }
+
+        dl.ChannelsSetCurrent(0);
+        var bg = headerHovered && !open ? 0xFF201F2Au : 0xFF1B1A23u;
+        dl.AddRectFilled(cardTL, new Vector2(cardTL.X + cardW, contentBottom), bg, Px(10f));
+        dl.ChannelsMerge();
+
+        ImGui.SetCursorScreenPos(new Vector2(cardTL.X, contentBottom));
+        ImGui.Dummy(new Vector2(1f, Px(8f)));
+    }
+
+    /// <summary>Monogram fill fading through the theme's secondary gradient down the list, darkened a touch
+    /// so the white initial stays legible on light theme stops.</summary>
+    private static uint MonogramColor(int index, int count)
+    {
+        var t = ThemeService.Current;
+        var f = count <= 1 ? 0.5f : index / (float)(count - 1);
+        var col = Vector4.Lerp(t.SecondaryStart, t.SecondaryEnd, f);
+        col = new Vector4(col.X * 0.82f, col.Y * 0.82f, col.Z * 0.82f, 1f);
+        return ImGui.ColorConvertFloat4ToU32(col);
+    }
+
+    /// <summary>The in-card image, left-aligned at 80% of half-portrait size. The revealed image is itself
+    /// the fullscreen trigger (hover tooltip, click to open); a blurred one reveals first.</summary>
+    private void DrawCharacterImage(ProfileCharacterDto ch, ImDrawListPtr dl)
+    {
+        if (!_characterTextures.TryGetValue(ch.Id, out var tex) || tex is null)
+        {
+            return;
+        }
+
+        var imgSz = Px(140f, 224f);
+        var tl = ImGui.GetCursorScreenPos();
+        var fallback = AvatarFallbackColor(_profile!.ProfileId);
+
+        // Unlike profile photos, the guard also applies to the owner's own view (explicit product choice).
+        var blurred = ch.ImageIsNsfw
+            && Plugin.Configuration.AlwaysBlurNsfw
+            && !_revealedNsfwChars.Contains((_profile.ProfileId, ch.Id));
+
+        if (blurred)
+        {
+            // The pseudo-blur draws offset copies of the image; clip them to the image rect so the smear
+            // can't bleed over the card. The full-width reveal pill is wider than this small image, so a
+            // compact icon badge + tooltip stands in for it here.
+            dl.PushClipRect(tl, tl + imgSz, true);
+            DrawBlurredPhoto(dl, tex, tl, imgSz, fallback, 1f);
+            dl.PopClipRect();
+            ImGui.SetCursorScreenPos(tl);
+            ImGui.InvisibleButton($"##rpcharReveal{ch.Id:N}", imgSz);
+            if (ImGui.IsItemClicked())
+            {
+                _revealedNsfwChars.Add((_profile.ProfileId, ch.Id));
+            }
+            var revealHovered = ImGui.IsItemHovered();
+            if (revealHovered)
+            {
+                ImGui.SetTooltip(Loc.T("profile.nsfw_reveal"));
+            }
+            var badgeR = Px(16f);
+            var center = tl + imgSz * 0.5f;
+            dl.AddCircleFilled(center, badgeR, revealHovered ? 0xE6000000u : 0xB3000000u, 24);
+            ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
+            var eye = FontAwesomeIcon.EyeSlash.ToIconString();
+            var eyeSz = ImGui.CalcTextSize(eye);
+            dl.AddText(center - eyeSz * 0.5f, 0xFFFFFFFFu, eye);
+            ImGui.PopFont();
+            return;
+        }
+
+        DrawPhoto(dl, tex, tl, imgSz, fallback, 1f);
+        ImGui.SetCursorScreenPos(tl);
+        ImGui.InvisibleButton($"##rpcharOpenFs{ch.Id:N}", imgSz);
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetTooltip(Loc.T("profile.rp_image_expand"));
+        }
+        if (ImGui.IsItemClicked())
+        {
+            _fullscreenCharacterId = ch.Id;
+        }
+    }
+
+    /// <summary>In-phone fullscreen view of one character image: fit-to-content on a dark backdrop with a
+    /// back pill returning to the profile (scroll position is retained by the scroll child's id).</summary>
+    private void DrawCharacterFullscreen(Guid characterId)
+    {
+        var ch = (_profile!.Characters ?? []).FirstOrDefault(c => c.Id == characterId);
+        if (ch is null
+            || !_characterTextures.TryGetValue(characterId, out var tex)
+            || tex?.GetWrapOrDefault() is not { } wrap)
+        {
+            _fullscreenCharacterId = null;
+            return;
+        }
+
+        var winPos = ImGui.GetWindowPos();
+        var winSize = ImGui.GetWindowSize();
+        var dl = ImGui.GetWindowDrawList();
+        dl.AddRectFilled(winPos, winPos + winSize, 0xF2000000);
+
+        // Full-window scrim: swallows every click that isn't the back pill (nothing underneath may react)
+        // and closes the viewer, so any tap outside the pill also returns to the profile.
+        ImGui.SetCursorScreenPos(winPos);
+        if (ImGui.InvisibleButton("##rpcharFsScrim", winSize))
+        {
+            _fullscreenCharacterId = null;
+        }
+
+        var margin = Px(10f);
+        var availW = winSize.X - margin * 2f;
+        var availH = winSize.Y - margin * 2f;
+        var scale = MathF.Min(availW / wrap.Width, availH / wrap.Height);
+        var imgSz = new Vector2(wrap.Width * scale, wrap.Height * scale);
+        var imgTL = winPos + (winSize - imgSz) * 0.5f;
+        dl.AddImage(wrap.Handle, imgTL, imgTL + imgSz);
+
+        var BtnSize = Px(32f);
+        var btnTL = winPos + Px(10f, 10f);
+        ImGui.SetCursorScreenPos(btnTL);
+        ImGui.InvisibleButton("##rpcharFsBack", new Vector2(BtnSize, BtnSize));
+        var hovered = ImGui.IsItemHovered();
+        if (hovered)
+        {
+            ImGui.SetTooltip(Loc.T("profile.rp_image_back"));
+        }
+        if (ImGui.IsItemClicked())
+        {
+            _fullscreenCharacterId = null;
+        }
+        dl.AddCircleFilled(btnTL + new Vector2(BtnSize * 0.5f, BtnSize * 0.5f), BtnSize * 0.5f,
+            hovered ? 0xCC222222u : 0x99222222u);
+        ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
+        var backIcon = FontAwesomeIcon.ArrowLeft.ToIconString();
+        var backSz = ImGui.CalcTextSize(backIcon);
+        dl.AddText(btnTL + (new Vector2(BtnSize, BtnSize) - backSz) * 0.5f, 0xFFFFFFFFu, backIcon);
+        ImGui.PopFont();
     }
 
     private void DrawAbout(float winW, ImDrawListPtr dl)

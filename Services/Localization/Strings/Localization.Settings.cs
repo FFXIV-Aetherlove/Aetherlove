@@ -128,5 +128,11 @@ internal static class SettingsEn
         // added after update 1.4.0
         ["settings.lock_position"] = "Lock position",
         ["settings.lock_position_caption"] = "By locking the position you will be unable to move the phone (large and mini), they will be stuck in place.",
+
+        // added after update 1.4.3
+        ["settings.show_during_gpose"] = "Show AetherLove during group pose",
+        ["settings.show_during_gpose_tooltip"] = "Keeps AetherLove visible while you're in group pose (/gpose), overriding Dalamud's setting that hides plugin windows during gpose.",
+        ["settings.hide_during_cutscene"] = "Hide AetherLove during cutscenes",
+        ["settings.hide_during_cutscene_tooltip"] = "Hides AetherLove while a cutscene is playing (the default). Turn this off to keep it visible through cutscenes.",
     };
 }

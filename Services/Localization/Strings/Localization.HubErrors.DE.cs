@@ -37,5 +37,10 @@ internal static class HubErrorsDe
         ["huberror.reswipe_nothing_to_undo"] = "Es gibt nichts rückgängig zu machen.",
         ["huberror.reswipe_already_matched"] = "Bei einem Match kannst du nicht rückgängig machen.",
         ["huberror.reswipe_quota_exhausted"] = "Du hast dein Rückgängig für heute bereits genutzt.",
+
+        // added after update 1.4.3
+        ["huberror.character_limit_reached"] = "Du kannst höchstens {0} RP-Charaktere haben.",
+        ["huberror.character_name_invalid"] = "Charakternamen müssen 3-50 Zeichen lang sein.",
+        ["huberror.character_not_found"] = "Diesen Charakter gibt es nicht mehr. Lade neu und versuche es erneut.",
     };
 }

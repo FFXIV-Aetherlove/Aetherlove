@@ -9,6 +9,7 @@ public enum AppTheme
     CrystalVoid = 0,
     VanillaSunrise = 1,
     AllaganPassion = 2,
+    YorhaTypeAe = 3,
 }
 
 /// <summary>Global theme registry. Call <see cref="Initialise"/> once at start-up.</summary>
@@ -62,6 +63,23 @@ public static class ThemeService
                 ButtonNormal = new Vector4(0.60f, 0.10f, 0.20f, 0.90f),
                 ButtonHovered = new Vector4(0.85f, 0.22f, 0.35f, 1.00f),
                 ButtonActive = new Vector4(0.40f, 0.05f, 0.12f, 1.00f),
+            },
+
+            // NieR: Automata-style palette: warm ivory/parchment on near-black. The accent is light (like
+            // Vanilla Sunrise), so own chat bubbles use dark text; see ChatColors.OwnFgDefault.
+            [AppTheme.YorhaTypeAe] = new ThemeDefinition
+            {
+                Name = "YoRHa Type Æ",
+                BackgroundImageFile = "phone_bg_bw.png",
+                Accent = new Vector4(0.812f, 0.788f, 0.694f, 1f),
+                AccentLight = new Vector4(0.855f, 0.831f, 0.733f, 1f),
+                AccentDark = new Vector4(0.243f, 0.220f, 0.180f, 1f),
+                ChipFill = new Vector4(0.161f, 0.141f, 0.110f, 1f),
+                SecondaryStart = new Vector4(0.72f, 0.69f, 0.58f, 1f),
+                SecondaryEnd = new Vector4(0.55f, 0.50f, 0.41f, 1f),
+                ButtonNormal = new Vector4(0.28f, 0.25f, 0.20f, 0.92f),
+                ButtonHovered = new Vector4(0.42f, 0.38f, 0.31f, 1.00f),
+                ButtonActive = new Vector4(0.18f, 0.16f, 0.12f, 1.00f),
             },
         };
 

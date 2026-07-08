@@ -20,6 +20,14 @@ public static class UiFonts
     public static IFontHandle? H2   { get; private set; }
     public static IFontHandle? H3   { get; private set; }
 
+    /// <summary>True once every handle has finished building. The atlas builds asynchronously after
+    /// <see cref="Rebuild"/>, and pushing an unfinished handle silently falls back to the default font.</summary>
+    public static bool Ready =>
+        Body is { Available: true }
+        && H1 is { Available: true }
+        && H2 is { Available: true }
+        && H3 is { Available: true };
+
     /// <summary>(Re)builds the font set for the current <see cref="UiScale.S"/>. Call at startup and
     /// whenever the size preset changes, so text is re-rendered at the new on-screen size.</summary>
     public static void Rebuild()

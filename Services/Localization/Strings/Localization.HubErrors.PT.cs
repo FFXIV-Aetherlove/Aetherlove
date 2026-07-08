@@ -37,5 +37,10 @@ internal static class HubErrorsPt
         ["huberror.reswipe_nothing_to_undo"] = "Não há nada para desfazer.",
         ["huberror.reswipe_already_matched"] = "Você não pode desfazer em um perfil com quem já deu match.",
         ["huberror.reswipe_quota_exhausted"] = "Você já usou seu desfazer de hoje.",
+
+        // added after update 1.4.3
+        ["huberror.character_limit_reached"] = "Você pode ter no máximo {0} personagens de RP.",
+        ["huberror.character_name_invalid"] = "Nomes de personagem devem ter entre 3 e 50 caracteres.",
+        ["huberror.character_not_found"] = "Esse personagem não existe mais. Recarregue e tente novamente.",
     };
 }

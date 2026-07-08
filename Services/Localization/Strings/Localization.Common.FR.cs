@@ -131,5 +131,19 @@ internal static class CommonFr
 
         // added after update (1.3.1)
         ["common.sfw_gate_race_gender"] = "Veuillez vous assurer que votre image principale montre la race et le genre de votre personnage tels qu'indiqués dans votre profil.",
+
+        // added after update 1.4.3
+        ["common.img_cloud_title"] = "Fichier non téléchargé",
+        ["common.img_cloud_unavailable"] = "Cette image est stockée uniquement en ligne dans le cloud (par exemple OneDrive) et n'a pas été téléchargée sur votre PC, elle ne peut donc pas être ouverte. Dans l'Explorateur de fichiers, faites un clic droit dessus, choisissez 'Toujours conserver sur cet appareil', attendez la coche verte, puis réessayez. Ou choisissez un fichier enregistré localement sur votre PC.",
+        ["common.emoji_favorites"] = "Favoris",
+        ["common.emoji_favorite_hint"] = "clic droit pour ajouter ou retirer des favoris",
+        ["common.emoji_add_favorite"] = "Ajouter aux favoris",
+        ["common.emoji_remove_favorite"] = "Retirer des favoris",
+        ["common.selfie"] = "Selfie",
+        ["common.selfie_instructions"] = "Déplace ou redimensionne le cadre sur ton personnage, puis prends la photo.",
+        ["common.selfie_take"] = "Prendre la photo",
+        ["common.selfie_capturing"] = "Capture...",
+        ["common.offline_maintenance"] = "Le serveur est en maintenance.",
+        ["common.back"] = "Retour",
     };
 }

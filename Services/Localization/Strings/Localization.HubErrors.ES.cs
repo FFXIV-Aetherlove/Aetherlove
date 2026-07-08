@@ -37,5 +37,10 @@ internal static class HubErrorsEs
         ["huberror.reswipe_nothing_to_undo"] = "No hay nada que deshacer.",
         ["huberror.reswipe_already_matched"] = "No puedes deshacer en un perfil con el que ya tienes match.",
         ["huberror.reswipe_quota_exhausted"] = "Ya has usado tu deshacer de hoy.",
+
+        // added after update 1.4.3
+        ["huberror.character_limit_reached"] = "Puedes tener como máximo {0} personajes de rol.",
+        ["huberror.character_name_invalid"] = "Los nombres de personaje deben tener entre 3 y 50 caracteres.",
+        ["huberror.character_not_found"] = "Ese personaje ya no existe. Recarga e inténtalo de nuevo.",
     };
 }

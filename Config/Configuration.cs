@@ -121,6 +121,16 @@ public class Configuration : IPluginConfiguration
     /// <summary>What to do with the plugin windows when the player enters combat.</summary>
     public CombatBehavior CombatBehavior { get; set; } = CombatBehavior.Hide;
 
+    /// <summary>Keep AetherLove drawing during group pose, overriding Dalamud's hide-plugins-in-gpose.</summary>
+    public bool ShowDuringGpose { get; set; } = true;
+
+    /// <summary>Hide AetherLove during cutscenes (Dalamud's default). Unset to keep it drawing through them.</summary>
+    public bool HideDuringCutscenes { get; set; } = true;
+
+    /// <summary>Window state captured at the last unload so a mid-session reload (e.g. a Dalamud update that
+    /// restarts the plugin) can reopen as the user left it. Unused on a normal game boot; Login handles that.</summary>
+    public WindowOpenState LastWindowState { get; set; } = WindowOpenState.Minimized;
+
     /// <summary>Set after the first launch so onboarding is only force-opened on a fresh install.</summary>
     public bool HasCompletedFirstLaunch { get; set; } = false;
 
@@ -132,6 +142,9 @@ public class Configuration : IPluginConfiguration
     /// undo pill, so it appears only once. Showing it does not consume the daily reswipe allowance.</summary>
     public bool SeenReswipeIntro { get; set; } = false;
 
+    /// <summary>Set once the "My RP Profiles" intro popup has been shown, on first open of that menu.</summary>
+    public bool SeenRpProfilesIntro { get; set; } = false;
+
     /// <summary>Changelog versions ("Major.Minor.Build") whose "What's New" window has already been shown.</summary>
     public HashSet<string> ShownChangelogVersions { get; set; } = [];
 
@@ -139,10 +152,17 @@ public class Configuration : IPluginConfiguration
     /// clears the "needs a first hello" highlight on an empty match once it has been acknowledged.</summary>
     public HashSet<Guid> OpenedChats { get; set; } = [];
 
-    /// <summary>Peer profile ids of matches the user has archived. Client-side only (per install). Replaced
-    /// wholesale on change so it serializes as a consistent snapshot; <see cref="ChatArchiveStore"/>
-    /// owns the live access.</summary>
+    /// <summary>Legacy archived-matches set, kept only so older configs can be migrated into the "Archive"
+    /// chat category on startup (see <see cref="ChatCategoryStore"/>); emptied by that migration.</summary>
     public List<Guid> ArchivedMatches { get; set; } = [];
+
+    /// <summary>User-created chat categories in display order. Client-side only (per install);
+    /// <see cref="ChatCategoryStore"/> owns the live access.</summary>
+    public List<ChatCategoryConfig> ChatCategories { get; set; } = [];
+
+    /// <summary>Which category each categorized chat lives in (peer profile id → category id). Chats absent
+    /// from the map are top-level. Client-side only; <see cref="ChatCategoryStore"/> owns the live access.</summary>
+    public Dictionary<Guid, Guid> ChatCategoryMembers { get; set; } = [];
 
     /// <summary>Show the search row on the matches screen (toggled from its overflow menu).</summary>
     public bool ShowChatSearch { get; set; } = false;
@@ -153,6 +173,10 @@ public class Configuration : IPluginConfiguration
     /// <summary>Per-install tally of how often each emoji shortcode was used as a reaction; powers the
     /// "most-used" quick-react bar. Client-side only.</summary>
     public Dictionary<string, int> ReactionUsage { get; set; } = new();
+
+    /// <summary>Bare emoji shortcodes the user favorited, in add order; the picker surfaces them as a
+    /// "Favorites" category shown first. Client-side only (per install).</summary>
+    public List<string> FavoriteEmojis { get; set; } = new();
 
     public void Save() => Plugin.PluginInterface.SavePluginConfig(this);
 }

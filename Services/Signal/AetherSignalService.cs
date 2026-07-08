@@ -300,9 +300,6 @@ public sealed class AetherSignalService : IAsyncDisposable
 
         hub.On<MessageReceivedPushDto>("MessageReceived", payload =>
         {
-            // An incoming message un-archives that chat so it returns to the active list.
-            _services.GetRequiredService<ChatArchiveStore>().SetArchived(payload.FromProfileId, false);
-
             _chatEvents.RaiseMessageReceived(payload);
 
             // Suppress badge and notifications only while the phone is open on this conversation. Minimizing or

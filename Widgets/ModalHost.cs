@@ -19,7 +19,7 @@ public sealed class ModalHost : Window
     private Action<float>? _body;
     private bool _closeOnClickOutside;
     private float _lastPanelHeight;
-    private float _savedFontGlobalScale;
+    private float _savedFontGlobalScale = 1f;
     private Vector2 _anchorPos;
     private Vector2 _anchorSize;
     private bool _hasAnchor;
@@ -33,7 +33,6 @@ public sealed class ModalHost : Window
     {
         Instance = this;
         IsOpen = false;
-        RespectCloseHotkey = false;
     }
 
     /// <summary><paramref name="body"/> draws the modal's content given the panel's inner width.</summary>
@@ -96,16 +95,16 @@ public sealed class ModalHost : Window
             _justOpened = false;
         }
 
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Vector2.Zero);
+
         _savedFontGlobalScale = io.FontGlobalScale;
         io.FontGlobalScale = 1f;
-
-        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Vector2.Zero);
     }
 
     public override void PostDraw()
     {
-        ImGui.PopStyleVar();
         ImGui.GetIO().FontGlobalScale = _savedFontGlobalScale;
+        ImGui.PopStyleVar();
     }
 
     public override void Draw()

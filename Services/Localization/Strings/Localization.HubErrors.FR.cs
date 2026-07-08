@@ -37,5 +37,10 @@ internal static class HubErrorsFr
         ["huberror.reswipe_nothing_to_undo"] = "Il n'y a rien à annuler.",
         ["huberror.reswipe_already_matched"] = "Vous ne pouvez pas annuler sur un profil avec lequel vous avez déjà un match.",
         ["huberror.reswipe_quota_exhausted"] = "Vous avez déjà utilisé votre annulation pour aujourd'hui.",
+
+        // added after update 1.4.3
+        ["huberror.character_limit_reached"] = "Vous pouvez avoir au maximum {0} personnages RP.",
+        ["huberror.character_name_invalid"] = "Les noms de personnage doivent comporter entre 3 et 50 caractères.",
+        ["huberror.character_not_found"] = "Ce personnage n'existe plus. Rechargez et réessayez.",
     };
 }

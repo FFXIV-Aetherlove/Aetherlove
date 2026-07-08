@@ -5,8 +5,8 @@ public static class AetherConstants
 {
 #if DEBUG
     //public const string ServerBaseUrl = "https://localhost:7246/";
-    //public const string ServerBaseUrl = "https://apibeta.aetherlove.space/";
-    public const string ServerBaseUrl = "https://api.aetherlove.space/";
+    public const string ServerBaseUrl = "https://apibeta.aetherlove.space/";
+    //public const string ServerBaseUrl = "https://api.aetherlove.space/";
 #else
     public const string ServerBaseUrl = "https://api.aetherlove.space/";
 #endif

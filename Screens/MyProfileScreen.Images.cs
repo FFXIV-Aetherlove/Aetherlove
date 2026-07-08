@@ -440,6 +440,7 @@ public partial class MyProfileScreen
                 TryOpenImgFilePicker(-1);
             }
             PopThemeButton();
+            DrawSelfieButton(-1, t);
             if (tex != null)
             {
                 ImGui.EndGroup();
@@ -455,11 +456,17 @@ public partial class MyProfileScreen
                 TryOpenImgFilePicker(-1);
             }
             PopThemeButton();
+            DrawSelfieButton(-1, t);
         }
     }
 
-    /// <summary>Opens the file picker, gated on declaring any other confirmed extra first.</summary>
-    private void TryOpenImgFilePicker(int target)
+    private void TryOpenImgFilePicker(int target) => TryPickImage(target, OpenImgFilePicker);
+
+    private void TryStartImgSelfie(int target) => TryPickImage(target, OpenImgSelfie);
+
+    /// <summary>Sets the target slot then runs <paramref name="open"/> (file picker or selfie capture), gated on
+    /// declaring any other confirmed extra first.</summary>
+    private void TryPickImage(int target, Action open)
     {
         // Gate only applies to a NEW upload — replacing the active slot's own confirmed photo is fine.
         var startingNewSlot = target != _imgActiveSlot
@@ -470,7 +477,17 @@ public partial class MyProfileScreen
             return;
         }
         _imgPickerTarget = target;
-        OpenImgFilePicker();
+        open();
+    }
+
+    private void DrawSelfieButton(int target, ThemeDefinition t)
+    {
+        PushThemeButton(t);
+        if (ImGui.Button($"{Loc.T("common.selfie")}##selfie{target}", Px(120f, 26f)))
+        {
+            TryStartImgSelfie(target);
+        }
+        PopThemeButton();
     }
 
 
@@ -595,14 +612,6 @@ public partial class MyProfileScreen
         DrawActiveSlotControls(availW, t);
     }
 
-    /// <summary>Red destructive-action button colours; pop 3 after the button.</summary>
-    private static void PushDangerButton()
-    {
-        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.32f, 0.10f, 0.10f, 1f));
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.55f, 0.15f, 0.15f, 1f));
-        ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.22f, 0.06f, 0.06f, 1f));
-    }
-
     private void DrawActiveSlotControls(float availW, ThemeDefinition t)
     {
         var slot = _imgPhotoSlots[_imgActiveSlot];
@@ -717,6 +726,7 @@ public partial class MyProfileScreen
                 TryOpenImgFilePicker(_imgActiveSlot);
             }
             PopThemeButton();
+            DrawSelfieButton(_imgActiveSlot, t);
 
             // Show the server's current copy below the buttons.
             var pv = storedTex?.GetWrapOrDefault();
@@ -740,6 +750,7 @@ public partial class MyProfileScreen
                 TryOpenImgFilePicker(_imgActiveSlot);
             }
             PopThemeButton();
+            DrawSelfieButton(_imgActiveSlot, t);
         }
     }
 
@@ -770,6 +781,23 @@ public partial class MyProfileScreen
         OpenImgFilePickerCore();
     }
 
+    private void OpenImgSelfie()
+    {
+        if (_imgPickerTarget is -1 or 0)
+        {
+            _imgSfwGate.Open(OpenImgSelfieCore);
+            return;
+        }
+        OpenImgSelfieCore();
+    }
+
+    private void OpenImgSelfieCore()
+    {
+        var aspect = _imgPickerTarget == -1 ? 1.0f : 1.6f;
+        var minW = _imgPickerTarget == -1 ? PhotoSpec.AvatarSize : PhotoSpec.PortraitWidth;
+        _selfieOverlay.Start(aspect, minW, (path, crop) => HandleImgPicked(path, crop));
+    }
+
     private void OpenImgFilePickerCore()
     {
         _imgFileDialog.OpenFileDialog(
@@ -781,71 +809,96 @@ public partial class MyProfileScreen
                 {
                     return;
                 }
-
-                if (_imgPickerTarget == -1)
+                if (_imgPendingPick.RejectUnavailableCloudFile(path))
                 {
-                    var handle = LoadPickedPreview(path);
-                    _imgAvatarPath = path;
-                    _imgAvatarConfirmed = false;
-                    _imgAvatarHandle = handle;
-
-                    void Unload()
-                    {
-                        _imgAvatarPath = "";
-                        _imgAvatarHandle = null;
-                    }
-
-                    _imgPendingPick.Begin(handle, PhotoSpec.AvatarSize, PhotoSpec.AvatarSize,
-                        onValid: () => _imgCropPopup.Open(
-                            Loc.T("profile.crop_avatar"),
-                            handle,
-                            1.0f,
-                            cropRect =>
-                            {
-                                _imgAvatarCropRect = cropRect;
-                                _imgAvatarConfirmed = true;
-                            },
-                            onCancel: Unload),
-                        onReject: Unload);
+                    return;
                 }
-                else
-                {
-                    var target = _imgPickerTarget;
-                    var slot = _imgPhotoSlots[target];
-                    var prevPath = slot.Path;
-                    var prevHandle = slot.Handle;
-                    var prevCropRect = slot.CropRect;
-                    var prevConf = slot.Confirmed;
-                    var handle = LoadPickedPreview(path);
-
-                    slot.Path = path;
-                    slot.Confirmed = false;
-                    slot.Handle = handle;
-
-                    void Restore()
-                    {
-                        _imgPhotoSlots[target].Path = prevPath;
-                        _imgPhotoSlots[target].Handle = prevHandle;
-                        _imgPhotoSlots[target].CropRect = prevCropRect;
-                        _imgPhotoSlots[target].Confirmed = prevConf;
-                    }
-
-                    var label = target == 0 ? Loc.T("profile.crop_main_photo") : Loc.T("profile.crop_extra_photo", target);
-                    _imgPendingPick.Begin(handle, PhotoSpec.PortraitWidth, PhotoSpec.PortraitHeight,
-                        onValid: () => _imgCropPopup.Open(
-                            label,
-                            handle,
-                            1.6f,
-                            cropRect =>
-                            {
-                                _imgPhotoSlots[target].CropRect = cropRect;
-                                _imgPhotoSlots[target].Confirmed = true;
-                                _imgPhotoSlots[target].PendingRemove = false;
-                            },
-                            onCancel: Restore),
-                        onReject: Restore);
-                }
+                HandleImgPicked(path);
             });
+    }
+
+    /// <summary>Loads a picked image into the current target slot and opens the crop popup, or, when
+    /// <paramref name="presetCrop"/> is supplied (a selfie already framed its crop), confirms the slot directly.</summary>
+    private void HandleImgPicked(string path, Vector4? presetCrop = null)
+    {
+        if (_imgPickerTarget == -1)
+        {
+            var handle = LoadPickedPreview(path);
+            _imgAvatarPath = path;
+            _imgAvatarConfirmed = false;
+            _imgAvatarHandle = handle;
+
+            if (presetCrop is { } avatarCrop)
+            {
+                _imgAvatarCropRect = avatarCrop;
+                _imgAvatarConfirmed = true;
+                return;
+            }
+
+            void Unload()
+            {
+                _imgAvatarPath = "";
+                _imgAvatarHandle = null;
+            }
+
+            _imgPendingPick.Begin(handle, PhotoSpec.AvatarSize, PhotoSpec.AvatarSize,
+                onValid: () => _imgCropPopup.Open(
+                    Loc.T("profile.crop_avatar"),
+                    handle,
+                    1.0f,
+                    cropRect =>
+                    {
+                        _imgAvatarCropRect = cropRect;
+                        _imgAvatarConfirmed = true;
+                    },
+                    onCancel: Unload),
+                onReject: Unload);
+        }
+        else
+        {
+            var target = _imgPickerTarget;
+            var slot = _imgPhotoSlots[target];
+            var prevPath = slot.Path;
+            var prevHandle = slot.Handle;
+            var prevCropRect = slot.CropRect;
+            var prevConf = slot.Confirmed;
+            var handle = LoadPickedPreview(path);
+
+            slot.Path = path;
+            slot.Confirmed = false;
+            slot.Handle = handle;
+
+            if (presetCrop is { } photoCrop)
+            {
+                slot.CropRect = photoCrop;
+                slot.Confirmed = true;
+                slot.PendingRemove = false;
+                return;
+            }
+
+            void Restore()
+            {
+                _imgPhotoSlots[target].Path = prevPath;
+                _imgPhotoSlots[target].Handle = prevHandle;
+                _imgPhotoSlots[target].CropRect = prevCropRect;
+                _imgPhotoSlots[target].Confirmed = prevConf;
+            }
+
+            var label = target == 0 ? Loc.T("profile.crop_main_photo") : Loc.T("profile.crop_extra_photo", target);
+            _imgPendingPick.Begin(handle, PhotoSpec.PortraitWidth, PhotoSpec.PortraitHeight,
+                onValid: () => _imgCropPopup.Open(
+                    label,
+                    handle,
+                    1.6f,
+                    cropRect =>
+                    {
+                        _imgPhotoSlots[target].CropRect = cropRect;
+                        _imgPhotoSlots[target].Confirmed = true;
+                        _imgPhotoSlots[target].PendingRemove = false;
+                    },
+                    onCancel: Restore),
+                onReject: Restore);
+        }
     }
 
 

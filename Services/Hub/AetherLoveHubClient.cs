@@ -62,6 +62,36 @@ public sealed class AetherLoveHubClient
     public async Task SaveFiltersAsync(FiltersDto dto, CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync("SaveFiltersAsync", dto, ct).ConfigureAwait(false);
 
+    public async Task<MyCharactersDto> GetMyCharactersAsync(CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<MyCharactersDto>("GetMyCharactersAsync", ct).ConfigureAwait(false);
+
+    public async Task<MyCharactersDto> SaveCharactersAsync(SaveCharactersRequest req, CancellationToken ct = default)
+    {
+        try
+        {
+            return await (await ConnAsync(ct)).InvokeAsync<MyCharactersDto>("SaveCharactersAsync", req, ct).ConfigureAwait(false);
+        }
+        catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl) { throw rl; }
+    }
+
+    public async Task SetCharacterImageAsync(Guid characterId, PhotoUploadDto image, CancellationToken ct = default)
+    {
+        try
+        {
+            await (await ConnAsync(ct)).InvokeAsync("SetCharacterImageAsync", characterId, image, ct).ConfigureAwait(false);
+        }
+        catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl) { throw rl; }
+    }
+
+    public async Task RemoveCharacterImageAsync(Guid characterId, CancellationToken ct = default)
+    {
+        try
+        {
+            await (await ConnAsync(ct)).InvokeAsync("RemoveCharacterImageAsync", characterId, ct).ConfigureAwait(false);
+        }
+        catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl) { throw rl; }
+    }
+
     /// <summary>Live preview: server validates a pasted music link and returns the curated name (null if invalid).</summary>
     public async Task<MusicLinkDto?> ResolveMusicLinkAsync(MusicProvider provider, string rawInput, CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync<MusicLinkDto?>("ResolveMusicLinkAsync", provider, rawInput, ct).ConfigureAwait(false);

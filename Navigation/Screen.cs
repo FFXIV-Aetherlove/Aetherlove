@@ -8,7 +8,7 @@ public enum Screen
     Deck,
     Match,
     ChatList,
-    ChatArchive,
+    ChatCategory,
     Chat,
     Profile,
     Settings,

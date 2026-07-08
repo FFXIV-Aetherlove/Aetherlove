@@ -115,10 +115,12 @@ public partial class MyProfileScreen
     private readonly RateLimitModal _rateLimitModal;
     private readonly SaveErrorModal _saveErrorModal;
     private readonly PendingImagePick _imgPendingPick;
+    private readonly SelfieCaptureOverlay _selfieOverlay;
 
     public MyProfileScreen(ProfileScreen profileScreen, AetherLoveHubClient hubClient,
                            OwnAvatarCache ownAvatar, RateLimitModal rateLimitModal,
                            SaveErrorModal saveErrorModal, ImageRequirementsModal imageReqModal,
+                           SelfieCaptureOverlay selfieOverlay,
                            Services.Auth.SessionBootstrapper bootstrap, ScreenRouter router, NewsScreen newsScreen)
     {
         _profileScreen = profileScreen;
@@ -127,6 +129,7 @@ public partial class MyProfileScreen
         _rateLimitModal = rateLimitModal;
         _saveErrorModal = saveErrorModal;
         _imgPendingPick = new PendingImagePick(imageReqModal);
+        _selfieOverlay = selfieOverlay;
         _bootstrap = bootstrap;
         _router = router;
         _newsScreen = newsScreen;
@@ -458,6 +461,9 @@ public partial class MyProfileScreen
                 break;
             case Section.Detail:
                 DrawDetail();
+                break;
+            case Section.RpCharacters:
+                DrawRpCharacters();
                 break;
             case Section.Warnings:
                 DrawWarningsView();

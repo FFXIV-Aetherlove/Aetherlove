@@ -99,16 +99,16 @@ public sealed class MiniWindow : Window, IDisposable
            && (Plugin.Configuration.CombatBehavior != CombatBehavior.Hide
                || !Plugin.Condition[ConditionFlag.InCombat]);
 
-    private float _savedFontGlobalScale;
+    private float _savedFontGlobalScale = 1f;
 
     public override void PreDraw()
     {
-        // Pin out Dalamud's global font scale so the mini phone stays its fixed size (see MainPluginWindow).
         Size = MiniScale.Px(85f, 153f);
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Vector2.Zero);
+        // Pin out Dalamud's global font scale so the mini phone stays its fixed size (see MainPluginWindow).
         var io = ImGui.GetIO();
         _savedFontGlobalScale = io.FontGlobalScale;
         io.FontGlobalScale = 1f;
-        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Vector2.Zero);
     }
 
     public override void Draw()

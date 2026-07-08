@@ -10,6 +10,9 @@ internal static class UiColors
     /// <summary>Caution accent (amber) for warning text and warning-style modals.</summary>
     internal static readonly Vector4 Amber = new(0.95f, 0.65f, 0.14f, 1f);
 
+    /// <summary>Gold star badge marking a favorited emoji.</summary>
+    internal const uint FavoriteStar = 0xFF3CC8FFu; // 0xAABBGGRR gold (R255 G200 B60)
+
     /// <summary>Error accent (red) for inline error text and failure-style modals.</summary>
     internal static readonly Vector4 Danger = new(0.95f, 0.45f, 0.45f, 1f);
 
@@ -114,4 +117,29 @@ internal static class UiColors
         0x0078E678u, // mint
         0x006482FFu, // coral
     ];
+
+    /// <summary>Preset swatches (0xAABBGGRR) for chat-category avatars: soft saturated tones that keep a white
+    /// letter legible on every phone theme. <see cref="CategoryArchiveColor"/> is the migrated-Archive default.</summary>
+    internal static readonly uint[] CategoryPalette =
+    [
+        0xFF755DE8u, // rose
+        0xFF5C79F2u, // coral
+        0xFF4AA6F2u, // amber
+        0xFF52C4E8u, // gold
+        0xFF4FC99Du, // lime
+        0xFF77BF4Fu, // emerald
+        0xFFB2BF3Fu, // teal
+        0xFFDBAE45u, // cyan
+        0xFFE88555u, // azure
+        0xFFDE6871u, // indigo
+        0xFFD0599Bu, // violet
+        0xFFB65BC7u, // magenta
+        0xFFA06FE3u, // pink
+        0xFF99867Au, // slate
+        0xFF78858Cu, // warm grey
+        0xFF8C7A5Fu, // steel
+    ];
+
+    /// <summary>Slate swatch assigned to the "Archive" category created by the archived-chats migration.</summary>
+    internal const uint CategoryArchiveColor = 0xFF99867Au;
 }

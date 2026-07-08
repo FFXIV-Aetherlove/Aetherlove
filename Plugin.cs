@@ -97,7 +97,7 @@ public sealed class Plugin : IDalamudPlugin
         services.AddSingleton<NotificationCenter>();
         services.AddSingleton<NotificationDispatcher>();
         services.AddSingleton<PulseService>();
-        services.AddSingleton<ChatArchiveStore>();
+        services.AddSingleton<ChatCategoryStore>();
         services.AddSingleton<Widgets.RateLimitModal>();
         services.AddSingleton<Widgets.SaveErrorModal>();
         services.AddSingleton<Widgets.ImageRequirementsModal>();
@@ -107,6 +107,9 @@ public sealed class Plugin : IDalamudPlugin
         services.AddSingleton<Services.Chat.ChatCacheStore>();
         services.AddSingleton<Services.Chat.ChatSyncService>();
         services.AddSingleton<WebpCapabilityProbe>();
+        services.AddSingleton<ScreenCaptureService>();
+        services.AddSingleton<Widgets.SelfieCaptureOverlay>();
+        services.AddSingleton<MaintenanceNoticeService>();
 
         services.AddHttpClient<TokenService>(c =>
         {
@@ -153,7 +156,7 @@ public sealed class Plugin : IDalamudPlugin
         services.AddSingleton<IMatchEffect, MatchSkyLanternsScreen>();
         services.AddSingleton<IMatchEffect, MatchTreasureChestScreen>();
         services.AddSingleton<ChatListScreen>();
-        services.AddSingleton<ChatArchiveScreen>();
+        services.AddSingleton<ChatCategoryScreen>();
         services.AddSingleton<ChatScreen>();
         services.AddSingleton<SettingsScreen>();
         services.AddSingleton<MyProfileScreen>();
