@@ -102,7 +102,17 @@ internal static class SharedUiHelpers
 
     internal static string TruncateToWidth(string text, float maxWidth)
     {
-        if (string.IsNullOrEmpty(text) || ImGui.CalcTextSize(text).X <= maxWidth)
+        if (string.IsNullOrEmpty(text))
+        {
+            return text;
+        }
+        // Single-line by contract: an embedded newline would render as a second line on top of whatever
+        // sits below the caller's fixed layout (and CalcTextSize would only measure the widest line).
+        if (text.Contains('\n') || text.Contains('\r'))
+        {
+            text = text.Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' ');
+        }
+        if (ImGui.CalcTextSize(text).X <= maxWidth)
         {
             return text;
         }

@@ -238,6 +238,11 @@ public partial class MyProfileScreen
             try
             {
                 await _hubClient.SetSupporterOptionsAsync(style, showBadge, ct).ConfigureAwait(false);
+                // Reopening the page seeds from the connection snapshot, so a stale one re-selects Default.
+                if (_bootstrap.LastConnection is { } conn)
+                {
+                    _bootstrap.ReplaceConnectionSnapshot(conn with { NameStyle = style, ShowSupporterBadge = showBadge });
+                }
                 _supSavedTimer = 2.5f;
             }
             catch (OperationCanceledException) { }

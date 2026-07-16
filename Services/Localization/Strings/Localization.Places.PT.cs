@@ -112,8 +112,8 @@ internal static class PlacesPt
         ["places.section_images"] = "Imagens",
         ["places.image_banner"] = "Banner",
         ["places.image_logo"] = "Imagem do local",
-        ["places.image_banner_hint"] = "Banner largo, no mínimo {0}×{1}px. Exibido na página do seu local.",
-        ["places.image_logo_hint"] = "Quadrada, no mínimo {0}px — exibida nos cartões do local.",
+        ["places.image_banner_hint"] = "Banner largo (25:9). Exibido na página do seu local.",
+        ["places.image_logo_hint"] = "Quadrada (1:1). Exibida nos cartões do local.",
         ["places.image_pick"] = "Escolher imagem",
         ["places.image_ready"] = "Pronta para salvar",
         ["places.image_remove"] = "Remover",
@@ -187,5 +187,11 @@ internal static class PlacesPt
         ["places.menu_hidden"] = "Venues ocultas ({0})",
         ["places.hidden_title"] = "Venues ocultas",
         ["places.unhide"] = "Mostrar",
+
+        // added after update 1.6.0
+        ["places.tag_247"] = "Local 24/7",
+        ["places.filters_247"] = "Mostrar locais 24/7",
+        ["places.tag_lgbtq"] = "LGBTQ+",
+        ["places.tag_minigames"] = "Minijogos",
     };
 }

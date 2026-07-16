@@ -57,7 +57,9 @@ public sealed record VenueOccurrenceDto(
 public sealed record PlacesFilterDto(
     VenueTag Tags,
     Region RegionMask,
-    bool IncludeNsfw);
+    bool IncludeNsfw,
+    // Inverted ("hide") so a client that omits the field keeps seeing 24/7 venues.
+    bool HideAlwaysOpen = false);
 
 /// <summary>The Places landing payload: venue cards plus their occurrences over the coming week.</summary>
 [MessagePackObject(keyAsPropertyName: true)]

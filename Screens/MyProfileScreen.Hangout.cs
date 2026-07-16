@@ -139,6 +139,8 @@ public partial class MyProfileScreen
         ImGui.Combo("##hgCat", ref _hgCategoryIdx, labels, labels.Length);
 
         ImGui.Spacing();
+        DrawWarningBox(w, Loc.T("hangout.nsfw_warning"), UiColors.DangerBoxFill, UiColors.DangerBoxBorder);
+        ImGui.Spacing();
         DrawFieldLabel(Loc.T("hangout.field_description"), t);
         InputTextMultilineWithPaste("##hgDesc", ref _hgDescription, HangoutLimits.DescriptionRawMaxLength, new Vector2(w, Px(70f)));
         var descLen = EmojiText.EffectiveLength(_hgDescription);
@@ -436,7 +438,7 @@ public partial class MyProfileScreen
         });
     }
 
-    private static void DrawWarningBox(float w, string text)
+    private static void DrawWarningBox(float w, string text, uint fill = UiColors.WarningBoxFill, uint border = UiColors.WarningBoxBorder)
     {
         var pad = Px(10f);
         var wrapW = w - pad * 2f;
@@ -444,8 +446,8 @@ public partial class MyProfileScreen
         var tl = ImGui.GetCursorScreenPos();
         var br = tl + new Vector2(w, size.Y + pad * 2f);
         var dl = ImGui.GetWindowDrawList();
-        dl.AddRectFilled(tl, br, UiColors.WarningBoxFill, Px(8f));
-        dl.AddRect(tl, br, UiColors.WarningBoxBorder, Px(8f));
+        dl.AddRectFilled(tl, br, fill, Px(8f));
+        dl.AddRect(tl, br, border, Px(8f));
         ImGui.SetCursorScreenPos(tl + new Vector2(pad, pad));
         ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + wrapW);
         ImGui.TextUnformatted(text);

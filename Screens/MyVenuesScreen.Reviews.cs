@@ -159,9 +159,7 @@ public partial class MyVenuesScreen
         var wrap = _bannerTex.TryGetValue(venue.Id, out var tex) ? tex?.GetWrapOrDefault() : null;
         if (wrap != null)
         {
-            var visible = h / cardW;
-            var uv0 = new Vector2(0f, (1f - visible) * 0.5f);
-            var uv1 = new Vector2(1f, (1f + visible) * 0.5f);
+            var (uv0, uv1) = SharedUiHelpers.CoverFitUvs(wrap.Width, wrap.Height, cardW, h);
             dl.AddImageRounded(wrap.Handle, tl, br, uv0, uv1, 0xFFFFFFFFu, Px(12f), ImDrawFlags.RoundCornersAll);
         }
         else

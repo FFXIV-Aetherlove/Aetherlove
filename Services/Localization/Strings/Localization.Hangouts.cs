@@ -129,5 +129,8 @@ internal static class HangoutsEn
         ["huberror.hangout_rsvp_own"] = "You can't sign up for your own hangout.",
         ["huberror.hangout_times_invalid"] = "The start or duration is out of range.",
         ["huberror.hangout_description_too_long"] = "The description exceeds the {0}-character limit.",
+
+        // added after update 1.6.0
+        ["hangout.nsfw_warning"] = "NSFW hangouts are not allowed.",
     };
 }

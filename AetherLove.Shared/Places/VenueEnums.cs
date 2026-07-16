@@ -25,6 +25,12 @@ public enum VenueTag : int
     GposeStudio = 1 << 12,
     LiveMusic = 1 << 13,
     MarketShop = 1 << 14,
+
+    /// <summary>Open around the clock ("24/7").</summary>
+    AlwaysOpen = 1 << 15,
+
+    Lgbtq = 1 << 16,
+    MiniGames = 1 << 17,
 }
 
 /// <summary>Residential district a venue's plot is in. Wire + storage values — append-only.</summary>

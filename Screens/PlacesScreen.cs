@@ -56,6 +56,7 @@ public partial class PlacesScreen
     private readonly bool[] _filterTags = new bool[VenueFields.VenueTagValues.Length];
     private readonly bool[] _filterRegions = new bool[RegionValues.Length];
     private bool _filterNsfw;
+    private bool _filterAlwaysOpen = true;
     private float _filterPanelHeight;
 
     private const float PadX = 16f;
@@ -128,6 +129,7 @@ public partial class PlacesScreen
         MaskToBools(RegionValues, (Region)state.RegionMask,
             (v, m) => (m & v) != 0, _filterRegions);
         _filterNsfw = state.IncludeNsfw;
+        _filterAlwaysOpen = !state.HideAlwaysOpen;
     }
 
     private void SaveFilterState()
@@ -136,13 +138,15 @@ public partial class PlacesScreen
         state.TagMask = (int)MaskOr(VenueFields.VenueTagValues, _filterTags, (a, b) => a | b);
         state.RegionMask = (short)MaskOr(RegionValues, _filterRegions, (a, b) => a | b);
         state.IncludeNsfw = _filterNsfw;
+        state.HideAlwaysOpen = !_filterAlwaysOpen;
         Plugin.Configuration.Save();
     }
 
     private PlacesFilterDto BuildFilter()
     {
         var state = Plugin.Configuration.Places;
-        return new PlacesFilterDto((VenueTag)state.TagMask, (Region)state.RegionMask, state.IncludeNsfw);
+        return new PlacesFilterDto((VenueTag)state.TagMask, (Region)state.RegionMask, state.IncludeNsfw,
+            state.HideAlwaysOpen);
     }
 
     private bool FiltersAreActive
@@ -150,7 +154,8 @@ public partial class PlacesScreen
         get
         {
             var state = Plugin.Configuration.Places;
-            return state.TagMask != 0 || state.RegionMask != 0 || _filterNsfw != ProfileNsfwDefault;
+            return state.TagMask != 0 || state.RegionMask != 0 || _filterNsfw != ProfileNsfwDefault
+                || !_filterAlwaysOpen;
         }
     }
 
@@ -159,6 +164,7 @@ public partial class PlacesScreen
         Array.Clear(_filterTags);
         Array.Clear(_filterRegions);
         _filterNsfw = ProfileNsfwDefault;
+        _filterAlwaysOpen = true;
         SaveFilterState();
         StartBrowseFetch();
     }
@@ -964,9 +970,12 @@ public partial class PlacesScreen
 
                 ImGui.TextColored(UiColors.Subtle, Loc.T("places.filters_tags"));
                 ImGui.Spacing();
+                // The 24/7 tag has no filter pill: always-open venues carry plenty of other tags, so a
+                // positive pill would never thin the view. The toggle below is the only 24/7 control.
                 VenueFields.DrawPillToggleRow("ptag", VenueFields.VenueTagLabels, _filterTags, innerW,
                     dangerAt: i => VenueFields.VenueTagValues[i] == VenueTag.Nsfw,
-                    skipAt: i => VenueFields.VenueTagValues[i] == VenueTag.Nsfw && !_filterNsfw);
+                    skipAt: i => VenueFields.VenueTagValues[i] == VenueTag.AlwaysOpen
+                        || (VenueFields.VenueTagValues[i] == VenueTag.Nsfw && !_filterNsfw));
 
                 ImGui.Spacing();
                 ImGui.TextColored(UiColors.Subtle, Loc.T("places.filters_regions"));
@@ -986,6 +995,11 @@ public partial class PlacesScreen
                             _filterTags[nsfwIdx] = false;
                         }
                     }
+                }
+                ImGui.Spacing();
+                if (DrawToggleSwitch("##places247", Loc.T("places.filters_247"), _filterAlwaysOpen))
+                {
+                    _filterAlwaysOpen = !_filterAlwaysOpen;
                 }
                 ImGui.Spacing();
                 ImGui.TextColored(UiColors.Hint, Loc.T("places.filters_hint"));

@@ -605,8 +605,8 @@ public partial class MyVenuesScreen
         ImGui.BeginGroup();
         ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + (w - slotW - Px(12f)));
         ImGui.TextColored(UiColors.Hint, banner
-            ? Loc.T("places.image_banner_hint", PhotoSpec.VenueBannerWidth, PhotoSpec.VenueBannerHeight)
-            : Loc.T("places.image_logo_hint", PhotoSpec.AvatarSize));
+            ? Loc.T("places.image_banner_hint")
+            : Loc.T("places.image_logo_hint"));
         ImGui.PopTextWrapPos();
         PushThemeButton(t);
         ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(6f));

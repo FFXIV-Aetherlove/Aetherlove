@@ -50,6 +50,9 @@ internal static class VenueFields
         VenueTag.GposeStudio,
         VenueTag.LiveMusic,
         VenueTag.MarketShop,
+        VenueTag.AlwaysOpen,
+        VenueTag.Lgbtq,
+        VenueTag.MiniGames,
     ];
 
     internal static string[] VenueTagLabels =>
@@ -69,6 +72,9 @@ internal static class VenueFields
         Loc.T("places.tag_gpose_studio"),
         Loc.T("places.tag_live_music"),
         Loc.T("places.tag_market"),
+        Loc.T("places.tag_247"),
+        Loc.T("places.tag_lgbtq"),
+        Loc.T("places.tag_minigames"),
     ];
 
     internal static readonly HousingDistrict[] DistrictValues =

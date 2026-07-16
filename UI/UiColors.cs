@@ -110,6 +110,12 @@ internal static class UiColors
     /// <summary>Opaque border for a caution/notice callout box - amber/orange.</summary>
     internal const uint WarningBoxBorder = 0xFF2080FFu;
 
+    /// <summary>Translucent fill for a hard-rule callout box - red at ~25% alpha.</summary>
+    internal const uint DangerBoxFill = 0x403333FFu;
+
+    /// <summary>Opaque border for a hard-rule callout box - red.</summary>
+    internal const uint DangerBoxBorder = 0xFF3333FFu;
+
     /// <summary>Opaque dark fill for the deck-expiry warning banner; it overlays a card photo, so it can't be translucent.</summary>
     internal const uint DeckExpiryWarnFill = 0xE0181818u;
 

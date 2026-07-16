@@ -129,5 +129,8 @@ internal static class HangoutsPt
         ["huberror.hangout_rsvp_own"] = "Você não pode se inscrever no seu próprio encontro.",
         ["huberror.hangout_times_invalid"] = "O início ou a duração está fora do intervalo.",
         ["huberror.hangout_description_too_long"] = "A descrição excede o limite de {0} caracteres.",
+
+        // added after update 1.6.0
+        ["hangout.nsfw_warning"] = "Encontros NSFW não são permitidos.",
     };
 }

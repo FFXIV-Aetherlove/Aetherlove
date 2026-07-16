@@ -112,8 +112,8 @@ internal static class PlacesDe
         ["places.section_images"] = "Bilder",
         ["places.image_banner"] = "Banner",
         ["places.image_logo"] = "Venue-Bild",
-        ["places.image_banner_hint"] = "Breites Banner, mindestens {0}×{1}px. Wird auf deiner Venue-Seite gezeigt.",
-        ["places.image_logo_hint"] = "Quadratisch, mindestens {0}px — wird auf Venue-Karten gezeigt.",
+        ["places.image_banner_hint"] = "Breites Banner (25:9). Wird auf deiner Venue-Seite gezeigt.",
+        ["places.image_logo_hint"] = "Quadratisch (1:1). Wird auf Venue-Karten gezeigt.",
         ["places.image_pick"] = "Bild auswählen",
         ["places.image_ready"] = "Bereit zum Speichern",
         ["places.image_remove"] = "Entfernen",
@@ -187,5 +187,11 @@ internal static class PlacesDe
         ["places.menu_hidden"] = "Ausgeblendete Venues ({0})",
         ["places.hidden_title"] = "Ausgeblendete Venues",
         ["places.unhide"] = "Anzeigen",
+
+        // added after update 1.6.0
+        ["places.tag_247"] = "24/7-Venue",
+        ["places.filters_247"] = "24/7-Venues anzeigen",
+        ["places.tag_lgbtq"] = "LGBTQ+",
+        ["places.tag_minigames"] = "Minispiele",
     };
 }

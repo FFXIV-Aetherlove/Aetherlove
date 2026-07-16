@@ -58,6 +58,9 @@ public class PlacesState
     /// <summary>Include 18+ venues in the browse feed; seeded from the profile's NSFW consent.</summary>
     public bool IncludeNsfw { get; set; }
 
+    /// <summary>Hide venues tagged 24/7 from the browse feed; off by default so nothing disappears.</summary>
+    public bool HideAlwaysOpen { get; set; }
+
     /// <summary>Venues hidden from the browse feed, id → name; the stored name renders the unhide list.</summary>
     public Dictionary<Guid, string> HiddenVenues { get; set; } = new();
 

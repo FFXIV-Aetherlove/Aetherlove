@@ -112,8 +112,8 @@ internal static class PlacesFr
         ["places.section_images"] = "Images",
         ["places.image_banner"] = "Bannière",
         ["places.image_logo"] = "Image de l'établissement",
-        ["places.image_banner_hint"] = "Bannière large, au moins {0}×{1}px. Affichée sur la page de votre établissement.",
-        ["places.image_logo_hint"] = "Carrée, au moins {0}px — affichée sur les cartes de l'établissement.",
+        ["places.image_banner_hint"] = "Bannière large (25:9). Affichée sur la page de votre établissement.",
+        ["places.image_logo_hint"] = "Carrée (1:1). Affichée sur les cartes de l'établissement.",
         ["places.image_pick"] = "Choisir une image",
         ["places.image_ready"] = "Prête à enregistrer",
         ["places.image_remove"] = "Retirer",
@@ -187,5 +187,11 @@ internal static class PlacesFr
         ["places.menu_hidden"] = "Venues masquées ({0})",
         ["places.hidden_title"] = "Venues masquées",
         ["places.unhide"] = "Afficher",
+
+        // added after update 1.6.0
+        ["places.tag_247"] = "Établissement 24h/24",
+        ["places.filters_247"] = "Afficher les établissements 24h/24",
+        ["places.tag_lgbtq"] = "LGBTQ+",
+        ["places.tag_minigames"] = "Mini-jeux",
     };
 }

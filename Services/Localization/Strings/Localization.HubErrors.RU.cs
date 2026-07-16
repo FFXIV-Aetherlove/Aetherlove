@@ -37,7 +37,7 @@ internal static class HubErrorsRu
         ["huberror.reswipe_nothing_to_undo"] = "Нечего отменять.",
         ["huberror.reswipe_already_matched"] = "Нельзя отменить свайп по профилю, с которым у вас уже есть пара.",
         ["huberror.reswipe_quota_exhausted"] = "Вы уже использовали отмену на сегодня.",
-        ["huberror.superlike_quota_exhausted"] = "Суперлайки на сегодня закончились.",
+        ["huberror.superlike_quota_exhausted"] = "Вы уже использовали все суперлайки на сегодня.",
 
         // added after update 1.4.3
         ["huberror.character_limit_reached"] = "У вас может быть не более {0} RP-персонажей.",
@@ -55,8 +55,8 @@ internal static class HubErrorsRu
         ["huberror.venue_limit_reached"] = "Вы достигли лимита в {0} заведений.",
         ["huberror.venue_name_invalid"] = "Название заведения должно содержать от 3 до 60 символов.",
         ["huberror.venue_description_too_long"] = "Описание превышает лимит в {0} символов.",
-        ["huberror.venue_times_invalid"] = "Одно из времён работы недопустимо.",
-        ["huberror.venue_times_too_many"] = "У заведения может быть не более {0} времён работы.",
+        ["huberror.venue_times_invalid"] = "Одно из расписаний работы недопустимо.",
+        ["huberror.venue_times_too_many"] = "У заведения может быть не более {0} расписаний работы.",
         ["huberror.venue_review_own"] = "Нельзя оставить отзыв о собственном заведении.",
         ["huberror.venue_review_too_long"] = "Ваш отзыв превышает лимит в {0} символов.",
         ["huberror.venue_review_rating_invalid"] = "Выберите оценку от 1 до 5 звёзд.",

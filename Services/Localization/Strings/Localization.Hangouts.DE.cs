@@ -129,5 +129,8 @@ internal static class HangoutsDe
         ["huberror.hangout_rsvp_own"] = "Du kannst dich nicht für dein eigenes Treffen anmelden.",
         ["huberror.hangout_times_invalid"] = "Beginn oder Dauer liegt außerhalb des zulässigen Bereichs.",
         ["huberror.hangout_description_too_long"] = "Die Beschreibung überschreitet das Limit von {0} Zeichen.",
+
+        // added after update 1.6.0
+        ["hangout.nsfw_warning"] = "NSFW-Treffen sind nicht erlaubt.",
     };
 }

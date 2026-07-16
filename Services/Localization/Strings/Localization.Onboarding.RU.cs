@@ -304,7 +304,7 @@ internal static class OnboardingRu
 
         // added after update (1.3.1)
         ["onboarding.content_ultimate_raiding"] = "Ультимейты",
-        ["onboarding.content_deep_dungeons"] = "Дип данжены",
+        ["onboarding.content_deep_dungeons"] = "Дип Данжены",
         ["onboarding.content_variant_criterion"] = "Варианты / Критерионы",
         ["onboarding.content_field_operations"] = "Полевые операции (Бозжа, Эврика)",
         ["onboarding.race_gender_warning"] = "Пожалуйста, укажите расу и пол вашего персонажа FFXIV, а не ваш пол в реальной жизни!",

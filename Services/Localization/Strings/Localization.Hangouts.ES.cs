@@ -129,5 +129,8 @@ internal static class HangoutsEs
         ["huberror.hangout_rsvp_own"] = "No puedes apuntarte a tu propia quedada.",
         ["huberror.hangout_times_invalid"] = "El inicio o la duración están fuera de rango.",
         ["huberror.hangout_description_too_long"] = "La descripción supera el límite de {0} caracteres.",
+
+        // added after update 1.6.0
+        ["hangout.nsfw_warning"] = "No se permiten quedadas NSFW.",
     };
 }

@@ -499,20 +499,6 @@ public class ProfileScreen
         ImGui.Spacing();
     }
 
-    private static string TruncateToWidth(string text, float maxW)
-    {
-        text = text.Replace('\n', ' ');
-        if (ImGui.CalcTextSize(text).X <= maxW)
-        {
-            return text;
-        }
-        while (text.Length > 1 && ImGui.CalcTextSize(text + "…").X > maxW)
-        {
-            text = text[..^1];
-        }
-        return text + "…";
-    }
-
     private void DrawImageScroller(int photoCount, float winW, ImDrawListPtr dl)
     {
         var photoSz = new Vector2(winW, PhotoHeight);
