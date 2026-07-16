@@ -40,9 +40,8 @@ public sealed class WarningAcknowledgeScreen
         _hub = hub;
     }
 
-    /// <summary>Marks the next showing as a live mid-session push (not a startup gate): on acknowledge it
-    /// returns to the deck instead of re-running the startup ladder, which mid-session can mis-route to the
-    /// passphrase / onboarding gates.</summary>
+    /// <summary>Marks the next showing as a live mid-session push: on acknowledge it returns to the deck
+    /// instead of re-running the startup gate ladder.</summary>
     public void RequestLiveAcknowledge() => _pendingLive = true;
 
     public void OnShow()
@@ -198,10 +197,7 @@ public sealed class WarningAcknowledgeScreen
 
     private void NavigateToTarget()
     {
-        // A live (mid-session) warning returns to the deck — the user is already active, so re-running the
-        // startup ladder would wrongly route to the passphrase / onboarding gates. A startup warning instead
-        // chains on through the ladder (passphrase → news → the regular target); warnings are flipped to Seen
-        // in the cached snapshot first so the resolver advances past them.
+        // A live mid-session warning returns to the deck; re-running the startup ladder would mis-route to gates.
         if (_returnToDeck)
         {
             _returnToDeck = false;

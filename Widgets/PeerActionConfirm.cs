@@ -7,19 +7,14 @@ using Dalamud.Interface;
 
 namespace AetherLove.Widgets;
 
-/// <summary>Which destructive peer action a <see cref="PeerActionConfirm"/> is confirming.</summary>
 public enum PeerAction
 {
     Unmatch,
     Block,
 }
 
-/// <summary>
-/// Shared in-page (in-phone) confirm for unmatching or blocking a peer, modeled on the category-delete
-/// confirm: it dims only the phone content and centres a small panel (never the screen-locking ModalHost).
-/// Hosted by both the chat screen and the matches list so the in-chat menu and a right-click on a match row
-/// show identical UI. The host owns the actual hub call and post-action via the <c>onConfirm</c> callback.
-/// </summary>
+/// <summary>In-page confirm for unmatching or blocking a peer; the host owns the hub call via the
+/// <c>onConfirm</c> callback.</summary>
 public sealed class PeerActionConfirm
 {
     private bool _open;
@@ -39,8 +34,6 @@ public sealed class PeerActionConfirm
 
     public void Close() => _open = false;
 
-    /// <summary>Draws the overlay while open. Invokes <paramref name="onConfirm"/> with the action and peer
-    /// once confirmed, then closes; a scrim tap or Escape cancels.</summary>
     public void Draw(Vector2 winPos, Vector2 winSize, Action<PeerAction, Guid> onConfirm)
     {
         if (!_open)

@@ -5,13 +5,10 @@ using Dalamud.Bindings.ImGui;
 
 namespace AetherLove.UI;
 
-/// <summary>Renders a conversation's verification fingerprint as a deterministic Truchet weave plus
-/// human-comparable text. The image is derived purely from the fingerprint bytes, so both peers draw the
-/// exact same weave and safety code. The palette is intentionally fixed (not the user's selected theme):
-/// two peers may run different themes, and the image must still match on both screens.</summary>
+/// <summary>Renders a conversation's verification fingerprint as a deterministic Truchet weave plus a
+/// safety code. The palette is fixed, not themed: both peers must render the identical image.</summary>
 public static class SafetyImage
 {
-    // Fixed pool spanning all three app themes (see the class summary), not the user's selected theme.
     private static readonly uint[] Palette =
     {
         0xFFC96BBA, // #BA6BC9
@@ -28,7 +25,6 @@ public static class SafetyImage
 
     private const uint Background = 0xFF1C1315; // #15131C
 
-    /// <summary>Draws the weave filling a square of <paramref name="size"/> at <paramref name="topLeft"/>.</summary>
     public static void DrawTruchet(ImDrawListPtr dl, Vector2 topLeft, float size, byte[] fp)
     {
         const int N = 6;

@@ -23,8 +23,7 @@ internal static class PhotoModerationLabels
     ];
 }
 
-/// <summary>Shared photo-moderation modals used by onboarding and My Profile. Each caller owns its
-/// `pending` flag; when it goes true the modal opens via the shared <see cref="Widgets.ModalHost"/>.</summary>
+/// <summary>Shared photo-moderation modals; each caller owns its pending flag, which opens the modal via ModalHost.</summary>
 internal static class PhotoModerationModals
 {
     public static void DrawLalafellNsfwModal(ref bool pending)

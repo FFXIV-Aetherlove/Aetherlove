@@ -4,11 +4,11 @@ internal static class ProfileEn
 {
     public static readonly System.Collections.Generic.Dictionary<string, string> Strings = new()
     {
-        // ProfileScreen — load / empty states
+        // ProfileScreen - load / empty states
         ["profile.load_failed"] = "Couldn't load profile: {0}",
         ["profile.none_loaded"] = "No profile loaded.",
 
-        // ProfileScreen — sections
+        // ProfileScreen - sections
         ["profile.about"] = "About",
         ["profile.flairs"] = "Flairs",
         ["profile.looking_for"] = "Looking for",
@@ -33,14 +33,14 @@ internal static class ProfileEn
         ["profile.weekend_playtimes"] = "Weekend playtimes  (Sat–Sun)",
         ["profile.timezone_value"] = "{0} (current time: {1})",
 
-        // ProfileScreen — Spotify / NSFW pill
+        // ProfileScreen - Spotify / NSFW pill
         ["profile.nsfw_reveal"] = "Click to show NSFW image",
 
-        // ProfileScreen — back pill
+        // ProfileScreen - back pill
         ["profile.back_to_chat"] = "Back to chat",
         ["profile.back_to_swiping"] = "Back to swiping",
 
-        // ProfileScreen — report flow
+        // ProfileScreen - report flow
         ["profile.report_profile"] = "Report profile",
         ["profile.report_warning"] = "False or malicious reports lead to warnings on your own account, and repeated abuse can result in suspension. Only report profiles that actually violate the rules.",
         ["profile.report_prompt"] = "Tell our moderators what's wrong with {0}:",
@@ -55,7 +55,7 @@ internal static class ProfileEn
         ["profile.closing_in"] = "Closing in {0} seconds",
         ["profile.close"] = "Close",
 
-        // ProfileScreen — copy profile text (viewing others only)
+        // ProfileScreen - copy profile text (viewing others only)
         ["profile.copy_text"] = "Copy profile text",
         ["profile.copy_warning_title"] = "Warning",
         ["profile.copy_warning_body"] = "You've copied someone's text. Be careful about clicking or following any links it contains — you do so at your own risk.",
@@ -72,14 +72,14 @@ internal static class ProfileEn
         ["profile.stat_match_rate"] = "Match rate",
         ["profile.back_to_my"] = "← Back",
 
-        // MyProfileScreen — edit tab load / save
+        // MyProfileScreen - edit tab load / save
         ["profile.load_profile_failed"] = "Couldn't load your profile: {0}",
         ["profile.retry"] = "Retry",
         ["profile.saving"] = "Saving…",
         ["profile.saved"] = "Saved  ✓",
         ["profile.save_changes"] = "Save Changes",
 
-        // MyProfileScreen — edit form section headings
+        // MyProfileScreen - edit form section headings
         ["profile.heading_character"] = "Character",
         ["profile.heading_location"] = "Location",
         ["profile.heading_languages"] = "Languages I Speak",
@@ -92,7 +92,7 @@ internal static class ProfileEn
         ["profile.heading_sync_tool"] = "Sync Tool",
         ["profile.heading_match_prefs"] = "Match Preferences",
 
-        // MyProfileScreen — edit form labels / hints
+        // MyProfileScreen - edit form labels / hints
         ["profile.display_name"] = "Display Name",
         ["profile.about_me"] = "About Me",
         ["profile.char_count"] = "{0} / 500 characters",
@@ -122,7 +122,7 @@ internal static class ProfileEn
         ["profile.spoken_language"] = "Spoken Language",
         ["profile.spoken_language_tooltip"] = "Leave all unchecked to match regardless of language.",
 
-        // MyProfileScreen.Images — tab text
+        // MyProfileScreen.Images - tab text
         ["profile.load_photos_failed"] = "Couldn't load your photos: {0}",
         ["profile.profile_picture"] = "Profile Picture",
         ["profile.profile_picture_desc"] = "Your profile picture is shown in the chat list and on match cards. Use a square close-up portrait of your FFXIV character.",
@@ -130,14 +130,14 @@ internal static class ProfileEn
         ["profile.profile_photos_desc"] = "Add portrait photos to your profile (10:16 ratio). The first slot is required; slots 2–4 are optional.",
         ["profile.declare_before_save"] = "Mark every extra photo as SFW or NSFW before saving.",
 
-        // MyProfileScreen.Images — avatar section
+        // MyProfileScreen.Images - avatar section
         ["profile.new_photo_ready"] = "New photo ready, not yet saved.",
         ["profile.change_photo"] = "Change Photo",
         ["profile.profile_picture_set"] = "Profile picture: Set  ✓",
         ["profile.no_profile_picture"] = "No profile picture set.",
         ["profile.upload_avatar"] = "Upload Avatar…",
 
-        // MyProfileScreen.Images — slot grid + active slot controls
+        // MyProfileScreen.Images - slot grid + active slot controls
         ["profile.slot_main"] = "Main",
         ["profile.tap_slot"] = "Tap a slot above to add or change a photo.",
         ["profile.main_photo"] = "Main photo",
@@ -157,7 +157,7 @@ internal static class ProfileEn
         ["profile.photo_optional"] = "This photo is optional.",
         ["profile.upload_photo"] = "Upload Photo…",
 
-        // MyProfileScreen.Images — file picker / crop popup
+        // MyProfileScreen.Images - file picker / crop popup
         ["profile.select_image"] = "Select Image",
         ["profile.image_files_filter"] = "Image files",
         ["profile.crop_avatar"] = "Crop Avatar",
@@ -189,5 +189,36 @@ internal static class ProfileEn
         ["profile.rp_crop_image"] = "Crop Character Image",
         ["profile.rp_back"] = "Back",
         ["profile.rp_details"] = "Character details:",
+
+        // added after update 1.5.1
+        ["profile.slot_locked"] = "This photo slot needs an active supporter subscription. You can remove the photo, or re-subscribe to use the slot again.",
+        ["profile.rp_extra_image"] = "Extra image {0} (supporter)",
+        ["profile.section_supporter"] = "Supporter",
+        ["profile.menu_sup_vanity"] = "Vanity designs",
+        ["profile.menu_sup_stats"] = "Extra statistics",
+        ["profile.sup_intro"] = "Thank you for supporting AetherLove! Pick a style for your name and choose whether to show the supporter badge. Everyone can see these.",
+        ["profile.sup_name_style"] = "Name style",
+        ["profile.sup_show_badge"] = "Show supporter badge",
+        ["profile.sup_badge_hint"] = "Shows the supporter tag on your profile. The star next to your name always shows.",
+        ["profile.sup_stats_intro"] = "Supporter-only insight into how your profile is doing across the realm.",
+        ["profile.sup_stat_likes_received"] = "Likes received",
+        ["profile.sup_stat_superlikes"] = "Superlikes received",
+        ["profile.sup_stat_views"] = "Profile views",
+        ["profile.sup_stat_impressions"] = "Deck appearances",
+        ["profile.sup_stat_likes_given"] = "Likes given",
+        ["profile.sup_stat_passes_given"] = "Passes given",
+        ["profile.sup_stat_matches"] = "Matches",
+        ["profile.sup_stat_like_rate"] = "Your like rate",
+        ["profile.sup_stat_match_rate"] = "Your match rate",
+        ["profile.style_none"] = "Default",
+        ["profile.style_crimson"] = "Crimson",
+        ["profile.style_gold"] = "Gold",
+        ["profile.style_emerald"] = "Emerald",
+        ["profile.style_sapphire"] = "Sapphire",
+        ["profile.style_violet"] = "Violet",
+        ["profile.style_rose"] = "Rose",
+        ["profile.style_rainbow"] = "Rainbow (animated)",
+        ["profile.style_shimmer"] = "Gold shimmer (animated)",
+        ["profile.style_pulse"] = "Rose pulse (animated)",
     };
 }

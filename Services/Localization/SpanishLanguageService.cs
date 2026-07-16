@@ -7,7 +7,7 @@ public sealed class SpanishLanguageService : ILanguageService
     private static readonly System.Collections.Generic.Dictionary<string, string> Map = LanguageMap.Merge(
         OnboardingEs.Strings, ChatEs.Strings, ProfileEs.Strings,
         DeckEs.Strings, SettingsEs.Strings, CommonEs.Strings, HubErrorsEs.Strings,
-        NotificationsEs.Strings, NewsEs.Strings);
+        NotificationsEs.Strings, NewsEs.Strings, PlacesEs.Strings, HangoutsEs.Strings);
 
     public string WelcomeTitle => "Bienvenido a AetherLove";
     public string WelcomeBody1 => "AetherLove es un plugin de emparejamiento social para Final Fantasy XIV — un lugar donde encontrar a tu gente, ya sea un compañero de juego fiel, un compañero de rol o algo más profundo.";

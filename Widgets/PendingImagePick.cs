@@ -4,9 +4,8 @@ using Dalamud.Interface.Textures;
 
 namespace AetherLove.Widgets;
 
-/// <summary>Gates a freshly-picked image behind validation before the user may crop it: it must decode and
-/// be at least the server's crop-target size. The texture loads off-thread, so <see cref="Poll"/> is called
-/// once per frame until the wrap (or a decode error) is available.</summary>
+/// <summary>Gates a picked image behind validation before cropping. The texture loads off-thread; call
+/// <see cref="Poll"/> once per frame until it resolves.</summary>
 public sealed class PendingImagePick
 {
     private readonly ImageRequirementsModal _modal;
@@ -18,8 +17,7 @@ public sealed class PendingImagePick
 
     public PendingImagePick(ImageRequirementsModal modal) => _modal = modal;
 
-    /// <summary>When the picked file is an un-hydrated cloud placeholder (its bytes aren't on disk), shows the
-    /// requirements modal explaining it and returns true so the caller aborts before trying to load it.</summary>
+    /// <summary>Returns true (and shows the modal) when the pick is a cloud placeholder; the caller aborts.</summary>
     public bool RejectUnavailableCloudFile(string path)
     {
         if (!SharedUiHelpers.IsUnavailableCloudFile(path))
@@ -31,7 +29,7 @@ public sealed class PendingImagePick
     }
 
     /// <param name="onValid">Runs once the image decodes and meets the minimum size.</param>
-    /// <param name="onReject">Runs when the image is invalid or too small — unload the pick here.</param>
+    /// <param name="onReject">Runs when the image is invalid or too small - unload the pick here.</param>
     public void Begin(ISharedImmediateTexture handle, int minW, int minH, Action onValid, Action onReject)
     {
         _handle = handle;

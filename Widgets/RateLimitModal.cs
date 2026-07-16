@@ -8,16 +8,14 @@ using Dalamud.Interface;
 
 namespace AetherLove.Widgets;
 
-/// <summary>Shown when the server denies a request with a <see cref="RateLimitException"/>.
-/// Routes through the shared <see cref="ModalHost"/>.</summary>
+/// <summary>Shown when the server denies a request with a <see cref="RateLimitException"/>.</summary>
 public sealed class RateLimitModal
 {
     private string _bucket = "";
     private int _limit;
     private DateTimeOffset _retryAtUtc;
 
-    /// <summary>Opens the modal with the latest denial. Safe to call from a background task — it only
-    /// sets fields and flips the host's <c>IsOpen</c>; no ImGui calls happen until the next UI frame.</summary>
+    /// <summary>Safe to call from a background task; no ImGui calls happen until the next UI frame.</summary>
     public void Show(string bucket, int limit, DateTimeOffset retryAtUtc)
     {
         _bucket = bucket;
@@ -26,7 +24,6 @@ public sealed class RateLimitModal
         ModalHost.Instance?.Open(310f, DrawBody);
     }
 
-    /// <summary>Convenience overload that unpacks the exception.</summary>
     public void Show(RateLimitException ex) => Show(ex.Bucket, ex.Limit, ex.RetryAtUtc);
 
     private void DrawBody(float availW)

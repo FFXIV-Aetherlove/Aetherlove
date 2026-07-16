@@ -11,9 +11,7 @@ using static AetherLove.Screens.MatchFx;
 
 namespace AetherLove.Screens;
 
-/// <summary>Match effect — Portal Rift: a dimensional tear cracks open at centre with
-/// jagged energy edges and a swirling gradient core; the two avatars emerge and drift to opposite sides.
-///</summary>
+/// <summary>Match effect - Portal Rift: a rift cracks open at centre; the avatars emerge and drift apart.</summary>
 public sealed class MatchPortalRiftScreen : IMatchEffect
 {
     private readonly ScreenRouter _router;

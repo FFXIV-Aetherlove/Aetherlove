@@ -6,9 +6,7 @@ using AetherLove.Shared.Profile;
 
 namespace AetherLove.Screens;
 
-// Hydration half of the onboarding screen: takes the profile a returning user already saved on the
-// server (their basic info, filters, and photos) and pre-fills the wizard's form fields with it, so
-// resuming onboarding shows what they had instead of an empty form.
+// Pre-fills the wizard's form fields from a returning user's saved profile.
 public partial class OnboardingScreen
 {
     private const string ResumePhotoCacheDir = "OnboardingResumeCache";
@@ -52,7 +50,6 @@ public partial class OnboardingScreen
         MaskToHours(b.WeekdayHoursMask, _weekdayHours);
         MaskToHours(b.WeekendHoursMask, _weekendHours);
 
-        // Scrub adult flags when the hydrated race is Lalafell.
         if (IsLalafellSelected())
         {
             ClearAdultFlagsForLalafell();

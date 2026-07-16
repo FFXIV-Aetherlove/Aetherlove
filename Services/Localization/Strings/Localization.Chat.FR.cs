@@ -51,6 +51,7 @@ internal static class ChatFr
 
         // ChatListScreen
         ["chat.preview_me_prefix"] = "Moi : ",
+        ["chat.preview_venue"] = "A partagé un établissement",
         ["chat.matches_title"] = "Correspondances",
         ["chat.show_search"] = "Afficher la recherche",
         ["chat.hide_search"] = "Masquer la recherche",
@@ -97,5 +98,16 @@ internal static class ChatFr
         ["chat.category_count"] = "Conversations : {0}",
         ["chat.category_archive_default"] = "Archives",
         ["chat.all_categorized"] = "Toutes vos conversations sont rangées dans des catégories",
+
+        // added after update 1.5.1
+        ["chat.menu_view_blocked"] = "Voir les bloqués",
+        ["blocked.title"] = "Utilisateurs bloqués",
+        ["blocked.intro_body"] = "Vous pouvez débloquer ici les profils que vous avez bloqués par le passé. En débloquant quelqu'un, aucun match automatique n'est recréé, mais vous pourrez à nouveau vous croiser dans le deck.",
+        ["blocked.empty"] = "Vous n'avez bloqué personne.",
+        ["blocked.loading"] = "Chargement...",
+        ["blocked.since"] = "Bloqué le {0}",
+        ["blocked.unblock"] = "Débloquer",
+        ["blocked.confirm_title"] = "Débloquer {0} ?",
+        ["blocked.confirm_body"] = "Aucun match automatique ne sera recréé, mais vous pourrez à nouveau vous croiser dans le deck.",
     };
 }

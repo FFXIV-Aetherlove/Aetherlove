@@ -77,6 +77,14 @@ public sealed record UnmatchedPushDto(Guid OtherProfileId);
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record BlockedByPeerPushDto(Guid OtherProfileId);
 
+/// <summary>One row on the caller's blocked-users page.</summary>
+[MessagePackObject(keyAsPropertyName: true)]
+public sealed record BlockedUserDto(
+    Guid ProfileId,
+    string DisplayName,
+    byte[] AvatarWebp,
+    DateTimeOffset BlockedAtUtc);
+
 /// <summary>One row in the chat / match list. The last-message fields carry the E2E ciphertext so
 /// the client can decrypt a short preview locally — the server never sees plaintext.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
@@ -91,7 +99,10 @@ public sealed record MatchSummaryDto(
     byte[] LastMessageNonce,
     bool LastMessageFromMe,
     int UnreadCount,
-    bool IsPinned);
+    bool IsPinned,
+    // Supporter cosmetics; the server sends None/false unless the peer currently holds the flag.
+    Profile.Enums.NameStyle PeerNameStyle = Profile.Enums.NameStyle.None,
+    bool PeerIsSupporter = false);
 
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record MatchListDto(MatchSummaryDto[] Matches);

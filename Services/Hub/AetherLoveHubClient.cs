@@ -6,10 +6,13 @@ using AetherLove.Services.Signal;
 using AetherLove.Shared.Diagnostics;
 using AetherLove.Shared.Feedback;
 using AetherLove.Shared.Flairs;
+using AetherLove.Shared.Hangouts;
 using AetherLove.Shared.Matching;
 using AetherLove.Shared.Messaging;
 using AetherLove.Shared.Moderation;
 using AetherLove.Shared.News;
+using AetherLove.Shared.Patreon;
+using AetherLove.Shared.Places;
 using AetherLove.Shared.Profile;
 using AetherLove.Shared.Profile.Enums;
 using AetherLove.Shared.Pulse;
@@ -28,10 +31,8 @@ public sealed class AetherLoveHubClient
         _signal = signal;
     }
 
-    /// <summary>True when the hub connection is live — lets callers tell a connectivity failure apart from a server-side error.</summary>
     public bool IsConnected => _signal.IsConnected;
 
-    /// <summary>Ensures the hub is connected and returns it. Throws via RequireConnection if there's no valid token.</summary>
     private async Task<HubConnection> ConnAsync(CancellationToken ct)
     {
         await _signal.EnsureConnectedAsync(ct).ConfigureAwait(false);
@@ -92,6 +93,24 @@ public sealed class AetherLoveHubClient
         catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl) { throw rl; }
     }
 
+    public async Task SetCharacterExtraImageAsync(Guid characterId, short sortOrder, PhotoUploadDto image, CancellationToken ct = default)
+    {
+        try
+        {
+            await (await ConnAsync(ct)).InvokeAsync("SetCharacterExtraImageAsync", characterId, sortOrder, image, ct).ConfigureAwait(false);
+        }
+        catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl) { throw rl; }
+    }
+
+    public async Task RemoveCharacterExtraImageAsync(Guid characterId, short sortOrder, CancellationToken ct = default)
+    {
+        try
+        {
+            await (await ConnAsync(ct)).InvokeAsync("RemoveCharacterExtraImageAsync", characterId, sortOrder, ct).ConfigureAwait(false);
+        }
+        catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl) { throw rl; }
+    }
+
     /// <summary>Live preview: server validates a pasted music link and returns the curated name (null if invalid).</summary>
     public async Task<MusicLinkDto?> ResolveMusicLinkAsync(MusicProvider provider, string rawInput, CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync<MusicLinkDto?>("ResolveMusicLinkAsync", provider, rawInput, ct).ConfigureAwait(false);
@@ -101,6 +120,15 @@ public sealed class AetherLoveHubClient
         try
         {
             await (await ConnAsync(ct)).InvokeAsync("SetProfileNsfwAsync", enabled, ct).ConfigureAwait(false);
+        }
+        catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl) { throw rl; }
+    }
+
+    public async Task SetSupporterOptionsAsync(NameStyle style, bool showBadge, CancellationToken ct = default)
+    {
+        try
+        {
+            await (await ConnAsync(ct)).InvokeAsync("SetSupporterOptionsAsync", style, showBadge, ct).ConfigureAwait(false);
         }
         catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl) { throw rl; }
     }
@@ -147,6 +175,49 @@ public sealed class AetherLoveHubClient
     public async Task DeleteAccountAsync(CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync("DeleteAccountAsync", ct).ConfigureAwait(false);
 
+    public async Task<VenueCardDto> GetVenueCardAsync(Guid venueId, CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<VenueCardDto>("GetVenueCardAsync", venueId, ct).ConfigureAwait(false);
+
+    public async Task<HangoutSummaryDto> CreateHangoutAsync(CreateHangoutRequest req, CancellationToken ct = default)
+    {
+        try
+        {
+            return await (await ConnAsync(ct)).InvokeAsync<HangoutSummaryDto>("CreateHangoutAsync", req, ct).ConfigureAwait(false);
+        }
+        catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl) { throw rl; }
+    }
+
+    public async Task EndMyHangoutAsync(CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync("EndMyHangoutAsync", ct).ConfigureAwait(false);
+
+    public async Task<HangoutRsvpResultDto> SetHangoutRsvpAsync(Guid hangoutId, bool going, CancellationToken ct = default)
+    {
+        try
+        {
+            return await (await ConnAsync(ct)).InvokeAsync<HangoutRsvpResultDto>("SetHangoutRsvpAsync", hangoutId, going, ct).ConfigureAwait(false);
+        }
+        catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl) { throw rl; }
+    }
+
+    public async Task<HangoutSyncDto> GetHangoutSyncAsync(CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<HangoutSyncDto>("GetHangoutSyncAsync", ct).ConfigureAwait(false);
+
+    public async Task<HangoutCardDto> GetHangoutCardAsync(Guid hangoutId, CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<HangoutCardDto>("GetHangoutCardAsync", hangoutId, ct).ConfigureAwait(false);
+
+    public async Task<HangoutDirectoryPageDto> GetHangoutDirectoryAsync(
+        HangoutDirectoryFilterDto filter, int skip, CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<HangoutDirectoryPageDto>("GetHangoutDirectoryAsync", filter, skip, ct).ConfigureAwait(false);
+
+    public async Task<Guid> ReportHangoutAsync(ReportHangoutRequest req, CancellationToken ct = default)
+    {
+        try
+        {
+            return await (await ConnAsync(ct)).InvokeAsync<Guid>("ReportHangoutAsync", req, ct).ConfigureAwait(false);
+        }
+        catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl) { throw rl; }
+    }
+
     public async Task<MatchDeckDto> GetMatchDeckAsync(CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync<MatchDeckDto>("GetMatchDeckAsync", ct).ConfigureAwait(false);
 
@@ -189,6 +260,12 @@ public sealed class AetherLoveHubClient
     public async Task BlockUserAsync(Guid peerId, CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync("BlockUserAsync", peerId, ct).ConfigureAwait(false);
 
+    public async Task<BlockedUserDto[]> GetBlockedUsersAsync(CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<BlockedUserDto[]>("GetBlockedUsersAsync", ct).ConfigureAwait(false);
+
+    public async Task UnblockUserAsync(Guid peerId, CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync("UnblockUserAsync", peerId, ct).ConfigureAwait(false);
+
     public async Task SetMatchPinnedAsync(Guid peerId, bool pinned, CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync("SetMatchPinnedAsync", peerId, pinned, ct).ConfigureAwait(false);
 
@@ -211,6 +288,9 @@ public sealed class AetherLoveHubClient
     public async Task<MyStatsDto> GetMyStatsAsync(CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync<MyStatsDto>("GetMyStatsAsync", ct).ConfigureAwait(false);
 
+    public async Task<SupporterStatsDto> GetSupporterStatsAsync(CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<SupporterStatsDto>("GetSupporterStatsAsync", ct).ConfigureAwait(false);
+
     public async Task<FlairDto[]> GetFlairCatalogAsync(CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync<FlairDto[]>("GetFlairCatalogAsync", ct).ConfigureAwait(false);
 
@@ -220,6 +300,15 @@ public sealed class AetherLoveHubClient
     public async Task<PulseDto?> GetPulseAsync(Language language, CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync<PulseDto?>("GetPulseAsync", language, ct).ConfigureAwait(false);
 
+    public async Task<PatreonLinkStartDto> StartPatreonLinkAsync(CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<PatreonLinkStartDto>("StartPatreonLinkAsync", ct).ConfigureAwait(false);
+
+    public async Task<PatreonStatusDto> GetPatreonStatusAsync(CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<PatreonStatusDto>("GetPatreonStatusAsync", ct).ConfigureAwait(false);
+
+    public async Task<PatreonStatusDto> UnlinkPatreonAsync(CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<PatreonStatusDto>("UnlinkPatreonAsync", ct).ConfigureAwait(false);
+
     public async Task<Guid> SubmitFeedbackAsync(SubmitFeedbackRequest req, CancellationToken ct = default)
     {
         try
@@ -228,4 +317,58 @@ public sealed class AetherLoveHubClient
         }
         catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl) { throw rl; }
     }
+
+    public async Task<PlacesBrowseDto> GetPlacesBrowseAsync(PlacesFilterDto filter, CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<PlacesBrowseDto>("GetPlacesBrowseAsync", filter, ct).ConfigureAwait(false);
+
+    public async Task<VenueDetailDto> GetVenueDetailAsync(Guid venueId, CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<VenueDetailDto>("GetVenueDetailAsync", venueId, ct).ConfigureAwait(false);
+
+    public async Task<VenueReviewDto[]> GetVenueReviewsAsync(Guid venueId, int skip, CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<VenueReviewDto[]>("GetVenueReviewsAsync", venueId, skip, ct).ConfigureAwait(false);
+
+    public async Task<int> SetVenueLikeAsync(Guid venueId, bool liked, CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<int>("SetVenueLikeAsync", venueId, liked, ct).ConfigureAwait(false);
+
+    public async Task<int> SetVenueRsvpAsync(Guid venueId, DateTimeOffset occurrenceStartUtc, bool going, CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<int>("SetVenueRsvpAsync", venueId, occurrenceStartUtc, going, ct).ConfigureAwait(false);
+
+    public async Task<VenueReviewDto> SubmitVenueReviewAsync(Guid venueId, short rating, string text, CancellationToken ct = default)
+    {
+        try
+        {
+            return await (await ConnAsync(ct)).InvokeAsync<VenueReviewDto>("SubmitVenueReviewAsync", venueId, rating, text, ct).ConfigureAwait(false);
+        }
+        catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl) { throw rl; }
+    }
+
+    public async Task DeleteMyVenueReviewAsync(Guid venueId, CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync("DeleteMyVenueReviewAsync", venueId, ct).ConfigureAwait(false);
+
+    public async Task<MyVenueDto[]> GetMyVenuesAsync(CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<MyVenueDto[]>("GetMyVenuesAsync", ct).ConfigureAwait(false);
+
+    public async Task<MyVenueDto> SaveVenueAsync(VenueEditDto dto, CancellationToken ct = default)
+    {
+        try
+        {
+            return await (await ConnAsync(ct)).InvokeAsync<MyVenueDto>("SaveVenueAsync", dto, ct).ConfigureAwait(false);
+        }
+        catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl) { throw rl; }
+    }
+
+    public async Task DeleteVenueAsync(Guid venueId, CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync("DeleteVenueAsync", venueId, ct).ConfigureAwait(false);
+
+    public async Task<MyVenueDto> SetVenueImageAsync(Guid venueId, bool banner, PhotoUploadDto upload, short slot = 1, CancellationToken ct = default)
+    {
+        try
+        {
+            return await (await ConnAsync(ct)).InvokeAsync<MyVenueDto>("SetVenueImageAsync", venueId, banner, slot, upload, ct).ConfigureAwait(false);
+        }
+        catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl) { throw rl; }
+    }
+
+    public async Task<MyVenueDto> RemoveVenueImageAsync(Guid venueId, bool banner, short slot = 1, CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<MyVenueDto>("RemoveVenueImageAsync", venueId, banner, slot, ct).ConfigureAwait(false);
 }

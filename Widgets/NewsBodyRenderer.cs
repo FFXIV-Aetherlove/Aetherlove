@@ -10,11 +10,8 @@ using Dalamud.Interface.Textures;
 
 namespace AetherLove.Widgets;
 
-/// <summary>Renders a news body — an ordered list of lines, each either text-with-emoji (reusing the chat
-/// <see cref="ParsedMessage"/> renderer) or a centered image. Image textures are disk-cached, so scope one
-/// renderer to the open article. Layout-only: the caller owns the surrounding scroll child + header, so the
-/// same widget serves both the startup immediate-show and the Settings entry view. Each line self-positions at
-/// <c>leftPad</c> (ImGui resets the cursor X after a wrapped-text child, so a one-time indent isn't enough).</summary>
+/// <summary>Renders a news body's lines (text-with-emoji or centered images). Each line re-sets its own
+/// cursor X: ImGui resets the cursor X after a wrapped-text child, so a one-time indent isn't enough.</summary>
 public sealed class NewsBodyRenderer
 {
     private readonly Dictionary<string, ISharedImmediateTexture?> _images = new();

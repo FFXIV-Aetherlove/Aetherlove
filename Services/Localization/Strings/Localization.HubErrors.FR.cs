@@ -37,10 +37,29 @@ internal static class HubErrorsFr
         ["huberror.reswipe_nothing_to_undo"] = "Il n'y a rien à annuler.",
         ["huberror.reswipe_already_matched"] = "Vous ne pouvez pas annuler sur un profil avec lequel vous avez déjà un match.",
         ["huberror.reswipe_quota_exhausted"] = "Vous avez déjà utilisé votre annulation pour aujourd'hui.",
+        ["huberror.superlike_quota_exhausted"] = "Vous n'avez plus de superlikes pour aujourd'hui.",
 
         // added after update 1.4.3
         ["huberror.character_limit_reached"] = "Vous pouvez avoir au maximum {0} personnages RP.",
         ["huberror.character_name_invalid"] = "Les noms de personnage doivent comporter entre 3 et 50 caractères.",
         ["huberror.character_not_found"] = "Ce personnage n'existe plus. Rechargez et réessayez.",
+
+        // added after update 1.5.0
+        ["huberror.patreon_disabled"] = "La liaison Patreon est actuellement indisponible.",
+        ["huberror.patreon_already_linked"] = "Un compte Patreon est déjà lié à votre profil.",
+        ["huberror.patreon_not_linked"] = "Aucun compte Patreon n'est lié à votre profil.",
+        ["huberror.patreon_account_taken"] = "Ce compte Patreon est déjà lié à un autre compte AetherLove.",
+        ["huberror.patreon_link_failed"] = "Nous n'avons pas pu finaliser la liaison Patreon. Veuillez réessayer.",
+        ["huberror.places_disabled"] = "Les Lieux sont actuellement indisponibles.",
+        ["huberror.venue_not_found"] = "Cet établissement n'existe plus.",
+        ["huberror.venue_limit_reached"] = "Vous avez atteint la limite de {0} établissements.",
+        ["huberror.venue_name_invalid"] = "Le nom de l'établissement doit comporter de 3 à 60 caractères.",
+        ["huberror.venue_description_too_long"] = "La description dépasse la limite de {0} caractères.",
+        ["huberror.venue_times_invalid"] = "L'un des horaires d'ouverture n'est pas valide.",
+        ["huberror.venue_times_too_many"] = "Un établissement peut avoir au maximum {0} horaires d'ouverture.",
+        ["huberror.venue_review_own"] = "Vous ne pouvez pas laisser d'avis sur votre propre établissement.",
+        ["huberror.venue_review_too_long"] = "Votre avis dépasse la limite de {0} caractères.",
+        ["huberror.venue_review_rating_invalid"] = "Choisissez une note de 1 à 5 étoiles.",
+        ["huberror.venue_rsvp_invalid"] = "Cette ouverture n'accepte plus de participations.",
     };
 }

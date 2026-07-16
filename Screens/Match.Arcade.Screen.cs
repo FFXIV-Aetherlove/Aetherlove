@@ -11,8 +11,7 @@ using static AetherLove.Screens.MatchFx;
 
 namespace AetherLove.Screens;
 
-/// <summary>Match effect — Arcade 8-bit: a CRT cabinet with scanlines, a chunky pixel
-/// heart that beats, a blocky "MATCH!" banner and a high-score counter that ticks up.</summary>
+/// <summary>Match effect - Arcade 8-bit: a CRT cabinet with scanlines, a beating pixel heart, and a "MATCH!" banner.</summary>
 public sealed class MatchArcadeScreen : IMatchEffect
 {
     private readonly ScreenRouter _router;

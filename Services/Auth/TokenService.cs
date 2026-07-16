@@ -32,9 +32,7 @@ public sealed class TokenService
         _http = http;
     }
 
-    /// <summary>True when the most recent <see cref="TryRefreshAsync"/> failed because the server actively
-    /// rejected the refresh token (HTTP 401), as opposed to the server being unreachable. Lets the startup
-    /// bootstrapper wipe tokens only on a real auth rejection, not when the server is merely down.</summary>
+    /// <summary>True when the last refresh was actively rejected (HTTP 401), as opposed to the server being unreachable.</summary>
     public bool LastRefreshFailedUnauthorized { get; private set; }
 
     /// <summary>True when there is no access token or it expires within <see cref="RefreshSkew"/>.</summary>
@@ -48,7 +46,6 @@ public sealed class TokenService
         return a.AccessTokenExpiresAtUtc - DateTimeOffset.UtcNow < RefreshSkew;
     }
 
-    /// <summary>Persists a token pair and saves the config.</summary>
     public void ApplyTokens(TokenPairDto tokens)
     {
         _config.Auth = new AuthState
@@ -61,15 +58,15 @@ public sealed class TokenService
         _config.Save();
     }
 
-    /// <summary>Wipes the stored tokens locally.</summary>
     public void Clear()
     {
         _config.Auth = new AuthState();
         _config.Save();
     }
 
-    /// <summary>Exchanges the refresh token for a fresh pair. Returns false on failure or no stored token.</summary>
-    public async Task<bool> TryRefreshAsync(CancellationToken ct)
+    /// <summary>Exchanges the refresh token for a fresh pair. <paramref name="force"/> refreshes even when the
+    /// token still looks fresh locally, for callers that just saw the server reject it (e.g. clock skew).</summary>
+    public async Task<bool> TryRefreshAsync(CancellationToken ct, bool force = false)
     {
         LastRefreshFailedUnauthorized = false;
         var refreshToken = _config.Auth.RefreshToken;
@@ -81,7 +78,7 @@ public sealed class TokenService
         await _refreshGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            if (!IsAccessTokenStale())
+            if (!force && !IsAccessTokenStale())
             {
                 return true;
             }

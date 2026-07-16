@@ -13,7 +13,16 @@ public sealed record ProfileCharacterDto(
     string Name,
     string Bio,
     byte[]? ImageBytes,
-    bool ImageIsNsfw);
+    bool ImageIsNsfw,
+    // Supporter-only extra images; peers only ever receive approved ones while the owner holds the flag.
+    CharacterImageDto[]? ExtraImages = null);
+
+/// <summary>One supporter extra image on an RP character.</summary>
+[MessagePackObject(keyAsPropertyName: true)]
+public sealed record CharacterImageDto(
+    short SortOrder,
+    byte[] Webp,
+    bool IsNsfw);
 
 /// <summary>The caller's own RP characters plus their allowance. <see cref="MaxCharacters"/> is resolved
 /// server-side (config, per-role) so a future supporter tier can raise it without client changes.

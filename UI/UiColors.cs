@@ -2,19 +2,26 @@ using System.Numerics;
 
 namespace AetherLove.UI;
 
-/// <summary>Colours (packed 0xAABBGGRR uints and Vector4s) that are shared by more than one screen,
-/// named and documented so they aren't scattered as bare literals. Colours used in a single place stay
-/// local to their call site.</summary>
+/// <summary>Colours (packed 0xAABBGGRR uints and Vector4s) shared by more than one screen.</summary>
 internal static class UiColors
 {
     /// <summary>Caution accent (amber) for warning text and warning-style modals.</summary>
     internal static readonly Vector4 Amber = new(0.95f, 0.65f, 0.14f, 1f);
+
+    /// <summary>Patreon brand coral (#FF424D), for the Supporter settings row + link buttons.</summary>
+    internal static readonly Vector4 Patreon = new(1.00f, 0.259f, 0.302f, 1f);
+
+    /// <summary>Discord brand blurple: the Settings Discord row and the join buttons.</summary>
+    internal static readonly Vector4 Discord = new(0.43f, 0.48f, 1.00f, 1f);
 
     /// <summary>Gold star badge marking a favorited emoji.</summary>
     internal const uint FavoriteStar = 0xFF3CC8FFu; // 0xAABBGGRR gold (R255 G200 B60)
 
     /// <summary>Error accent (red) for inline error text and failure-style modals.</summary>
     internal static readonly Vector4 Danger = new(0.95f, 0.45f, 0.45f, 1f);
+
+    /// <summary>Live-now accent (green): hangout status cards, banners, and directory chips.</summary>
+    internal static readonly Vector4 LiveGreen = new(0.35f, 0.85f, 0.45f, 1f);
 
     /// <summary>Account-warning accent (orange): the warning notice cards and the "My" hub warnings row.</summary>
     internal static readonly Vector4 WarningAccent = new(0.97f, 0.62f, 0.25f, 1f);
@@ -34,7 +41,7 @@ internal static class UiColors
     /// <summary>Softer success hint (light green), used for "photo set" style notes.</summary>
     internal static readonly Vector4 SuccessSoft = new(0.55f, 0.85f, 0.55f, 1f);
 
-    /// <summary>Muted grey text; alpha variants are derived via <c>with</c> at the call site.</summary>
+    /// <summary>Muted grey text.</summary>
     internal static readonly Vector4 Muted = new(0.55f, 0.55f, 0.55f, 1f);
 
     /// <summary>Faint hint / caption text (dimmer than <see cref="Muted"/>).</summary>
@@ -51,13 +58,15 @@ internal static class UiColors
     internal static readonly Vector4 NsfwFrameBgHovered = new(0.70f, 0.18f, 0.18f, 1.00f);
     internal static readonly Vector4 NsfwFrameBgActive = new(0.40f, 0.06f, 0.06f, 1.00f);
 
-    /// <summary>Profile bio body text and its empty-state placeholder, shared by the profile view and
-    /// both bio edit previews.</summary>
+    /// <summary>Profile bio body text and its empty-state placeholder.</summary>
     internal static readonly Vector4 BioText = new(0.88f, 0.88f, 0.88f, 1f);
     internal static readonly Vector4 BioPlaceholder = new(0.38f, 0.38f, 0.38f, 1f);
 
     /// <summary>Muted grey for draw-list text (placeholder labels, hints).</summary>
     internal const uint TextMuted = 0xFF888888u;
+
+    /// <summary>Even quieter than <see cref="TextMuted"/>: tertiary detail lines (addresses, footnotes).</summary>
+    internal const uint TextFaint = 0xFF666666u;
 
     /// <summary>Translucent red rule under ban/warning headings.</summary>
     internal const uint DangerDivider = 0x88FF3333u;
@@ -95,10 +104,10 @@ internal static class UiColors
     internal const uint YouTubeRed = 0xFF0000FFu;
     internal const uint YouTubeRedHover = 0xFF4D4DFFu;
 
-    /// <summary>Translucent fill for a caution/notice callout box — amber/orange at ~25% alpha.</summary>
+    /// <summary>Translucent fill for a caution/notice callout box - amber/orange at ~25% alpha.</summary>
     internal const uint WarningBoxFill = 0x402080FFu;
 
-    /// <summary>Opaque border for a caution/notice callout box — amber/orange.</summary>
+    /// <summary>Opaque border for a caution/notice callout box - amber/orange.</summary>
     internal const uint WarningBoxBorder = 0xFF2080FFu;
 
     /// <summary>Opaque dark fill for the deck-expiry warning banner; it overlays a card photo, so it can't be translucent.</summary>
@@ -118,8 +127,7 @@ internal static class UiColors
         0x006482FFu, // coral
     ];
 
-    /// <summary>Preset swatches (0xAABBGGRR) for chat-category avatars: soft saturated tones that keep a white
-    /// letter legible on every phone theme. <see cref="CategoryArchiveColor"/> is the migrated-Archive default.</summary>
+    /// <summary>Preset swatches (0xAABBGGRR) for chat-category avatars.</summary>
     internal static readonly uint[] CategoryPalette =
     [
         0xFF755DE8u, // rose

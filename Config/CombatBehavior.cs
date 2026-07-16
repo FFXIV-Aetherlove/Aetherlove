@@ -7,6 +7,6 @@ public enum CombatBehavior
     Hide = 0,
     /// <summary>If the phone is open, it switches to the mini bubble when combat starts.</summary>
     Minimize = 1,
-    /// <summary>Nothing happens — windows stay wherever they are.</summary>
+    /// <summary>Nothing happens - windows stay wherever they are.</summary>
     LeaveOpen = 2,
 }

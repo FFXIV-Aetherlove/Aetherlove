@@ -11,9 +11,7 @@ using static AetherLove.Screens.MatchFx;
 
 namespace AetherLove.Screens;
 
-/// <summary>Match effect — Electric Storm: a crackling lightning arc of jagged
-/// segments leaps between two charged avatars over a dark, faintly glowing storm, with stray sparks
-/// and the odd full-screen flash.</summary>
+/// <summary>Match effect - Electric Storm: a lightning arc leaps between the two avatars.</summary>
 public sealed class MatchElectricStormScreen : IMatchEffect
 {
     private const int ArcPoints = 16;

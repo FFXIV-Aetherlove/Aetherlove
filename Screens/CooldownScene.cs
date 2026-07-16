@@ -10,9 +10,8 @@ using static AetherLove.Screens.MatchFx;
 
 namespace AetherLove.Screens;
 
-/// <summary>The night-sky pegasus scene drawn over the deck for its empty states (slot cooldown and an empty
-/// candidate pool). The caller supplies the heading, body, live countdown text and any refresh error; call
-/// <see cref="Reset"/> when the view re-appears to replay the fade-in.</summary>
+/// <summary>Night-sky pegasus scene for the deck's empty states; call <see cref="Reset"/> when the view
+/// re-appears to replay the fade-in.</summary>
 public sealed class CooldownScene
 {
     private static readonly Vector4 SkyTop = new(0.07f, 0.06f, 0.16f, 1f);
@@ -95,8 +94,7 @@ public sealed class CooldownScene
             DrawTimerPill(dl, cx, max.Y - (showReswipe ? Px(42f) : Px(58f)), timer, anim, settle);
         }
 
-        // The refresh error and the reswipe CTA compete for the same bottom slot; reswipe wins (errors here
-        // are transient refresh failures and clear on the next tick).
+        // The error and the reswipe CTA compete for the same bottom slot; reswipe wins.
         if (!string.IsNullOrEmpty(error) && !showReswipe)
         {
             DrawError(dl, cx, max.Y - Px(28f), size.X - Px(72f), error, settle);
@@ -458,9 +456,7 @@ public sealed class CooldownScene
         return result;
     }
 
-    /// <summary>An interactive "reswipe your last card" pill, shown on the cooldown screen when the player
-    /// still has an undoable last swipe and a reswipe left. Styled in the scene's violet palette to stand
-    /// apart from the gold countdown. Returns true on click.</summary>
+    /// <summary>Reswipe pill on the cooldown screen; returns true on click.</summary>
     private bool DrawReswipePill(ImDrawListPtr dl, float cx, float y, string label, float anim, float settle)
     {
         float iconPx = Px(15f);

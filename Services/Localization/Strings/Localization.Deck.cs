@@ -55,5 +55,20 @@ internal static class DeckEn
 
         // added after update 1.5.0
         ["deck.cooldown_reswipe_btn"] = "Reswipe your last card",
+
+        // added after update 1.5.1
+        ["deck.superlike_tooltip"] = "Superlikes: {0}/{1} left",
+        ["deck.superlike_cooldown"] = "New superlikes in {0}h:{1:00}m",
+        ["deck.superlike_intro_title"] = "Superlike",
+        ["deck.superlike_intro"] = "A superlike tells someone they really caught your eye: your profile jumps straight to the top of their deck with a golden entrance. If they like you back, it's an instant match. {0} Closing this note won't use one up, so tap the star again when you're ready.",
+        ["deck.superlike_intro_daily"] = "You get {0} per day.",
+        ["deck.superlike_intro_weekly"] = "You get 1 free superlike per week.",
+        ["deck.superliked_you"] = "You've received a superlike!",
+        ["deck.superliked_you_sub"] = "Like them back for an instant match.",
+        ["deck.superlikes_waiting"] = "Superlikes waiting: {0}",
+
+        ["deck.superlike_supporter_pitch"] = "Supporters get more superlikes: a fresh set every single day, along with other fun extras such as extra photos, exclusive name styles, bonus statistics and more.",
+        ["deck.superlike_free_tooltip"] = "Your free superlike of the week",
+        ["deck.superlike_weekly_cooldown"] = "Next free superlike in {0}d {1}h",
     };
 }

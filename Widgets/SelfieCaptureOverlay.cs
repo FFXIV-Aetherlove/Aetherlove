@@ -10,10 +10,8 @@ using TerraFX.Interop.DirectX;
 
 namespace AetherLove.Widgets;
 
-/// <summary>Live viewfinder for the selfie flow: an aspect-locked, movable/resizable crop frame over the live game
-/// with take-photo / cancel buttons. The window is NoInputs so the game keeps mouse camera control; the frame and
-/// buttons hit-test manually and grab the mouse only while hovered or dragging. On capture it hands back the
-/// full-frame temp PNG plus the crop rect in image pixels, like a file pick through the crop popup.</summary>
+/// <summary>Live viewfinder for the selfie flow. The window is NoInputs so the game keeps mouse camera
+/// control; the frame and buttons hit-test manually and grab the mouse only while hovered or dragging.</summary>
 public sealed class SelfieCaptureOverlay : Window
 {
     private const uint Dim = 0x99000000u;
@@ -326,7 +324,6 @@ public sealed class SelfieCaptureOverlay : Window
 
     private static string TempDir => Path.Combine(Path.GetTempPath(), "AetherLoveSelfie");
 
-    /// <summary>Clears leftover selfie temp PNGs; called on load and unload.</summary>
     internal static void PurgeTempFiles()
     {
         try

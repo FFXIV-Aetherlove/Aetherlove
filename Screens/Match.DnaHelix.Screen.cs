@@ -11,9 +11,7 @@ using static AetherLove.Screens.MatchFx;
 
 namespace AetherLove.Screens;
 
-/// <summary>Match effect — DNA Helix: a rotating double-helix climbs the centre, its two
-/// strands sine-waving 180 degrees out of phase with glowing rungs between paired base points. The two
-/// avatars are the prominent larger nodes near the middle, one per strand.</summary>
+/// <summary>Match effect - DNA Helix: a rotating double helix; the avatars are the larger nodes, one per strand.</summary>
 public sealed class MatchDnaHelixScreen : IMatchEffect
 {
     private readonly ScreenRouter _router;

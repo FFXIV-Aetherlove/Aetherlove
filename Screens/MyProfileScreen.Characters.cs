@@ -39,6 +39,24 @@ public partial class MyProfileScreen
         public bool StagedConfirmed;
         public bool StagedNsfw;
         public bool PendingRemoveImage;
+
+        /// <summary>Supporter extra-image slots (index = SortOrder - 1).</summary>
+        public readonly RpExtraSlot[] Extras =
+            [.. Enumerable.Range(0, SupporterLimits.ExtraCharacterImages).Select(_ => new RpExtraSlot())];
+    }
+
+    private sealed class RpExtraSlot
+    {
+        public ISharedImmediateTexture? ServerTex;
+        public bool HasServer;
+        public bool ServerIsNsfw;
+
+        public string StagedPath = "";
+        public ISharedImmediateTexture? StagedHandle;
+        public Vector4 StagedCrop;
+        public bool StagedConfirmed;
+        public bool StagedNsfw;
+        public bool PendingRemove;
     }
 
     private readonly List<RpCharRow> _rpRows = new();
@@ -132,6 +150,18 @@ public partial class MyProfileScreen
             {
                 row.ServerImageTex = AvatarDiskCache.Store(RpCharCacheDir, $"rpchar_{c.Id:N}", c.ImageBytes);
             }
+            foreach (var extra in c.ExtraImages ?? [])
+            {
+                var idx = extra.SortOrder - 1;
+                if (idx < 0 || idx >= row.Extras.Length || extra.Webp is not { Length: > 0 })
+                {
+                    continue;
+                }
+                var slot = row.Extras[idx];
+                slot.HasServer = true;
+                slot.ServerIsNsfw = extra.IsNsfw;
+                slot.ServerTex = AvatarDiskCache.Store(RpCharCacheDir, $"rpchar_{c.Id:N}_x{extra.SortOrder}", extra.Webp);
+            }
             _rpRows.Add(row);
         }
         if (_rpEditIdx >= _rpRows.Count)
@@ -145,7 +175,7 @@ public partial class MyProfileScreen
         var editing = _rpEditIdx >= 0 && _rpEditIdx < _rpRows.Count;
         if (editing)
         {
-            if (DrawBackButton(Loc.T("profile.rp_back")))
+            if (DrawFloatingBackPill(ImGui.GetCursorScreenPos(), Loc.T("profile.rp_back"), FontAwesomeIcon.List))
             {
                 _rpEditIdx = -1;
                 editing = false;
@@ -293,8 +323,7 @@ public partial class MyProfileScreen
         ImGui.Spacing();
     }
 
-    /// <summary>One overview line: reorder arrows plus a clickable card (name, image marker, chevron) that
-    /// opens the character's edit view.</summary>
+    /// <summary>One overview line: reorder arrows plus a clickable card that opens the edit view.</summary>
     private void DrawRpListRow(int index, float winW, ThemeDefinition t)
     {
         var row = _rpRows[index];
@@ -400,7 +429,7 @@ public partial class MyProfileScreen
             }
         }
         var bioBefore = row.Bio;
-        ImGui.InputTextMultiline($"##rpBio{id}", ref row.Bio, EmojiText.MaxBioRawLength,
+        InputTextMultilineWithPaste($"##rpBio{id}", ref row.Bio, EmojiText.MaxBioRawLength,
             new Vector2(innerW, Px(68f)));
         // Lock the field at the user-visible limit: undo an edit that pushed it over.
         if (EmojiText.EffectiveLength(row.Bio) > EmojiText.MaxBioLength)
@@ -422,6 +451,7 @@ public partial class MyProfileScreen
 
         ImGui.Spacing();
         DrawRpRowImage(row, id, innerW, t);
+        DrawRpRowExtraImages(row, id, t);
 
         ImGui.Spacing();
         ImGui.Separator();
@@ -532,6 +562,160 @@ public partial class MyProfileScreen
         }
         PopThemeButton();
         DrawRpSelfieButton(row, id, t);
+    }
+
+    /// <summary>Supporter extra-image slots under the primary image. Non-supporters only ever see slots that
+    /// still hold a server image after a lapse, and those are remove-only.</summary>
+    private void DrawRpRowExtraImages(RpCharRow row, string id, ThemeDefinition t)
+    {
+        var isSupporter = _bootstrap.LastConnection is { IsSupporter: true };
+        for (var s = 0; s < row.Extras.Length; s++)
+        {
+            var slot = row.Extras[s];
+            if (!isSupporter && !slot.HasServer && !slot.StagedConfirmed)
+            {
+                continue;
+            }
+
+            ImGui.Spacing();
+            var slotId = $"{id}_x{s}";
+            DrawFieldLabel(Loc.T("profile.rp_extra_image", s + 1), t);
+
+            if (slot.StagedConfirmed)
+            {
+                var pv = slot.StagedHandle?.GetWrapOrDefault();
+                if (pv != null)
+                {
+                    var cr = slot.StagedCrop;
+                    var uv0 = new Vector2(cr.X / pv.Width, cr.Y / pv.Height);
+                    var uv1 = new Vector2((cr.X + cr.Z) / pv.Width, (cr.Y + cr.W) / pv.Height);
+                    ImGui.Image(pv.Handle, Px(74f, 118f), uv0, uv1);
+                    ImGui.SameLine(0f, Px(10f));
+                }
+                ImGui.BeginGroup();
+                ImGui.TextColored(new Vector4(0.90f, 0.75f, 0.25f, 1f), Loc.T("profile.rp_image_ready"));
+                if (_rpProfileIsNsfw)
+                {
+                    ImGui.Checkbox($"{Loc.T("profile.rp_image_nsfw")}##rpxNsfw{slotId}", ref slot.StagedNsfw);
+                }
+                PushDangerButton();
+                if (ImGui.Button($"{Loc.T("profile.remove")}##rpxRmStaged{slotId}", Px(90f, 24f)))
+                {
+                    slot.StagedPath = "";
+                    slot.StagedHandle = null;
+                    slot.StagedConfirmed = false;
+                    slot.StagedNsfw = false;
+                }
+                ImGui.PopStyleColor(3);
+                ImGui.EndGroup();
+                continue;
+            }
+
+            if (slot.PendingRemove)
+            {
+                ImGui.TextColored(new Vector4(0.90f, 0.60f, 0.20f, 1f), Loc.T("profile.photo_will_be_removed"));
+                ImGui.SameLine(0f, Px(12f));
+                if (ImGui.Button($"{Loc.T("profile.undo")}##rpxUndo{slotId}", Px(60f, 24f)))
+                {
+                    slot.PendingRemove = false;
+                }
+                continue;
+            }
+
+            if (slot.HasServer)
+            {
+                var pv = slot.ServerTex?.GetWrapOrDefault();
+                if (pv != null)
+                {
+                    ImGui.Image(pv.Handle, Px(74f, 118f));
+                    ImGui.SameLine(0f, Px(10f));
+                }
+                ImGui.BeginGroup();
+                ImGui.TextColored(UiColors.Success, Loc.T("profile.photo_set"));
+                ImGui.SameLine(0f, Px(10f));
+                ImGui.TextColored(slot.ServerIsNsfw ? UiColors.ReviewOrange : UiColors.SuccessSoft,
+                    slot.ServerIsNsfw ? Loc.T("profile.currently_nsfw") : Loc.T("profile.currently_sfw"));
+                if (isSupporter)
+                {
+                    PushThemeButton(t);
+                    if (ImGui.Button($"{Loc.T("profile.rp_replace_image")}##rpxRepl{slotId}", Px(120f, 24f)))
+                    {
+                        OpenRpExtraPicker(slot);
+                    }
+                    PopThemeButton();
+                    ImGui.SameLine(0f, Px(8f));
+                }
+                PushDangerButton();
+                if (ImGui.Button($"{Loc.T("profile.rp_remove_image")}##rpxRm{slotId}", Px(120f, 24f)))
+                {
+                    slot.PendingRemove = true;
+                }
+                ImGui.PopStyleColor(3);
+                if (!isSupporter)
+                {
+                    ImGui.PushTextWrapPos(0f);
+                    ImGui.TextColored(UiColors.Hint, Loc.T("profile.slot_locked"));
+                    ImGui.PopTextWrapPos();
+                }
+                ImGui.EndGroup();
+                continue;
+            }
+
+            PushThemeButton(t);
+            if (ImGui.Button($"{Loc.T("profile.rp_upload_image")}##rpxUp{slotId}", Px(140f, 26f)))
+            {
+                OpenRpExtraPicker(slot);
+            }
+            PopThemeButton();
+        }
+    }
+
+    private void OpenRpExtraPicker(RpExtraSlot slot)
+    {
+        _imgFileDialog.OpenFileDialog(
+            title: Loc.T("profile.select_image"),
+            filters: Loc.T("profile.image_files_filter") + "{.png,.jpg,.jpeg,.bmp,.webp}",
+            callback: (ok, path) =>
+            {
+                if (!ok)
+                {
+                    return;
+                }
+                if (_imgPendingPick.RejectUnavailableCloudFile(path))
+                {
+                    return;
+                }
+                HandleRpExtraPicked(slot, path);
+            });
+    }
+
+    private void HandleRpExtraPicked(RpExtraSlot slot, string path)
+    {
+        var handle = LoadPickedPreview(path);
+        slot.StagedPath = path;
+        slot.StagedHandle = handle;
+        slot.StagedConfirmed = false;
+
+        void Unload()
+        {
+            slot.StagedPath = "";
+            slot.StagedHandle = null;
+            slot.StagedConfirmed = false;
+        }
+
+        _imgPendingPick.Begin(handle, PhotoSpec.PortraitWidth, PhotoSpec.PortraitHeight,
+            onValid: () => _imgCropPopup.Open(
+                Loc.T("profile.rp_crop_image"),
+                handle,
+                1.6f,
+                cropRect =>
+                {
+                    slot.StagedCrop = cropRect;
+                    slot.StagedConfirmed = true;
+                    slot.PendingRemove = false;
+                },
+                onCancel: Unload),
+            onReject: Unload);
     }
 
     private void OpenRpImagePicker(RpCharRow row)
@@ -647,6 +831,20 @@ public partial class MyProfileScreen
                     else if (row.PendingRemoveImage)
                     {
                         await _hubClient.RemoveCharacterImageAsync(charId, ct).ConfigureAwait(false);
+                    }
+
+                    for (short s = 1; s <= row.Extras.Length; s++)
+                    {
+                        var slot = row.Extras[s - 1];
+                        if (slot.StagedConfirmed && slot.StagedPath.Length > 0)
+                        {
+                            var dto = ReadPhotoUpload(slot.StagedPath, slot.StagedCrop, slot.StagedNsfw, PhotoKind.Portrait);
+                            await _hubClient.SetCharacterExtraImageAsync(charId, s, dto, ct).ConfigureAwait(false);
+                        }
+                        else if (slot.PendingRemove)
+                        {
+                            await _hubClient.RemoveCharacterExtraImageAsync(charId, s, ct).ConfigureAwait(false);
+                        }
                     }
                 }
 

@@ -11,9 +11,8 @@ using Dalamud.Interface.Utility.Raii;
 
 namespace AetherLove.Screens;
 
-/// <summary>Full-page encryption-verification view for one conversation: a deterministic weave and safety
-/// code derived from both public keys, plus key excerpts and an explanation. Opened from the chat menu;
-/// the back button returns to the chat.</summary>
+/// <summary>Encryption verification for one conversation: a deterministic weave and safety code derived
+/// from both public keys.</summary>
 public class EncryptionVerificationScreen
 {
     private readonly ScreenRouter _router;
@@ -23,7 +22,6 @@ public class EncryptionVerificationScreen
     private byte[]? _peerPublicKey;
 
     private const float HeaderH = 44f;
-    private const float BtnW = 36f;
 
     public EncryptionVerificationScreen(ScreenRouter router, KeyStorageService keys)
     {
@@ -50,32 +48,9 @@ public class EncryptionVerificationScreen
 
     private void DrawHeader()
     {
-        var t = ThemeService.Current;
         var dl = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var winW = ImGui.GetContentRegionAvail().X;
-
-        var btnY = origin.Y + (Px(HeaderH) - Px(BtnW)) * 0.5f;
-        ImGui.SetCursorScreenPos(new Vector2(origin.X, btnY));
-        ImGui.InvisibleButton("##verifyBack", Px(BtnW, BtnW));
-        var backHovered = ImGui.IsItemHovered();
-        if (backHovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            ImGui.SetTooltip(Loc.T("verify.back"));
-        }
-        if (ImGui.IsItemClicked())
-        {
-            _router.Navigate(Screen.Chat);
-        }
-
-        ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
-        var backIcon = FontAwesomeIcon.ArrowLeft.ToIconString();
-        var backSz = ImGui.CalcTextSize(backIcon);
-        dl.AddText(ImGui.GetFont(), ImGui.GetFontSize(),
-            new Vector2(origin.X + (Px(BtnW) - backSz.X) * 0.5f, btnY + (Px(BtnW) - backSz.Y) * 0.5f),
-            backHovered ? t.AccentLightU32 : t.AccentU32, backIcon);
-        ImGui.PopFont();
 
         using (UiFonts.H3?.Push())
         {
@@ -84,6 +59,11 @@ public class EncryptionVerificationScreen
             dl.AddText(ImGui.GetFont(), ImGui.GetFontSize(),
                 new Vector2(origin.X + (winW - titleSz.X) * 0.5f, origin.Y + (Px(HeaderH) - titleSz.Y) * 0.5f),
                 0xFFFFFFFF, title);
+        }
+
+        if (DrawFloatingBackPill(new Vector2(origin.X, origin.Y + Px(6f)), Loc.T("verify.back"), FontAwesomeIcon.Comment))
+        {
+            _router.Navigate(Screen.Chat);
         }
 
         ImGui.SetCursorScreenPos(new Vector2(origin.X, origin.Y + Px(HeaderH)));

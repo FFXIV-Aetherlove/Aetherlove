@@ -6,12 +6,8 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace AetherLove.Services;
 
-/// <summary>
-/// Renders exceptions from hub calls as localized user-facing text. Server errors carry an
-/// <c>AL_ERR|code|args</c> payload (<see cref="HubErrors"/>) inside the SignalR-wrapped message;
-/// the code maps to the <c>huberror.&lt;code&gt;</c> string key. Unknown codes and legacy payloads
-/// fall back to a generic localized line, and non-hub exceptions pass their message through.
-/// </summary>
+/// <summary>Renders hub-call exceptions as localized text. Server errors carry an <c>AL_ERR|code|args</c>
+/// payload (<see cref="HubErrors"/>) whose code maps to the <c>huberror.&lt;code&gt;</c> string key.</summary>
 public static class HubErrorText
 {
     public static string Localize(Exception ex)
@@ -24,8 +20,7 @@ public static class HubErrorText
         {
             return LocalizeMessage(hub.Message);
         }
-        // Client-side failures (e.g. PhotoProcessingException from the pre-upload image pipeline) carry the
-        // same AL_ERR payload, so localize them the same way as server errors.
+        // Client-side failures (e.g. the pre-upload photo pipeline) carry the same AL_ERR payload.
         if (ex.Message is { } m && m.Contains(HubErrors.Sentinel, StringComparison.Ordinal))
         {
             return LocalizeMessage(m);

@@ -7,9 +7,8 @@ using Dalamud.Interface;
 
 namespace AetherLove.Emoji;
 
-/// <summary>A brief gold star-pop drawn on the foreground layer when an emoji is favorited, giving the action
-/// a little confirmation flourish. Skipped under reduced motion. Drawn once per frame by MainPluginWindow so
-/// it finishes even after the menu or picker closes.</summary>
+/// <summary>Gold star-pop drawn when an emoji is favorited. Drawn once per frame by MainPluginWindow so it
+/// finishes even after the menu or picker closes.</summary>
 internal static class EmojiFavoriteFx
 {
     private const double Duration = 0.45;
@@ -46,12 +45,7 @@ internal static class EmojiFavoriteFx
         var rise = eased * Px(14f);
 
         var dl = ImGui.GetForegroundDrawList();
-        ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
-        var star = FontAwesomeIcon.Star.ToIconString();
-        var px = Px(18f) * scale;
-        var sz = ImGui.CalcTextSize(star) * (px / ImGui.GetFontSize());
         var col = (UiColors.FavoriteStar & 0x00FFFFFFu) | ((uint)(alpha * 255f) << 24);
-        dl.AddText(ImGui.GetFont(), px, new Vector2(_pos.X - sz.X * 0.5f, _pos.Y - sz.Y * 0.5f - rise), col, star);
-        ImGui.PopFont();
+        IconDraw.AddCentered(dl, FontAwesomeIcon.Star, Px(18f) * scale, new Vector2(_pos.X, _pos.Y - rise), col);
     }
 }

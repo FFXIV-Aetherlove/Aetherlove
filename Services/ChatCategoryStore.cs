@@ -7,10 +7,7 @@ using AetherLove.UI;
 
 namespace AetherLove.Services;
 
-/// <summary>Client-side, per-install chat categories: the ordered category list plus a peer→category map.
-/// Backed by the plugin config; thread-safe so push handlers can touch it off the UI thread. Saves run inside
-/// the lock because serialization walks the same collections the mutators edit in place. On first run it
-/// migrates the legacy archived-matches set into an "Archive" category.</summary>
+/// <summary>Client-side chat categories backed by the plugin config. Saves run inside the lock: serialization walks the same collections the mutators edit.</summary>
 public sealed class ChatCategoryStore
 {
     private readonly Configuration _config;
@@ -68,7 +65,7 @@ public sealed class ChatCategoryStore
         }
     }
 
-    /// <summary>Snapshot of the peer→category map. Callers must treat mappings to unknown categories as top-level.</summary>
+    /// <summary>Snapshot of the peer→category map; mappings to unknown categories mean top-level.</summary>
     public Dictionary<Guid, Guid> GetMembership()
     {
         lock (_lock)
@@ -91,8 +88,7 @@ public sealed class ChatCategoryStore
         }
     }
 
-    /// <summary>Moves a chat into a category, or back to the top level when <paramref name="categoryId"/> is
-    /// null or no longer exists (e.g. deleted while a move animation was in flight).</summary>
+    /// <summary>Moves a chat into a category, or back to the top level when <paramref name="categoryId"/> is null or no longer exists.</summary>
     public void SetCategory(Guid peerId, Guid? categoryId)
     {
         lock (_lock)
@@ -159,7 +155,6 @@ public sealed class ChatCategoryStore
         }
     }
 
-    /// <summary>Moves a category to a new position in the display order.</summary>
     public void Reorder(Guid categoryId, int newIndex)
     {
         lock (_lock)
@@ -180,7 +175,6 @@ public sealed class ChatCategoryStore
         }
     }
 
-    /// <summary>Drops any mapping for a peer that is no longer matched.</summary>
     public void RemovePeer(Guid peerId)
     {
         lock (_lock)
@@ -192,8 +186,7 @@ public sealed class ChatCategoryStore
         }
     }
 
-    /// <summary>Drops mappings whose peer is not in <paramref name="matchedPeers"/>. Call only with a complete,
-    /// freshly-synced match list; an empty list is ignored so a cold cache can't wipe valid mappings.</summary>
+    /// <summary>Call only with a complete, freshly-synced match list; an empty list is ignored so a cold cache can't wipe valid mappings.</summary>
     public void PruneTo(IReadOnlyCollection<Guid> matchedPeers)
     {
         if (matchedPeers.Count == 0)

@@ -37,10 +37,29 @@ internal static class HubErrorsRu
         ["huberror.reswipe_nothing_to_undo"] = "Нечего отменять.",
         ["huberror.reswipe_already_matched"] = "Нельзя отменить свайп по профилю, с которым у вас уже есть пара.",
         ["huberror.reswipe_quota_exhausted"] = "Вы уже использовали отмену на сегодня.",
+        ["huberror.superlike_quota_exhausted"] = "Суперлайки на сегодня закончились.",
 
         // added after update 1.4.3
         ["huberror.character_limit_reached"] = "У вас может быть не более {0} RP-персонажей.",
         ["huberror.character_name_invalid"] = "Имя персонажа должно быть от 3 до 50 символов.",
         ["huberror.character_not_found"] = "Этот персонаж больше не существует. Обновите и попробуйте снова.",
+
+        // added after update 1.5.0
+        ["huberror.patreon_disabled"] = "Привязка Patreon сейчас недоступна.",
+        ["huberror.patreon_already_linked"] = "К вашему профилю уже привязан аккаунт Patreon.",
+        ["huberror.patreon_not_linked"] = "К вашему профилю не привязан аккаунт Patreon.",
+        ["huberror.patreon_account_taken"] = "Этот аккаунт Patreon уже привязан к другому аккаунту AetherLove.",
+        ["huberror.patreon_link_failed"] = "Не удалось завершить привязку Patreon. Попробуйте ещё раз.",
+        ["huberror.places_disabled"] = "Раздел «Места» сейчас недоступен.",
+        ["huberror.venue_not_found"] = "Это заведение больше не существует.",
+        ["huberror.venue_limit_reached"] = "Вы достигли лимита в {0} заведений.",
+        ["huberror.venue_name_invalid"] = "Название заведения должно содержать от 3 до 60 символов.",
+        ["huberror.venue_description_too_long"] = "Описание превышает лимит в {0} символов.",
+        ["huberror.venue_times_invalid"] = "Одно из времён работы недопустимо.",
+        ["huberror.venue_times_too_many"] = "У заведения может быть не более {0} времён работы.",
+        ["huberror.venue_review_own"] = "Нельзя оставить отзыв о собственном заведении.",
+        ["huberror.venue_review_too_long"] = "Ваш отзыв превышает лимит в {0} символов.",
+        ["huberror.venue_review_rating_invalid"] = "Выберите оценку от 1 до 5 звёзд.",
+        ["huberror.venue_rsvp_invalid"] = "На это открытие больше нельзя записаться.",
     };
 }

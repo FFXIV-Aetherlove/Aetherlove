@@ -7,9 +7,7 @@ using AetherLove.Shared.Profile.Enums;
 
 namespace AetherLove.UI;
 
-/// <summary>The canonical profile-field choices shared by the onboarding wizard and the "My profile" editor:
-/// the fixed ordering of each enum's options (the <c>*Values</c> arrays) paired with their localized display
-/// labels. Both screens render the same combos/checkboxes, so the lists live here rather than on a screen.</summary>
+/// <summary>Canonical profile-field option arrays and their localized labels.</summary>
 internal static class ProfileFields
 {
     internal static readonly Race[] RaceValues =
@@ -222,8 +220,6 @@ internal static class ProfileFields
         Loc.T("onboarding.lf_erp"),
     ];
 
-    /// <summary>Localized label for a single enum value, looked up by its position in the option array;
-    /// returns <paramref name="fallback"/> when the value isn't in the list.</summary>
     private static string LabelFor<T>(T[] values, string[] labels, T value, string fallback)
         where T : struct, Enum
     {
@@ -274,10 +270,8 @@ internal static class ProfileFields
         return _jobLabelsCache;
     }
 
-    // FFXIV only ships its game data (job names, etc.) in four languages — Japanese, English, German,
-    // French — so that's all we can pull localized names in. German and French plugin users get matching
-    // job names; everyone else, Russian/Spanish/Portuguese included, falls back to English, which is the
-    // best the game data offers. This is unrelated to the plugin's own six UI languages.
+    // FFXIV game data ships only in Japanese/English/German/French; other plugin languages fall back to
+    // English job names.
     private static Dalamud.Game.ClientLanguage PluginLanguageToClientLanguage() =>
         Plugin.Configuration.PluginLanguage switch
         {

@@ -50,7 +50,7 @@ internal static class ProfileRu
         ["profile.closing_in"] = "Закрытие через {0} секунд",
         ["profile.close"] = "Закрыть",
 
-        // ProfileScreen — copy profile text (viewing others only)
+        // ProfileScreen - copy profile text (viewing others only)
         ["profile.copy_text"] = "Скопировать текст профиля",
         ["profile.copy_warning_title"] = "Предупреждение",
         ["profile.copy_warning_body"] = "Вы скопировали чужой текст. Будьте осторожны, переходя по любым содержащимся в нём ссылкам, — вы делаете это на свой страх и риск.",
@@ -177,5 +177,36 @@ internal static class ProfileRu
         ["profile.rp_crop_image"] = "Обрезать изображение персонажа",
         ["profile.rp_back"] = "Назад",
         ["profile.rp_details"] = "Детали персонажа:",
+
+        // added after update 1.5.1
+        ["profile.slot_locked"] = "Для этого слота фото нужна активная подписка поддержки. Вы можете удалить фото или снова оформить подписку, чтобы использовать слот.",
+        ["profile.rp_extra_image"] = "Дополнительное изображение {0} (поддержка)",
+        ["profile.section_supporter"] = "Поддержка",
+        ["profile.menu_sup_vanity"] = "Оформление профиля",
+        ["profile.menu_sup_stats"] = "Расширенная статистика",
+        ["profile.sup_intro"] = "Спасибо за поддержку AetherLove! Выберите стиль для своего имени и решите, показывать ли значок поддержки. Их видят все.",
+        ["profile.sup_name_style"] = "Стиль имени",
+        ["profile.sup_show_badge"] = "Показывать значок поддержки",
+        ["profile.sup_badge_hint"] = "Показывает тег поддержки в вашем профиле. Звезда рядом с именем отображается всегда.",
+        ["profile.sup_stats_intro"] = "Эксклюзивная статистика для поддерживающих: как ваш профиль показывает себя по всему миру.",
+        ["profile.sup_stat_likes_received"] = "Полученные лайки",
+        ["profile.sup_stat_superlikes"] = "Полученные суперлайки",
+        ["profile.sup_stat_views"] = "Просмотры профиля",
+        ["profile.sup_stat_impressions"] = "Показы в колодах",
+        ["profile.sup_stat_likes_given"] = "Поставленные лайки",
+        ["profile.sup_stat_passes_given"] = "Пропуски",
+        ["profile.sup_stat_matches"] = "Пары",
+        ["profile.sup_stat_like_rate"] = "Ваша доля лайков",
+        ["profile.sup_stat_match_rate"] = "Ваша доля пар",
+        ["profile.style_none"] = "Обычный",
+        ["profile.style_crimson"] = "Багровый",
+        ["profile.style_gold"] = "Золотой",
+        ["profile.style_emerald"] = "Изумрудный",
+        ["profile.style_sapphire"] = "Сапфировый",
+        ["profile.style_violet"] = "Фиолетовый",
+        ["profile.style_rose"] = "Розовый",
+        ["profile.style_rainbow"] = "Радуга (анимация)",
+        ["profile.style_shimmer"] = "Золотое мерцание (анимация)",
+        ["profile.style_pulse"] = "Розовый пульс (анимация)",
     };
 }

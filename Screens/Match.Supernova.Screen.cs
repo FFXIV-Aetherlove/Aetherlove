@@ -11,7 +11,7 @@ using static AetherLove.Screens.MatchFx;
 
 namespace AetherLove.Screens;
 
-/// <summary>Match effect — Supernova Heartbeat: a pulsing heart fires expanding
+/// <summary>Match effect - Supernova Heartbeat: a pulsing heart fires expanding
 /// shockwaves over a slowly rotating sunburst while two avatars orbit it.</summary>
 public sealed class MatchSupernovaScreen : IMatchEffect
 {

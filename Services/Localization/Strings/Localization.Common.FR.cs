@@ -89,12 +89,12 @@ internal static class CommonFr
         ["common.nav_swipe"] = "Swipe",
         ["common.nav_matches"] = "Matches",
         ["common.nav_settings"] = "Réglages",
-        ["common.nav_minimize"] = "Réduire",
 
         ["common.emoji_none_found"] = "Aucun emoji trouvé.",
 
         // Close-plugin confirmation modal
         ["common.close_plugin_tooltip"] = "Fermer AetherLove",
+        ["common.minimize_tooltip"] = "Réduire AetherLove",
         ["common.close_plugin_title"] = "Fermer AetherLove ?",
         ["common.close_plugin_body"] = "Cela masque simplement la fenêtre. Vous resterez connecté et continuerez à recevoir de nouvelles correspondances et des messages tant que le plugin est activé.\n\nRouvrez la fenêtre à tout moment en tapant {0} dans le chat.",
         ["common.close_plugin_tip"] = "Astuce : utilisez plutôt le bouton Réduire en bas pour garder la petite bulle flottante visible avec son badge de notification.",
@@ -144,6 +144,8 @@ internal static class CommonFr
         ["common.selfie_take"] = "Prendre la photo",
         ["common.selfie_capturing"] = "Capture...",
         ["common.offline_maintenance"] = "Le serveur est en maintenance.",
-        ["common.back"] = "Retour",
+
+        // added after update 1.5.0
+        ["common.nav_places"] = "Lieux",
     };
 }

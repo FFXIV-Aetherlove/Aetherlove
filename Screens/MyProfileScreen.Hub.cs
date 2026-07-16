@@ -20,11 +20,12 @@ namespace AetherLove.Screens;
 
 public partial class MyProfileScreen
 {
-    /// <summary>Which slice of the "My" area is showing: the hub (stats + menu), the profile detail (the
-    /// view/edit/images tabs), the RP-characters editor, or one of the moderation lists.</summary>
-    private enum Section { Hub, Detail, RpCharacters, Warnings, ModMessages }
+    /// <summary>Which slice of the "My" area is showing.</summary>
+    private enum Section { Hub, Detail, RpCharacters, Warnings, ModMessages, SupporterVanity, SupporterStats, Hangout }
 
     private Section _section = Section.Hub;
+
+    private readonly EntranceAnimation _entrance = new();
 
     private readonly SessionBootstrapper _bootstrap;
     private readonly ScreenRouter _router;
@@ -74,6 +75,7 @@ public partial class MyProfileScreen
     {
         var t = ThemeService.Current;
         var winW = ImGui.GetContentRegionAvail().X;
+        _entrance.BeginFrame();
 
         ImGui.Spacing();
         DrawStatsRow(winW);
@@ -81,13 +83,42 @@ public partial class MyProfileScreen
         ImGui.Spacing();
 
         DrawSectionHeader(Loc.T("profile.section_myprofile"), HubPadX);
-        DrawMenuCard("myprof", winW, HubPadX, new List<MenuRow>
+        var profileRows = new List<MenuRow>
         {
             new(FontAwesomeIcon.User, t.Accent, Loc.T("profile.menu_view"), 0, false, () => OpenDetail(Tab.View)),
             new(FontAwesomeIcon.Edit, t.Accent, Loc.T("profile.menu_edit"), 0, false, () => OpenDetail(Tab.Edit)),
             new(FontAwesomeIcon.Images, t.Accent, Loc.T("profile.menu_images"), 0, false, () => OpenDetail(Tab.Images)),
             new(FontAwesomeIcon.TheaterMasks, t.Accent, Loc.T("profile.menu_rp"), 0, false, OpenRpCharacters),
-        });
+        };
+        if (_bootstrap.LastConnection?.HangoutsEnabled != false)
+        {
+            profileRows.Add(new(FontAwesomeIcon.MapMarkerAlt, t.Accent, Loc.T("hangout.menu_entry"),
+                0, false, OpenHangout,
+                _hangoutState.MyHangout is null ? null : FontAwesomeIcon.Bullhorn, UiColors.Patreon));
+        }
+        if (_bootstrap.LastConnection is { IsVenueOwner: true, PlacesEnabled: true })
+        {
+            profileRows.Add(new(FontAwesomeIcon.Store, t.Accent, Loc.T("places.menu_my_venues"), 0, false,
+                () => _router.Navigate(Screen.MyVenues)));
+        }
+        DrawMenuCard("myprof", winW, HubPadX, profileRows);
+
+        if (_bootstrap.LastConnection is { IsSupporter: true })
+        {
+            ImGui.Spacing();
+            ImGui.Spacing();
+            DrawSectionHeader(Loc.T("profile.section_supporter"), HubPadX, UiColors.Patreon);
+            var supOrigin = ImGui.GetCursorScreenPos();
+            var supporterRows = new List<MenuRow>
+            {
+                new(FontAwesomeIcon.Palette, UiColors.Patreon, Loc.T("profile.menu_sup_vanity"), 0, false, OpenSupporterVanity),
+                new(FontAwesomeIcon.ChartLine, UiColors.Patreon, Loc.T("profile.menu_sup_stats"), 0, false, OpenSupporterStats),
+            };
+            DrawMenuCard("supporter", winW, HubPadX, supporterRows);
+            DrawSupporterShine(
+                new Vector2(supOrigin.X + Px(HubPadX), supOrigin.Y),
+                new Vector2(supOrigin.X + winW - Px(HubPadX), supOrigin.Y + Px(MenuCardRowHeight) * supporterRows.Count));
+        }
 
         ImGui.Spacing();
         ImGui.Spacing();
@@ -109,14 +140,57 @@ public partial class MyProfileScreen
         if (messages.Length > 0)
         {
             rows.Add(new(FontAwesomeIcon.Envelope, UiColors.MessageAccent, Loc.T("settings.modmsg_title"),
-                messages.Count(m => !m.Seen), false, () => _section = Section.ModMessages));
+                messages.Count(m => !m.Seen), false, () =>
+                {
+                    _entrance.Arm();
+                    _section = Section.ModMessages;
+                }));
         }
         if (warnings.Length > 0)
         {
             rows.Add(new(FontAwesomeIcon.ExclamationTriangle, UiColors.WarningAccent, Loc.T("settings.warnings_title"),
-                warnings.Count(w => !w.Seen), false, () => _section = Section.Warnings));
+                warnings.Count(w => !w.Seen), false, () =>
+                {
+                    _entrance.Arm();
+                    _section = Section.Warnings;
+                }));
         }
         DrawMenuCard("service", winW, HubPadX, rows);
+        _entrance.EndFrame();
+    }
+
+    // One-shot shine over the Supporter card, armed each time the profile screen opens.
+    private double _supShineStart = double.MinValue;
+
+    private void ArmSupporterShine() => _supShineStart = ImGui.GetTime() + 0.35;
+
+    /// <summary>Gold glint sweeping the Supporter card shortly after the hub opens; skipped under reduce-motion.</summary>
+    private void DrawSupporterShine(Vector2 min, Vector2 max)
+    {
+        if (AccessibilityService.ReduceMotion)
+        {
+            return;
+        }
+        const double Sweep = 0.9;
+        var t = (ImGui.GetTime() - _supShineStart) / Sweep;
+        if (t is < 0 or > 1)
+        {
+            return;
+        }
+        var f = (float)t;
+        var fade = 1f - MathF.Abs(f * 2f - 1f);
+        var dl = ImGui.GetWindowDrawList();
+        dl.AddRectFilled(min, max, ImGui.GetColorU32(UiColors.Patreon with { W = 0.12f * fade }), Px(10f));
+
+        var bandW = (max.Y - min.Y) * 1.3f;
+        var centerX = min.X - bandW + f * (max.X - min.X + bandW * 2f);
+        var gold = new Vector4(1f, 0.85f, 0.40f, 1f);
+        var peak = ImGui.GetColorU32(gold with { W = 0.30f });
+        var edge = ImGui.GetColorU32(gold with { W = 0f });
+        dl.PushClipRect(min, max, true);
+        dl.AddRectFilledMultiColor(new Vector2(centerX - bandW, min.Y), new Vector2(centerX, max.Y), edge, peak, peak, edge);
+        dl.AddRectFilledMultiColor(new Vector2(centerX, min.Y), new Vector2(centerX + bandW, max.Y), peak, edge, edge, peak);
+        dl.PopClipRect();
     }
 
     private void DrawStatsRow(float winW)
@@ -153,8 +227,7 @@ public partial class MyProfileScreen
         ImGui.Dummy(new Vector2(winW, blockH));
     }
 
-    /// <summary>One fancy stat tile: a theme-accent-tinted card with a coloured FontAwesome icon (the heart
-    /// beats unless reduced motion is on), a large value, and a caption.</summary>
+    /// <summary>One stat tile: icon, large value, caption; the heart beats unless reduced motion is on.</summary>
     private static void DrawStatBlock(ImDrawListPtr dl, Vector2 tl, float w, float h, FontAwesomeIcon icon,
         Vector4 accent, string value, string label, bool beat)
     {
@@ -163,8 +236,6 @@ public partial class MyProfileScreen
         dl.AddRect(tl, br, ImGui.GetColorU32(accent with { W = 0.55f }), Px(10f), ImDrawFlags.None, Px(1.5f));
 
         var cx = tl.X + w * 0.5f;
-        var iconFont = Plugin.PluginInterface.UiBuilder.FontIcon;
-
         var scale = 1f;
         if (beat && !AccessibilityService.ReduceMotion)
         {
@@ -173,13 +244,8 @@ public partial class MyProfileScreen
             scale = 1f + 0.24f * thump;
         }
         var iconPx = Px(21f) * scale;
-
-        ImGui.PushFont(iconFont);
-        var iconGlyph = icon.ToIconString();
-        var iconDrawSz = ImGui.CalcTextSize(iconGlyph) * (iconPx / ImGui.GetFontSize());
         var iconCenter = new Vector2(cx, tl.Y + Px(24f));
-        dl.AddText(ImGui.GetFont(), iconPx, iconCenter - iconDrawSz * 0.5f, ImGui.GetColorU32(accent), iconGlyph);
-        ImGui.PopFont();
+        IconDraw.AddCentered(dl, icon, iconPx, iconCenter, ImGui.GetColorU32(accent));
 
         var bigSize = ImGui.GetFontSize() * 1.5f;
         var valueSz = ImGui.CalcTextSize(value) * 1.5f;
@@ -191,8 +257,7 @@ public partial class MyProfileScreen
 
     private void DrawDetail()
     {
-        // The fullscreen character-image overlay covers the whole content; hiding the back button keeps its
-        // hit-target from lurking under the overlay's own back pill.
+        // Hiding the back button keeps its hit-target from lurking under the fullscreen overlay's own back pill.
         if (!(_activeTab == Tab.View && _profileScreen.IsCharacterFullscreenOpen))
         {
             DrawHubBackButton();
@@ -213,8 +278,9 @@ public partial class MyProfileScreen
 
     private void DrawHubBackButton()
     {
-        if (DrawBackButton(Loc.T("profile.back_to_my")))
+        if (DrawFloatingBackPill(ImGui.GetCursorScreenPos(), Loc.T("profile.back_to_my"), FontAwesomeIcon.User))
         {
+            _entrance.Arm();
             _section = Section.Hub;
         }
         ImGui.Spacing();
@@ -238,6 +304,7 @@ public partial class MyProfileScreen
             return;
         }
         var listW = ImGui.GetContentRegionAvail().X;
+        _entrance.BeginFrame();
         ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(0f, Px(10f)));
         ImGui.Dummy(new Vector2(1f, Px(2f)));
         foreach (var w in warnings.OrderByDescending(w => w.CreatedAtUtc))
@@ -245,6 +312,7 @@ public partial class MyProfileScreen
             DrawNoticeCard(listW, FontAwesomeIcon.ExclamationTriangle, UiColors.WarningAccent, w.CreatedAtUtc, w.Reason, w.Seen, HubPadX);
         }
         ImGui.PopStyleVar();
+        _entrance.EndFrame();
     }
 
     private void DrawModMessagesView()
@@ -265,6 +333,7 @@ public partial class MyProfileScreen
             return;
         }
         var listW = ImGui.GetContentRegionAvail().X;
+        _entrance.BeginFrame();
         ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(0f, Px(10f)));
         ImGui.Dummy(new Vector2(1f, Px(2f)));
         foreach (var m in messages.OrderByDescending(m => m.CreatedAtUtc))
@@ -272,6 +341,7 @@ public partial class MyProfileScreen
             DrawNoticeCard(listW, FontAwesomeIcon.Envelope, UiColors.MessageAccent, m.CreatedAtUtc, m.Body, m.Seen, HubPadX);
         }
         ImGui.PopStyleVar();
+        _entrance.EndFrame();
     }
 
     private static void DrawNoticeEmpty(string text)

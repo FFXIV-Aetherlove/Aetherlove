@@ -25,7 +25,6 @@ public sealed class AetherLoveBootstrap : IHostedService
 {
     public const string CommandName = "/aetherlove";
 
-    /// <summary>Short alias for <see cref="CommandName"/>.</summary>
     public const string AliasCommandName = "/love";
 
     private readonly IPluginLog _log;
@@ -45,6 +44,15 @@ public sealed class AetherLoveBootstrap : IHostedService
     private readonly AetherSignalService _signal;
     private readonly PulseService _pulse;
     private readonly ScreenCaptureService _capture;
+    private readonly Services.Hangouts.HangoutStateService _hangoutState;
+    private readonly Services.Hub.AetherLoveHubClient _hubClient;
+
+    /// <summary>When the character logged out to the title screen while owning a live hangout. The hub stays
+    /// connected there, so the server-side presence grace never fires; this client-side twin ends the hangout
+    /// after the same window unless they log back in first.</summary>
+    private DateTimeOffset? _hangoutLogoutAtUtc;
+
+    private static readonly TimeSpan HangoutLogoutGrace = TimeSpan.FromMinutes(15);
 
     /// <summary>Guards the once-per-session changelog check so character switches don't re-run it.</summary>
     private bool _changelogShown;
@@ -72,7 +80,9 @@ public sealed class AetherLoveBootstrap : IHostedService
         AetherSignalService signal,
         PulseService pulse,
         ScreenCaptureService capture,
-        Widgets.SelfieCaptureOverlay selfieOverlay)
+        Widgets.SelfieCaptureOverlay selfieOverlay,
+        Services.Hangouts.HangoutStateService hangoutState,
+        Services.Hub.AetherLoveHubClient hubClient)
     {
         _log = log;
         _pluginInterface = pluginInterface;
@@ -90,6 +100,8 @@ public sealed class AetherLoveBootstrap : IHostedService
         _pulse = pulse;
         _capture = capture;
         _selfieOverlay = selfieOverlay;
+        _hangoutState = hangoutState;
+        _hubClient = hubClient;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -128,6 +140,7 @@ public sealed class AetherLoveBootstrap : IHostedService
         _pluginInterface.UiBuilder.DisableGposeUiHide = _config.ShowDuringGpose;
         _pluginInterface.UiBuilder.DisableCutsceneUiHide = !_config.HideDuringCutscenes;
         _clientState.Login += OnLogin;
+        _clientState.Logout += OnLogout;
         Plugin.Framework.Update += OnCombatUpdate;
         _pulse.Start();
         _capture.Initialize();
@@ -138,8 +151,7 @@ public sealed class AetherLoveBootstrap : IHostedService
             ? null
             : $"{changelogVersion.Major}.{changelogVersion.Minor}.{changelogVersion.Build}";
 
-        // First launch: a fresh install has no identity yet and goes to onboarding; an existing user
-        // upgrading into this build already carries a device id / refresh token, so don't force it.
+        // Only a truly fresh install (no device id / refresh token) is forced into onboarding.
         if (!_config.HasCompletedFirstLaunch)
         {
             var freshInstall = string.IsNullOrEmpty(_config.DeviceId)
@@ -160,13 +172,11 @@ public sealed class AetherLoveBootstrap : IHostedService
             }
         }
 
-        // Changelog normally shows on login (so never at character-select); if (re)loaded while
-        // already in-game, show it now since the Login event won't fire.
+        // If (re)loaded while already in-game, the Login event won't fire; show the changelog now.
         if (_clientState.IsLoggedIn)
         {
             MaybeShowChangelog();
-            // A mid-session (re)load — a Dalamud update that restarts the plugin, or reinstalling over an
-            // existing config — never fires Login, so restore the last window state instead of staying closed.
+            // A mid-session (re)load never fires Login, so restore the last window state.
             if (!_mainWindow.IsOpen && !_miniWindow.IsOpen)
             {
                 RestoreLastWindowState();
@@ -189,6 +199,7 @@ public sealed class AetherLoveBootstrap : IHostedService
         Plugin.Framework.Update -= OnCombatUpdate;
         _pluginInterface.UiBuilder.OpenConfigUi -= OpenConfig;
         _clientState.Login -= OnLogin;
+        _clientState.Logout -= OnLogout;
         Plugin.Framework.Update -= OnFrameworkUpdate;
 
         _commandManager.RemoveHandler(CommandName);
@@ -208,9 +219,8 @@ public sealed class AetherLoveBootstrap : IHostedService
 
     private bool _fontScaleLeakLogged;
 
-    /// <summary>Draws the window system with ImGui's global font scale guarded: the phone windows pin it to 1
-    /// for their own draw, and this restore runs even if a window lifecycle callback throws, so the pin can
-    /// never bleed into other plugins' rendering.</summary>
+    /// <summary>Restores ImGui's global font scale even if a window callback throws, so the phone's pin
+    /// can never bleed into other plugins' rendering.</summary>
     private void DrawWindowSystemGuarded()
     {
         var io = ImGui.GetIO();
@@ -240,8 +250,7 @@ public sealed class AetherLoveBootstrap : IHostedService
         }
     }
 
-    /// <summary>Opens the full window only if neither window is already showing, so re-running the
-    /// command doesn't reload the current screen.</summary>
+    /// <summary>Opens the full window only if neither window is already showing.</summary>
     private void OpenIfClosed()
     {
         if (_mainWindow.IsOpen || _miniWindow.IsOpen)
@@ -252,8 +261,7 @@ public sealed class AetherLoveBootstrap : IHostedService
         _router.Navigate(Screen.Splash);
     }
 
-    /// <summary>Reopens the plugin as it was at the last unload, for a mid-session (re)load that never fires
-    /// the Login event. A deliberately-closed plugin stays closed.</summary>
+    /// <summary>Reopens the plugin as it was at the last unload; a deliberately-closed plugin stays closed.</summary>
     private void RestoreLastWindowState()
     {
         switch (_config.LastWindowState)
@@ -269,8 +277,6 @@ public sealed class AetherLoveBootstrap : IHostedService
         }
     }
 
-    /// <summary>Settings cog in the plugin installer: jumps to Settings for a signed-in user,
-    /// otherwise the normal open (splash).</summary>
     private void OpenConfig()
     {
         _miniWindow.IsOpen = false;
@@ -285,16 +291,26 @@ public sealed class AetherLoveBootstrap : IHostedService
         }
     }
 
+    private void OnLogout(int type, int code)
+    {
+        if (_hangoutState.MyHangout is not null)
+        {
+            _hangoutLogoutAtUtc = DateTimeOffset.UtcNow;
+        }
+    }
+
     private void OnLogin()
     {
-        // Show "What's New" now that the user is in-game, regardless of the auto-open preference below.
+        // Logging back in within the grace keeps the hangout alive.
+        _hangoutLogoutAtUtc = null;
+
+        // Before the auto-open early-outs: the changelog shows regardless of that preference.
         MaybeShowChangelog();
 
         if (!_config.AutoOpenMinimizedOnLogin)
         {
             return;
         }
-        // Nothing to show without an account; the install flow already handles new users.
         if (string.IsNullOrEmpty(_config.Auth.RefreshToken))
         {
             return;
@@ -338,9 +354,30 @@ public sealed class AetherLoveBootstrap : IHostedService
         _ = _signal.EnsureConnectedAsync();
     }
 
-    /// <summary>On entering combat, applies the configured combat behaviour.</summary>
     private void OnCombatUpdate(IFramework framework)
     {
+        if (_hangoutLogoutAtUtc is { } loggedOutAt && !_clientState.IsLoggedIn
+            && DateTimeOffset.UtcNow - loggedOutAt > HangoutLogoutGrace)
+        {
+            _hangoutLogoutAtUtc = null;
+            if (_hangoutState.MyHangout is not null)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _hubClient.EndMyHangoutAsync().ConfigureAwait(false);
+                        _hangoutState.SetMyHangout(null);
+                        _log.Information("[AetherLove] Hangout ended: character logged out past the grace window.");
+                    }
+                    catch (Exception ex)
+                    {
+                        _log.Warning(ex, "[AetherLove] EndMyHangoutAsync after logout grace failed.");
+                    }
+                });
+            }
+        }
+
         var inCombat = Plugin.Condition[ConditionFlag.InCombat];
 
         if (inCombat && !_wasInCombat)
@@ -400,8 +437,7 @@ public sealed class AetherLoveBootstrap : IHostedService
         OpenIfClosed();
     }
 
-    /// <summary>Recenters the currently-shown window (full phone or minimised bubble) on the game screen,
-    /// recovering one that was dragged off-screen. Opens the full window first if neither is showing.</summary>
+    /// <summary>Recenters the shown window, recovering one dragged off-screen.</summary>
     private void ResetScreen()
     {
         if (_miniWindow.IsOpen)

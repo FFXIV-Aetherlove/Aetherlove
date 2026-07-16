@@ -17,12 +17,8 @@ using Dalamud.Interface.Utility.Raii;
 
 namespace AetherLove.Screens;
 
-/// <summary>
-/// One-time startup recovery for an Active account that has no server key bundle (e.g. one that
-/// re-registered after deletion and reached Active without establishing encryption). Generates a fresh
-/// X25519 identity from a new passphrase and publishes it, so messaging works again. Reached only via the
-/// startup gate (<see cref="SessionBootstrapper.NeedsEncryptionRecovery"/>), never mid-session.
-/// </summary>
+/// <summary>One-time startup recovery for an Active account with no server key bundle; generates a fresh
+/// X25519 identity from a new passphrase and publishes it. Reached only via the startup gate.</summary>
 public sealed class EncryptionRecoveryScreen
 {
     private readonly ScreenRouter _router;

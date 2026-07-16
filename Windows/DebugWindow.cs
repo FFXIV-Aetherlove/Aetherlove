@@ -15,10 +15,8 @@ using Dalamud.Interface.Windowing;
 
 namespace AetherLove.Windows;
 
-/// <summary>Standalone diagnostic window with the default Dalamud chrome (resizable, closable), opened by
-/// "/aetherlove debug" / "/love debug". Surfaces connection, environment and timing facts plus a server
-/// sample image, with a copy-for-support button. English-only on purpose — it's a support tool, and the
-/// copyable text is meant to be read by whoever is helping.</summary>
+/// <summary>Standalone diagnostic window opened by "/aetherlove debug". English-only on purpose: it's a
+/// support tool whose copyable text is read by whoever is helping.</summary>
 public sealed class DebugWindow : Window
 {
     private readonly AetherSignalService _signal;

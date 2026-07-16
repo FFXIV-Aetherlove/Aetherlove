@@ -11,9 +11,7 @@ using static AetherLove.Screens.MatchFx;
 
 namespace AetherLove.Screens;
 
-/// <summary>Match effect — Lava Lamp: a warm 70s gradient column where soft
-/// translucent globules rise and sink on eased sine motion, while two big avatar-bearing blobs
-/// drift together and merge at centre.</summary>
+/// <summary>Match effect - Lava Lamp: rising globules; two avatar-bearing blobs drift together and merge.</summary>
 public sealed class MatchLavaLampScreen : IMatchEffect
 {
     private readonly ScreenRouter _router;

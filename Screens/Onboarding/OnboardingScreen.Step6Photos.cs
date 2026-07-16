@@ -200,7 +200,6 @@ public partial class OnboardingScreen
 
         if (active.Confirmed)
         {
-            // SFW/NSFW selector goes above the preview.
             if (mainSlot)
             {
                 ImGui.PushTextWrapPos(0f);
@@ -218,7 +217,6 @@ public partial class OnboardingScreen
                     var requested = (PhotoNsfwDecl)declIdx;
                     if (requested == PhotoNsfwDecl.Nsfw && IsLalafellSelected())
                     {
-                        // Lalafell: NSFW forbidden. Reset to SFW + modal.
                         active.Declaration = PhotoNsfwDecl.Sfw;
                         _lalafellNsfwModalPending = true;
                     }

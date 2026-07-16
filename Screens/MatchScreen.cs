@@ -8,9 +8,8 @@ using Dalamud.Interface.Textures;
 
 namespace AetherLove.Screens;
 
-/// <summary>The match host. On a real match it captures the matched pair's avatars and names into
-/// <see cref="MatchContent"/>, then picks a random effect from the registered pool and delegates drawing
-/// to it — so every match is "treated" to a random celebration.</summary>
+/// <summary>The match host: captures the matched pair into <see cref="MatchContent"/>, then delegates
+/// drawing to a random effect from the registered pool.</summary>
 public sealed class MatchScreen
 {
     private readonly IMatchEffect[] _effects;
@@ -50,7 +49,7 @@ public sealed class MatchScreen
             ? _pending.PeerDisplayName
             : Loc.T("deck.match_your_match");
 
-        // The match is consumed once shown — clearing here means dismissing via any effect button can't re-trigger it.
+        // The match is consumed once shown - clearing here means dismissing via any effect button can't re-trigger it.
         _pending.Clear();
 
         _current = _effects.Length > 0 ? _effects[_rng.Next(_effects.Length)] : null;

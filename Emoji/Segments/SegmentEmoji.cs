@@ -13,9 +13,8 @@ public class SegmentEmoji : ISegment
 {
     public readonly string EmojiName;
 
-    /// <summary>Armed by ChatScreen only for the chat render pass: a right-click on a hovered emoji is
-    /// captured into <see cref="RightClickedName"/> so ChatScreen can favorite it and suppress the bubble
-    /// menu. Off for every other render path (bio previews, reply quotes, pins) so shared instances stay inert.</summary>
+    /// <summary>Armed by ChatScreen only for the chat render pass; off for every other render path so
+    /// shared instances stay inert.</summary>
     internal static bool CaptureRightClick;
 
     /// <summary>Bare name of the emoji right-clicked this frame while armed; consumed/cleared by ChatScreen.</summary>
@@ -34,7 +33,7 @@ public class SegmentEmoji : ISegment
         var size = new Vector2(MathF.Floor(lineH * sizeMult));
 
         // No leading SameLine: the preceding text/space segment owns the gap before us. Adding one here
-        // would clobber it (two consecutive SameLine calls — last wins), eating a space typed before the emoji.
+        // would clobber it (two consecutive SameLine calls - last wins), eating a space typed before the emoji.
         if (ImGui.GetContentRegionAvail().X < size.X)
         {
             ImGui.NewLine();
@@ -52,8 +51,7 @@ public class SegmentEmoji : ISegment
             ImGui.Image(tex.Handle, size);
             if (ImGui.IsItemHovered())
             {
-                // The bubble's text colour is pushed while we draw; on light-accent themes it's near-black,
-                // which is illegible on the dark tooltip. Force light tooltip text.
+                // The pushed bubble text colour can be near-black, illegible on the dark tooltip.
                 ImGui.PushStyleColor(ImGuiCol.Text, 0xFFFFFFFFu);
                 ImGui.SetTooltip(CaptureRightClick
                     ? $":{EmojiName}:  ({Loc.T("common.emoji_favorite_hint")})"

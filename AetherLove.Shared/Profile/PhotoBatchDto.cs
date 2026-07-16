@@ -12,11 +12,15 @@ public sealed record PhotoUploadDto(
     int CropHeight,
     bool IsNsfw);
 
-/// <summary>Onboarding step 2: avatar + main portrait + up to 3 extras. Null slot = leave server copy alone.</summary>
+/// <summary>Avatar + main portrait + extras. Null slot = leave server copy alone. Extra4/Extra5 are the
+/// supporter-only slots (trailing defaults keep the wire shape compatible); the server rejects them for
+/// non-supporters.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record PhotoBatchDto(
     PhotoUploadDto? Avatar,
     PhotoUploadDto? Main,
     PhotoUploadDto? Extra1,
     PhotoUploadDto? Extra2,
-    PhotoUploadDto? Extra3);
+    PhotoUploadDto? Extra3,
+    PhotoUploadDto? Extra4 = null,
+    PhotoUploadDto? Extra5 = null);

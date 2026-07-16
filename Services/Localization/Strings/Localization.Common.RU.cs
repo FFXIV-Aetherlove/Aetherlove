@@ -91,10 +91,10 @@ internal static class CommonRu
         ["common.nav_swipe"] = "Анкеты",
         ["common.nav_matches"] = "Пары",
         ["common.nav_settings"] = "Настр.",
-        ["common.nav_minimize"] = "Свернуть",
 
         // Close-plugin confirmation modal
         ["common.close_plugin_tooltip"] = "Закрыть AetherLove",
+        ["common.minimize_tooltip"] = "Свернуть AetherLove",
         ["common.close_plugin_title"] = "Закрыть AetherLove?",
         ["common.close_plugin_body"] = "Данная кнопка только скроет окно. Вы останетесь в сети и будете получать уведомления о новых парах и сообщения, пока плагин включён.\n\nОткройте окно снова в любой момент, введя {0} в чат.",
         ["common.close_plugin_tip"] = "Совет: используйте кнопку «Свернуть» внизу, чтобы маленький виджет уведомлений оставался видимым.",
@@ -144,6 +144,8 @@ internal static class CommonRu
         ["common.selfie_take"] = "Сделать фото",
         ["common.selfie_capturing"] = "Идет съёмка...",
         ["common.offline_maintenance"] = "Сервер на техническом обслуживании.",
-        ["common.back"] = "Назад",
+
+        // added after update 1.5.0
+        ["common.nav_places"] = "Места",
     };
 }

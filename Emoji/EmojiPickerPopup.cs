@@ -66,8 +66,7 @@ public sealed class EmojiPickerPopup
             return;
         }
 
-        // Justify the grid: fit as many GridSize cells as the width allows, then spread the
-        // leftover evenly between columns so each row fills edge-to-edge (no trailing right gap).
+        // Fit as many cells as the width allows, then spread the leftover so each row fills edge-to-edge.
         var avail = ImGui.GetContentRegionAvail().X;
         var minGap = Px(3f);
         _columns = Math.Max(1, (int)MathF.Floor((avail + minGap) / (GridSize + minGap)));
@@ -232,7 +231,6 @@ public sealed class EmojiPickerPopup
         }
     }
 
-    /// <summary>Drops to a fresh line (if mid-row) and prints a category label.</summary>
     private void StartHeader(string label, ref int col)
     {
         if (col != 0)

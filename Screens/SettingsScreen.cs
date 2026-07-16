@@ -9,8 +9,10 @@ using AetherLove.Services;
 using AetherLove.Services.Auth;
 using AetherLove.Services.Hub;
 using AetherLove.Services.Localization;
+using AetherLove.Services.Patreon;
 using AetherLove.Services.Signal;
 using AetherLove.Shared.Feedback;
+using AetherLove.Shared.Patreon;
 using AetherLove.Shared.Profile.Enums;
 using AetherLove.UI;
 using AetherLove.Windows;
@@ -19,7 +21,6 @@ using Dalamud.Interface;
 
 namespace AetherLove.Screens;
 
-/// <summary>Settings screen with theme selection, about info, and account deletion.</summary>
 public class SettingsScreen
 {
     private readonly ScreenRouter _router;
@@ -28,8 +29,12 @@ public class SettingsScreen
     private readonly TokenService _tokens;
     private readonly SessionBootstrapper _bootstrap;
     private readonly ChangelogWindow _changelogWindow;
+    private readonly PatreonLinkFlow _patreon;
+    private readonly Services.Chat.ChatCacheStore _chatCache;
 
-    private enum View { Hub, LanguageTheme, General, Notifications, Appearance, ChatColors, ConfirmDelete, Deleting, Deleted, Feedback, Tos, Contributors }
+    private enum View { Hub, LanguageTheme, General, Notifications, Appearance, ChatColors, Supporter, ConfirmDelete, Deleting, Deleted, Feedback, Tos, Contributors }
+
+    private bool _supporterConfirmUnlink;
 
     // volatile: written from the deletion task, read on the UI thread.
     private volatile int _viewRaw = (int)View.Hub;
@@ -56,10 +61,12 @@ public class SettingsScreen
 
     private readonly Widgets.ConfettiBurst _thanksConfetti = new();
 
+    private readonly EntranceAnimation _entrance = new();
+    private View _lastDrawnView = View.Hub;
+
     private const float PadX = 16f;
 
-    // Icon tint for the "Other" Discord row, and the danger-zone label / delete-button outline colour.
-    private static readonly Vector4 DiscordTop = new(0.43f, 0.48f, 1.00f, 1f);
+    // Danger-zone label / delete-button outline colour.
     private static readonly Vector4 DangerLabelColor = new(0.93f, 0.36f, 0.36f, 1f);
 
     public SettingsScreen(ScreenRouter router,
@@ -67,7 +74,9 @@ public class SettingsScreen
                           AetherSignalService signal,
                           TokenService tokens,
                           SessionBootstrapper bootstrap,
-                          ChangelogWindow changelogWindow)
+                          ChangelogWindow changelogWindow,
+                          PatreonLinkFlow patreon,
+                          Services.Chat.ChatCacheStore chatCache)
     {
         _router = router;
         _hubClient = hubClient;
@@ -75,11 +84,36 @@ public class SettingsScreen
         _tokens = tokens;
         _bootstrap = bootstrap;
         _changelogWindow = changelogWindow;
+        _patreon = patreon;
+        _chatCache = chatCache;
     }
+
+    /// <summary>Deep-links the next open straight to the Supporter page; its back pill then returns to
+    /// <paramref name="returnTo"/> instead of the settings hub.</summary>
+    public void RequestSupporterView(Screen returnTo)
+    {
+        _pendingSupporterView = true;
+        _supporterReturnScreen = returnTo;
+    }
+
+    private bool _pendingSupporterView;
+    private Screen? _supporterReturnScreen;
 
     public void OnShow()
     {
         _view = View.Hub;
+        if (_pendingSupporterView)
+        {
+            _pendingSupporterView = false;
+            _supporterConfirmUnlink = false;
+            _patreon.Reset();
+            _view = View.Supporter;
+        }
+        else
+        {
+            _supporterReturnScreen = null;
+        }
+        _entrance.Arm();
         _deleteError = null;
         ResetFeedback();
         LoadNsfwState();
@@ -144,6 +178,12 @@ public class SettingsScreen
     {
         var winW = ImGui.GetWindowSize().X;
 
+        if (_view == View.Hub && _lastDrawnView != View.Hub)
+        {
+            _entrance.Arm();
+        }
+        _lastDrawnView = _view;
+
         switch (_view)
         {
             case View.Hub:
@@ -163,6 +203,9 @@ public class SettingsScreen
                 break;
             case View.ChatColors:
                 DrawChatColorsPage(winW);
+                break;
+            case View.Supporter:
+                DrawSupporterPage(winW);
                 break;
             case View.ConfirmDelete:
                 DrawConfirmDelete(winW);
@@ -201,6 +244,7 @@ public class SettingsScreen
                 return;
             }
 
+            _entrance.BeginFrame();
             ImGui.Spacing();
             ImGui.Spacing();
 
@@ -212,6 +256,12 @@ public class SettingsScreen
                 new(FontAwesomeIcon.MobileAlt, t.Accent, Loc.T("settings.menu_appearance"), 0, false, () => _view = View.Appearance),
                 new(FontAwesomeIcon.Bell, t.Accent, Loc.T("settings.section_notifications"), 0, false, () => _view = View.Notifications),
                 new(FontAwesomeIcon.Comments, t.Accent, Loc.T("settings.menu_chat_colors"), 0, false, () => _view = View.ChatColors),
+                new(FontAwesomeIcon.HandHoldingHeart, UiColors.Patreon, Loc.T("settings.menu_supporter"), 0, false, () =>
+                {
+                    _supporterConfirmUnlink = false;
+                    _patreon.Reset();
+                    _view = View.Supporter;
+                }),
             });
 
             ImGui.Spacing();
@@ -229,6 +279,7 @@ public class SettingsScreen
 
             ImGui.Spacing();
             ImGui.Spacing();
+            _entrance.EndFrame();
         }
     }
 
@@ -395,7 +446,6 @@ public class SettingsScreen
         }
     }
 
-    /// <summary>A label + colour swatch (opens a picker) + a reset-to-theme button for one chat colour.</summary>
     private static void DrawColorRow(string label, string id, Func<Vector4?> get, Action<Vector4?> set, Vector4 themeDefault)
     {
         ImGui.SetCursorPosX(Px(PadX));
@@ -428,7 +478,6 @@ public class SettingsScreen
         ImGui.Spacing();
     }
 
-    /// <summary>A live three-bubble chat sample (own, peer, own) using the current chat colours.</summary>
     private static void DrawChatPreview()
     {
         var areaW = ImGui.GetContentRegionAvail().X;
@@ -460,15 +509,395 @@ public class SettingsScreen
         ImGui.Dummy(new Vector2(areaW, bubbleH + Px(5f)));
     }
 
-    /// <summary>The themed "← Back" pill at the top of a settings sub-page; returns to the settings hub.</summary>
+    private bool _linkNoMemberOpen;
+    private float _linkNoMemberPanelH;
+    private PatreonFlowState _lastPatreonFlowState;
+
+    private void DrawSupporterPage(float winW)
+    {
+        // A link that completed without an entitled pledge gets a one-shot guidance modal.
+        var flowState = _patreon.State;
+        if (flowState != _lastPatreonFlowState)
+        {
+            if (flowState == PatreonFlowState.Completed
+                && _patreon.Status is { IsEntitled: false, IsSupporter: false })
+            {
+                _linkNoMemberOpen = true;
+                _linkNoMemberPanelH = 0f;
+            }
+            _lastPatreonFlowState = flowState;
+        }
+
+        DrawSupporterPageBack();
+
+        var scrollH = ImGui.GetContentRegionAvail().Y;
+        PushScrollbarStyle();
+        using (var scroll = Dalamud.Interface.Utility.Raii.ImRaii.Child("##settSupporter", new Vector2(0f, scrollH), false))
+        {
+            PopScrollbarStyle();
+            if (!scroll.Success)
+            {
+                return;
+            }
+
+            var t = ThemeService.Current;
+
+            switch (_patreon.State)
+            {
+                case PatreonFlowState.Starting:
+                    ImGui.Spacing();
+                    Widgets.LoadingIndicator.Draw(Loc.T("settings.supporter_contacting"));
+                    return;
+                case PatreonFlowState.AwaitingBrowser:
+                    DrawSupporterAwaiting(winW, t);
+                    return;
+                case PatreonFlowState.Failed:
+                    DrawSupporterFailed(winW, t);
+                    return;
+            }
+
+            var status = _patreon.Status;
+            if (status is null)
+            {
+                ImGui.Spacing();
+                Widgets.LoadingIndicator.Draw();
+                return;
+            }
+            if (!status.Enabled)
+            {
+                ImGui.Spacing();
+                ImGui.Spacing();
+                ImGui.SetCursorPosX(Px(PadX));
+                ImGui.PushTextWrapPos(winW - Px(PadX));
+                ImGui.TextColored(UiColors.Subtle, Loc.T("settings.supporter_unavailable"));
+                ImGui.PopTextWrapPos();
+                return;
+            }
+
+            if (status.Linked)
+            {
+                DrawSupporterLinked(winW, t, status);
+            }
+            else
+            {
+                DrawSupporterUnlinked(winW, t, status);
+            }
+        }
+
+        if (_linkNoMemberOpen)
+        {
+            DrawLinkNoMembershipOverlay();
+        }
+    }
+
+    private void DrawLinkNoMembershipOverlay()
+    {
+        var dismissed = DrawPageOverlayPanel("supNoMember", ImGui.GetWindowPos(), ImGui.GetWindowSize(),
+            ref _linkNoMemberPanelH, Px(300f), w =>
+        {
+            Widgets.ModalUi.Header(w, FontAwesomeIcon.ExclamationTriangle,
+                Loc.T("settings.supporter_nomember_title"), UiColors.WarningAccent);
+            ImGui.PushTextWrapPos(w);
+            ImGui.TextColored(UiColors.Body, Loc.T("settings.supporter_nomember_body"));
+            ImGui.PopTextWrapPos();
+            ImGui.Spacing();
+            var gap = Px(8f);
+            var half = (w - gap) * 0.5f;
+            if (Widgets.ModalUi.Button($"{Loc.T("settings.supporter_unlink_button")}##noMemberUnlink", half))
+            {
+                _linkNoMemberOpen = false;
+                _ = _patreon.UnlinkAsync();
+            }
+            ImGui.SameLine(0f, gap);
+            if (Widgets.ModalUi.Button($"{Loc.T("common.got_it")}##noMemberOk", half))
+            {
+                _linkNoMemberOpen = false;
+            }
+        });
+        if (dismissed)
+        {
+            _linkNoMemberOpen = false;
+        }
+    }
+
+    private void DrawSupporterTitle(string text)
+    {
+        ImGui.SetCursorPosX(Px(PadX));
+        using (UiFonts.H1?.Push())
+        {
+            ImGui.TextColored(ThemeService.Current.AccentLight, text);
+        }
+        ImGui.Spacing();
+    }
+
+    private void DrawSupporterUnlinked(float winW, ThemeDefinition t, PatreonStatusDto status)
+    {
+        var btnW = winW - Px(PadX) * 2f;
+
+        ImGui.Spacing();
+        DrawSupporterTitle(Loc.T("settings.supporter_title"));
+        ImGui.SetCursorPosX(Px(PadX));
+        ImGui.PushTextWrapPos(winW - Px(PadX));
+        ImGui.TextColored(UiColors.Body, Loc.T("settings.supporter_intro"));
+        ImGui.PopTextWrapPos();
+        ImGui.Spacing();
+        ImGui.Spacing();
+
+        DrawSectionHeader(Loc.T("settings.supporter_perks_header"), PadX);
+        DrawSupporterPerks(winW, t);
+        ImGui.Spacing();
+
+        DrawSectionHeader(Loc.T("settings.supporter_how_heading"), PadX);
+        ImGui.SetCursorPosX(Px(PadX));
+        ImGui.PushTextWrapPos(winW - Px(PadX));
+        ImGui.TextColored(UiColors.Subtle, Loc.T("settings.supporter_how_intro"));
+        ImGui.PopTextWrapPos();
+        ImGui.Spacing();
+
+        DrawSupporterStep(winW, t, Loc.T("settings.supporter_step1_title"), Loc.T("settings.supporter_step1_body"));
+
+        ImGui.SetCursorPosX(Px(PadX));
+        ImGui.PushStyleColor(ImGuiCol.Button, UiColors.Patreon with { W = 0.92f });
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, UiColors.Patreon);
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive, UiColors.Patreon with { W = 0.82f });
+        ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 1f, 1f, 1f));
+        ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(10f));
+        if (ImGui.Button(Loc.T("settings.supporter_become"), new Vector2(btnW, Px(40f))))
+        {
+            OpenUrl(AetherLove.Shared.AetherConstants.PatreonCampaignUrl);
+        }
+        ImGui.PopStyleVar();
+        ImGui.PopStyleColor(4);
+        ImGui.Spacing();
+        ImGui.Spacing();
+
+        DrawSupporterStep(winW, t, Loc.T("settings.supporter_step2_title"), Loc.T("settings.supporter_step2_body"));
+
+        ImGui.SetCursorPosX(Px(PadX));
+        PushThemeButton(t);
+        var link = ImGui.Button(Loc.T("settings.supporter_link_button"), new Vector2(btnW, Px(36f)));
+        PopThemeButton();
+        if (link)
+        {
+            _patreon.StartLink();
+        }
+        ImGui.Spacing();
+
+        ImGui.SetCursorPosX(Px(PadX));
+        ImGui.PushTextWrapPos(winW - Px(PadX));
+        ImGui.TextColored(UiColors.Hint, Loc.T("settings.supporter_data_note"));
+        ImGui.PopTextWrapPos();
+        ImGui.Spacing();
+        ImGui.Spacing();
+    }
+
+    private void DrawSupporterAwaiting(float winW, ThemeDefinition t)
+    {
+        var btnW = winW - Px(PadX) * 2f;
+
+        ImGui.Spacing();
+        ImGui.Spacing();
+        ImGui.SetCursorPosX(Px(PadX));
+        ImGui.PushTextWrapPos(winW - Px(PadX));
+        ImGui.TextColored(UiColors.Body, Loc.T("settings.supporter_awaiting_browser"));
+        ImGui.PopTextWrapPos();
+        ImGui.Spacing();
+        ImGui.Spacing();
+
+        ImGui.SetCursorPosX(Px(PadX));
+        PushThemeButton(t);
+        if (ImGui.Button(Loc.T("settings.supporter_open_again"), new Vector2(btnW, Px(32f))))
+        {
+            _patreon.ReopenBrowser();
+        }
+        PopThemeButton();
+        ImGui.Spacing();
+        ImGui.SetCursorPosX(Px(PadX));
+        if (ImGui.Button(Loc.T("settings.supporter_cancel"), new Vector2(btnW, Px(30f))))
+        {
+            _patreon.Cancel();
+        }
+    }
+
+    private void DrawSupporterFailed(float winW, ThemeDefinition t)
+    {
+        var btnW = winW - Px(PadX) * 2f;
+
+        ImGui.Spacing();
+        ImGui.Spacing();
+        ImGui.SetCursorPosX(Px(PadX));
+        ImGui.PushTextWrapPos(winW - Px(PadX));
+        ImGui.TextColored(UiColors.Danger, _patreon.ErrorMessage ?? Loc.T("settings.supporter_failed"));
+        ImGui.PopTextWrapPos();
+        ImGui.Spacing();
+        ImGui.Spacing();
+
+        ImGui.SetCursorPosX(Px(PadX));
+        PushThemeButton(t);
+        if (ImGui.Button(Loc.T("settings.supporter_retry"), new Vector2(btnW, Px(34f))))
+        {
+            _patreon.StartLink();
+        }
+        PopThemeButton();
+    }
+
+    private void DrawSupporterLinked(float winW, ThemeDefinition t, PatreonStatusDto status)
+    {
+        var btnW = winW - Px(PadX) * 2f;
+
+        ImGui.Spacing();
+        DrawSupporterTitle(Loc.T("settings.menu_supporter"));
+        if (status.IsSupporter || status.IsEntitled)
+        {
+            ImGui.Spacing();
+            DrawPerkCard(winW, PadX, FontAwesomeIcon.Star, new Vector4(0.45f, 0.85f, 0.48f, 1f),
+                Loc.T("settings.supporter_you_are_title"), Loc.T("settings.supporter_you_are_body"));
+        }
+        else
+        {
+            ImGui.SetCursorPosX(Px(PadX));
+            ImGui.TextColored(UiColors.Success, Loc.T("settings.supporter_linked"));
+            ImGui.Spacing();
+            ImGui.SetCursorPosX(Px(PadX));
+            ImGui.PushTextWrapPos(winW - Px(PadX));
+            ImGui.TextColored(UiColors.Subtle, Loc.T("settings.supporter_not_entitled"));
+            ImGui.PopTextWrapPos();
+            ImGui.Spacing();
+            ImGui.Spacing();
+        }
+
+        DrawSectionHeader(Loc.T("settings.supporter_perks_header"), PadX);
+        DrawSupporterPerks(winW, t);
+        ImGui.Spacing();
+
+        if (!_supporterConfirmUnlink)
+        {
+            ImGui.SetCursorPosX(Px(PadX));
+            ImGui.PushStyleColor(ImGuiCol.Text, UiColors.Danger);
+            if (ImGui.Button(Loc.T("settings.supporter_unlink_button"), new Vector2(btnW, Px(30f))))
+            {
+                _supporterConfirmUnlink = true;
+            }
+            ImGui.PopStyleColor();
+            return;
+        }
+
+        ImGui.SetCursorPosX(Px(PadX));
+        ImGui.PushTextWrapPos(winW - Px(PadX));
+        ImGui.TextColored(UiColors.Danger, Loc.T("settings.supporter_unlink_confirm"));
+        ImGui.PopTextWrapPos();
+        ImGui.Spacing();
+
+        var halfW = (btnW - Px(8f)) * 0.5f;
+        ImGui.SetCursorPosX(Px(PadX));
+        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.55f, 0.14f, 0.14f, 0.85f));
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.68f, 0.18f, 0.18f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.45f, 0.10f, 0.10f, 1f));
+        if (ImGui.Button(Loc.T("settings.supporter_unlink_button") + "##confirm", new Vector2(halfW, Px(30f))))
+        {
+            _supporterConfirmUnlink = false;
+            _ = _patreon.UnlinkAsync();
+        }
+        ImGui.PopStyleColor(3);
+        ImGui.SameLine(0f, Px(8f));
+        if (ImGui.Button(Loc.T("settings.supporter_cancel") + "##cancelunlink", new Vector2(halfW, Px(30f))))
+        {
+            _supporterConfirmUnlink = false;
+        }
+    }
+
+    private void DrawSupporterStep(float winW, ThemeDefinition t, string title, string body)
+    {
+        var dl = ImGui.GetWindowDrawList();
+        var pad = Px(PadX);
+        var w = winW - pad * 2f;
+        var innerPad = Px(12f);
+        var textW = w - innerPad * 2f;
+
+        var titleH = ImGui.GetTextLineHeight();
+        var bodyH = ImGui.CalcTextSize(body, false, textW).Y;
+        var cardH = innerPad * 2f + titleH + Px(4f) + bodyH;
+
+        var cursorBefore = ImGui.GetCursorPos();
+        var tl = ImGui.GetCursorScreenPos() + new Vector2(pad, 0f);
+        var br = tl + new Vector2(w, cardH);
+
+        dl.AddRectFilled(tl, br, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.04f)), Px(10f));
+        dl.AddRect(tl, br, ImGui.GetColorU32(t.Accent with { W = 0.30f }), Px(10f), ImDrawFlags.None, Px(1f));
+
+        ImGui.SetCursorScreenPos(new Vector2(tl.X + innerPad, tl.Y + innerPad));
+        ImGui.TextColored(t.AccentLight, title);
+        ImGui.SetCursorScreenPos(new Vector2(tl.X + innerPad, tl.Y + innerPad + titleH + Px(4f)));
+        ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + textW);
+        ImGui.TextColored(UiColors.Body, body);
+        ImGui.PopTextWrapPos();
+
+        ImGui.SetCursorPos(new Vector2(cursorBefore.X, cursorBefore.Y + cardH + Px(8f)));
+    }
+
+    private void DrawSupporterPerks(float winW, ThemeDefinition t)
+    {
+        var red = new Vector4(0.95f, 0.38f, 0.38f, 1f);
+        var orange = new Vector4(0.97f, 0.62f, 0.26f, 1f);
+        var yellow = new Vector4(0.96f, 0.83f, 0.32f, 1f);
+        var green = new Vector4(0.45f, 0.85f, 0.48f, 1f);
+        var blue = new Vector4(0.40f, 0.64f, 0.96f, 1f);
+        var violet = new Vector4(0.72f, 0.52f, 0.96f, 1f);
+
+        DrawPerkCard(winW, PadX, FontAwesomeIcon.Images, red,
+            Loc.T("settings.supporter_perk_photos_title"), Loc.T("settings.supporter_perk_photos_body"));
+        DrawPerkCard(winW, PadX, FontAwesomeIcon.Bolt, orange,
+            Loc.T("settings.supporter_perk_superlike_title"), Loc.T("settings.supporter_perk_superlike_body"));
+        DrawPerkCard(winW, PadX, FontAwesomeIcon.Undo, yellow,
+            Loc.T("settings.supporter_perk_rewinds_title"), Loc.T("settings.supporter_perk_rewinds_body"));
+        DrawPerkCard(winW, PadX, FontAwesomeIcon.ChartLine, green,
+            Loc.T("settings.supporter_perk_analytics_title"), Loc.T("settings.supporter_perk_analytics_body"));
+        DrawPerkCard(winW, PadX, FontAwesomeIcon.Palette, blue,
+            Loc.T("settings.supporter_perk_colors_title"), Loc.T("settings.supporter_perk_colors_body"));
+        DrawPerkCard(winW, PadX, FontAwesomeIcon.Star, violet,
+            Loc.T("settings.supporter_perk_badge_title"), Loc.T("settings.supporter_perk_badge_body"));
+    }
+
+    private static void OpenUrl(string url)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Warning(ex, "[Settings] Failed to open URL. Url={Url}", url);
+        }
+    }
+
     private void DrawSubpageBack()
     {
         ImGui.Spacing();
         ImGui.Spacing();
         ImGui.SetCursorPosX(Px(PadX));
-        if (DrawBackButton(Loc.T("settings.back_arrow")))
+        if (DrawFloatingBackPill(ImGui.GetCursorScreenPos(), Loc.T("settings.back_arrow"), FontAwesomeIcon.Cog))
         {
             _view = View.Hub;
+        }
+        ImGui.Spacing();
+    }
+
+    private void DrawSupporterPageBack()
+    {
+        ImGui.Spacing();
+        ImGui.Spacing();
+        ImGui.SetCursorPosX(Px(PadX));
+        if (DrawFloatingBackPill(ImGui.GetCursorScreenPos(), Loc.T("settings.back_arrow"), FontAwesomeIcon.Cog))
+        {
+            if (_supporterReturnScreen is { } returnTo)
+            {
+                _supporterReturnScreen = null;
+                _router.Navigate(returnTo);
+            }
+            else
+            {
+                _view = View.Hub;
+            }
         }
         ImGui.Spacing();
     }
@@ -484,7 +913,7 @@ public class SettingsScreen
                 ResetFeedback();
                 _view = View.Feedback;
             }),
-            new(FontAwesomeIcon.Comments, DiscordTop, "Discord", 0, true, OpenDiscord),
+            new(FontAwesomeIcon.Comments, UiColors.Discord, "Discord", 0, true, OpenDiscord),
             new(FontAwesomeIcon.Heart, t.Accent, Loc.T("settings.contributors"), 0, false, () =>
             {
                 _thanksConfetti.Reset();
@@ -493,7 +922,6 @@ public class SettingsScreen
         });
     }
 
-    /// <summary>A red-outlined (not filled) "Delete Account" button that opens the confirmation flow.</summary>
     private void DrawDeleteButton(float winW)
     {
         ImGui.SetCursorPosX(Px(PadX));
@@ -698,6 +1126,7 @@ public class SettingsScreen
                 await _hubClient.DeleteAccountAsync(CancellationToken.None).ConfigureAwait(false);
                 await _signal.DisconnectAsync().ConfigureAwait(false);
                 _tokens.Clear();
+                _chatCache.Clear();
                 ClearLocalProfileConfig();
                 _view = View.Deleted;
             }
@@ -712,6 +1141,7 @@ public class SettingsScreen
 
     private void StartFreshOnboarding()
     {
+        _chatCache.Clear();
         ClearLocalProfileConfig();
         _router.Navigate(Screen.Onboarding);
     }
@@ -900,7 +1330,6 @@ public class SettingsScreen
 
     private static void DrawNotificationSettings(float winW)
     {
-        // Master switch — when off, every notification option below is greyed out and ignored.
         SettingCheckbox(Loc.T("settings.enable_notifications"),
             () => Plugin.Configuration.EnableNotifications,
             v => Plugin.Configuration.EnableNotifications = v);
@@ -933,9 +1362,27 @@ public class SettingsScreen
             () => Plugin.Configuration.NotifyPopupOnMatch,
             v => Plugin.Configuration.NotifyPopupOnMatch = v);
 
+        ImGui.Spacing();
+        ImGui.SetCursorPosX(Px(PadX));
+        ImGui.TextColored(new Vector4(0.70f, 0.70f, 0.70f, 1f), Loc.T("settings.hangouts_heading"));
+        ImGui.Spacing();
+        SettingCheckbox(Loc.T("settings.hangout_notify_rsvp"),
+            () => Plugin.Configuration.Hangouts.NotifyRsvp,
+            v => Plugin.Configuration.Hangouts.NotifyRsvp = v);
+        SettingCheckbox(Loc.T("settings.hangout_notify_ended"),
+            () => Plugin.Configuration.Hangouts.NotifyEnded,
+            v => Plugin.Configuration.Hangouts.NotifyEnded = v);
+        SettingCheckbox(Loc.T("settings.hangout_notify_match"),
+            () => Plugin.Configuration.Hangouts.NotifyMatchStarted,
+            v => Plugin.Configuration.Hangouts.NotifyMatchStarted = v);
+
         ImGui.EndDisabled();
 
-        // Opening the minimized bubble on login isn't a notification, so it stays available.
+        // These two aren't notifications, so they stay outside the master-switch disable.
+        SettingCheckbox(Loc.T("settings.hangout_show_in_match_list"),
+            () => Plugin.Configuration.Hangouts.ShowInMatchList,
+            v => Plugin.Configuration.Hangouts.ShowInMatchList = v);
+
         SettingCheckbox(Loc.T("settings.auto_open_minimized"),
             () => Plugin.Configuration.AutoOpenMinimizedOnLogin,
             v => Plugin.Configuration.AutoOpenMinimizedOnLogin = v);
@@ -1041,7 +1488,7 @@ public class SettingsScreen
 
     private static void DrawPulseOptOut(float winW)
     {
-        // Surfaces only after the player has actually seen a pulse line — keeps it a surprise until then.
+        // Hidden until a pulse line has been seen, to keep it a surprise.
         if (!Plugin.Configuration.Pulse.SeenPulse)
         {
             return;
@@ -1056,7 +1503,6 @@ public class SettingsScreen
         }
         ImGui.SameLine(0f, Px(6f));
         HelpMarker(Loc.T("settings.pulse_optout_tooltip"));
-        // The label is long and playful, so it wraps instead of overflowing the checkbox row.
         ImGui.SameLine(0f, Px(6f));
         ImGui.PushTextWrapPos(winW - Px(PadX));
         ImGui.TextWrapped(Loc.T("settings.pulse_optout"));
@@ -1197,8 +1643,6 @@ public class SettingsScreen
         }
     }
 
-    /// <summary>Centers a single line horizontally in the content area; falls back to a left-padded, wrapped
-    /// paragraph when the text is too wide to fit on one line.</summary>
     private static void CenteredHeading(string text, Vector4 color, float winW)
     {
         var avail = winW - Px(PadX) * 2f;
@@ -1217,24 +1661,19 @@ public class SettingsScreen
         }
     }
 
-    /// <summary>Draws a FontAwesome glyph centered in the content area, scaled to <paramref name="sizePx"/>.</summary>
     private static void CenteredIcon(FontAwesomeIcon icon, Vector4 color, float winW, float sizePx)
     {
-        ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
-        var iconFont = ImGui.GetFont();
-        var glyph = icon.ToIconString();
-        var sz = ImGui.CalcTextSize(glyph) * (sizePx / ImGui.GetFontSize());
-        ImGui.PopFont();
-
+        var sz = IconDraw.Measure(icon, sizePx);
         var origin = ImGui.GetCursorScreenPos();
         var dl = ImGui.GetWindowDrawList();
-        dl.AddText(iconFont, sizePx, new Vector2(origin.X + (winW - sz.X) * 0.5f, origin.Y), ImGui.GetColorU32(color), glyph);
+        IconDraw.Add(dl, icon, sizePx, new Vector2(origin.X + (winW - sz.X) * 0.5f, origin.Y), ImGui.GetColorU32(color));
         ImGui.Dummy(new Vector2(winW, sz.Y));
     }
 
     private void DrawFeedback(float winW)
     {
         var t = ThemeService.Current;
+        DrawSubpageBack();
         var scrollH = ImGui.GetContentRegionAvail().Y;
 
         PushScrollbarStyle();
@@ -1311,7 +1750,7 @@ public class SettingsScreen
             ImGui.TextColored(new Vector4(0.70f, 0.70f, 0.70f, 1f), Loc.T("settings.feedback_your_message"));
             ImGui.Spacing();
             ImGui.SetCursorPosX(Px(PadX));
-            ImGui.InputTextMultiline("##feedbackText", ref _feedbackText, 4000, new Vector2(winW - Px(PadX) * 2f, Px(140f)));
+            InputTextMultilineWithPaste("##feedbackText", ref _feedbackText, 4000, new Vector2(winW - Px(PadX) * 2f, Px(140f)));
             ImGui.Spacing();
 
             if (_feedbackError is not null)
@@ -1324,23 +1763,9 @@ public class SettingsScreen
             }
 
             var canSubmit = !_feedbackSubmitting && !string.IsNullOrWhiteSpace(_feedbackText);
-            var availBtnW = winW - Px(PadX) * 2f;
-            var backW = MathF.Floor(availBtnW * 0.40f);
-            var submitW = availBtnW - backW - Px(8f);
+            var submitW = winW - Px(PadX) * 2f;
 
             ImGui.SetCursorPosX(Px(PadX));
-            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.20f, 0.20f, 0.20f, 1f));
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.34f, 0.34f, 0.34f, 1f));
-            ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.14f, 0.14f, 0.14f, 1f));
-            ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
-            if (ImGui.Button(Loc.T("settings.back"), new Vector2(backW, Px(36f))))
-            {
-                _view = View.Hub;
-            }
-            ImGui.PopStyleVar();
-            ImGui.PopStyleColor(3);
-
-            ImGui.SameLine(0f, Px(8f));
             ImGui.BeginDisabled(!canSubmit);
             ImGui.PushStyleColor(ImGuiCol.Button, t.ButtonNormal);
             ImGui.PushStyleColor(ImGuiCol.ButtonHovered, t.ButtonHovered);

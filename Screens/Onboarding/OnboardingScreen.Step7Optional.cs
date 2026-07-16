@@ -39,7 +39,7 @@ public partial class OnboardingScreen
 
     private MusicLinkField[]? _musicFields;
 
-    /// <summary>Spotify, SoundCloud, Apple Music, YouTube Music — in that order.</summary>
+    /// <summary>Spotify, SoundCloud, Apple Music, YouTube Music - in that order.</summary>
     private MusicLinkField[] MusicFields => _musicFields ??=
     [
         new MusicLinkField(MusicProvider.Spotify, _hubClient.ResolveMusicLinkAsync),

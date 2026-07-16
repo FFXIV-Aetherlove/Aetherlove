@@ -11,9 +11,7 @@ using static AetherLove.Screens.MatchFx;
 
 namespace AetherLove.Screens;
 
-/// <summary>Match effect — Kaleidoscope Bloom: a radially-symmetric mandala of
-/// triangular shards blooms outward and slowly rotates, revealing the two avatars at its hub.
-///</summary>
+/// <summary>Match effect - Kaleidoscope Bloom: a rotating mandala blooms outward, revealing the avatars at its hub.</summary>
 public sealed class MatchKaleidoscopeScreen : IMatchEffect
 {
     private const int ShardCount = 20;

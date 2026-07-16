@@ -40,7 +40,7 @@ public partial class MyProfileScreen
     private readonly FileDialogManager _imgFileDialog = new();
     private readonly ImageCropPopup _imgCropPopup = new();
     private readonly SfwImageGateModal _imgSfwGate = new();
-    // -1 = avatar, 0-3 = photo slot (0 = main portrait, 1-3 = extras)
+    // -1 = avatar, 0..N = photo slot (0 = main portrait, 1..N = extras; N = supporter max)
     private int _imgPickerTarget;
 
     private string _imgAvatarPath = "";
@@ -49,8 +49,29 @@ public partial class MyProfileScreen
     private bool _imgAvatarConfirmed;
 
     private readonly ImgPhotoSlot[] _imgPhotoSlots =
-        [new ImgPhotoSlot(), new ImgPhotoSlot(), new ImgPhotoSlot(), new ImgPhotoSlot()];
+        [.. Enumerable.Range(0, 1 + SupporterLimits.SupporterExtraPhotos).Select(_ => new ImgPhotoSlot())];
     private int _imgActiveSlot = -1;
+
+    /// <summary>Extra-photo allowance from the connection snapshot (the server re-validates regardless).</summary>
+    private int MaxExtraSlots => SupporterLimits.MaxExtraPhotos(_bootstrap.LastConnection?.IsSupporter == true);
+
+    /// <summary>Slots to draw: main + allowed extras, plus any over-allowance slot still holding a server
+    /// photo, so a lapsed supporter can remove (but not refill) those.</summary>
+    private int VisibleSlotCount
+    {
+        get
+        {
+            var count = 1 + MaxExtraSlots;
+            for (int i = count; i < _imgPhotoSlots.Length; i++)
+            {
+                if (SlotHasServerPhoto(i))
+                {
+                    count = i + 1;
+                }
+            }
+            return count;
+        }
+    }
 
     /// <summary>Set when a Lalafell user attempts to declare an extra NSFW. Drives the policy modal.</summary>
     private bool _imgLalafellNsfwModalPending;
@@ -129,8 +150,8 @@ public partial class MyProfileScreen
         var avatarConfirmed = _imgAvatarConfirmed;
         var avatarPath = _imgAvatarPath;
         var avatarCrop = _imgAvatarCropRect;
-        var slotInputs = new (bool Confirmed, string Path, Vector4 Crop, bool IsNsfw)[4];
-        for (int i = 0; i < 4; i++)
+        var slotInputs = new (bool Confirmed, string Path, Vector4 Crop, bool IsNsfw)[_imgPhotoSlots.Length];
+        for (int i = 0; i < _imgPhotoSlots.Length; i++)
         {
             var slot = _imgPhotoSlots[i];
             // Main portrait (i == 0) is always SFW by policy. Extras carry their per-photo declaration.
@@ -138,9 +159,9 @@ public partial class MyProfileScreen
             slotInputs[i] = (slot.Confirmed, slot.Path, slot.CropRect, isNsfw);
         }
 
-        // Server orders: avatar=0, main=1, extras=2/3/4.
-        var deleteOrders = new System.Collections.Generic.List<int>(4);
-        for (int i = 0; i < 4; i++)
+        // Server orders: avatar=0, main=1, extras=2..6.
+        var deleteOrders = new System.Collections.Generic.List<int>(_imgPhotoSlots.Length);
+        for (int i = 0; i < _imgPhotoSlots.Length; i++)
         {
             if (_imgPhotoSlots[i].PendingRemove)
             {
@@ -156,45 +177,36 @@ public partial class MyProfileScreen
                     ? ReadPhotoUpload(avatarPath, avatarCrop, isNsfw: false, PhotoKind.Avatar)
                     : (PhotoUploadDto?)null;
                 PhotoUploadDto? mainUpload = null;
-                PhotoUploadDto? extra1Upload = null;
-                PhotoUploadDto? extra2Upload = null;
-                PhotoUploadDto? extra3Upload = null;
-                for (int i = 0; i < 4; i++)
+                var extraUploads = new PhotoUploadDto?[SupporterLimits.SupporterExtraPhotos];
+                for (int i = 0; i < slotInputs.Length; i++)
                 {
                     if (!slotInputs[i].Confirmed)
                     {
                         continue;
                     }
                     var dto = ReadPhotoUpload(slotInputs[i].Path, slotInputs[i].Crop, slotInputs[i].IsNsfw, PhotoKind.Portrait);
-                    switch (i)
+                    if (i == 0)
                     {
-                        case 0:
-                            mainUpload = dto;
-                            break;
-                        case 1:
-                            extra1Upload = dto;
-                            break;
-                        case 2:
-                            extra2Upload = dto;
-                            break;
-                        case 3:
-                            extra3Upload = dto;
-                            break;
+                        mainUpload = dto;
+                    }
+                    else
+                    {
+                        extraUploads[i - 1] = dto;
                     }
                 }
 
                 if (avatarUpload is not null
                     || mainUpload is not null
-                    || extra1Upload is not null
-                    || extra2Upload is not null
-                    || extra3Upload is not null)
+                    || extraUploads.Any(u => u is not null))
                 {
                     var batch = new PhotoBatchDto(
                         Avatar: avatarUpload,
                         Main: mainUpload,
-                        Extra1: extra1Upload,
-                        Extra2: extra2Upload,
-                        Extra3: extra3Upload);
+                        Extra1: extraUploads[0],
+                        Extra2: extraUploads[1],
+                        Extra3: extraUploads[2],
+                        Extra4: extraUploads[3],
+                        Extra5: extraUploads[4]);
                     await _hubClient.SavePhotosAsync(batch, ct).ConfigureAwait(false);
                 }
 
@@ -230,7 +242,7 @@ public partial class MyProfileScreen
                 _imgActiveSlot = -1;
                 _imagesSavedTimer = 2.5f;
 
-                // Photos changed server-side — force the view/edit caches to re-fetch.
+                // Photos changed server-side - force the view/edit caches to re-fetch.
                 _cachedState = null;
                 _profileScreen.InvalidateMyProfileCache();
             }
@@ -468,7 +480,7 @@ public partial class MyProfileScreen
     /// declaring any other confirmed extra first.</summary>
     private void TryPickImage(int target, Action open)
     {
-        // Gate only applies to a NEW upload — replacing the active slot's own confirmed photo is fine.
+        // Gate only applies to a NEW upload - replacing the active slot's own confirmed photo is fine.
         var startingNewSlot = target != _imgActiveSlot
                               || !(target >= 0 && _imgPhotoSlots[target].Confirmed);
         if (startingNewSlot && AnyConfirmedExtraIsUndeclared())
@@ -495,15 +507,17 @@ public partial class MyProfileScreen
     {
         var dl = ImGui.GetWindowDrawList();
 
-        var SlotW = Px(74f);
+        var slotCount = VisibleSlotCount;
+        var SlotGap = Px(6f);
+        // Shrink slots as the count grows so a supporter's 6 always fit the row.
+        var SlotW = MathF.Min(Px(74f), (availW - (slotCount - 1) * SlotGap - Px(8f)) / slotCount);
         // 10:16 portrait
         var SlotH = SlotW * 1.6f;
-        var SlotGap = Px(6f);
-        var totalW = 4 * SlotW + 3 * SlotGap;
+        var totalW = slotCount * SlotW + (slotCount - 1) * SlotGap;
         var slotsX = (availW - totalW) * 0.5f;
         var slotsY = ImGui.GetCursorPosY();
 
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < slotCount; i++)
         {
             var slot = _imgPhotoSlots[i];
             var isMain = i == 0;
@@ -709,6 +723,9 @@ public partial class MyProfileScreen
             }
             ImGui.Spacing();
 
+            // A slot beyond the current allowance (lapsed supporter) can be emptied but not refilled.
+            var lockedSlot = _imgActiveSlot > MaxExtraSlots;
+
             if (!isMain)
             {
                 PushDangerButton();
@@ -717,16 +734,29 @@ public partial class MyProfileScreen
                     slot.PendingRemove = true;
                 }
                 ImGui.PopStyleColor(3);
-                ImGui.SameLine(0f, Px(8f));
+                if (!lockedSlot)
+                {
+                    ImGui.SameLine(0f, Px(8f));
+                }
             }
 
-            PushThemeButton(t);
-            if (ImGui.Button($"{Loc.T("profile.replace")}##replPhoto{_imgActiveSlot}", Px(80f, 26f)))
+            if (lockedSlot)
             {
-                TryOpenImgFilePicker(_imgActiveSlot);
+                ImGui.Spacing();
+                ImGui.PushTextWrapPos(0f);
+                ImGui.TextColored(UiColors.Hint, Loc.T("profile.slot_locked"));
+                ImGui.PopTextWrapPos();
             }
-            PopThemeButton();
-            DrawSelfieButton(_imgActiveSlot, t);
+            else
+            {
+                PushThemeButton(t);
+                if (ImGui.Button($"{Loc.T("profile.replace")}##replPhoto{_imgActiveSlot}", Px(80f, 26f)))
+                {
+                    TryOpenImgFilePicker(_imgActiveSlot);
+                }
+                PopThemeButton();
+                DrawSelfieButton(_imgActiveSlot, t);
+            }
 
             // Show the server's current copy below the buttons.
             var pv = storedTex?.GetWrapOrDefault();
@@ -758,14 +788,14 @@ public partial class MyProfileScreen
     private bool SlotHasServerPhoto(int slotIdx) => slotIdx switch
     {
         0 => _serverMain is not null,
-        1 or 2 or 3 => _serverExtras[slotIdx - 1] is not null,
+        > 0 when slotIdx - 1 < _serverExtras.Length => _serverExtras[slotIdx - 1] is not null,
         _ => false,
     };
 
     private ISharedImmediateTexture? SlotServerTexture(int slotIdx) => slotIdx switch
     {
         0 => _serverMainTex,
-        1 or 2 or 3 => _serverExtraTex[slotIdx - 1],
+        > 0 when slotIdx - 1 < _serverExtraTex.Length => _serverExtraTex[slotIdx - 1],
         _ => null,
     };
 

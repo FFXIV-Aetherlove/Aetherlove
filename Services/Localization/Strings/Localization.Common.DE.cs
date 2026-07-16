@@ -98,12 +98,12 @@ internal static class CommonDe
         ["common.nav_swipe"] = "Swipe",
         ["common.nav_matches"] = "Matches",
         ["common.nav_settings"] = "Einst.",
-        ["common.nav_minimize"] = "Minim.",
 
         ["common.emoji_none_found"] = "Kein Emoji gefunden.",
 
         // Close-plugin confirmation modal
         ["common.close_plugin_tooltip"] = "AetherLove schließen",
+        ["common.minimize_tooltip"] = "AetherLove minimieren",
         ["common.close_plugin_title"] = "AetherLove schließen?",
         ["common.close_plugin_body"] = "Das schließt nur das Fenster. Du bleibst verbunden und erhältst weiterhin neue Matches und Nachrichten, solange das Plugin aktiv ist.\n\nÖffne das Fenster jederzeit wieder, indem du {0} im Chat eingibst.",
         ["common.close_plugin_tip"] = "Tipp: Nutze stattdessen die Minimieren-Schaltfläche unten, damit die kleine schwebende Blase mit ihrem Benachrichtigungsabzeichen sichtbar bleibt.",
@@ -153,6 +153,8 @@ internal static class CommonDe
         ["common.selfie_take"] = "Foto aufnehmen",
         ["common.selfie_capturing"] = "Aufnahme...",
         ["common.offline_maintenance"] = "Der Server befindet sich in Wartung.",
-        ["common.back"] = "Zurück",
+
+        // added after update 1.5.0
+        ["common.nav_places"] = "Orte",
     };
 }

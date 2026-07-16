@@ -15,16 +15,12 @@ using static AetherLove.Screens.MatchFx;
 
 namespace AetherLove.Screens;
 
-/// <summary>Blocking screen shown when the SignalR hub connection drops; clears once it's restored. Paints an
-/// animated "severed signal" backdrop, keeps quietly retrying the connection, and once it has been down for a
-/// couple of minutes surfaces a Discord link for live status.</summary>
+/// <summary>Blocking screen shown while the hub connection is down; keeps retrying and clears once restored.</summary>
 public sealed class OfflineScreen
 {
-    /// <summary>How long the connection must stay down before the Discord call-to-action appears.</summary>
     private const float DiscordGraceSeconds = 120f;
 
-    /// <summary>The default auto-reconnect gives up after roughly 30s, so this nudges a fresh attempt on
-    /// this cadence while the screen is up.</summary>
+    /// <summary>Automatic reconnect gives up after roughly 30s, so nudge a fresh attempt on this cadence.</summary>
     private const float RetryIntervalSeconds = 5f;
 
     private readonly AetherSignalService _signal;
@@ -50,8 +46,7 @@ public sealed class OfflineScreen
     {
         _elapsed = 0f;
         _retryTimer = RetryIntervalSeconds;
-        // Captured per-show. A mid-session drop arms restore (reconnect the signal, snap back to the prior
-        // screen); a startup "can't reach the server" does not, so we re-run the bootstrap to resolve the session.
+        // A mid-session drop arms restore; a startup failure does not and needs a full bootstrap re-run.
         _startupMode = !_signal.RestoreArmed;
     }
 
@@ -71,7 +66,6 @@ public sealed class OfflineScreen
 
         DrawSeveredSignal(dl, pos, size, _elapsed);
 
-        // Legibility scrim fading up into the lower copy band.
         var bandTop = pos.Y + size.Y * 0.58f;
         var clear = U32(new Vector4(0.03f, 0.03f, 0.06f, 0f));
         var solid = U32(new Vector4(0.02f, 0.02f, 0.05f, 0.92f));
@@ -105,12 +99,8 @@ public sealed class OfflineScreen
         DrawStatus(pos, size, cx);
     }
 
-    /// <summary>While fully disconnected, kick a fresh connect attempt every few seconds (idempotent). Reset
-    /// the timer whenever a connect/reconnect is already in flight so we don't pile on.</summary>
     private void MaybeAutoRetry(float dt)
     {
-        // Startup couldn't reach the server: re-run the whole bootstrap (refresh + connect + lifecycle) so a
-        // recovered server lands the user where they belong, not just back on the deck.
         if (_startupMode)
         {
             MaybeRetryBootstrap(dt);
@@ -135,9 +125,6 @@ public sealed class OfflineScreen
         });
     }
 
-    /// <summary>Startup-offline retry: re-runs the session bootstrap on the retry cadence and, once the server
-    /// answers again, routes to the resolved startup screen (deck / onboarding / a gate). No-ops while one is
-    /// already in flight.</summary>
     private void MaybeRetryBootstrap(float dt)
     {
         if (_bootstrapRetryInFlight)
@@ -198,8 +185,6 @@ public sealed class OfflineScreen
         DrawDiscordButton($"{Loc.T("common.offline_join_discord")}##offlineDiscord", new Vector2(btnW, Px(34f)));
     }
 
-    /// <summary>Concentric "failed ping" rings expanding from a pulsing broken-plug glyph over a faint circuit
-    /// grid, on a theme-tinted backdrop.</summary>
     private static void DrawSeveredSignal(ImDrawListPtr dl, Vector2 pos, Vector2 size, float t)
     {
         var th = ThemeService.Current;
@@ -242,16 +227,10 @@ public sealed class OfflineScreen
 
         var shake = reduce ? 0f : MathF.Sin(t * 18f) * Px(1.4f);
         ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
-        var glyph = FontAwesomeIcon.Plug.ToIconString();
         var render = ImGui.GetFontSize() * 2.4f;
-        var baseSz = ImGui.CalcTextSize(glyph);
-        var gw = baseSz.X * (render / ImGui.GetFontSize());
-        var gh = baseSz.Y * (render / ImGui.GetFontSize());
-        var font = ImGui.GetFont();
         ImGui.PopFont();
-        dl.AddText(font, render,
-            new Vector2(center.X - gw * 0.5f + shake, center.Y - gh * 0.5f),
-            U32(new Vector4(0.95f, 0.45f, 0.45f, 1f)), glyph);
+        IconDraw.AddCentered(dl, FontAwesomeIcon.Plug, render,
+            new Vector2(center.X + shake, center.Y), U32(new Vector4(0.95f, 0.45f, 0.45f, 1f)));
     }
 
     private static List<string> WrapLines(string text, float wrap)

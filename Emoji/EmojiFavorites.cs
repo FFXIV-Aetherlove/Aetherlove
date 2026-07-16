@@ -2,8 +2,7 @@ using System.Collections.Generic;
 
 namespace AetherLove.Emoji;
 
-/// <summary>Local (per-install) favorite-emoji list, backed by <see cref="Config.Configuration.FavoriteEmojis"/>.
-/// Every mutation persists immediately, matching the app's other client-side toggles. Keyed by bare shortcode
+/// <summary>Per-install favorite-emoji list; every mutation persists immediately. Keyed by bare shortcode
 /// name (no colons).</summary>
 internal static class EmojiFavorites
 {

@@ -56,11 +56,44 @@ public static class HubErrors
     public const string ReswipeNothingToUndo = "reswipe_nothing_to_undo";
     public const string ReswipeAlreadyMatched = "reswipe_already_matched";
     public const string ReswipeQuotaExhausted = "reswipe_quota_exhausted";
+    public const string SuperlikeQuotaExhausted = "superlike_quota_exhausted";
 
     /// <summary>Arg 0: the caller's max RP characters.</summary>
     public const string CharacterLimitReached = "character_limit_reached";
     public const string CharacterNameInvalid = "character_name_invalid";
     public const string CharacterNotFound = "character_not_found";
+
+    public const string PlacesDisabled = "places_disabled";
+    public const string VenueNotFound = "venue_not_found";
+    /// <summary>Arg 0: the caller's max venues.</summary>
+    public const string VenueLimitReached = "venue_limit_reached";
+    public const string VenueNameInvalid = "venue_name_invalid";
+    /// <summary>Arg 0: max visible characters.</summary>
+    public const string VenueDescriptionTooLong = "venue_description_too_long";
+    public const string VenueTimesInvalid = "venue_times_invalid";
+    /// <summary>Arg 0: max opening-time rules per venue.</summary>
+    public const string VenueTimesTooMany = "venue_times_too_many";
+    public const string VenueReviewOwn = "venue_review_own";
+    /// <summary>Arg 0: max visible characters.</summary>
+    public const string VenueReviewTooLong = "venue_review_too_long";
+    public const string VenueReviewRatingInvalid = "venue_review_rating_invalid";
+    public const string VenueRsvpInvalid = "venue_rsvp_invalid";
+
+    public const string HangoutsDisabled = "hangouts_disabled";
+    public const string HangoutNotFound = "hangout_not_found";
+    public const string HangoutAlreadyActive = "hangout_already_active";
+    public const string HangoutRsvpOwn = "hangout_rsvp_own";
+    public const string HangoutTimesInvalid = "hangout_times_invalid";
+    /// <summary>Arg 0: max visible characters.</summary>
+    public const string HangoutDescriptionTooLong = "hangout_description_too_long";
+
+    public const string PatreonDisabled = "patreon_disabled";
+    public const string PatreonAlreadyLinked = "patreon_already_linked";
+    public const string PatreonNotLinked = "patreon_not_linked";
+    /// <summary>The Patreon account is already linked to a different AetherLove profile.</summary>
+    public const string PatreonAccountTaken = "patreon_account_taken";
+    /// <summary>Generic OAuth exchange / identity read failure during linking.</summary>
+    public const string PatreonLinkFailed = "patreon_link_failed";
 
     /// <summary>Builds the wire payload. Args are serialized invariant-culture; they must not contain '|'.</summary>
     public static string Format(string code, params object?[] args)

@@ -10,8 +10,7 @@ using Dalamud.Interface.Textures;
 
 namespace AetherLove.Screens;
 
-/// <summary>Shared draw helpers for the match-effect screens: colour packing, gradient
-/// text/rings, the logo avatar, and centred text. Animated effects take a time-based phase.</summary>
+/// <summary>Shared draw helpers for the match-effect screens; animated effects take a time-based phase.</summary>
 internal static class MatchFx
 {
     public static uint U32(Vector4 c) => ImGui.ColorConvertFloat4ToU32(c);
@@ -80,8 +79,8 @@ internal static class MatchFx
         dl.AddText(new Vector2(cx - w * 0.5f, y), col, text);
     }
 
-    /// <summary>Draws the shared match actions — "Start chatting" (→ chats) and "Back to swiping"
-    /// (→ deck) — pinned near the bottom. Every match effect calls this so the actions stay consistent.</summary>
+    /// <summary>Shared match actions pinned near the bottom; every match effect calls this so the actions
+    /// stay consistent.</summary>
     public static void DrawActionButtons(ScreenRouter router, Vector2 pos, Vector2 size, float alpha = 1f)
     {
         var t = ThemeService.Current;

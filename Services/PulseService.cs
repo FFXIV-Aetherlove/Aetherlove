@@ -8,9 +8,8 @@ using Dalamud.Game.ClientState.Conditions;
 
 namespace AetherLove.Services;
 
-/// <summary>Surfaces a server-provided presence line in the game chat once the player hasn't swiped for
-/// <see cref="InactivityWindow"/>, only while they're in a safe state. The schedule is client-owned and
-/// persisted; the server only supplies the line when asked.</summary>
+/// <summary>Prints a server-provided presence line after <see cref="InactivityWindow"/> without swipes.
+/// The schedule is client-owned and persisted; the server only supplies the line when asked.</summary>
 public sealed class PulseService : IDisposable
 {
     private static readonly TimeSpan TickInterval = TimeSpan.FromSeconds(300);
@@ -57,9 +56,7 @@ public sealed class PulseService : IDisposable
 
     private void OnLogin() => _sessionStartUtc = DateTimeOffset.UtcNow;
 
-    /// <summary>Records a swipe and pushes the next eligible time out by <see cref="InactivityWindow"/>, so a
-    /// line only fires after the player stops swiping. Held in memory until the next flush so frequent swipes
-    /// don't hit disk.</summary>
+    /// <summary>Pushes the next eligible time out; held in memory until the next flush so frequent swipes don't hit disk.</summary>
     public void MarkActivity()
     {
         var now = DateTimeOffset.UtcNow;

@@ -8,4 +8,7 @@ public static class PhotoSpec
     public const int AvatarSize = 100;
     public const int PortraitWidth = 350;
     public const int PortraitHeight = 560;
+    /// <summary>25:9, matching the wide banner rect the venue detail page renders (361x130 design units).</summary>
+    public const int VenueBannerWidth = 500;
+    public const int VenueBannerHeight = 180;
 }

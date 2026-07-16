@@ -7,11 +7,8 @@ using Dalamud.Plugin.Services;
 
 namespace AetherLove.Services;
 
-/// <summary>Probes once per launch whether this machine's image decoder (WIC on Windows) can actually decode
-/// WebP, by decoding a tiny lossy WebP through the same texture path photos use. The result is persisted to
-/// <see cref="Configuration.WebpSupported"/> and drives the acceptsWebp connection flag, so machines whose
-/// decoder can't handle WebP (Wine, or Windows missing the WebP codec) are served JPEG instead of gray blocks.
-/// <see cref="Tick"/> must run on the draw thread (the splash screen) — texture wraps only resolve there.</summary>
+/// <summary>Probes once per launch whether this machine's decoder can decode WebP, persisting the result to
+/// <see cref="Configuration.WebpSupported"/>. <see cref="Tick"/> must run on the draw thread; texture wraps only resolve there.</summary>
 public sealed class WebpCapabilityProbe
 {
     private const double TimeoutSeconds = 3.0;
@@ -30,8 +27,7 @@ public sealed class WebpCapabilityProbe
         _log = log;
     }
 
-    /// <summary>Drives the probe; call every frame from the draw thread. Starts the decode on the first call,
-    /// then resolves once the texture loads (supported) or the timeout elapses with it still blank (unsupported).</summary>
+    /// <summary>Call every frame from the draw thread; resolves once the texture loads or the timeout elapses.</summary>
     public void Tick(float deltaSeconds)
     {
         if (_tcs.Task.IsCompleted)

@@ -17,7 +17,12 @@ public sealed record DeckCardDto(
     ContentInterest ContentInterestMask,
     byte[] AvatarWebp,
     byte[] PortraitWebp,
-    Guid[] FlairIds);
+    Guid[] FlairIds,
+    // Supporter cosmetics; the server sends None/false unless the profile currently holds the flag.
+    NameStyle NameStyle = NameStyle.None,
+    bool IsSupporter = false,
+    // True when this card was injected because its profile superliked the caller.
+    bool SuperlikedYou = false);
 
 /// <summary>One slot's worth of candidates plus the next-slot timestamp.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
@@ -26,7 +31,9 @@ public sealed record MatchDeckDto(
     DateTimeOffset NextPullAtUtc,
     int RemainingInSlot,
     bool NoPoolForPreferences = false,
-    int ReswipesRemaining = 0);
+    int ReswipesRemaining = 0,
+    int SuperlikesRemaining = 0,
+    int SuperlikesPerDay = 0);
 
 /// <summary>Server's response to a single swipe.</summary>
 [MessagePackObject(keyAsPropertyName: true)]

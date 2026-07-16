@@ -71,7 +71,6 @@ public partial class OnboardingScreen
     private bool IsLalafellSelected() =>
         _raceIdx >= 0 && _raceIdx < RaceValues.Length && RaceValues[_raceIdx] == Race.Lalafell;
 
-    /// <summary>Clear ERP from looking-for and the NSFW opt-in.</summary>
     private void ClearAdultFlagsForLalafell()
     {
         for (var i = 0; i < LookingForValues.Length && i < _lookingFor.Length; i++)
@@ -229,7 +228,7 @@ public partial class OnboardingScreen
         }
         ImGui.SetNextItemWidth(Px(340f));
         var bioBefore = _bio;
-        ImGui.InputTextMultiline("##bio", ref _bio, EmojiText.MaxBioRawLength, Px(340f, 68f));
+        InputTextMultilineWithPaste("##bio", ref _bio, EmojiText.MaxBioRawLength, Px(340f, 68f));
         if (EmojiText.EffectiveLength(_bio) > EmojiText.MaxBioLength)
         {
             _bio = bioBefore;

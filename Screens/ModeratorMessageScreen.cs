@@ -16,8 +16,7 @@ using Dalamud.Interface.Utility.Raii;
 
 namespace AetherLove.Screens;
 
-/// <summary>Read screen for unseen moderator messages. Mirrors <see cref="WarningAcknowledgeScreen"/> but
-/// neutral in tone — same delivery path, shown in fewer places (startup gate + settings only).</summary>
+/// <summary>Read screen for unseen moderator messages; same delivery path as warnings, neutral in tone.</summary>
 public sealed class ModeratorMessageScreen
 {
     private readonly ScreenRouter _router;
@@ -198,10 +197,8 @@ public sealed class ModeratorMessageScreen
 
     private void NavigateToTarget()
     {
-        // A live (mid-session) message returns to the deck — the user is already active, so re-running the
-        // startup ladder would wrongly route to the passphrase / onboarding gates. A startup message instead
-        // chains on through the ladder; messages are flipped to Seen in the cached snapshot first so the
-        // resolver advances past them.
+        // Re-running the startup ladder mid-session would wrongly route to the passphrase/onboarding gates;
+        // startup messages chain on instead, flipped to Seen in the cached snapshot so the resolver advances.
         if (_returnToDeck)
         {
             _returnToDeck = false;

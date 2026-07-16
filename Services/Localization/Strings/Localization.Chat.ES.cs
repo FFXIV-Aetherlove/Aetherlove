@@ -50,6 +50,7 @@ internal static class ChatEs
 
         // ChatListScreen
         ["chat.preview_me_prefix"] = "Yo: ",
+        ["chat.preview_venue"] = "Compartió un local",
         ["chat.matches_title"] = "Coincidencias",
         ["chat.show_search"] = "Mostrar búsqueda",
         ["chat.hide_search"] = "Ocultar búsqueda",
@@ -96,5 +97,16 @@ internal static class ChatEs
         ["chat.category_count"] = "Chats: {0}",
         ["chat.category_archive_default"] = "Archivo",
         ["chat.all_categorized"] = "Todos tus chats están guardados en categorías",
+
+        // added after update 1.5.1
+        ["chat.menu_view_blocked"] = "Ver bloqueados",
+        ["blocked.title"] = "Usuarios bloqueados",
+        ["blocked.intro_body"] = "Aquí puedes desbloquear perfiles que bloqueaste en el pasado. Al desbloquear a alguien no habrá match automático, pero podríais volver a veros en el mazo.",
+        ["blocked.empty"] = "No has bloqueado a nadie.",
+        ["blocked.loading"] = "Cargando...",
+        ["blocked.since"] = "Bloqueado el {0}",
+        ["blocked.unblock"] = "Desbloquear",
+        ["blocked.confirm_title"] = "¿Desbloquear a {0}?",
+        ["blocked.confirm_body"] = "No habrá match automático, pero podríais volver a veros en el mazo.",
     };
 }

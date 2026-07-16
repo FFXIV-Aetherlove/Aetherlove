@@ -23,8 +23,7 @@ public enum SessionBootstrapResult
     Banned = 4,
     OutdatedClient = 5,
 
-    /// <summary>Have a session (tokens present) but the server can't be reached. Tokens are kept; the user is
-    /// shown the Offline screen, which retries the bootstrap rather than dropping them into onboarding.</summary>
+    /// <summary>Tokens present but the server can't be reached; tokens are kept and the Offline screen retries.</summary>
     ServerUnreachable = 6,
 }
 
@@ -39,6 +38,8 @@ public sealed class SessionBootstrapper
     private readonly NotificationCenter _notifications;
     private readonly Crypto.KeyStorageService _keys;
     private readonly ScreenRouter _router;
+    private readonly Chat.ChatCacheStore _chatCache;
+    private readonly Hangouts.HangoutStateService _hangouts;
 
     private readonly object _gate = new();
     private Task<SessionBootstrapResult>? _inflight;
@@ -55,7 +56,9 @@ public sealed class SessionBootstrapper
         Configuration config,
         NotificationCenter notifications,
         Crypto.KeyStorageService keys,
-        ScreenRouter router)
+        ScreenRouter router,
+        Chat.ChatCacheStore chatCache,
+        Hangouts.HangoutStateService hangouts)
     {
         _log = log;
         _tokens = tokens;
@@ -65,6 +68,8 @@ public sealed class SessionBootstrapper
         _notifications = notifications;
         _keys = keys;
         _router = router;
+        _chatCache = chatCache;
+        _hangouts = hangouts;
     }
 
     public SessionBootstrapResult LastResult => _lastResult;
@@ -81,17 +86,11 @@ public sealed class SessionBootstrapper
 
     public AetherConnectionDto? LastConnection => _lastConnection;
 
-    /// <summary>Updates the cached connection snapshot so push handlers (warning/ban) take effect without a reconnect.</summary>
     public void ReplaceConnectionSnapshot(AetherConnectionDto updated)
     {
         _lastConnection = updated;
     }
 
-    /// <summary>Re-fetches the connection snapshot (warnings, new-match count, lifecycle/ban state) after a
-    /// (re)connect, back-filling a snapshot the startup bootstrap missed on a flaky link. Best-effort: a
-    /// failed fetch leaves the previous snapshot in place. If the server rejects the client's API version (it
-    /// bumped while the client was connected), this drops the connection and routes to the terminal update
-    /// screen, so a reconnected old client is evicted instead of lingering unprompted.</summary>
     public async Task RefreshConnectionInfoAsync(CancellationToken ct = default)
     {
         try
@@ -99,6 +98,7 @@ public sealed class SessionBootstrapper
             var status = await _hub.GetConnectionInfoAsync(ct).ConfigureAwait(false);
             _lastConnection = status;
             _notifications.NewMatches = status.NewMatchCount;
+            await SyncHangoutsAsync(status, ct).ConfigureAwait(false);
         }
         catch (OutdatedClientException)
         {
@@ -132,9 +132,7 @@ public sealed class SessionBootstrapper
         }
     }
 
-    /// <summary>True when the user is signed in and Active but the server has no key bundle at all (e.g. an
-    /// account that re-registered after deletion, completing onboarding without establishing encryption). They
-    /// can't message and have no in-app way to fix it, so the startup ladder routes them to a one-time setup.</summary>
+    /// <summary>True when signed in and Active but the server has no key bundle at all.</summary>
     public bool NeedsEncryptionRecovery
     {
         get
@@ -190,17 +188,12 @@ public sealed class SessionBootstrapper
         }
     }
 
-    /// <summary>True when the connection snapshot carries at least one unseen published news item.</summary>
     public bool HasUnseenNews => (_lastConnection?.UnseenNews?.Length ?? 0) > 0;
 
-    /// <summary>The next screen in the startup gate order — outdated/banned (terminal) → warnings → moderator
-    /// messages → passphrase → news → the regular target. Every startup gate screen funnels onward through this,
-    /// so the order lives in one place; each gate clears its own condition in the cached snapshot before
-    /// calling it again.</summary>
+    /// <summary>The next screen in the startup gate order; each gate clears its condition in the cached snapshot, then calls this again.</summary>
     public Screen ResolveNextStartupScreen()
     {
-        // ServerUnreachable (and a still-Pending result reached via the splash timeout) hold on the Offline
-        // screen, which retries the bootstrap, rather than dropping a returning user into onboarding.
+        // A still-Pending result means the splash timed out; hold on Offline rather than onboarding.
         if (_lastResult is SessionBootstrapResult.ServerUnreachable or SessionBootstrapResult.Pending)
         {
             return Screen.Offline;
@@ -240,7 +233,6 @@ public sealed class SessionBootstrapper
             : Screen.Onboarding;
     }
 
-    /// <summary>Drops the given news ids from the cached unseen list so the news gate clears without a reconnect.</summary>
     public void MarkNewsSeenInSnapshot(IReadOnlyCollection<Guid> seenIds)
     {
         var c = _lastConnection;
@@ -255,8 +247,6 @@ public sealed class SessionBootstrapper
         }
     }
 
-    /// <summary>Adds a freshly-published news item to the cached unseen list (idempotent) so a live push
-    /// surfaces it without a reconnect.</summary>
     public void AppendNewsToSnapshot(NewsSummaryDto summary)
     {
         var c = _lastConnection;
@@ -282,7 +272,6 @@ public sealed class SessionBootstrapper
         }
     }
 
-    /// <summary>Drops the cached result so the next <see cref="RunAsync"/> call hits the server again.</summary>
     public void Reset()
     {
         lock (_gate)
@@ -315,25 +304,37 @@ public sealed class SessionBootstrapper
                         _tokens.Clear();
                         return Settle(SessionBootstrapResult.NoSession, null);
                     }
-                    // Server down/unreachable, not a real auth rejection: keep tokens so a retry resumes the session.
                     _log.Warning("[SessionBootstrapper] Refresh failed; server unreachable, keeping tokens.");
                     return Settle(SessionBootstrapResult.ServerUnreachable, null);
                 }
             }
 
             await _signal.EnsureConnectedAsync(ct).ConfigureAwait(false);
+            if (!_signal.IsConnected && _signal.LastFailureWasUnauthorized)
+            {
+                // A 401 with a locally-fresh token can be clock skew or a rotated signing key; retry once before wiping.
+                _log.Information("[SessionBootstrapper] Hub returned 401; forcing a token refresh and retrying.");
+                var refreshed = await _tokens.TryRefreshAsync(ct, force: true).ConfigureAwait(false);
+                if (refreshed)
+                {
+                    await _signal.EnsureConnectedAsync(ct).ConfigureAwait(false);
+                }
+                else if (!_tokens.LastRefreshFailedUnauthorized)
+                {
+                    _log.Warning("[SessionBootstrapper] Forced refresh failed; server unreachable, keeping tokens.");
+                    return Settle(SessionBootstrapResult.ServerUnreachable, null);
+                }
+            }
             if (!_signal.IsConnected)
             {
                 if (_signal.LastFailureWasUnauthorized)
                 {
-                    // Token rejected (e.g. profile deleted server-side); force a fresh sign-in.
                     _log.Information("[SessionBootstrapper] Hub returned 401; wiping tokens and routing to sign-in.");
                     _tokens.Clear();
                     _keys.Clear();
                     return Settle(SessionBootstrapResult.NoSession, null);
                 }
 
-                // Network-level failure; keep tokens and show Offline so a later retry resumes the session.
                 _log.Warning("[SessionBootstrapper] Hub unreachable; keeping tokens, showing offline.");
                 return Settle(SessionBootstrapResult.ServerUnreachable, null);
             }
@@ -341,6 +342,8 @@ public sealed class SessionBootstrapper
             var status = await _hub.GetConnectionInfoAsync(ct).ConfigureAwait(false);
             _lastConnection = status;
             _notifications.NewMatches = status.NewMatchCount;
+            _chatCache.EnsureOwner(status.ProfileId);
+            await SyncHangoutsAsync(status, ct).ConfigureAwait(false);
 
             if (status.Status == ProfileLifecycle.Onboarding)
             {
@@ -384,18 +387,33 @@ public sealed class SessionBootstrapper
         }
         catch (OutdatedClientException)
         {
-            // Server rejected our API version. Drop the connection so nothing keeps talking to it; the
-            // outdated screen is terminal. Tokens/keys are kept — this is a plugin-update problem, not auth.
+            // Tokens and keys stay: an outdated client is an update problem, not an auth failure.
             _log.Warning("[SessionBootstrapper] Server rejected plugin API version; client is outdated.");
             await _signal.DisconnectAsync().ConfigureAwait(false);
             return Settle(SessionBootstrapResult.OutdatedClient, null);
         }
         catch (Exception ex)
         {
-            // A refresh token is still present here (the no-token case returned earlier), so treat any
-            // unexpected failure as the server being unreachable rather than wiping the session to onboarding.
             _log.Warning(ex, "[SessionBootstrapper] Bootstrap failed; treating as server-unreachable.");
             return Settle(SessionBootstrapResult.ServerUnreachable, null);
+        }
+    }
+
+    private async Task SyncHangoutsAsync(AetherConnectionDto status, CancellationToken ct)
+    {
+        _hangouts.SetOwner(status.ProfileId);
+        if (!status.HangoutsEnabled)
+        {
+            _hangouts.Clear();
+            return;
+        }
+        try
+        {
+            _hangouts.ApplySync(await _hub.GetHangoutSyncAsync(ct).ConfigureAwait(false));
+        }
+        catch (Exception ex)
+        {
+            _log.Warning(ex, "[SessionBootstrapper] Hangout sync failed.");
         }
     }
 

@@ -11,7 +11,7 @@ using static AetherLove.Screens.MatchFx;
 
 namespace AetherLove.Screens;
 
-/// <summary>Match effect — Treasure Chest: a wooden, iron-banded chest swings its lid
+/// <summary>Match effect - Treasure Chest: a wooden, iron-banded chest swings its lid
 /// open and bursts golden light rays, sparkles and spilling coins to reveal the two avatars as loot.</summary>
 public sealed class MatchTreasureChestScreen : IMatchEffect
 {

@@ -11,9 +11,7 @@ using static AetherLove.Screens.MatchFx;
 
 namespace AetherLove.Screens;
 
-/// <summary>Match effect — Constellation Heart: glowing star points connect with thin
-/// celestial lines that draw on segment-by-segment to trace a heart around the two avatars, over a
-/// twinkling night sky.</summary>
+/// <summary>Match effect - Constellation Heart: star points trace a heart around the two avatars.</summary>
 public sealed class MatchConstellationScreen : IMatchEffect
 {
     private readonly ScreenRouter _router;

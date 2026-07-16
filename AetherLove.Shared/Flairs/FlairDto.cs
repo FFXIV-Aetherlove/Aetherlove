@@ -21,4 +21,12 @@ public sealed record FlairDto(
     string? DescriptionFrench,
     string? DescriptionRussian,
     string? DescriptionGerman,
-    string? DescriptionPortuguese);
+    string? DescriptionPortuguese,
+    string Key = "");
+
+/// <summary>Well-known flair keys the client attaches behavior to.</summary>
+public static class FlairKeys
+{
+    /// <summary>The supporter badge flair, appended server-side while a profile is a supporter.</summary>
+    public const string Supporter = "supporter";
+}

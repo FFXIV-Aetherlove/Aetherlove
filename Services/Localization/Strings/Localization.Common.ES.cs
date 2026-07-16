@@ -88,12 +88,12 @@ internal static class CommonEs
         ["common.nav_swipe"] = "Swipe",
         ["common.nav_matches"] = "Matches",
         ["common.nav_settings"] = "Ajustes",
-        ["common.nav_minimize"] = "Ocultar",
 
         ["common.emoji_none_found"] = "No se encontró ningún emoji.",
 
         // Close-plugin confirmation modal
         ["common.close_plugin_tooltip"] = "Cerrar AetherLove",
+        ["common.minimize_tooltip"] = "Minimizar AetherLove",
         ["common.close_plugin_title"] = "¿Cerrar AetherLove?",
         ["common.close_plugin_body"] = "Esto solo oculta la ventana. Seguirás conectado y recibirás nuevas coincidencias y mensajes mientras el plugin esté habilitado.\n\nVuelve a abrir la ventana en cualquier momento escribiendo {0} en el chat.",
         ["common.close_plugin_tip"] = "Consejo: usa el botón Minimizar en la parte inferior para mantener visible la pequeña burbuja flotante con su indicador de notificaciones.",
@@ -143,6 +143,8 @@ internal static class CommonEs
         ["common.selfie_take"] = "Hacer foto",
         ["common.selfie_capturing"] = "Capturando...",
         ["common.offline_maintenance"] = "El servidor está en mantenimiento.",
-        ["common.back"] = "Atrás",
+
+        // added after update 1.5.0
+        ["common.nav_places"] = "Lugares",
     };
 }

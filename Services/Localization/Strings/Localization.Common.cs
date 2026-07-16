@@ -95,7 +95,6 @@ internal static class CommonEn
         ["common.nav_swipe"] = "Swipe",
         ["common.nav_matches"] = "Matches",
         ["common.nav_settings"] = "Settings",
-        ["common.nav_minimize"] = "Minimize",
 
         // Emoji picker
         ["common.emoji_search_hint"] = "Search emoji...",
@@ -103,6 +102,7 @@ internal static class CommonEn
 
         // Close-plugin confirmation modal
         ["common.close_plugin_tooltip"] = "Close AetherLove",
+        ["common.minimize_tooltip"] = "Minimize AetherLove",
         ["common.close_plugin_title"] = "Close AetherLove?",
         ["common.close_plugin_body"] = "This just hides the window. You'll stay connected and still receive new matches and messages while the plugin is enabled.\n\nReopen the window any time by typing {0} in chat.",
         ["common.close_plugin_tip"] = "Tip: use the Minimize button at the bottom instead to keep the small floating bubble visible with its notification badge.",
@@ -152,6 +152,8 @@ internal static class CommonEn
         ["common.selfie_take"] = "Take photo",
         ["common.selfie_capturing"] = "Capturing...",
         ["common.offline_maintenance"] = "The server is in maintenance.",
-        ["common.back"] = "Back",
+
+        // added after update 1.5.0
+        ["common.nav_places"] = "Places",
     };
 }

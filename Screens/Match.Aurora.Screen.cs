@@ -11,9 +11,7 @@ using static AetherLove.Screens.MatchFx;
 
 namespace AetherLove.Screens;
 
-/// <summary>Match effect — Liquid Aurora: stacked translucent aurora bands undulate over
-/// a near-black sky, two frosted avatars float linked by a flowing ribbon of light amid drifting bokeh.
-///</summary>
+/// <summary>Match effect - Liquid Aurora: aurora bands over a night sky; the avatars are linked by a ribbon of light.</summary>
 public sealed class MatchAuroraScreen : IMatchEffect
 {
     private readonly ScreenRouter _router;

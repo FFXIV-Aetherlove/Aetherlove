@@ -2,18 +2,13 @@ using System.Numerics;
 
 namespace AetherLove.UI;
 
-/// <summary>
-/// Independent scale knob for the minimised "bubble" window, driven by the user's mini-size
-/// <see cref="PhoneScalePreset"/> choice. Unlike <see cref="UiScale"/> (which scales the full phone), this is
-/// not tied to the main phone size: <see cref="PhoneScalePreset.Medium"/> = 1.0 = the bubble's authored size,
-/// so the smaller/larger presets size the bubble around its current look.
-/// </summary>
+/// <summary>Scale knob for the minimised "bubble" window, independent of the main phone size;
+/// <see cref="PhoneScalePreset.Medium"/> = 1.0 = the bubble's authored size.</summary>
 public static class MiniScale
 {
     /// <summary>The uniform mini-bubble scale; set via <see cref="Apply"/>, defaults to 1 (Medium).</summary>
     public static float S { get; private set; } = 1f;
 
-    /// <summary>The multiplier each size preset maps to, anchored on Medium = 1.0 (the current size).</summary>
     public static float MultiplierFor(PhoneScalePreset preset) => preset switch
     {
         PhoneScalePreset.Small => 0.75f,

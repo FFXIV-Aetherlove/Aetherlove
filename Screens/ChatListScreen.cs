@@ -15,6 +15,7 @@ using AetherLove.Services.Hub;
 using AetherLove.Services.Localization;
 using AetherLove.Shared.Matching;
 using AetherLove.Shared.Messaging;
+using AetherLove.Shared.Profile.Enums;
 using AetherLove.UI;
 using AetherLove.Widgets;
 using Dalamud.Bindings.ImGui;
@@ -24,7 +25,7 @@ using Dalamud.Interface.Utility.Raii;
 
 namespace AetherLove.Screens;
 
-/// <summary>List of active conversations, grouped by user-created categories (see the Categories partial).</summary>
+/// <summary>List of active conversations, grouped by user-created categories.</summary>
 public partial class ChatListScreen
 {
     private readonly ScreenRouter _router;
@@ -36,14 +37,13 @@ public partial class ChatListScreen
     private readonly ChatCategoryStore _categories;
     private readonly ChatSyncService _sync;
 
-    // Shared in-page confirm for unmatch/block, opened from a match row's right-click menu.
     private readonly PeerActionConfirm _peerConfirm = new();
 
     private readonly List<MatchSummaryDto> _matches = new();
     // Guards _matches: mutated off the UI thread (fetch Task, push handlers) while Draw() enumerates it.
     private readonly object _matchesLock = new();
     private readonly Dictionary<Guid, ISharedImmediateTexture?> _avatarTexCache = new();
-    // Decrypted last-message previews, keyed by peer. Derived keys cached so re-renders don't re-do ECDH.
+    // Decrypted last-message previews; derived keys cached so re-renders don't re-do ECDH.
     private readonly ConcurrentDictionary<Guid, string> _previewByPeer = new();
     private readonly ConcurrentDictionary<Guid, byte[]> _keyByPeer = new();
     private volatile bool _fetching;
@@ -54,6 +54,8 @@ public partial class ChatListScreen
     private Guid _selectedPeerId;
     private string _selectedPeerName = string.Empty;
     private byte[] _selectedPeerAvatar = [];
+    private bool _selectedPeerIsSupporter;
+    private NameStyle _selectedPeerNameStyle;
     private Guid _selectedScrollMessageId;
 
     /// <summary>The category the category view is showing; kept across chat round-trips so back returns here.</summary>
@@ -68,8 +70,8 @@ public partial class ChatListScreen
         Search,
     }
 
-    /// <summary>One match that satisfied the current search: whether its name matched, and the id of the
-    /// first message whose text matched (Empty if only the name matched).</summary>
+    /// <summary>Whether the name matched, and the id of the first message whose text matched
+    /// (Empty if only the name matched).</summary>
     private sealed record SearchHit(bool NameMatch, Guid ContentMessageId);
 
     private string _searchQuery = string.Empty;
@@ -90,7 +92,10 @@ public partial class ChatListScreen
         KeyStorageService keys,
         NotificationCenter notifications,
         ChatCategoryStore categories,
-        ChatSyncService sync)
+        ChatSyncService sync,
+        Services.Hangouts.HangoutStateService hangoutState,
+        Widgets.HangoutOverlay hangoutOverlay,
+        Widgets.HangoutSharePicker hangoutSharePicker)
     {
         _router = router;
         _hub = hub;
@@ -100,15 +105,36 @@ public partial class ChatListScreen
         _notifications = notifications;
         _categories = categories;
         _sync = sync;
+        _hangoutState = hangoutState;
+        _hangoutOverlay = hangoutOverlay;
+        _hangoutSharePicker = hangoutSharePicker;
+    }
+
+    private readonly Services.Hangouts.HangoutStateService _hangoutState;
+    private readonly Widgets.HangoutOverlay _hangoutOverlay;
+    private readonly Widgets.HangoutSharePicker _hangoutSharePicker;
+
+    /// <summary>The peer's live hangout when frames are enabled, else null.</summary>
+    private Shared.Hangouts.HangoutSummaryDto? HangoutChipFor(Guid peerId)
+    {
+        if (!Plugin.Configuration.Hangouts.ShowInMatchList)
+        {
+            return null;
+        }
+        var hg = _hangoutState.ForMatchPeer(peerId);
+        return hg is null || hg.EndUtc <= DateTimeOffset.UtcNow ? null : hg;
     }
 
     public Guid SelectedPeerId => _selectedPeerId;
     public string SelectedPeerName => _selectedPeerName;
     public byte[] SelectedPeerAvatar => _selectedPeerAvatar;
+    public bool SelectedPeerIsSupporter => _selectedPeerIsSupporter;
+    public NameStyle SelectedPeerNameStyle => _selectedPeerNameStyle;
 
-    /// <summary>When a search result is opened by content, the message to scroll to and highlight in the chat
-    /// (Empty for a normal open). Read by <see cref="ChatScreen"/> on show.</summary>
+    /// <summary>Message to scroll to when a search result is opened by content; Empty for a normal open.</summary>
     public Guid SelectedScrollMessageId => _selectedScrollMessageId;
+
+    private readonly EntranceAnimation _entrance = new();
 
     public void OnShow()
     {
@@ -117,6 +143,7 @@ public partial class ChatListScreen
         _events.MessageReceived += OnMessageReceived;
         _events.MatchCreated += OnMatchCreated;
         ClearSearch();
+        _entrance.Arm();
         StartFetch();
     }
 
@@ -129,14 +156,13 @@ public partial class ChatListScreen
         _cts.Cancel();
         _cts.Dispose();
         _cts = new CancellationTokenSource();
-        // Stop any in-flight content search; the applied filter is kept so returning from a chat keeps it.
+        // The applied filter is kept so returning from a chat keeps it.
         _searchCts.Cancel();
         FinalizeCategoryAnimations();
     }
 
     private void StartFetch()
     {
-        // Instant render from the persisted cache, then a cheap delta sync (no full match-list refetch).
         HydrateMatchesFromCache();
         if (_fetching)
         {
@@ -160,8 +186,7 @@ public partial class ChatListScreen
                 {
                     if (_hub.IsConnected)
                     {
-                        // Resilience: the delta yielded nothing (transient error / partial rollout); fall back to
-                        // the direct list so the screen is never stuck empty.
+                        // Delta yielded nothing (transient error / partial rollout); fall back to the direct list.
                         var dto = await _hub.GetMyMatchesAsync(ct).ConfigureAwait(false);
                         if (ct.IsCancellationRequested)
                         {
@@ -219,7 +244,6 @@ public partial class ChatListScreen
         CacheAvatars(cached);
         BuildPreviews(cached);
         _categories.PruneTo(cached.Select(m => m.PeerProfileId).ToHashSet());
-        // Resync the unread badge to the cached per-conversation counts.
         _notifications.UnreadChatMessages = cached.Sum(m => m.UnreadCount);
     }
 
@@ -235,7 +259,6 @@ public partial class ChatListScreen
     private void OnUnmatched(UnmatchedPushDto p) => RemovePeer(p.OtherProfileId);
     private void OnBlockedByPeer(BlockedByPeerPushDto p) => RemovePeer(p.OtherProfileId);
 
-    /// <summary>New match while the list is open — re-fetch so it appears live with avatar/preview.</summary>
     private void OnMatchCreated(MatchCreatedPushDto _) => StartFetch();
 
     private void RemovePeer(Guid peerId)
@@ -245,11 +268,11 @@ public partial class ChatListScreen
             _matches.RemoveAll(m => m.PeerProfileId == peerId);
         }
         _categories.RemovePeer(peerId);
+        _sync.Cache.RemovePeer(peerId);
+        _hangoutState.RemoveMatchPeer(peerId);
     }
 
-    /// <summary>Fires the confirmed destructive action against a peer, then optimistically drops the row so
-    /// it disappears immediately (the server also pushes the removal). Shared by the match row's right-click
-    /// unmatch/block, using the same in-page confirm as the chat screen.</summary>
+    /// <summary>Fires the confirmed action, then optimistically drops the row; the server also pushes the removal.</summary>
     private void ConfirmPeerAction(PeerAction action, Guid peerId)
     {
         _ = Task.Run(async () =>
@@ -298,8 +321,7 @@ public partial class ChatListScreen
         }
     }
 
-    /// <summary>Pins/unpins a match: updates the list immediately (optimistic, re-sorted) and persists to the
-    /// server. On failure the local change is reverted. Safe to call from either screen.</summary>
+    /// <summary>Optimistic pin/unpin, persisted to the server; reverted on failure.</summary>
     public void SetPinned(Guid peerId, bool pinned)
     {
         lock (_matchesLock)
@@ -336,15 +358,25 @@ public partial class ChatListScreen
         });
     }
 
-    /// <summary>Where the chat screen's back action should land: the category the chat was opened from
-    /// (if it still exists), otherwise the matches overview.</summary>
+    /// <summary>Selects a peer for the chat screen without going through the list UI.</summary>
+    public void SelectPeer(MatchSummaryDto m)
+    {
+        _selectedPeerId = m.PeerProfileId;
+        _selectedPeerName = m.PeerDisplayName;
+        _selectedPeerAvatar = m.PeerAvatarWebp;
+        _selectedPeerIsSupporter = m.PeerIsSupporter;
+        _selectedPeerNameStyle = m.PeerNameStyle;
+        _selectedScrollMessageId = Guid.Empty;
+        _openedChatFromCategory = false;
+    }
+
+    /// <summary>The category the chat was opened from if it still exists, otherwise the matches overview.</summary>
     public Screen ChatBackTarget =>
         _openedChatFromCategory && _categories.Get(_openCategoryId) is not null
             ? Screen.ChatCategory
             : Screen.ChatList;
 
-    /// <summary>Bumps the row's unread count + time, refreshes its preview, and floats it to the top.
-    /// The global unread badge is owned by the signal handler, not touched here.</summary>
+    /// <summary>The global unread badge is owned by the signal handler, not touched here.</summary>
     private void OnMessageReceived(MessageReceivedPushDto p)
     {
         MatchSummaryDto updated;
@@ -404,6 +436,14 @@ public partial class ChatListScreen
         {
             var bytes = _crypto.Decrypt(key, m.LastMessageNonce, m.LastMessageCiphertext);
             var text = Encoding.UTF8.GetString(bytes).Replace('\n', ' ').Replace('\r', ' ').Trim();
+            if (VenueShare.TryParse(text, out _))
+            {
+                text = Loc.T("chat.preview_venue");
+            }
+            else if (HangoutShare.TryParse(text, out _))
+            {
+                text = Loc.T("chat.preview_hangout");
+            }
             var full = (m.LastMessageFromMe ? Loc.T("chat.preview_me_prefix") : string.Empty) + text;
             return full.Length > 42 ? full[..41] + "…" : full;
         }
@@ -457,6 +497,8 @@ public partial class ChatListScreen
         DrawCategoryEditor(winPos, winSize);
         DrawCategoryDeleteConfirm(winPos, winSize);
         _peerConfirm.Draw(winPos, winSize, ConfirmPeerAction);
+        _hangoutOverlay.Draw(winPos, winSize);
+        _hangoutSharePicker.Draw(winPos, winSize);
     }
 
     public void DrawCategoryView()
@@ -472,63 +514,21 @@ public partial class ChatListScreen
         var contentTL = ImGui.GetCursorScreenPos();
         var contentSize = ImGui.GetContentRegionAvail();
         UpdateCategoryAnimations(ImGui.GetIO().DeltaTime);
-        DrawBackHeader(cat.Name, Loc.T("common.back"), () => _router.Navigate(Screen.ChatList));
+        ImGui.Spacing();
+        if (DrawFloatingBackPill(ImGui.GetCursorScreenPos(), Loc.T("chat.back_to_matches"), FontAwesomeIcon.Comment))
+        {
+            _router.Navigate(Screen.ChatList);
+        }
+        DrawSubpageHeading(cat.Name, 16f);
         DrawCategoryChatList(cat);
         DrawCategoryOpenFade(contentTL, contentSize);
         DrawCategoryEditor(winPos, winSize);
         DrawCategoryDeleteConfirm(winPos, winSize);
         _peerConfirm.Draw(winPos, winSize, ConfirmPeerAction);
+        _hangoutOverlay.Draw(winPos, winSize);
+        _hangoutSharePicker.Draw(winPos, winSize);
     }
 
-    /// <summary>Centred title with an arrow + label back button in the top left, matching the app's usual
-    /// back-navigation placement.</summary>
-    private static void DrawBackHeader(string title, string backLabel, Action onBack)
-    {
-        var winW = ImGui.GetWindowSize().X;
-        var t = ThemeService.Current;
-        var headerTop = ImGui.GetCursorPosY();
-
-        ImGui.SetCursorPosX((winW - ImGui.CalcTextSize(title).X) * 0.5f);
-        ImGui.Text(title);
-        var afterTitleY = ImGui.GetCursorPosY();
-
-        ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
-        var arrow = FontAwesomeIcon.ArrowLeft.ToIconString();
-        var arrowSz = ImGui.CalcTextSize(arrow);
-        ImGui.PopFont();
-        var labelSz = ImGui.CalcTextSize(backLabel);
-        var btnW = arrowSz.X + Px(6f) + labelSz.X;
-        var btnH = ImGui.GetTextLineHeight() + Px(4f);
-
-        ImGui.SetCursorPos(new Vector2(Px(12f), headerTop - Px(2f)));
-        ImGui.InvisibleButton("##catBack", new Vector2(btnW, btnH));
-        var hovered = ImGui.IsItemHovered();
-        if (hovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-        if (ImGui.IsItemClicked())
-        {
-            onBack();
-        }
-        var rectMin = ImGui.GetItemRectMin();
-        var dl = ImGui.GetWindowDrawList();
-        var col = hovered ? t.AccentLightU32 : t.AccentU32;
-        ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
-        dl.AddText(ImGui.GetFont(), ImGui.GetFontSize(),
-            new Vector2(rectMin.X, rectMin.Y + (btnH - arrowSz.Y) * 0.5f), col, arrow);
-        ImGui.PopFont();
-        dl.AddText(new Vector2(rectMin.X + arrowSz.X + Px(6f), rectMin.Y + (btnH - labelSz.Y) * 0.5f),
-            col, backLabel);
-
-        ImGui.SetCursorPosY(afterTitleY);
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-    }
-
-    /// <summary>Matches-view header: centred title, an overflow menu (Archived + show/hide search), and the
-    /// search row when enabled.</summary>
     private void DrawMatchesHeader()
     {
         var winW = ImGui.GetWindowSize().X;
@@ -576,6 +576,11 @@ public partial class ChatListScreen
             {
                 ImGui.CloseCurrentPopup();
                 ToggleSearchVisible();
+            }
+            if (ChatScreen.DrawIconMenuItem(FontAwesomeIcon.Ban, Loc.T("chat.menu_view_blocked")))
+            {
+                ImGui.CloseCurrentPopup();
+                _router.Navigate(Screen.Blocked);
             }
             ImGui.EndPopup();
         }
@@ -658,9 +663,8 @@ public partial class ChatListScreen
         _searchQuery = string.Empty;
     }
 
-    /// <summary>Runs the current query over names and, by decrypting each conversation from the local cache,
-    /// message contents. Builds the per-peer hit map the list filters on. Fully offline: the server only ever
-    /// holds ciphertext, so content search reads the cached ciphertext and decrypts in memory.</summary>
+    /// <summary>Fully offline search: the server only holds ciphertext, so names and message contents are
+    /// matched by decrypting the local cache in memory.</summary>
     private void RunSearch()
     {
         var query = _searchQuery.Trim();
@@ -679,7 +683,7 @@ public partial class ChatListScreen
         MatchSummaryDto[] snapshot;
         lock (_matchesLock)
         {
-            // Search spans every conversation; archived ones are included, not hidden behind the folder.
+            // Archived conversations are included in search.
             snapshot = _matches.ToArray();
         }
 
@@ -722,9 +726,8 @@ public partial class ChatListScreen
         }, ct);
     }
 
-    /// <summary>Id of the first message in the peer's cached conversation whose text contains
-    /// <paramref name="query"/>, or Empty. Reads ciphertext from the local cache and decrypts in memory with
-    /// the per-conversation key; no server round-trip.</summary>
+    /// <summary>Id of the first cached message containing <paramref name="query"/>, or Empty;
+    /// decrypts locally, no server round-trip.</summary>
     private Guid FindContentMatch(MatchSummaryDto m, string query)
     {
         var key = KeyForPeer(m);
@@ -750,8 +753,7 @@ public partial class ChatListScreen
         return Guid.Empty;
     }
 
-    /// <summary>Shared preamble for both list views: snapshots the matches and renders the loading / error /
-    /// empty states. Returns null when a state was rendered and the list should not draw.</summary>
+    /// <summary>Returns null when a loading/error/empty state was rendered and the list should not draw.</summary>
     private MatchSummaryDto[]? SnapshotMatchesOrDrawState()
     {
         MatchSummaryDto[] all;
@@ -781,8 +783,7 @@ public partial class ChatListScreen
         return all;
     }
 
-    /// <summary>The matches overview: category rows first, then the top-level (uncategorized) chats. During an
-    /// active search the categories are hidden and hits from every category are shown flat.</summary>
+    /// <summary>During an active search the categories are hidden and hits from every category are shown flat.</summary>
     private void DrawTopLevelList()
     {
         if (SnapshotMatchesOrDrawState() is not { } all)
@@ -859,7 +860,6 @@ public partial class ChatListScreen
         }
     }
 
-    /// <summary>The inside-a-category list: that category's chats only.</summary>
     private void DrawCategoryChatList(Config.ChatCategoryConfig cat)
     {
         if (SnapshotMatchesOrDrawState() is not { } all)
@@ -889,11 +889,11 @@ public partial class ChatListScreen
         }
     }
 
-    /// <summary>Virtualized chat rows: only rows intersecting the viewport (plus a one-screen margin) are drawn;
-    /// off-screen rows just advance the cursor, so scroll extent and position stay correct. Departing rows
-    /// animate their height toward zero, so their (shrinking) height participates in both branches.</summary>
+    /// <summary>Virtualized rows: off-screen rows advance the cursor so scroll extent stays correct;
+    /// departing rows' shrinking height participates in both branches.</summary>
     private void DrawChatRows(MatchSummaryDto[] rows, RowContext ctx, Dictionary<Guid, SearchHit>? hits)
     {
+        _entrance.BeginFrame();
         var rowHeight = Px(MatchRowHeight);
         var viewH = ImGui.GetWindowSize().Y;
         var bandTop = ImGui.GetScrollY() - viewH;
@@ -916,12 +916,14 @@ public partial class ChatListScreen
                 continue;
             }
 
+
             // Mark the row that sits on the pinned/unpinned boundary so it gets an accent divider.
             var isPinnedBoundary = ctx != RowContext.Search && m.IsPinned && i + 1 < rows.Length && !rows[i + 1].IsPinned;
             SearchHit? hit = null;
             hits?.TryGetValue(m.PeerProfileId, out hit);
             DrawMatchRow(m, isPinnedBoundary, ctx, hit, depart, visH);
         }
+        _entrance.EndFrame();
     }
 
     private static void DrawCenteredHint(string message)
@@ -945,26 +947,19 @@ public partial class ChatListScreen
         }
     }
 
-    /// <summary>Full-panel "couldn't reach the server" state: a disconnected icon, the localized message,
-    /// and Try-again / Discord actions. Shown when a matches fetch fails while the hub is not connected.</summary>
     private void DrawConnectivityError()
     {
         var t = ThemeService.Current;
         var winSize = ImGui.GetWindowSize();
         var winPos = ImGui.GetWindowPos();
 
-        const float IconScale = 2.6f;
         var Padding = Px(24f);
         var Gap = Px(22f);
         var ButtonGap = Px(20f);
         var buttonH = Px(32f);
 
-        var icon = FontAwesomeIcon.Unlink.ToIconString();
-        ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIconFixedWidth);
-        ImGui.SetWindowFontScale(IconScale * UiScale.S);
-        var iconSz = ImGui.CalcTextSize(icon);
-        ImGui.SetWindowFontScale(1.0f);
-        ImGui.PopFont();
+        var iconPx = Px(44f);
+        var iconSz = IconDraw.Measure(FontAwesomeIcon.Unlink, iconPx);
 
         var msg = Loc.T("chat.connectivity_error");
         var wrapWidth = winSize.X - Padding * 2f;
@@ -982,14 +977,8 @@ public partial class ChatListScreen
         var blockTop = winPos.Y + (winSize.Y - totalH) * 0.40f;
 
         var iconX = winPos.X + (winSize.X - iconSz.X) * 0.5f;
-        ImGui.SetCursorScreenPos(new Vector2(iconX, blockTop));
-        ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIconFixedWidth);
-        ImGui.SetWindowFontScale(IconScale * UiScale.S);
-        ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0.92f, 0.46f, 0.46f, 0.85f));
-        ImGui.TextUnformatted(icon);
-        ImGui.PopStyleColor();
-        ImGui.SetWindowFontScale(1.0f);
-        ImGui.PopFont();
+        IconDraw.Add(ImGui.GetWindowDrawList(), FontAwesomeIcon.Unlink, iconPx,
+            new Vector2(iconX, blockTop), ImGui.GetColorU32(new Vector4(0.92f, 0.46f, 0.46f, 0.85f)));
 
         // Centre each wrapped line individually; TextWrapped left-aligns.
         var textY = blockTop + iconSz.Y + Gap;
@@ -1035,16 +1024,11 @@ public partial class ChatListScreen
         var winSize = ImGui.GetWindowSize();
         var winPos = ImGui.GetWindowPos();
 
-        const float IconScale = 2.6f;
         var Padding = Px(24f);
         var Gap = Px(22f);
 
-        var icon = FontAwesomeIcon.HeartBroken.ToIconString();
-        ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIconFixedWidth);
-        ImGui.SetWindowFontScale(IconScale * UiScale.S);
-        var iconSz = ImGui.CalcTextSize(icon);
-        ImGui.SetWindowFontScale(1.0f);
-        ImGui.PopFont();
+        var iconPx = Px(44f);
+        var iconSz = IconDraw.Measure(FontAwesomeIcon.HeartBroken, iconPx);
 
         var msg = Loc.T("chat.empty_state");
         var wrapWidth = winSize.X - Padding * 2f;
@@ -1062,15 +1046,8 @@ public partial class ChatListScreen
         var blockTop = winPos.Y + (winSize.Y - totalH) * 0.42f;
 
         var iconX = winPos.X + (winSize.X - iconSz.X) * 0.5f;
-        ImGui.SetCursorScreenPos(new Vector2(iconX, blockTop));
-        ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIconFixedWidth);
-        ImGui.SetWindowFontScale(IconScale * UiScale.S);
-        ImGui.PushStyleColor(ImGuiCol.Text,
-            new Vector4(t.AccentLight.X, t.AccentLight.Y, t.AccentLight.Z, 0.55f));
-        ImGui.TextUnformatted(icon);
-        ImGui.PopStyleColor();
-        ImGui.SetWindowFontScale(1.0f);
-        ImGui.PopFont();
+        IconDraw.Add(ImGui.GetWindowDrawList(), FontAwesomeIcon.HeartBroken, iconPx,
+            new Vector2(iconX, blockTop), ImGui.GetColorU32(new Vector4(t.AccentLight.X, t.AccentLight.Y, t.AccentLight.Z, 0.55f)));
 
         // Centre each wrapped line individually; TextWrapped left-aligns.
         var textY = blockTop + iconSz.Y + Gap;
@@ -1089,7 +1066,6 @@ public partial class ChatListScreen
         }
     }
 
-    /// <summary>Word-wraps <paramref name="text"/> into lines fitting within <paramref name="maxWidth"/>.</summary>
     private static string[] WrapLines(string text, float maxWidth)
     {
         var words = text.Split(' ');
@@ -1127,6 +1103,27 @@ public partial class ChatListScreen
         var rowMax = cursorStart + new Vector2(windowWidth, visH);
         var beingDragged = _dragActive && _dragKind == DragKind.Chat && _dragPeerId == m.PeerProfileId;
 
+        // The hangout marker shares the row's InvisibleButton; the release handler routes a marker tap to the overlay.
+        var hangout = HangoutChipFor(m.PeerProfileId);
+        Vector2 chipTl = default, chipBr = default;
+        if (hangout is not null)
+        {
+            const float ChipTextScale = 0.78f;
+            var chipW = Px(8f) + Px(12f) + Px(5f)
+                + ImGui.CalcTextSize(Loc.T("hangout.row_active")).X * ChipTextScale + Px(8f);
+            var nameX = Px(80f) + ImGui.CalcTextSize(m.PeerDisplayName).X + Px(6f);
+            if (m.PeerIsSupporter)
+            {
+                nameX += IconDraw.Measure(FontAwesomeIcon.Star, ImGui.GetFontSize() * 0.6f).X + Px(4f);
+            }
+            if (m.IsPinned)
+            {
+                nameX += IconDraw.Measure(FontAwesomeIcon.Thumbtack, ImGui.GetFontSize() * 0.8f).X + Px(4f);
+            }
+            chipTl = cursorStart + new Vector2(nameX + Px(4f), Px(9f));
+            chipBr = chipTl + new Vector2(chipW, Px(20f));
+        }
+
         var isHovered = false;
         if (depart is null)
         {
@@ -1147,12 +1144,24 @@ public partial class ChatListScreen
                 _pressPeerId = Guid.Empty;
                 if (!_dragActive && ImGui.IsItemHovered())
                 {
-                    _selectedPeerId = m.PeerProfileId;
-                    _selectedPeerName = m.PeerDisplayName;
-                    _selectedPeerAvatar = m.PeerAvatarWebp;
-                    _selectedScrollMessageId = hit?.ContentMessageId ?? Guid.Empty;
-                    _openedChatFromCategory = ctx == RowContext.Category;
-                    _router.Navigate(Screen.Chat);
+                    var mouse = ImGui.GetMousePos();
+                    if (hangout is not null
+                        && mouse.X >= chipTl.X && mouse.X <= chipBr.X
+                        && mouse.Y >= chipTl.Y && mouse.Y <= chipBr.Y)
+                    {
+                        _hangoutOverlay.Open(hangout);
+                    }
+                    else
+                    {
+                        _selectedPeerId = m.PeerProfileId;
+                        _selectedPeerName = m.PeerDisplayName;
+                        _selectedPeerAvatar = m.PeerAvatarWebp;
+                        _selectedPeerIsSupporter = m.PeerIsSupporter;
+                        _selectedPeerNameStyle = m.PeerNameStyle;
+                        _selectedScrollMessageId = hit?.ContentMessageId ?? Guid.Empty;
+                        _openedChatFromCategory = ctx == RowContext.Category;
+                        _router.Navigate(Screen.Chat);
+                    }
                 }
             }
 
@@ -1174,6 +1183,12 @@ public partial class ChatListScreen
                 }
                 DrawCategoryMenuItems(m.PeerProfileId, ctx,
                     cursorStart + new Vector2(Px(40f), rowHeight * 0.5f));
+                if (hangout is not null
+                    && ChatScreen.DrawIconMenuItem(FontAwesomeIcon.MapMarkerAlt, Loc.T("hangout.menu_view")))
+                {
+                    ImGui.CloseCurrentPopup();
+                    _hangoutOverlay.Open(hangout);
+                }
                 ImGui.Separator();
                 if (ChatScreen.DrawIconMenuItem(FontAwesomeIcon.Unlink, Loc.T("chat.menu_unmatch")))
                 {
@@ -1198,9 +1213,7 @@ public partial class ChatListScreen
         var contentStart = cursorStart + new Vector2(slide, 0f);
         drawList.PushClipRect(cursorStart, new Vector2(rowMax.X, MathF.Max(rowMax.Y, cursorStart.Y + 1f)), true);
 
-        // A match with no messages yet still needs the first hello: tint it with the theme accent and
-        // sweep a periodic shine across it so it stands out as needing attention. Both clear as soon as
-        // either side sends a message, or once the user has opened the chat (acknowledged it).
+        // "Needs a first hello" highlight; clears once a message is sent or the chat has been opened.
         if (m.LastMessageAtUtc is null
             && !Plugin.Configuration.OpenedChats.Contains(m.PeerProfileId))
         {
@@ -1211,6 +1224,31 @@ public partial class ChatListScreen
         if (isHovered)
         {
             drawList.AddRectFilled(cursorStart, rowMax, 0x20FFFFFF);
+        }
+
+        if (hangout is not null)
+        {
+            var accent = HangoutFields.IsLiveNow(hangout) ? UiColors.LiveGreen : ThemeService.Current.Accent;
+            drawList.AddRectFilled(cursorStart, rowMax, ImGui.GetColorU32(accent with { W = 0.06f }));
+            drawList.AddRect(cursorStart + Px(3f, 3f), rowMax - Px(3f, 3f),
+                ImGui.GetColorU32(accent with { W = 0.80f }), Px(8f), ImDrawFlags.None, Px(1.5f));
+
+            var chipHovered = isHovered && ImGui.GetMousePos() is { } mp
+                && mp.X >= chipTl.X && mp.X <= chipBr.X && mp.Y >= chipTl.Y && mp.Y <= chipBr.Y;
+            var glow = AccessibilityService.ReduceMotion || chipHovered
+                ? 1f
+                : 0.65f + 0.35f * MathF.Sin((float)ImGui.GetTime() * 2.6f);
+            drawList.AddRectFilled(chipTl, chipBr,
+                ImGui.GetColorU32(accent with { W = 0.12f * glow }), Px(10f));
+            var chipMidY = (chipTl.Y + chipBr.Y) * 0.5f;
+            IconDraw.AddCentered(drawList, FontAwesomeIcon.Bullhorn, Px(11f),
+                new Vector2(chipTl.X + Px(13f), chipMidY), ImGui.GetColorU32(accent with { W = glow }));
+            var chipLabel = Loc.T("hangout.row_active");
+            var chipFs = ImGui.GetFontSize() * 0.78f;
+            var chipTextSz = ImGui.CalcTextSize(chipLabel) * 0.78f;
+            drawList.AddText(ImGui.GetFont(), chipFs,
+                new Vector2(chipTl.X + Px(24f), chipMidY - chipTextSz.Y * 0.5f),
+                ImGui.GetColorU32(accent with { W = glow }), chipLabel);
         }
 
         var avatarCenter = contentStart + new Vector2(Px(40), rowHeight * 0.5f);
@@ -1250,14 +1288,21 @@ public partial class ChatListScreen
         }
         else
         {
-            drawList.AddText(textPos, 0xFFFFFFFF, m.PeerDisplayName);
+            drawList.AddText(textPos, SupporterStyle.NameColor(m.PeerNameStyle, 0xFFFFFFFF), m.PeerDisplayName);
+        }
+        var afterNameX = ImGui.CalcTextSize(m.PeerDisplayName).X + Px(6f);
+        if (m.PeerIsSupporter)
+        {
+            var starPx = ImGui.GetFontSize() * 0.6f;
+            IconDraw.Add(drawList, FontAwesomeIcon.Star, starPx,
+                textPos + new Vector2(afterNameX, Px(3f)), UiColors.FavoriteStar);
+            afterNameX += IconDraw.Measure(FontAwesomeIcon.Star, starPx).X + Px(4f);
         }
         if (m.IsPinned)
         {
-            var nameW = ImGui.CalcTextSize(m.PeerDisplayName).X;
             ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
             drawList.AddText(ImGui.GetFont(), ImGui.GetFontSize() * 0.8f,
-                textPos + new Vector2(nameW + Px(6f), Px(1f)),
+                textPos + new Vector2(afterNameX, Px(1f)),
                 ThemeService.Current.AccentU32, FontAwesomeIcon.Thumbtack.ToIconString());
             ImGui.PopFont();
         }
@@ -1271,7 +1316,6 @@ public partial class ChatListScreen
             UiColors.TextMuted,
             timeAgo);
 
-        // Last-message preview ("Me: …" for outgoing, the text itself for incoming).
         _previewByPeer.TryGetValue(m.PeerProfileId, out var preview);
         var previewText = !string.IsNullOrEmpty(preview)
             ? preview
@@ -1291,7 +1335,6 @@ public partial class ChatListScreen
 
         if (isPinnedBoundary)
         {
-            // Accent, full-width separator between the pinned group and the rest.
             drawList.AddLine(
                 cursorStart + new Vector2(0f, visH),
                 cursorStart + new Vector2(windowWidth, visH),
@@ -1308,8 +1351,7 @@ public partial class ChatListScreen
         ImGui.SetCursorScreenPos(cursorStart + new Vector2(0, visH));
     }
 
-    /// <summary>A theme-tinted glint that sweeps across an attention row every few seconds (skipped under
-    /// reduce-motion). Driven by the global clock, so every awaiting-reply row shines in unison.</summary>
+    /// <summary>Driven by the global clock so every awaiting-reply row shines in unison; skipped under reduce-motion.</summary>
     private static void DrawAttentionShine(ImDrawListPtr dl, Vector2 min, Vector2 max)
     {
         if (AccessibilityService.ReduceMotion)
@@ -1353,8 +1395,6 @@ public partial class ChatListScreen
         return Loc.T("chat.time_ago_days", (int)diff.TotalDays);
     }
 
-    /// <summary>Draws a match's name, colouring the first occurrence of <paramref name="query"/> with the
-    /// search-highlight accent so the matched text stands out in the row.</summary>
     private static void DrawNameHighlighted(ImDrawListPtr dl, Vector2 pos, string name, string query)
     {
         var idx = name.IndexOf(query, StringComparison.OrdinalIgnoreCase);

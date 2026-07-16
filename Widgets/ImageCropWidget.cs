@@ -102,7 +102,7 @@ public class ImageCropWidget
             }
             var delta = (ImGui.GetMousePos().X - _resizeDragStartMouseX) / scale;
             var newWidth = Math.Max(MinCropWidth, _resizeDragStartWidth + delta);
-            var newHeight = newWidth * 16f / 10f;
+            var newHeight = newWidth * _aspectRatio;
             newWidth = Math.Min(newWidth, texture.Width - _cropTopLeft.X);
             newHeight = Math.Min(newHeight, texture.Height - _cropTopLeft.Y);
             newWidth = Math.Min(newWidth, newHeight / _aspectRatio);

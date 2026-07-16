@@ -11,6 +11,38 @@ public static class ChangelogRegistry
     private static readonly List<ChangelogEntry> _entries =
     [
         new(
+            Version: new Version(1, 6, 0),
+            ReleaseDate: new DateOnly(2026, 07, 16),
+            NewFeatures:
+            [
+                "Places: a full directory of player-run venues, all from the comfort of your game. Browse what's happening now and later this week, filter by vibe and region, RSVP to events, and see who else is going.",
+                "Find venues that cater to your likes with the filters you're familiar with. Rate and review venues, like your favorites, hide the ones that aren't for you, and share places with your matches to perhaps meet up.",
+                "Venue owners can list their venue with a banner, logo, opening times, and location, and manage everything from the new My Venues editor. Venue owners can request access to the venues feature via a support ticket on our Discord.",
+                "Hangouts: broadcast what you're up to right now (\"Ocean fishing, come join!\") and browse everyone else's hangouts in the new Hangouts tab. One tap tells the host you're on your way.",
+                "Live hangouts also show up on your matches' profiles and in your matches list. Quickly invite people to a certain type of content, a certain type of activity, or find someone to gpose with!",
+                "Supporting us: if you would like to support our project financially, you can do so via Patreon. Link your Patreon from inside the app to unlock supporter perks and help cover the server costs.",
+                "Supporter perks include five extra profile photos, five reswipes a day, three superlikes a day, exclusive name styles and a supporter star, up to three images per RP character, a venue banner carousel, and personal profile statistics.",
+                "Superlikes for everyone: each week you get one free superlike. When you superlike someone, you land right on top of their deck with a special reveal.",
+                "Two new phone themes, Crystal Void and World of Lovecraft, plus refreshed backgrounds for every theme.",
+                "A new Blocked Users page in Settings lets you review who you've blocked and unblock them in case you made a mistake blocking someone.",
+                "New bezel buttons to minimize or close the phone."
+            ],
+            BugFixes:
+            [
+                "Ctrl+V now pastes into every multiline text field.",
+                "Fixed ghost chats that could linger after the other person deleted their account.",
+                "A brief server hiccup while connecting no longer drops you back into onboarding.",
+                "You no longer get notified about news published before you registered.",
+                "Large icons render crisply now.",
+                "Signing in through XIVAuth is now more reliable."
+            ],
+            Important:
+            [
+                "AetherLove 1.6.0 is here! Our biggest update yet: This update adds \"places\", \"Hangouts\" and an option to support the project!",
+                "With this update we will be celebrating 5,000,000 swipes and over 145,000 matches made. You just keep on swiping, it's ridiculous ❤️ !"
+            ]
+        ),
+        new(
             Version: new Version(1, 5, 0),
             ReleaseDate: new DateOnly(2026, 07, 08),
             NewFeatures:

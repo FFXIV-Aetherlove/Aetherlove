@@ -7,9 +7,8 @@ using Dalamud.Interface;
 
 namespace AetherLove.Widgets;
 
-/// <summary>Blocking gate shown before the main avatar or first profile photo is chosen — those two must
-/// stay SFW. The user has to acknowledge the rules before the file picker opens; routed through the shared
-/// <see cref="ModalHost"/> with click-outside disabled so it can't be dismissed without acknowledging.</summary>
+/// <summary>Blocking SFW acknowledgement gate before the avatar or first profile photo pick; click-outside
+/// is disabled so it can't be dismissed without acknowledging.</summary>
 public sealed class SfwImageGateModal
 {
     private Action? _onAccept;
@@ -57,14 +56,12 @@ public sealed class SfwImageGateModal
     {
         var danger = UiColors.Danger;
 
-        ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIconFixedWidth);
-        ImGui.SetWindowFontScale(1.5f * UiScale.S);
-        var icon = FontAwesomeIcon.ExclamationTriangle.ToIconString();
-        var iconSz = ImGui.CalcTextSize(icon);
-        ImGui.SetCursorPosX((availW - iconSz.X) * 0.5f);
-        ImGui.TextColored(danger, icon);
-        ImGui.SetWindowFontScale(1f);
-        ImGui.PopFont();
+        var iconPx = Px(26f);
+        var iconSz = IconDraw.Measure(FontAwesomeIcon.ExclamationTriangle, iconPx);
+        var origin = ImGui.GetCursorScreenPos();
+        IconDraw.Add(ImGui.GetWindowDrawList(), FontAwesomeIcon.ExclamationTriangle, iconPx,
+            new Vector2(origin.X + (availW - iconSz.X) * 0.5f, origin.Y), ImGui.GetColorU32(danger));
+        ImGui.Dummy(new Vector2(availW, iconSz.Y));
         ImGui.Spacing();
 
         using (UiFonts.H3?.Push())
@@ -91,7 +88,6 @@ public sealed class SfwImageGateModal
         ImGui.Spacing();
     }
 
-    /// <summary>One rule line: a dot drawn in the margin, with the wrapped text hanging-indented past it.</summary>
     private static void DrawBullet(string text, Vector4 color)
     {
         var indent = Px(18f);
@@ -109,7 +105,6 @@ public sealed class SfwImageGateModal
         ImGui.Spacing();
     }
 
-    /// <summary>Green callout that makes the "secondary images may be NSFW" allowance stand out.</summary>
     private static void DrawSecondaryCallout(float availW)
     {
         var green = UiColors.Success;

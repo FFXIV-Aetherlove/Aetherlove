@@ -2,9 +2,7 @@ using System;
 
 namespace AetherLove.Services;
 
-/// <summary>Maps image bytes to a file extension by their container magic. Cache files are named by
-/// actual content so <c>GetFromFile</c> decodes them whether the server sent WebP or JPEG (Wine has
-/// no WebP WIC codec and gets JPEG); the on-disk name then never disagrees with the bytes.</summary>
+/// <summary>Maps image bytes to a file extension by their container magic, so the on-disk name never disagrees with the bytes.</summary>
 public static class ImageFormat
 {
     public static string ExtensionFor(ReadOnlySpan<byte> bytes)

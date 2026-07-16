@@ -51,7 +51,7 @@ internal static class ProfileFr
         ["profile.closing_in"] = "Fermeture dans {0} secondes",
         ["profile.close"] = "Fermer",
 
-        // ProfileScreen — copy profile text (viewing others only)
+        // ProfileScreen - copy profile text (viewing others only)
         ["profile.copy_text"] = "Copier le texte du profil",
         ["profile.copy_warning_title"] = "Avertissement",
         ["profile.copy_warning_body"] = "Vous venez de copier le texte de quelqu'un. Faites attention avant de cliquer sur les liens qu'il pourrait contenir ou de les suivre — vous le faites à vos propres risques.",
@@ -177,5 +177,36 @@ internal static class ProfileFr
         ["profile.rp_crop_image"] = "Recadrer l'image du personnage",
         ["profile.rp_back"] = "Retour",
         ["profile.rp_details"] = "Détails du personnage :",
+
+        // added after update 1.5.1
+        ["profile.slot_locked"] = "Cet emplacement de photo nécessite un abonnement de soutien actif. Vous pouvez retirer la photo ou vous réabonner pour l'utiliser à nouveau.",
+        ["profile.rp_extra_image"] = "Image supplémentaire {0} (soutien)",
+        ["profile.section_supporter"] = "Soutien",
+        ["profile.menu_sup_vanity"] = "Styles personnalisés",
+        ["profile.menu_sup_stats"] = "Statistiques bonus",
+        ["profile.sup_intro"] = "Merci de soutenir AetherLove ! Choisissez un style pour votre nom et décidez d'afficher ou non le badge de soutien. Tout le monde peut les voir.",
+        ["profile.sup_name_style"] = "Style du nom",
+        ["profile.sup_show_badge"] = "Afficher le badge de soutien",
+        ["profile.sup_badge_hint"] = "Affiche le tag de soutien sur votre profil. L'étoile à côté de votre nom est toujours visible.",
+        ["profile.sup_stats_intro"] = "Un aperçu réservé aux soutiens de la façon dont votre profil se porte à travers le royaume.",
+        ["profile.sup_stat_likes_received"] = "Likes reçus",
+        ["profile.sup_stat_superlikes"] = "Superlikes reçus",
+        ["profile.sup_stat_views"] = "Vues du profil",
+        ["profile.sup_stat_impressions"] = "Apparitions en deck",
+        ["profile.sup_stat_likes_given"] = "Likes donnés",
+        ["profile.sup_stat_passes_given"] = "Refus donnés",
+        ["profile.sup_stat_matches"] = "Matchs",
+        ["profile.sup_stat_like_rate"] = "Votre taux de like",
+        ["profile.sup_stat_match_rate"] = "Votre taux de match",
+        ["profile.style_none"] = "Par défaut",
+        ["profile.style_crimson"] = "Cramoisi",
+        ["profile.style_gold"] = "Or",
+        ["profile.style_emerald"] = "Émeraude",
+        ["profile.style_sapphire"] = "Saphir",
+        ["profile.style_violet"] = "Violet",
+        ["profile.style_rose"] = "Rose",
+        ["profile.style_rainbow"] = "Arc-en-ciel (animé)",
+        ["profile.style_shimmer"] = "Reflet doré (animé)",
+        ["profile.style_pulse"] = "Pulsation rose (animé)",
     };
 }

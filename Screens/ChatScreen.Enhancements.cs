@@ -16,27 +16,24 @@ using Dalamud.Interface.Utility.Raii;
 
 namespace AetherLove.Screens;
 
-/// <summary>Server-backed chat enhancements: reply/quote, emoji reactions, and pinned messages. Reactions use
-/// a two-column model (mine vs theirs) so a user can only remove their own; the server stores them as plaintext
-/// metadata (not end-to-end encrypted) and resolves "mine/theirs" per caller, since the client never knows its
-/// own profile id. All mutation of this state happens on the UI thread: push handlers and async hub replies
-/// queue their work via <see cref="_uiActions"/>, drained at the top of <see cref="Draw"/>.</summary>
+/// <summary>Reply/quote, emoji reactions, and pinned messages. Reactions are plaintext server metadata in a
+/// mine/theirs two-column model resolved per caller (the client never knows its own profile id); all state
+/// mutation is marshalled to the UI thread via <see cref="_uiActions"/>.</summary>
 public partial class ChatScreen
 {
     /// <summary>Reactions placed by this user, per message id (the column the server lets us edit).</summary>
     private readonly Dictionary<Guid, List<string>> _myReactions = new();
     /// <summary>Reactions placed by the peer, per message id (read-only attribution).</summary>
     private readonly Dictionary<Guid, List<string>> _theirReactions = new();
-    /// <summary>Ordered chips currently shown for a message, including any mid-exit; reconciled from the two
-    /// reaction columns so a removed chip can fade out before its slot is pruned.</summary>
+    /// <summary>Ordered chips currently shown, including any mid-exit, so a removed chip can fade out
+    /// before its slot is pruned.</summary>
     private readonly Dictionary<Guid, List<string>> _rxDisplay = new();
 
     private readonly HashSet<Guid> _pinned = new();
     private readonly Dictionary<Guid, Guid> _replyTo = new();
     private readonly List<(Guid Temp, Guid Real)> _pendingIdMigrations = new();
 
-    /// <summary>Optimistic message ids not yet acknowledged by the server (no real id). Reactions/pins on these
-    /// are deferred via <see cref="_deferredByTempId"/> until the real id arrives.</summary>
+    /// <summary>Optimistic ids not yet acknowledged; reactions/pins on these are deferred until the real id arrives.</summary>
     private readonly HashSet<Guid> _unsentTempIds = new();
     private readonly Dictionary<Guid, List<Action<Guid>>> _deferredByTempId = new();
 
@@ -84,7 +81,6 @@ public partial class ChatScreen
         }
     }
 
-    /// <summary>Runs queued UI-thread work from push handlers and hub-reply continuations.</summary>
     private void DrainUiActions()
     {
         while (_uiActions.TryDequeue(out var act))
@@ -93,9 +89,8 @@ public partial class ChatScreen
         }
     }
 
-    /// <summary>UI-thread step that follows a message's enhancement state from its optimistic temp id to the
-    /// server-assigned id, so a reaction/pin/reply attached before the send completes isn't orphaned, and any
-    /// hub calls deferred while it was unsent now fire against the real id.</summary>
+    /// <summary>Moves a message's enhancement state from its optimistic temp id to the server-assigned id
+    /// and fires any deferred hub calls against the real id.</summary>
     private void DrainIdMigrations()
     {
         (Guid Temp, Guid Real)[] pending;
@@ -166,8 +161,8 @@ public partial class ChatScreen
         ReconcileReactionDisplay(msgId, animate);
     }
 
-    /// <summary>Brings the displayed chip list in line with the two reaction columns: new emoji pop in, removed
-    /// ones fade out (kept in the list until the exit completes). Order is first-seen.</summary>
+    /// <summary>Reconciles the displayed chips with the two reaction columns; removed chips stay in the
+    /// list until their exit completes. Order is first-seen.</summary>
     private void ReconcileReactionDisplay(Guid msgId, bool animate)
     {
         var mine = _myReactions.GetValueOrDefault(msgId);
@@ -235,8 +230,7 @@ public partial class ChatScreen
         }
     }
 
-    /// <summary>Toggles this user's reaction on a message: optimistic update first, then the server call, whose
-    /// authoritative reply reconciles any drift (a failure reverts the optimistic change).</summary>
+    /// <summary>Optimistic toggle; the server's authoritative reply reconciles drift and a failure reverts.</summary>
     private void ToggleMyReaction(Guid msgId, string emoji)
     {
         var mine = _myReactions.GetValueOrDefault(msgId) ?? new List<string>();
@@ -434,8 +428,7 @@ public partial class ChatScreen
             return Loc.T("chat.quote_unavailable");
         }
         var author = info.IsOwn ? Loc.T("chat.you") : _peerName;
-        // PlainText drops emoji shortcodes, so an emoji-only message leaves nothing; fall back to the raw
-        // text (shortcodes visible) rather than an empty preview.
+        // PlainText drops emoji shortcodes; fall back to the raw text so an emoji-only message isn't an empty preview.
         var body = ParsedMessage.Parse(info.Text).PlainText.Trim();
         if (body.Length == 0) { body = info.Text.Trim(); }
         if (body.Length == 0) { body = Loc.T("chat.quote_generic"); }
@@ -450,8 +443,7 @@ public partial class ChatScreen
             ? ImGui.GetTextLineHeight() + Px(12f)
             : 0f;
 
-    /// <summary>Quoted-original strip drawn above a reply bubble; click jumps to the original. Height matches
-    /// <see cref="ReplyQuoteHeight"/>.</summary>
+    /// <summary>Quoted-original strip above a reply bubble; height must match <see cref="ReplyQuoteHeight"/>.</summary>
     private void DrawReplyQuote(Guid messageId, float left, float top, float width)
     {
         if (!_replyTo.TryGetValue(messageId, out var quotedId))
@@ -476,9 +468,7 @@ public partial class ChatScreen
         if (ImGui.IsItemClicked()) { JumpToMessage(quotedId); }
     }
 
-    /// <summary>Reaction chips under a bubble. A chip carries the emoji plus a "2" when both participants used
-    /// it; ones this user placed are highlighted and removable on click (a click on a peer-only chip adds it as
-    /// mine). Chips scale+fade in on add and out on remove (the slot stays reserved until the exit completes).
+    /// <summary>Reaction chips under a bubble; a slot stays reserved until a chip's exit completes.
     /// Returns the vertical space used.</summary>
     private float DrawReactions(DisplayedMessage msg, float bubbleLeft, float bubbleBottomY, float maxBubW)
     {
@@ -593,9 +583,7 @@ public partial class ChatScreen
         return ImGui.GetTextLineHeight() + Px(12f);
     }
 
-    /// <summary>Thumbtack straddling a pinned bubble's top outer corner (right for a peer bubble, left for
-    /// your own) so its needle sticks into the message. On pin it drops in from above and settles (a
-    /// back-eased landing); steady after.</summary>
+    /// <summary>Thumbtack straddling a pinned bubble's top outer corner; drops in from above on pin.</summary>
     private void DrawPinMarker(Vector2 bubbleTL, float maxBubW, Guid messageId, bool isOwn)
     {
         var dl = ImGui.GetWindowDrawList();
@@ -604,8 +592,7 @@ public partial class ChatScreen
         var sz = ImGui.CalcTextSize(icon);
         ImGui.PopFont();
 
-        // Sit on the flat top just inside the rounded corner (inset past the corner radius), overlapping
-        // down into the bubble (needle in) and mostly above the top edge (head out).
+        // Inset past the corner radius so it sits on the flat top, needle overlapping into the bubble.
         var cornerX = isOwn ? bubbleTL.X : bubbleTL.X + maxBubW;
         var inset = isOwn ? Px(11f) : -Px(11f);
         var restPos = new Vector2(cornerX - sz.X * 0.5f + inset, bubbleTL.Y - sz.Y * 0.7f - Px(3f));
@@ -620,8 +607,7 @@ public partial class ChatScreen
             alpha = MathF.Min(1f, p * 1.6f);
         }
 
-        // The accent reads well on the grey peer bubble; on your own bubble it clashes, so use a soft
-        // off-white (a very light grey, not pure white) there for contrast.
+        // The accent clashes on your own bubble; use a soft off-white there.
         var baseCol = isOwn
             ? ImGui.ColorConvertFloat4ToU32(new Vector4(0.92f, 0.92f, 0.93f, 1f))
             : ThemeService.Current.AccentLightU32;
@@ -724,9 +710,7 @@ public partial class ChatScreen
         ImGui.SetCursorScreenPos(new Vector2(tl.X, br.Y + Px(4f)));
     }
 
-    /// <summary>In-app pinned-messages panel: a lightweight popup floating over the chat (not a
-    /// screen-locking modal), dismissed by the X or by clicking outside it. Opened via OpenPopup at the top
-    /// of <see cref="Draw"/>; this renders it.</summary>
+    /// <summary>Pinned-messages popup floating over the chat; opened via OpenPopup at the top of <see cref="Draw"/>.</summary>
     private void DrawPinnedOverlay()
     {
         var winPos = ImGui.GetWindowPos();

@@ -13,11 +13,23 @@ using Dalamud.Interface.Utility.Raii;
 
 namespace AetherLove.UI;
 
-/// <summary>Small stateless helpers shared by the profile-editing screens (onboarding and "My profile"):
-/// an inline help marker plus the conversions between a stored bitmask and the on/off checkbox state of a
-/// multi-select list. They live here, not on a screen, because both screens build the same profile data.</summary>
 internal static class SharedUiHelpers
 {
+    /// <summary>UV rect that cover-fits a source texture into a destination rect, centre-cropping the
+    /// overflowing axis. Works for any source aspect (legacy square venue banners and the wide 25:9 ones).</summary>
+    internal static (Vector2 Uv0, Vector2 Uv1) CoverFitUvs(float srcW, float srcH, float destW, float destH)
+    {
+        var srcAspect = srcW / srcH;
+        var destAspect = destW / destH;
+        if (srcAspect > destAspect)
+        {
+            var visible = destAspect / srcAspect;
+            return (new Vector2((1f - visible) * 0.5f, 0f), new Vector2((1f + visible) * 0.5f, 1f));
+        }
+        var visibleY = srcAspect / destAspect;
+        return (new Vector2(0f, (1f - visibleY) * 0.5f), new Vector2(1f, (1f + visibleY) * 0.5f));
+    }
+
     /// <summary>Red destructive-action button colours; pop 3 after the button.</summary>
     internal static void PushDangerButton()
     {
@@ -26,8 +38,59 @@ internal static class SharedUiHelpers
         ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.22f, 0.06f, 0.06f, 1f));
     }
 
-    /// <summary>Draws a faint "(?)" that shows <paramref name="text"/> as a tooltip while hovered — an
-    /// inline explanation for the field it sits next to.</summary>
+    /// <summary>Returns true the frame it is clicked; the caller flips the bound bool.</summary>
+    internal static bool DrawToggleSwitch(string id, string label, bool on)
+    {
+        var t = ThemeService.Current;
+        var dl = ImGui.GetWindowDrawList();
+        var h = ImGui.GetTextLineHeight() + Px(6f);
+        var trackW = h * 1.85f;
+        var labelSz = ImGui.CalcTextSize(label);
+        var origin = ImGui.GetCursorScreenPos();
+
+        var clicked = ImGui.InvisibleButton(id, new Vector2(trackW + Px(10f) + labelSz.X, h));
+        var hovered = ImGui.IsItemHovered();
+
+        var trackBR = origin + new Vector2(trackW, h);
+        var trackCol = on
+            ? t.Accent with { W = hovered ? 0.95f : 0.80f }
+            : new Vector4(1f, 1f, 1f, hovered ? 0.20f : 0.13f);
+        dl.AddRectFilled(origin, trackBR, ImGui.GetColorU32(trackCol), h * 0.5f);
+
+        var knobR = h * 0.5f - Px(3f);
+        var knobX = on ? trackBR.X - knobR - Px(3f) : origin.X + knobR + Px(3f);
+        dl.AddCircleFilled(new Vector2(knobX, origin.Y + h * 0.5f), knobR, 0xFFFFFFFFu);
+        dl.AddText(new Vector2(trackBR.X + Px(10f), origin.Y + (h - labelSz.Y) * 0.5f),
+            ImGui.GetColorU32(UiColors.Body), label);
+        return clicked;
+    }
+
+    internal static void DrawSectionPill(string title, Vector4 accent, FontAwesomeIcon icon)
+    {
+        var dl = ImGui.GetWindowDrawList();
+        var titleSz = ImGui.CalcTextSize(title);
+        var iconPx = ImGui.GetFontSize() * 0.9f;
+        var iconSz = IconDraw.Measure(icon, iconPx);
+        var innerPad = Px(11f);
+        var gap = Px(7f);
+        var h = MathF.Max(titleSz.Y, iconSz.Y) + Px(9f);
+        var w = innerPad + iconSz.X + gap + titleSz.X + innerPad;
+
+        ImGui.SetCursorPosX(Px(16f));
+        var tl = ImGui.GetCursorScreenPos();
+        var br = tl + new Vector2(w, h);
+        dl.AddRectFilled(tl, br, ImGui.GetColorU32(accent with { W = 0.16f }), h * 0.5f);
+        dl.AddRect(tl, br, ImGui.GetColorU32(accent with { W = 0.5f }), h * 0.5f, ImDrawFlags.None, Px(1f));
+
+        IconDraw.Add(dl, icon, iconPx, new Vector2(tl.X + innerPad, tl.Y + (h - iconSz.Y) * 0.5f),
+            ImGui.GetColorU32(accent));
+        dl.AddText(new Vector2(tl.X + innerPad + iconSz.X + gap, tl.Y + (h - titleSz.Y) * 0.5f),
+            0xFFFFFFFFu, title);
+
+        ImGui.Dummy(new Vector2(w, h));
+        ImGui.Spacing();
+    }
+
     internal static void HelpTooltip(string text)
     {
         ImGui.TextDisabled("(?)");
@@ -37,8 +100,6 @@ internal static class SharedUiHelpers
         }
     }
 
-    /// <summary>Returns <paramref name="text"/> shortened with a trailing ellipsis so it fits within
-    /// <paramref name="maxWidth"/> at the current font; returns it unchanged when it already fits.</summary>
     internal static string TruncateToWidth(string text, float maxWidth)
     {
         if (string.IsNullOrEmpty(text) || ImGui.CalcTextSize(text).X <= maxWidth)
@@ -63,9 +124,113 @@ internal static class SharedUiHelpers
         return lo <= 0 ? ellipsis : text[..lo].TrimEnd() + ellipsis;
     }
 
-    /// <summary>Copies player-authored text to the clipboard and, on the first copy ever, shows the one-time
-    /// link-safety warning gated by the shared AcknowledgedProfileCopyTextWarning flag. Used by the profile bio
-    /// and chat-message copy actions.</summary>
+    // Ctrl+V doesn't fire reliably in ImGui inputs in-game; armed pastes are spliced in through the input
+    // callback, the only place ImGui exposes the caret.
+    private static bool _pasteArmed;
+    private static int _pasteArmedFrame;
+
+    /// <summary>Call right after drawing a text input; a true <paramref name="textChanged"/> means the paste
+    /// was handled natively, so arming would insert it twice.</summary>
+    internal static void ArmPasteIfIgnored(bool textChanged)
+    {
+        if (!textChanged && ImGui.IsItemActive()
+            && ImGui.GetIO().KeyCtrl && ImGui.IsKeyPressed(ImGuiKey.V, false))
+        {
+            _pasteArmed = true;
+            _pasteArmedFrame = ImGui.GetFrameCount();
+        }
+    }
+
+    /// <summary>Call from the input's CallbackAlways handler; returns true when text was inserted.</summary>
+    internal static unsafe bool TryConsumeArmedPaste(ImGuiInputTextCallbackData* p)
+    {
+        if (!_pasteArmed)
+        {
+            return false;
+        }
+        _pasteArmed = false;
+        if (ImGui.GetFrameCount() - _pasteArmedFrame > 1)
+        {
+            return false;
+        }
+
+        var clip = ImGui.GetClipboardText();
+        if (string.IsNullOrEmpty(clip))
+        {
+            return false;
+        }
+        var insert = System.Text.Encoding.UTF8.GetBytes(clip.Replace("\r\n", "\n").Replace('\r', '\n'));
+
+        var selMin = Math.Min(p->SelectionStart, p->SelectionEnd);
+        var selMax = Math.Max(p->SelectionStart, p->SelectionEnd);
+        if (selMax > selMin)
+        {
+            var tail = p->BufTextLen - selMax;
+            for (var i = 0; i < tail; i++)
+            {
+                p->Buf[selMin + i] = p->Buf[selMax + i];
+            }
+            p->BufTextLen -= selMax - selMin;
+            p->Buf[p->BufTextLen] = 0;
+            p->CursorPos = selMin;
+            p->SelectionStart = selMin;
+            p->SelectionEnd = selMin;
+        }
+
+        var len = Math.Min(insert.Length, p->BufSize - p->BufTextLen - 1);
+        while (len > 0 && len < insert.Length && (insert[len] & 0xC0) == 0x80)
+        {
+            len--;
+        }
+        if (len <= 0)
+        {
+            return false;
+        }
+
+        var cursor = Math.Clamp(p->CursorPos, 0, p->BufTextLen);
+        for (var i = p->BufTextLen - 1; i >= cursor; i--)
+        {
+            p->Buf[i + len] = p->Buf[i];
+        }
+        for (var i = 0; i < len; i++)
+        {
+            p->Buf[cursor + i] = insert[i];
+        }
+        p->BufTextLen += len;
+        p->Buf[p->BufTextLen] = 0;
+        p->CursorPos = cursor + len;
+        p->SelectionStart = p->CursorPos;
+        p->SelectionEnd = p->CursorPos;
+        p->BufDirty = 1;
+        return true;
+    }
+
+    /// <summary>ImGui.InputTextMultiline with working Ctrl+V.</summary>
+    internal static bool InputTextMultilineWithPaste(string label, ref string text, int maxLength, Vector2 size)
+    {
+        var changed = ImGui.InputTextMultiline(label, ref text, maxLength, size,
+            ImGuiInputTextFlags.CallbackAlways, PasteInputCallback);
+        ArmPasteIfIgnored(changed);
+        return changed;
+    }
+
+    private static unsafe int PasteInputCallback(ImGuiInputTextCallbackDataPtr data)
+    {
+        try
+        {
+            ImGuiInputTextCallbackData* p = data;
+            if (p->EventFlag == ImGuiInputTextFlags.CallbackAlways)
+            {
+                TryConsumeArmedPaste(p);
+            }
+        }
+        catch
+        {
+            // A managed exception must not cross into the native ImGui call.
+        }
+        return 0;
+    }
+
     internal static void CopyTextWithLinkWarning(string text)
     {
         ImGui.SetClipboardText(text ?? string.Empty);
@@ -92,8 +257,7 @@ internal static class SharedUiHelpers
         }
     }
 
-    /// <summary>Draws one "favourite song" input row: a link box plus the server-resolved name preview (or a
-    /// "fetching" / "saved link" status). The displayed name is curated server-side — never user-typed.</summary>
+    /// <summary>The displayed song name is server-resolved, never user-typed.</summary>
     internal static void DrawMusicLinkField(MusicLinkField field, string label, string tip, float width)
     {
         field.Tick();
@@ -128,7 +292,6 @@ internal static class SharedUiHelpers
         }
     }
 
-    /// <summary>Pushes the theme's button colours; pair with <see cref="PopThemeButton"/>.</summary>
     internal static void PushThemeButton(ThemeDefinition t)
     {
         ImGui.PushStyleColor(ImGuiCol.Button, t.ButtonNormal);
@@ -138,22 +301,67 @@ internal static class SharedUiHelpers
 
     internal static void PopThemeButton() => ImGui.PopStyleColor(3);
 
-    /// <summary>The themed "← Back" pill used to step out of a sub-page back to its parent (the "My" hub, the
-    /// News list). Position the cursor before calling; returns true on click.</summary>
-    internal static bool DrawBackButton(string label)
+    /// <summary>Draw after the scroll child so the pill's overlay layers above it. Returns true on click.</summary>
+    internal static bool DrawFloatingBackPill(Vector2 pos, string tooltip, FontAwesomeIcon destinationIcon)
     {
-        PushThemeButton(ThemeService.Current);
-        ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
-        var clicked = ImGui.Button(label, new Vector2(Px(96f), Px(28f)));
-        ImGui.PopStyleVar();
-        PopThemeButton();
+        var padX = Px(11f);
+        var padY = Px(7f);
+        var iconGap = Px(7f);
+        var t = ThemeService.Current;
+
+        ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
+        var backStr = FontAwesomeIcon.ArrowLeft.ToIconString();
+        var destStr = destinationIcon.ToIconString();
+        var backSz = ImGui.CalcTextSize(backStr);
+        var destSz = ImGui.CalcTextSize(destStr);
+        ImGui.PopFont();
+
+        var pillW = padX + backSz.X + iconGap + destSz.X + padX;
+        var pillH = MathF.Max(backSz.Y, destSz.Y) + padY * 2f;
+        var pillBR = pos + new Vector2(pillW, pillH);
+
+        ImGui.SetCursorScreenPos(pos);
+        using var wp = ImRaii.PushStyle(ImGuiStyleVar.WindowPadding, Vector2.Zero);
+        using var overlay = ImRaii.Child("##floatingBackPill", new Vector2(pillW, pillH), false,
+            ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoScrollbar
+            | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoNav);
+        if (!overlay.Success)
+        {
+            return false;
+        }
+
+        var dl = ImGui.GetWindowDrawList();
+        ImGui.SetCursorScreenPos(pos);
+        ImGui.InvisibleButton("##floatingBackPillBtn", new Vector2(pillW, pillH));
+        var hovered = ImGui.IsItemHovered();
+        var clicked = ImGui.IsItemClicked();
+        if (hovered)
+        {
+            ImGui.SetTooltip(tooltip);
+        }
+
+        var tmod = (float)(ImGui.GetTime() % 4.0);
+        var pulse = tmod < 0.5f ? MathF.Sin(tmod * MathF.PI / 0.5f) : 0f;
+        var baseBg = hovered ? t.ButtonHovered : t.ButtonNormal;
+        var blendBg = Vector4.Lerp(baseBg, t.AccentLight, pulse * 0.55f);
+        dl.AddRectFilled(pos, pillBR, ImGui.ColorConvertFloat4ToU32(blendBg), pillH * 0.5f);
+        if (pulse > 0.05f)
+        {
+            var glowAlpha = (uint)(pulse * 80f) << 24;
+            dl.AddRect(pos, pillBR, glowAlpha | (t.AccentU32 & 0x00FFFFFF), pillH * 0.5f, ImDrawFlags.None, 2f);
+        }
+
+        var iconAlpha = MathF.Min(1f, (hovered ? 1.0f : 0.80f) + pulse * 0.20f);
+        var iconCol = ((uint)(iconAlpha * 255f) << 24) | 0x00FFFFFF;
+        var iconY = pos.Y + padY;
+        ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
+        dl.AddText(ImGui.GetFont(), ImGui.GetFontSize(), new Vector2(pos.X + padX, iconY), iconCol, backStr);
+        dl.AddText(ImGui.GetFont(), ImGui.GetFontSize(),
+            new Vector2(pos.X + padX + backSz.X + iconGap, iconY), iconCol, destStr);
+        ImGui.PopFont();
         return clicked;
     }
 
-    /// <summary>One moderation notice as a card: an accent stripe + icon + timestamp header above the wrapped
-    /// body. Unseen notices get an accent-tinted fill, a brighter border and an unread dot; seen ones use a
-    /// neutral card. <paramref name="padX"/> is the design-pixel inset. Shared by the "My" hub lists and the
-    /// live warning / message acknowledge screens.</summary>
     internal static void DrawNoticeCard(float listW, Dalamud.Interface.FontAwesomeIcon icon, Vector4 accent,
         DateTimeOffset whenUtc, string body, bool seen, float padX)
     {
@@ -205,16 +413,16 @@ internal static class SharedUiHelpers
         ImGui.Dummy(new Vector2(cardW, cardH));
     }
 
-    /// <summary>One entry of a grouped "menu card" (icon + label + optional badge), invoked on click. Shared so
-    /// the "My" hub and the Settings hub build identical menus.</summary>
     internal readonly record struct MenuRow(Dalamud.Interface.FontAwesomeIcon Icon, Vector4 IconColor, string Label,
-        int Badge, bool External, Action OnClick);
+        int Badge, bool External, Action OnClick,
+        Dalamud.Interface.FontAwesomeIcon? PulseIcon = null, Vector4 PulseColor = default);
 
-    /// <summary>Draws a grouped menu card: a faint rounded panel with a thin border holding one
-    /// <see cref="DrawMenuRow"/> per entry. <paramref name="padX"/> is the design-pixel inset.</summary>
+    /// <summary>Design-pixel height of one menu-card row.</summary>
+    internal const float MenuCardRowHeight = 44f;
+
     internal static void DrawMenuCard(string idPrefix, float winW, float padX, IReadOnlyList<MenuRow> rows)
     {
-        var rowH = Px(44f);
+        var rowH = Px(MenuCardRowHeight);
         var origin = ImGui.GetCursorScreenPos();
         var dl = ImGui.GetWindowDrawList();
         var cardMin = new Vector2(origin.X + Px(padX), origin.Y);
@@ -226,7 +434,7 @@ internal static class SharedUiHelpers
         {
             var r = rows[i];
             if (DrawMenuRow(winW, rowH, $"##{idPrefix}row{i}", r.Icon, r.IconColor, r.Label,
-                    i == rows.Count - 1, r.External, r.Badge, padX))
+                    i == rows.Count - 1, r.External, r.Badge, padX, r.PulseIcon, r.PulseColor))
             {
                 r.OnClick();
             }
@@ -235,15 +443,64 @@ internal static class SharedUiHelpers
         dl.AddRect(cardMin, cardMax, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.07f)), Px(10f), ImDrawFlags.None, Px(1f));
     }
 
-    /// <summary>An accent block heading (e.g. "Plugin settings", "Service") inset by <paramref name="padX"/>.</summary>
-    internal static void DrawSectionHeader(string title, float padX)
+    internal static void DrawPerkCard(float winW, float padX, Dalamud.Interface.FontAwesomeIcon icon,
+        Vector4 accent, string title, string body)
+    {
+        var dl = ImGui.GetWindowDrawList();
+        var pad = Px(padX);
+        var w = winW - pad * 2f;
+        var innerPad = Px(12f);
+        var iconCol = Px(46f);
+        var gap = Px(12f);
+        var textW = w - innerPad * 2f - iconCol - gap;
+
+        var titleH = ImGui.GetTextLineHeight();
+        var bodyH = ImGui.CalcTextSize(body, false, textW).Y;
+        var contentH = titleH + Px(4f) + bodyH;
+        var cardH = MathF.Max(iconCol, contentH) + innerPad * 2f;
+
+        var cursorBefore = ImGui.GetCursorPos();
+        var tl = ImGui.GetCursorScreenPos() + new Vector2(pad, 0f);
+        var br = tl + new Vector2(w, cardH);
+        var rounding = Px(12f);
+
+        dl.AddRectFilled(tl, br, ImGui.GetColorU32(accent with { W = 0.10f }), rounding);
+        dl.AddRect(tl, br, ImGui.GetColorU32(accent with { W = 0.42f }), rounding, ImDrawFlags.None, Px(1f));
+
+        var discR = iconCol * 0.5f;
+        var discC = new Vector2(tl.X + innerPad + discR, tl.Y + cardH * 0.5f);
+        dl.AddCircleFilled(discC, discR, ImGui.GetColorU32(accent with { W = 0.16f }), 40);
+        dl.AddCircle(discC, discR, ImGui.GetColorU32(accent with { W = 0.55f }), 40, Px(1.5f));
+
+        var iconFont = Plugin.PluginInterface.UiBuilder.FontIcon;
+        ImGui.PushFont(iconFont);
+        var glyph = icon.ToIconString();
+        var gsz = ImGui.CalcTextSize(glyph);
+        dl.AddText(new Vector2(discC.X - gsz.X * 0.5f, discC.Y - gsz.Y * 0.5f), ImGui.GetColorU32(accent), glyph);
+        ImGui.PopFont();
+
+        var textX = tl.X + innerPad + iconCol + gap;
+        var titleCol = Vector4.Lerp(accent, new Vector4(1f, 1f, 1f, 1f), 0.35f);
+        ImGui.SetCursorScreenPos(new Vector2(textX, tl.Y + innerPad));
+        ImGui.TextColored(titleCol, title);
+        ImGui.SetCursorScreenPos(new Vector2(textX, tl.Y + innerPad + titleH + Px(4f)));
+        ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + textW);
+        ImGui.TextColored(UiColors.Subtle, body);
+        ImGui.PopTextWrapPos();
+
+        ImGui.SetCursorPos(new Vector2(cursorBefore.X, cursorBefore.Y + cardH + Px(10f)));
+    }
+
+    internal static void DrawSectionHeader(string title, float padX) =>
+        DrawSectionHeader(title, padX, ThemeService.Current.Accent);
+
+    internal static void DrawSectionHeader(string title, float padX, Vector4 color)
     {
         ImGui.SetCursorPosX(Px(padX));
-        ImGui.TextColored(ThemeService.Current.Accent, title);
+        ImGui.TextColored(color, title);
         ImGui.Spacing();
     }
 
-    /// <summary>A larger accent-light page title for a hub sub-page, inset by <paramref name="padX"/>.</summary>
     internal static void DrawSubpageHeading(string title, float padX)
     {
         ImGui.SetCursorPosX(Px(padX));
@@ -254,12 +511,9 @@ internal static class SharedUiHelpers
         ImGui.Spacing();
     }
 
-    /// <summary>One row of a grouped "menu card": a full-width hit target with a leading coloured icon, a
-    /// label, an optional unseen-count badge, and a trailing chevron (or external-link glyph). Flat, not a
-    /// filled button: the caller draws the card background and border. Shared by the Settings "Other" list
-    /// and the "My" hub.</summary>
     internal static bool DrawMenuRow(float winW, float rowH, string id, Dalamud.Interface.FontAwesomeIcon icon,
-        Vector4 iconColor, string label, bool isLast, bool external, int badge, float padX)
+        Vector4 iconColor, string label, bool isLast, bool external, int badge, float padX,
+        Dalamud.Interface.FontAwesomeIcon? pulseIcon = null, Vector4 pulseColor = default)
     {
         ImGui.SetCursorPosX(Px(padX));
         ImGui.PushStyleColor(ImGuiCol.Header, new Vector4(1f, 1f, 1f, 0.05f));
@@ -297,7 +551,15 @@ internal static class SharedUiHelpers
         dl.AddText(chevFont, chevPx, new Vector2(rightX - chevSz.X, midY - chevSz.Y * 0.5f),
             ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.30f)), chevGlyph);
 
-        if (badge > 0)
+        if (pulseIcon is { } pulse)
+        {
+            var glow = AccessibilityService.ReduceMotion
+                ? 1f
+                : 0.65f + 0.35f * MathF.Sin((float)ImGui.GetTime() * 2.6f);
+            IconDraw.AddCentered(dl, pulse, Px(16f),
+                new Vector2(rightX - chevSz.X - Px(20f), midY), ImGui.GetColorU32(pulseColor with { W = glow }));
+        }
+        else if (badge > 0)
         {
             var badgeText = badge.ToString();
             var badgeSz = ImGui.CalcTextSize(badgeText);
@@ -319,10 +581,8 @@ internal static class SharedUiHelpers
         return clicked;
     }
 
-    /// <summary>The community Discord invite, shared by the connectivity/error screens and Settings.</summary>
     internal const string DiscordInvite = "https://discord.gg/SkyQmpxWhB";
 
-    /// <summary>Discord-blurple call-to-action button; opens the community invite on click.</summary>
     internal static void DrawDiscordButton(string label, Vector2 size)
     {
         ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.345f, 0.396f, 0.949f, 1f));
@@ -337,7 +597,6 @@ internal static class SharedUiHelpers
         ImGui.PopStyleColor(3);
     }
 
-    /// <summary>Opens the community Discord invite in the user's browser. Failures are logged, never surfaced.</summary>
     internal static void OpenDiscord()
     {
         try
@@ -351,8 +610,6 @@ internal static class SharedUiHelpers
         }
     }
 
-    /// <summary>Draws a full-width amber caution callout containing the wrapped <paramref name="text"/>, the
-    /// standard warning card sitting beside a form field. Advances the cursor to just below the box.</summary>
     internal static void DrawWarningCard(string text, float width)
     {
         var dl = ImGui.GetWindowDrawList();
@@ -372,9 +629,8 @@ internal static class SharedUiHelpers
         ImGui.SetCursorScreenPos(new Vector2(boxTL.X, boxTL.Y + boxH));
     }
 
-    /// <summary>Recolours the draw-list vertices added since <paramref name="vtxStart"/> with a horizontal
-    /// accent gradient anchored to screen-x and scrolled by <paramref name="phase"/> — the shared animated
-    /// sheen used by the selected nav button and the decide-later pill. Callers guard on reduce-motion.</summary>
+    /// <summary>Recolours vertices added since <paramref name="vtxStart"/> with a scrolling horizontal
+    /// gradient; callers guard on reduce-motion.</summary>
     internal static void GradientSweepVertices(ImDrawListPtr dl, int vtxStart, Vector4 a, Vector4 b, float phase)
     {
         var k = MathF.Tau / Px(70f);
@@ -387,7 +643,6 @@ internal static class SharedUiHelpers
         }
     }
 
-    /// <summary>The Terms of Service paragraphs, shared by the onboarding ToS step and the Settings ToS view.</summary>
     internal static string[] TermsOfServiceParagraphs() =>
     [
         Loc.T("onboarding.tos_p1"),
@@ -403,19 +658,15 @@ internal static class SharedUiHelpers
         Loc.T("onboarding.tos_p7"),
     ];
 
-    /// <summary>Design-pixel thickness of every in-app scrollbar (scaled through <c>Px</c>).</summary>
+    /// <summary>Design-pixel thickness of every in-app scrollbar.</summary>
     internal const float ScrollbarWidth = 10f;
 
-    /// <summary>Pushes the themed scrollbar style (theme accent as the grab) used by every scrolling panel;
-    /// pair with <see cref="PopScrollbarStyle"/>.</summary>
     internal static void PushScrollbarStyle()
     {
         var t = ThemeService.Current;
         PushScrollbarStyle(t.ScrollbarGrab, t.ScrollbarGrabHovered, t.ScrollbarGrabActive);
     }
 
-    /// <summary>Pushes the scrollbar style with explicit grab colours, for a non-accent rail such as the
-    /// delete-confirmation danger scrollbar; pair with <see cref="PopScrollbarStyle"/>.</summary>
     internal static void PushScrollbarStyle(Vector4 grab, Vector4 grabHovered, Vector4 grabActive)
     {
         ImGui.PushStyleColor(ImGuiCol.ScrollbarBg, new Vector4(0.08f, 0.08f, 0.08f, 0.6f));
@@ -431,11 +682,9 @@ internal static class SharedUiHelpers
         ImGui.PopStyleColor(4);
     }
 
-    /// <summary>Shared in-page (in-phone) overlay shell: dims only the current window/content rect, centres a
-    /// measured bordered panel, and returns true on a scrim tap (outside the panel). Drawn as a late child so
-    /// it layers above the screen's content. <paramref name="panelH"/> is remembered across frames so the
-    /// panel settles to its content height. This is the default popup surface (never the screen-locking
-    /// ModalHost); model confirms/editors on it.</summary>
+    /// <summary>In-page overlay panel; returns true on a scrim tap. Draw it after the screen's content so it
+    /// layers on top; <paramref name="panelH"/> persists across frames so the panel settles to its content
+    /// height.</summary>
     internal static bool DrawPageOverlayPanel(string id, Vector2 winPos, Vector2 winSize, ref float panelH,
                                               float fallbackH, Action<float> drawContent)
     {
@@ -487,8 +736,6 @@ internal static class SharedUiHelpers
         return dismissed;
     }
 
-    /// <summary>Index of <paramref name="value"/> in <paramref name="arr"/>, or <paramref name="fallback"/>
-    /// if absent. Maps a stored enum value back to its position in a fixed choice list (e.g. a combo box).</summary>
     internal static int IndexOf<T>(T[] arr, T value, int fallback)
         where T : struct, Enum
     {
@@ -502,13 +749,9 @@ internal static class SharedUiHelpers
         return fallback;
     }
 
-    /// <summary><c>arr[idx]</c>, or <paramref name="fallback"/> when the index is out of range. Turns a
-    /// combo box's selected index back into its enum value.</summary>
     internal static T ValueAt<T>(T[] arr, int idx, T fallback) =>
         idx >= 0 && idx < arr.Length ? arr[idx] : fallback;
 
-    /// <summary>Fills <paramref name="output"/> with one bool per entry in <paramref name="values"/>, true
-    /// when that entry is set in <paramref name="mask"/>. Turns a stored bitmask into checkbox states.</summary>
     internal static void MaskToBools<TEnum>(TEnum[] values, TEnum mask,
         Func<TEnum, TEnum, bool> test, bool[] output)
         where TEnum : struct, Enum
@@ -520,8 +763,6 @@ internal static class SharedUiHelpers
         }
     }
 
-    /// <summary>Combines the <paramref name="values"/> whose checkbox in <paramref name="selected"/> is
-    /// ticked into one OR'd bitmask. The inverse of <see cref="MaskToBools"/>.</summary>
     internal static TEnum MaskOr<TEnum>(TEnum[] values, bool[] selected, Func<TEnum, TEnum, TEnum> orFn)
         where TEnum : struct, Enum
     {
@@ -547,8 +788,7 @@ internal static class SharedUiHelpers
         }
     }
 
-    /// <summary>Packs a 24-entry hour checkbox array back into a 24-bit mask (bit 0 = 00:00 UTC). The
-    /// inverse of <see cref="MaskToHours"/>.</summary>
+    /// <summary>Packs a 24-entry hour checkbox array back into a 24-bit mask (bit 0 = 00:00 UTC).</summary>
     internal static int HoursToMask(bool[] hours)
     {
         var mask = 0;
@@ -563,7 +803,6 @@ internal static class SharedUiHelpers
         return mask;
     }
 
-    /// <summary>An accent-coloured section title with an underline rule.</summary>
     internal static void DrawSectionHeading(string title, ThemeDefinition t)
     {
         ImGui.Spacing();
@@ -578,7 +817,6 @@ internal static class SharedUiHelpers
         ImGui.Spacing();
     }
 
-    /// <summary>A dimmed accent label for the field that follows it.</summary>
     internal static void DrawFieldLabel(string label, ThemeDefinition t)
     {
         ImGui.TextColored(
@@ -632,7 +870,6 @@ internal static class SharedUiHelpers
             }
         }
 
-        // Time labels at 0, 6, 12, 18.
         var labelFsz = ImGui.GetFontSize() * 0.82f;
         foreach (var h in new[] { 0, 6, 12, 18 })
         {
@@ -645,10 +882,8 @@ internal static class SharedUiHelpers
         ImGui.SetCursorScreenPos(new Vector2(origin.X, origin.Y + barH + labelH + Px(4f)));
     }
 
-    /// <summary>Renders the row of selectable language pills (flag + label). <paramref name="flags"/> are the
-    /// per-language flag textures (parallel to <see cref="ProfileFields.LanguageEntries"/>); the caller owns
-    /// loading them. <paramref name="isSelected"/>/<paramref name="onToggle"/> read and flip selection state,
-    /// so the same renderer serves spoken-language and filter-language pickers.</summary>
+    /// <summary><paramref name="flags"/> is parallel to <see cref="ProfileFields.LanguageEntries"/>; the
+    /// caller owns loading the textures.</summary>
     internal static void DrawLanguagePillsCore(
         ISharedImmediateTexture?[] flags,
         float flagW, float flagH, bool useCode, string idPrefix,
@@ -722,12 +957,8 @@ internal static class SharedUiHelpers
         ImGui.SetCursorPosY(startY + pillH + Px(4f));
     }
 
-    /// <summary>Draws a flair pill (a capsule of <paramref name="bgHex"/> with contrasting text) at screen
-    /// position <paramref name="pos"/> via the draw list and returns its width. Shows <paramref name="description"/>
-    /// as a tooltip while hovered (non-rotated screens only).</summary>
     private const float FlairPillPadX = 7f;
 
-    /// <summary>Width a flair pill occupies for <paramref name="text"/> in the current font.</summary>
     internal static float FlairPillWidth(string text)
     {
         return ImGui.CalcTextSize(text).X + Px(FlairPillPadX) * 2f;
@@ -780,10 +1011,8 @@ internal static class SharedUiHelpers
         return (88, 101, 242);
     }
 
-    /// <summary>True when the picked file is a cloud placeholder whose contents aren't on disk (OneDrive
-    /// "online-only" / Files On-Demand, and other providers using the same attributes). Such a file may fail
-    /// to read if hydration doesn't complete, so callers reject the pick and ask for a locally-available file.
-    /// A probing failure returns false so a genuine read error still surfaces through the normal path.</summary>
+    /// <summary>True when the file is a cloud placeholder (OneDrive online-only and similar) whose contents
+    /// aren't on disk.</summary>
     internal static bool IsUnavailableCloudFile(string path)
     {
         if (string.IsNullOrWhiteSpace(path))
@@ -792,8 +1021,7 @@ internal static class SharedUiHelpers
         }
         try
         {
-            // Raw Win32 recall bits, not named in the .NET FileAttributes enum. Reading attributes is
-            // metadata-only, so it never triggers a download or blocks.
+            // Raw Win32 recall bits, not named in the .NET FileAttributes enum.
             const FileAttributes recallOnOpen = (FileAttributes)0x00040000;
             const FileAttributes recallOnDataAccess = (FileAttributes)0x00400000;
             var attrs = File.GetAttributes(path);
@@ -801,16 +1029,13 @@ internal static class SharedUiHelpers
         }
         catch
         {
-            // Fail open on any error (incl. Wine / Windows 7-8, where these markers aren't supported): treat
-            // the file as available so the pick proceeds as before and never crashes.
+            // Fail open; the attributes aren't supported everywhere (Wine, older Windows).
             return false;
         }
     }
 
-    /// <summary>Loads a just-picked source image for preview/cropping. WIC (notably on Wine) has no WebP
-    /// codec, so a <c>.webp</c> source is transcoded to a cached PNG the loader can read; other formats load
-    /// straight from disk. The transcoded preview keeps the source's pixel dimensions, so the crop rect still
-    /// maps onto the original at save time.</summary>
+    /// <summary>WIC (notably on Wine) has no WebP codec, so .webp sources are transcoded to a cached PNG;
+    /// the preview keeps the source's pixel dimensions so the crop rect still maps onto the original.</summary>
     internal static ISharedImmediateTexture? LoadPickedPreview(string path)
     {
         if (path.EndsWith(".webp", StringComparison.OrdinalIgnoreCase))
@@ -833,10 +1058,8 @@ internal static class SharedUiHelpers
         return Plugin.TextureProvider.GetFromFile(path);
     }
 
-    /// <summary>Reads an image file, applies the crop + resize to the slot's target size, and packs the
-    /// small PNG into an upload DTO. The crop fields are set to the full (already-processed) image — the
-    /// server's signal that no further crop/resize is needed. CPU-bound; call off the UI thread. Throws
-    /// <see cref="PhotoProcessingException"/> (a localizable <c>AL_ERR</c> payload) on a bad image.</summary>
+    /// <summary>The crop fields cover the full processed image, the server's signal that no further crop is
+    /// needed. CPU-bound; call off the UI thread.</summary>
     internal static PhotoUploadDto ReadPhotoUpload(string path, Vector4 cropRect, bool isNsfw, PhotoKind kind)
     {
         var bytes = File.ReadAllBytes(path);

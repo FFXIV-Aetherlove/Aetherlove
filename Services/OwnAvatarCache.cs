@@ -8,11 +8,7 @@ using Dalamud.Interface.Textures;
 
 namespace AetherLove.Services;
 
-/// <summary>
-/// Keeps the user's own avatar warm for the match overlay and the nav bar. <see cref="Texture"/> serves
-/// the last disk-cached copy instantly; <see cref="Refresh"/> re-fetches in the background and swaps the
-/// texture when done, so a stale avatar shows briefly instead of a grey placeholder.
-/// </summary>
+/// <summary>Keeps the user's own avatar warm; the last disk-cached copy shows instantly while <see cref="Refresh"/> swaps in a fresh one.</summary>
 public sealed class OwnAvatarCache : IDisposable
 {
     private readonly AetherLoveHubClient _hub;
@@ -42,7 +38,6 @@ public sealed class OwnAvatarCache : IDisposable
         }
     }
 
-    /// <summary>Re-fetches the avatar in the background; the current texture stays visible meanwhile.</summary>
     public void Refresh(bool onlyIfCold = false)
     {
         if (onlyIfCold && Texture is not null)

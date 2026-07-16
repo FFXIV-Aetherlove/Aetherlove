@@ -37,10 +37,29 @@ internal static class HubErrorsEn
         ["huberror.reswipe_nothing_to_undo"] = "There's nothing to undo.",
         ["huberror.reswipe_already_matched"] = "You cannot reswipe on a matched profile.",
         ["huberror.reswipe_quota_exhausted"] = "You've used your reswipe for today.",
+        ["huberror.superlike_quota_exhausted"] = "You're out of superlikes for today.",
 
         // added after update 1.4.3
         ["huberror.character_limit_reached"] = "You can have at most {0} RP characters.",
         ["huberror.character_name_invalid"] = "Character names must be 3-50 characters.",
         ["huberror.character_not_found"] = "That character no longer exists. Reload and try again.",
+
+        // added after update 1.5.0
+        ["huberror.patreon_disabled"] = "Patreon linking is currently unavailable.",
+        ["huberror.patreon_already_linked"] = "A Patreon account is already linked to your profile.",
+        ["huberror.patreon_not_linked"] = "No Patreon account is linked to your profile.",
+        ["huberror.patreon_account_taken"] = "That Patreon account is already linked to another AetherLove account.",
+        ["huberror.patreon_link_failed"] = "We couldn't complete the Patreon link. Please try again.",
+        ["huberror.places_disabled"] = "Places is currently unavailable.",
+        ["huberror.venue_not_found"] = "This venue no longer exists.",
+        ["huberror.venue_limit_reached"] = "You've reached the limit of {0} venues.",
+        ["huberror.venue_name_invalid"] = "The venue name must be 3 to 60 characters.",
+        ["huberror.venue_description_too_long"] = "The description exceeds the {0}-character limit.",
+        ["huberror.venue_times_invalid"] = "One of the opening times is invalid.",
+        ["huberror.venue_times_too_many"] = "A venue can have at most {0} opening times.",
+        ["huberror.venue_review_own"] = "You can't review your own venue.",
+        ["huberror.venue_review_too_long"] = "Your review exceeds the {0}-character limit.",
+        ["huberror.venue_review_rating_invalid"] = "Pick a rating from 1 to 5 stars.",
+        ["huberror.venue_rsvp_invalid"] = "That opening is no longer available for RSVPs.",
     };
 }

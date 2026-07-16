@@ -32,7 +32,6 @@ public partial class MyProfileScreen
 
     private readonly ProfileScreen _profileScreen;
 
-    // Emoji picker for the About-Me field in the Edit tab (mirrors onboarding Step 4).
     private readonly EmojiPickerPopup _bioEmojiPicker = new();
 
     // Lazy: Lumina labels need Plugin.DataManager to be live.
@@ -60,7 +59,7 @@ public partial class MyProfileScreen
     private int _expansionIdx;
     private MusicLinkField[]? _musicFields;
 
-    /// <summary>Spotify, SoundCloud, Apple Music, YouTube Music — in that order.</summary>
+    /// <summary>Spotify, SoundCloud, Apple Music, YouTube Music - in that order.</summary>
     private MusicLinkField[] MusicFields => _musicFields ??=
     [
         new MusicLinkField(MusicProvider.Spotify, _hubClient.ResolveMusicLinkAsync),
@@ -101,13 +100,14 @@ public partial class MyProfileScreen
     public void InvalidateEditCache() => _cachedState = null;
 
     // Server-known photos. `_serverAvatar` is the Order=0 row (avatar). `_serverMain` is Order=1.
-    // `_serverExtras[i]` is Order=2+i (extras 1..3). Null = no photo set server-side at that slot.
+    // `_serverExtras[i]` is Order=2+i, sized to the supporter maximum (regular users just leave the
+    // tail empty). Null = no photo set server-side at that slot.
     private OnboardingPhotoDto? _serverAvatar;
     private OnboardingPhotoDto? _serverMain;
-    private readonly OnboardingPhotoDto?[] _serverExtras = new OnboardingPhotoDto?[3];
+    private readonly OnboardingPhotoDto?[] _serverExtras = new OnboardingPhotoDto?[SupporterLimits.SupporterExtraPhotos];
     private ISharedImmediateTexture? _serverAvatarTex;
     private ISharedImmediateTexture? _serverMainTex;
-    private readonly ISharedImmediateTexture?[] _serverExtraTex = new ISharedImmediateTexture?[3];
+    private readonly ISharedImmediateTexture?[] _serverExtraTex = new ISharedImmediateTexture?[SupporterLimits.SupporterExtraPhotos];
     private volatile bool _committingImages;
     private float _imagesSavedTimer;
 
@@ -117,11 +117,14 @@ public partial class MyProfileScreen
     private readonly PendingImagePick _imgPendingPick;
     private readonly SelfieCaptureOverlay _selfieOverlay;
 
+    private readonly Services.Hangouts.HangoutStateService _hangoutState;
+
     public MyProfileScreen(ProfileScreen profileScreen, AetherLoveHubClient hubClient,
                            OwnAvatarCache ownAvatar, RateLimitModal rateLimitModal,
                            SaveErrorModal saveErrorModal, ImageRequirementsModal imageReqModal,
                            SelfieCaptureOverlay selfieOverlay,
-                           Services.Auth.SessionBootstrapper bootstrap, ScreenRouter router, NewsScreen newsScreen)
+                           Services.Auth.SessionBootstrapper bootstrap, ScreenRouter router, NewsScreen newsScreen,
+                           Services.Hangouts.HangoutStateService hangoutState)
     {
         _profileScreen = profileScreen;
         _hubClient = hubClient;
@@ -133,12 +136,15 @@ public partial class MyProfileScreen
         _bootstrap = bootstrap;
         _router = router;
         _newsScreen = newsScreen;
+        _hangoutState = hangoutState;
     }
 
 
     public void OnShow()
     {
         _section = Section.Hub;
+        _entrance.Arm();
+        ArmSupporterShine();
         StartStatsFetch();
 
         _activeTab = Tab.View;
@@ -155,6 +161,12 @@ public partial class MyProfileScreen
             slot.Clear();
         }
         _imgActiveSlot = -1;
+
+        if (_pendingHangoutView)
+        {
+            _pendingHangoutView = false;
+            OpenHangout();
+        }
     }
 
     public void OnHide()
@@ -321,9 +333,7 @@ public partial class MyProfileScreen
         {
             try
             {
-                // Content-hashed filename so GetFromFile reloads when a slot's image changes — a fixed
-                // per-slot path keeps serving the texture Dalamud already cached for it (which left the
-                // avatar preview showing the old image after a replace+save).
+                // Content-hashed filename: a fixed per-slot path keeps serving Dalamud's cached texture after a replace+save.
                 var tex = AvatarDiskCache.Store(cacheDir, $"slot_{photo.Order}", photo.WebpBytes);
 
                 switch (photo.Order)
@@ -336,9 +346,7 @@ public partial class MyProfileScreen
                         _serverMain = photo;
                         _serverMainTex = tex;
                         break;
-                    case 2:
-                    case 3:
-                    case 4:
+                    case >= 2 when photo.Order - 2 < _serverExtras.Length:
                         var idx = photo.Order - 2;
                         _serverExtras[idx] = photo;
                         _serverExtraTex[idx] = tex;
@@ -376,7 +384,7 @@ public partial class MyProfileScreen
                     return;
                 }
                 _savedTimer = 2.5f;
-                // Server now has newer data than either cache — force both to re-fetch.
+                // Server now has newer data than either cache - force both to re-fetch.
                 _cachedState = null;
                 _profileScreen.InvalidateMyProfileCache();
             }
@@ -470,6 +478,15 @@ public partial class MyProfileScreen
                 break;
             case Section.ModMessages:
                 DrawModMessagesView();
+                break;
+            case Section.SupporterVanity:
+                DrawSupporterVanityView();
+                break;
+            case Section.SupporterStats:
+                DrawSupporterStatsView();
+                break;
+            case Section.Hangout:
+                DrawHangoutView();
                 break;
         }
     }
@@ -603,7 +620,7 @@ public partial class MyProfileScreen
         }
         ImGui.SetNextItemWidth(w - Px(8f));
         var bioBefore = _bio;
-        ImGui.InputTextMultiline("##edBio", ref _bio, AetherLove.Shared.EmojiText.MaxBioRawLength,
+        InputTextMultilineWithPaste("##edBio", ref _bio, AetherLove.Shared.EmojiText.MaxBioRawLength,
             new Vector2(w - Px(8f), Px(68f)));
         // Lock the field at the user-visible limit: undo an edit that pushed it over.
         if (AetherLove.Shared.EmojiText.EffectiveLength(_bio) > AetherLove.Shared.EmojiText.MaxBioLength)
@@ -624,8 +641,7 @@ public partial class MyProfileScreen
         var previewW = w - Px(8f);
         if (_bio.Length > 0)
         {
-            // Render through the shared DrawWrapped helper (measure/draw/wrap-pos all share one edge),
-            // tinted to match the real profile's About-me text.
+            // DrawWrapped keeps measure/draw/wrap-pos on one edge.
             ImGui.PushStyleColor(ImGuiCol.Text, UiColors.BioText);
             parsedBio.DrawWrapped("##edBioPreview", previewW);
             ImGui.PopStyleColor();
@@ -800,7 +816,9 @@ public partial class MyProfileScreen
 
         DrawSectionHeading(Loc.T("profile.heading_sync_tool"), t);
 
+        ImGui.PushTextWrapPos(0f);
         ImGui.TextColored(muted, Loc.T("profile.sync_tool_hint"));
+        ImGui.PopTextWrapPos();
         ImGui.Spacing();
         var syncCol = Px(170f);
         for (int i = 0; i < SyncToolLabels.Length; i++)

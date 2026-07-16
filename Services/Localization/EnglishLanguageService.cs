@@ -24,5 +24,5 @@ public sealed class EnglishLanguageService : ILanguageService
     public static readonly System.Collections.Generic.Dictionary<string, string> Map = LanguageMap.Merge(
         OnboardingEn.Strings, ChatEn.Strings, ProfileEn.Strings,
         DeckEn.Strings, SettingsEn.Strings, CommonEn.Strings, HubErrorsEn.Strings,
-        NotificationsEn.Strings, NewsEn.Strings);
+        NotificationsEn.Strings, NewsEn.Strings, PlacesEn.Strings, HangoutsEn.Strings);
 }

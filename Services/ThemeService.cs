@@ -10,6 +10,7 @@ public enum AppTheme
     VanillaSunrise = 1,
     AllaganPassion = 2,
     YorhaTypeAe = 3,
+    WorldOfLovecraft = 4,
 }
 
 /// <summary>Global theme registry. Call <see cref="Initialise"/> once at start-up.</summary>
@@ -20,25 +21,45 @@ public static class ThemeService
     public static IReadOnlyDictionary<AppTheme, ThemeDefinition> Themes { get; } =
         new Dictionary<AppTheme, ThemeDefinition>
         {
+            // The v3 art set (Crystal Void, Vanilla Sunrise, Allagan Passion, World of Lovecraft) shares one
+            // 1050x1670 canvas with an identical content area, so those four use identical geometry.
             [AppTheme.CrystalVoid] = new ThemeDefinition
             {
                 Name = "Crystal Void",
-                BackgroundImageFile = "phone_bg_purple_v2.png",
-                Accent = new Vector4(0.73f, 0.42f, 0.79f, 1f),
-                AccentLight = new Vector4(0.85f, 0.56f, 0.90f, 1f),
-                AccentDark = new Vector4(0.48f, 0.25f, 0.63f, 1f),
-                ChipFill = new Vector4(0.15f, 0.07f, 0.23f, 1f),
-                SecondaryStart = new Vector4(0.62f, 0.40f, 0.92f, 1f),
-                SecondaryEnd = new Vector4(0.98f, 0.45f, 0.78f, 1f),
-                ButtonNormal = new Vector4(0.50f, 0.22f, 0.70f, 0.90f),
-                ButtonHovered = new Vector4(0.68f, 0.34f, 0.88f, 1.00f),
-                ButtonActive = new Vector4(0.38f, 0.12f, 0.55f, 1.00f),
+                BackgroundImageFile = "phone_bg_purple_v3.png",
+                WindowWidth = 525f,
+                BezelTop = 38f,
+                BezelBottom = 41f,
+                BezelLeft = 66f,
+                BezelRight = 66f,
+                CloseButtonTL = new Vector2(496f, 24f),
+                CloseButtonSize = new Vector2(29f, 28f),
+                MinimizeButtonTL = new Vector2(496f, 53f),
+                MinimizeButtonSize = new Vector2(29f, 27f),
+                Accent = new Vector4(0.74f, 0.32f, 0.95f, 1f),
+                AccentLight = new Vector4(0.85f, 0.52f, 1.00f, 1f),
+                AccentDark = new Vector4(0.44f, 0.14f, 0.66f, 1f),
+                ChipFill = new Vector4(0.10f, 0.07f, 0.22f, 1f),
+                SecondaryStart = new Vector4(0.70f, 0.30f, 0.98f, 1f),
+                SecondaryEnd = new Vector4(0.20f, 0.50f, 1.00f, 1f),
+                ButtonNormal = new Vector4(0.46f, 0.16f, 0.72f, 0.90f),
+                ButtonHovered = new Vector4(0.64f, 0.30f, 0.92f, 1.00f),
+                ButtonActive = new Vector4(0.34f, 0.10f, 0.56f, 1.00f),
             },
 
             [AppTheme.VanillaSunrise] = new ThemeDefinition
             {
                 Name = "Vanilla Sunrise",
-                BackgroundImageFile = "phone_bg_yellow_v2.png",
+                BackgroundImageFile = "phone_bg_yellow_v3.png",
+                WindowWidth = 525f,
+                BezelTop = 38f,
+                BezelBottom = 41f,
+                BezelLeft = 66f,
+                BezelRight = 66f,
+                CloseButtonTL = new Vector2(496f, 24f),
+                CloseButtonSize = new Vector2(29f, 28f),
+                MinimizeButtonTL = new Vector2(496f, 53f),
+                MinimizeButtonSize = new Vector2(29f, 27f),
                 Accent = new Vector4(1.00f, 0.72f, 0.30f, 1f),
                 AccentLight = new Vector4(1.00f, 0.85f, 0.50f, 1f),
                 AccentDark = new Vector4(0.72f, 0.44f, 0.06f, 1f),
@@ -53,7 +74,16 @@ public static class ThemeService
             [AppTheme.AllaganPassion] = new ThemeDefinition
             {
                 Name = "Allagan Passion",
-                BackgroundImageFile = "phone_bg_allagan_v2.png",
+                BackgroundImageFile = "phone_bg_allagan_v3.png",
+                WindowWidth = 525f,
+                BezelTop = 38f,
+                BezelBottom = 41f,
+                BezelLeft = 66f,
+                BezelRight = 66f,
+                CloseButtonTL = new Vector2(496f, 24f),
+                CloseButtonSize = new Vector2(29f, 28f),
+                MinimizeButtonTL = new Vector2(496f, 53f),
+                MinimizeButtonSize = new Vector2(29f, 27f),
                 Accent = new Vector4(0.95f, 0.28f, 0.40f, 1f),
                 AccentLight = new Vector4(1.00f, 0.48f, 0.58f, 1f),
                 AccentDark = new Vector4(0.60f, 0.10f, 0.20f, 1f),
@@ -65,12 +95,21 @@ public static class ThemeService
                 ButtonActive = new Vector4(0.40f, 0.05f, 0.12f, 1.00f),
             },
 
-            // NieR: Automata-style palette: warm ivory/parchment on near-black. The accent is light (like
-            // Vanilla Sunrise), so own chat bubbles use dark text; see ChatColors.OwnFgDefault.
+            // The accent is light, so own chat bubbles use dark text (ChatColors.OwnFgDefault).
             [AppTheme.YorhaTypeAe] = new ThemeDefinition
             {
                 Name = "YoRHa Type Æ",
-                BackgroundImageFile = "phone_bg_bw.png",
+                BackgroundImageFile = "phone_bg_nier2_v1.png",
+                // 1200x1670 art with side decorations; the window widens to 600 to render at native aspect.
+                WindowWidth = 600f,
+                BezelTop = 36f,
+                BezelBottom = 52f,
+                BezelLeft = 104f,
+                BezelRight = 104f,
+                CloseButtonTL = new Vector2(532f, 23f),
+                CloseButtonSize = new Vector2(30f, 28f),
+                MinimizeButtonTL = new Vector2(532f, 52f),
+                MinimizeButtonSize = new Vector2(30f, 27f),
                 Accent = new Vector4(0.812f, 0.788f, 0.694f, 1f),
                 AccentLight = new Vector4(0.855f, 0.831f, 0.733f, 1f),
                 AccentDark = new Vector4(0.243f, 0.220f, 0.180f, 1f),
@@ -81,12 +120,36 @@ public static class ThemeService
                 ButtonHovered = new Vector4(0.42f, 0.38f, 0.31f, 1.00f),
                 ButtonActive = new Vector4(0.18f, 0.16f, 0.12f, 1.00f),
             },
+
+            // The accent is light, so own chat bubbles use dark text (ChatColors.OwnFgDefault).
+            [AppTheme.WorldOfLovecraft] = new ThemeDefinition
+            {
+                Name = "World of Lovecraft",
+                BackgroundImageFile = "phone_bg_wow_v3.png",
+                WindowWidth = 525f,
+                BezelTop = 38f,
+                BezelBottom = 41f,
+                BezelLeft = 66f,
+                BezelRight = 66f,
+                CloseButtonTL = new Vector2(496f, 24f),
+                CloseButtonSize = new Vector2(29f, 28f),
+                MinimizeButtonTL = new Vector2(496f, 53f),
+                MinimizeButtonSize = new Vector2(29f, 27f),
+                Accent = new Vector4(0.93f, 0.72f, 0.34f, 1f),
+                AccentLight = new Vector4(1.00f, 0.85f, 0.52f, 1f),
+                AccentDark = new Vector4(0.55f, 0.38f, 0.10f, 1f),
+                ChipFill = new Vector4(0.05f, 0.10f, 0.20f, 1f),
+                SecondaryStart = new Vector4(0.95f, 0.78f, 0.40f, 1f),
+                SecondaryEnd = new Vector4(0.14f, 0.42f, 0.76f, 1f),
+                ButtonNormal = new Vector4(0.55f, 0.38f, 0.10f, 0.90f),
+                ButtonHovered = new Vector4(0.78f, 0.58f, 0.22f, 1.00f),
+                ButtonActive = new Vector4(0.40f, 0.27f, 0.06f, 1.00f),
+            },
         };
 
     public static AppTheme CurrentTheme { get; private set; } = AppTheme.CrystalVoid;
     public static ThemeDefinition Current { get; private set; } = Themes[AppTheme.CrystalVoid];
 
-    /// <summary>Loads the saved theme preference. Call once at start-up.</summary>
     public static void Initialise(Configuration config)
     {
         _config = config;
@@ -94,7 +157,6 @@ public static class ThemeService
         Current = Themes.TryGetValue(CurrentTheme, out var t) ? t : Themes[AppTheme.CrystalVoid];
     }
 
-    /// <summary>Switches the active theme and persists the selection. No-op if already active.</summary>
     public static void SetTheme(AppTheme theme)
     {
         if (CurrentTheme == theme)

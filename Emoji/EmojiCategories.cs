@@ -122,7 +122,7 @@ internal static class EmojiCategories
             "brain", "foot", "leg", "mechanical_arm", "mechanical_leg",
             "footprints", "mouth (open_mouth)", "bust_in_silhouette", "busts_in_silhouette",
             "speaking_head",
-            // people — basic
+            // people - basic
             "baby", "child", "boy", "girl",
             "adult", "man", "woman",
             "older_adult", "older_man", "older_woman",
@@ -132,7 +132,7 @@ internal static class EmojiCategories
             "man_curly_haired", "woman_curly_haired",
             "man_white_haired", "woman_white_haired",
             "blond_haired_person", "blond_haired_man", "blond_haired_woman",
-            // people — standing / posture
+            // people - standing / posture
             "person_standing", "man_standing", "woman_standing",
             "person_kneeling", "man_kneeling", "woman_kneeling",
             "person_walking", "man_walking", "woman_walking",
@@ -146,18 +146,18 @@ internal static class EmojiCategories
             "person_raising_hand", "man_raising_hand", "woman_raising_hand",
             "person_pouting", "man_pouting", "woman_pouting",
             "person_frowning", "man_frowning", "woman_frowning",
-            // people — life events
+            // people - life events
             "pregnant_woman", "breast_feeding",
             "bride_with_veil", "man_in_tuxedo",
             "prince", "princess",
             "santa", "mrs_claus",
-            // people — accessibility
+            // people - accessibility
             "man_with_probing_cane", "woman_with_probing_cane",
             "man_in_manual_wheelchair", "woman_in_manual_wheelchair",
             "man_in_motorized_wheelchair", "woman_in_motorized_wheelchair",
             "deaf_person", "deaf_man", "deaf_woman",
             "probing_cane",
-            // people — professions
+            // people - professions
             "construction_worker", "man_construction_worker", "woman_construction_worker",
             "police_officer", "man_police_officer", "woman_police_officer",
             "guard", "man_guard", "woman_guard",
@@ -178,7 +178,7 @@ internal static class EmojiCategories
             "man_astronaut", "woman_astronaut",
             "man_firefighter", "woman_firefighter",
             "man_singer", "woman_singer",
-            // people — activities (gendered)
+            // people - activities (gendered)
             "man_dancing", "dancer",
             "man_in_steamy_room", "woman_in_steamy_room", "person_in_steamy_room",
             "man_in_lotus_position", "woman_in_lotus_position", "person_in_lotus_position",
@@ -200,7 +200,7 @@ internal static class EmojiCategories
             "person_playing_water_polo", "man_playing_water_polo", "woman_playing_water_polo",
             "man_with_chinese_cap", "woman_with_headscarf", "person_wearing_turban",
             "man_wearing_turban", "woman_wearing_turban",
-            // people — fantasy / special
+            // people - fantasy / special
             "levitate",
             "superhero", "man_superhero", "woman_superhero",
             "supervillain", "man_supervillain", "woman_supervillain",

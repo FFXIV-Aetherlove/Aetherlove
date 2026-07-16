@@ -21,9 +21,7 @@ public partial class OnboardingScreen
 
     private float _matchAnimElapsed;
 
-    /// <summary>Heartbeat-pulse easing, peaking at dt = 0: a sharp Gaussian rise before the beat (dt &lt; 0)
-    /// and a slower exponential fall after it (dt &gt; 0). Two offset calls make the "lub-dub" double thump.
-    /// Same curve the splash screen uses.</summary>
+    /// <summary>Heartbeat easing: sharp Gaussian rise before the beat, slower exponential fall after.</summary>
     private static float AsymPeakAvatar(float dt)
         => dt < 0f ? MathF.Exp(-80f * dt * dt) : MathF.Exp(-6f * dt);
 
@@ -140,9 +138,7 @@ public partial class OnboardingScreen
     }
 
 
-    /// <summary>Teaser shown a couple of seconds after the user confirms their avatar: a faux "It's a Match!"
-    /// card that fades in, sets their avatar beside a mystery "?" partner, and gives the avatar circle a
-    /// heartbeat pulse — a preview of what a real match looks like. Purely cosmetic; nothing is saved.</summary>
+    /// <summary>Faux "It's a Match!" teaser card; purely cosmetic, nothing is saved.</summary>
     private void DrawMatchPreviewCard(Dalamud.Interface.Textures.TextureWraps.IDalamudTextureWrap tex,
                                       ThemeDefinition t)
     {

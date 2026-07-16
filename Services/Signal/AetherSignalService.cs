@@ -6,8 +6,10 @@ using AetherLove.Config;
 using AetherLove.Navigation;
 using AetherLove.Screens;
 using AetherLove.Services.Auth;
+using AetherLove.Services.Hangouts;
 using AetherLove.Services.Hub;
 using AetherLove.Windows;
+using AetherLove.Shared.Hangouts;
 using AetherLove.Shared.Matching;
 using AetherLove.Shared.Messaging;
 using AetherLove.Shared.Moderation;
@@ -21,7 +23,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace AetherLove.Services.Signal;
 
-/// <summary>Current liveness of the hub connection.</summary>
 public enum SignalConnectionState
 {
     Disconnected = 0,
@@ -39,6 +40,7 @@ public sealed class AetherSignalService : IAsyncDisposable
     private readonly NotificationCenter _notifications;
     private readonly NotificationDispatcher _notifier;
     private readonly ChatEventBus _chatEvents;
+    private readonly HangoutStateService _hangouts;
     private readonly ScreenRouter _router;
     // Lazy-resolved to break the SessionBootstrapper <-> AetherSignalService ctor cycle.
     private readonly IServiceProvider _services;
@@ -56,9 +58,7 @@ public sealed class AetherSignalService : IAsyncDisposable
     /// <summary>Screen to restore once the connection returns, captured when we drop to Offline.</summary>
     private Screen _screenBeforeOffline = Screen.Deck;
 
-    /// <summary>Armed only by a mid-session drop (<see cref="GoOffline"/>) so a reconnect restores the prior app
-    /// screen. A startup "server unreachable" routes to Offline without arming this, leaving the Offline screen's
-    /// bootstrap retry in charge of routing (lifecycle resolution) instead of snapping straight to the deck.</summary>
+    /// <summary>Armed only by a mid-session drop; startup routing to Offline leaves this false so the bootstrap retry owns routing.</summary>
     private bool _armedRestore;
 
     private const string HubPath = "hubs/aetherlove";
@@ -70,6 +70,7 @@ public sealed class AetherSignalService : IAsyncDisposable
         NotificationCenter notifications,
         NotificationDispatcher notifier,
         ChatEventBus chatEvents,
+        HangoutStateService hangouts,
         ScreenRouter router,
         IServiceProvider services)
     {
@@ -79,6 +80,7 @@ public sealed class AetherSignalService : IAsyncDisposable
         _notifications = notifications;
         _notifier = notifier;
         _chatEvents = chatEvents;
+        _hangouts = hangouts;
         _router = router;
         _services = services;
     }
@@ -86,14 +88,10 @@ public sealed class AetherSignalService : IAsyncDisposable
     public SignalConnectionState State => (SignalConnectionState)_stateRaw;
     public bool IsConnected => State == SignalConnectionState.Connected;
 
-    /// <summary>True if the last connect attempt failed with HTTP 401.</summary>
     public bool LastFailureWasUnauthorized => _lastFailureWasUnauthorized;
 
-    /// <summary>True when Offline was reached from a mid-session drop (a reconnect should restore the previous
-    /// app screen). False when reached from startup routing, where the bootstrap owns re-routing.</summary>
     public bool RestoreArmed => _armedRestore;
 
-    /// <summary>Returns the live hub connection. Throws if not connected.</summary>
     public HubConnection RequireConnection()
     {
         var hub = _hub;
@@ -105,7 +103,6 @@ public sealed class AetherSignalService : IAsyncDisposable
         return hub;
     }
 
-    /// <summary>Opens the hub connection if not already open. Idempotent.</summary>
     public async Task EnsureConnectedAsync(CancellationToken ct = default)
     {
         if (_disposed)
@@ -165,7 +162,6 @@ public sealed class AetherSignalService : IAsyncDisposable
         }
     }
 
-    /// <summary>Stops the hub connection. Idempotent.</summary>
     public async Task DisconnectAsync()
     {
         await _gate.WaitAsync().ConfigureAwait(false);
@@ -207,15 +203,11 @@ public sealed class AetherSignalService : IAsyncDisposable
         _gate.Dispose();
     }
 
-    /// <summary>Whether this client wants WebP photos. Driven by the startup WebP-decode probe (persisted in
-    /// config) with a manual force-JPEG override — accurate even on native Windows that lacks the WebP codec,
-    /// where the old Wine guess was wrong. Null (not yet probed) defaults to JPEG, which always renders.</summary>
+    /// <summary>Driven by the startup WebP-decode probe; null (not yet probed) falls back to JPEG, which always renders.</summary>
     public bool AcceptsWebp() => !_config.ForceJpegImages && (_config.WebpSupported ?? false);
 
     private HubConnection BuildHubConnection()
     {
-        // apiVersion rides the connection query string (like access_token). The server defaults a missing
-        // value to 1, so clients from before versioning keep working until the server's version moves on.
         var url = new UriBuilder(new Uri(new Uri(Plugin.ServerBaseUrl), HubPath))
         {
             Query = $"apiVersion={AetherLove.Shared.ApiVersion.Current}&acceptsWebp={(AcceptsWebp() ? "true" : "false")}",
@@ -224,7 +216,7 @@ public sealed class AetherSignalService : IAsyncDisposable
         var hub = new HubConnectionBuilder()
             .WithUrl(url, options =>
             {
-                // Refresh stale tokens on every (re)connect.
+                // Refresh happens before each (re)connect, not after expiry mid-connection.
                 options.AccessTokenProvider = async () =>
                 {
                     if (_tokens.IsAccessTokenStale())
@@ -254,7 +246,7 @@ public sealed class AetherSignalService : IAsyncDisposable
             CancelOfflineDebounce();
             if (ex is not null)
             {
-                // Non-null ex = unexpected drop (reconnect exhausted); null = graceful StopAsync, leave the user alone.
+                // Non-null ex means reconnect exhausted; null is a graceful StopAsync.
                 _log.Warning(ex, "[AetherSignalService] Hub closed with error.");
                 GoOffline();
             }
@@ -292,6 +284,12 @@ public sealed class AetherSignalService : IAsyncDisposable
             _notifier.NotifyNewMatch(payload.OtherDisplayName);
         });
 
+        hub.On("SuperlikeReceived", () =>
+        {
+            _notifications.NotifyDeckRefreshRequested();
+            _log.Information("[AetherSignalService] Superlike received push; deck refresh requested.");
+        });
+
         hub.On<DeckRefreshPushDto>("DeckRefresh", payload =>
         {
             _log.Information($"[AetherSignalService] DeckRefresh push: {payload.Reason}");
@@ -302,8 +300,7 @@ public sealed class AetherSignalService : IAsyncDisposable
         {
             _chatEvents.RaiseMessageReceived(payload);
 
-            // Suppress badge and notifications only while the phone is open on this conversation. Minimizing or
-            // closing leaves ActiveChatPeerId set (neither navigates the router), so gate on the window too.
+            // ActiveChatPeerId stays set when the phone is minimised or closed, so gate on the window too.
             var phoneOpen = _services.GetRequiredService<MainPluginWindow>().IsOpen;
             if (phoneOpen && payload.FromProfileId == _notifications.ActiveChatPeerId)
             {
@@ -323,13 +320,44 @@ public sealed class AetherSignalService : IAsyncDisposable
         hub.On<UnmatchedPushDto>("Unmatched", payload =>
         {
             _chatEvents.RaiseUnmatched(payload);
+            _hangouts.RemoveMatchPeer(payload.OtherProfileId);
             _log.Information($"[AetherSignalService] Unmatched push from {payload.OtherProfileId}.");
         });
 
         hub.On<BlockedByPeerPushDto>("BlockedByPeer", payload =>
         {
             _chatEvents.RaiseBlockedByPeer(payload);
+            _hangouts.RemoveMatchPeer(payload.OtherProfileId);
             _log.Information($"[AetherSignalService] BlockedByPeer push from {payload.OtherProfileId}.");
+        });
+
+        hub.On<HangoutStartedPushDto>("HangoutStarted", payload =>
+        {
+            var newMatchHangout = _hangouts.ApplyStarted(payload.Hangout);
+            _log.Information($"[AetherSignalService] HangoutStarted push from {payload.Hangout.OwnerProfileId}.");
+            if (newMatchHangout && _config.Hangouts.NotifyMatchStarted)
+            {
+                _notifier.NotifyMatchHangout(payload.Hangout);
+            }
+        });
+
+        hub.On<HangoutEndedPushDto>("HangoutEnded", payload =>
+        {
+            var wasRsvped = _hangouts.ApplyEnded(payload.HangoutId, payload.OwnerProfileId);
+            _log.Information($"[AetherSignalService] HangoutEnded push: {payload.HangoutId} ({payload.Kind}).");
+            if (wasRsvped && payload.Kind != HangoutEndKind.Expired && _config.Hangouts.NotifyEnded)
+            {
+                _notifier.NotifyHangoutEnded(payload.Kind == HangoutEndKind.Cancelled);
+            }
+        });
+
+        hub.On<HangoutRsvpChangedPushDto>("HangoutRsvpChanged", payload =>
+        {
+            _hangouts.ApplyRsvpChanged(payload);
+            if (payload.Going && _config.Hangouts.NotifyRsvp)
+            {
+                _notifier.NotifyHangoutRsvp(payload.RsvperDisplayName);
+            }
         });
 
         hub.On<MessageReactionsChangedPushDto>("MessageReactionsChanged", payload =>
@@ -347,9 +375,7 @@ public sealed class AetherSignalService : IAsyncDisposable
             _log.Information($"[AetherSignalService] WarningIssued push: {payload.Warning.Id}.");
             AppendWarningToCachedSnapshot(payload.Warning);
 
-            // Phone open: show it now (and auto-ack, as before). Minimised/closed: badge and buzz the mini
-            // phone, and defer the acknowledge screen and the seen-mark until the user opens the phone — so a
-            // warning that lands while minimised isn't silently swallowed.
+            // While minimised, the acknowledge screen and the seen-mark are deferred to the next phone open.
             if (_services.GetRequiredService<MainPluginWindow>().IsOpen)
             {
                 _services.GetRequiredService<WarningAcknowledgeScreen>().RequestLiveAcknowledge();
@@ -379,8 +405,7 @@ public sealed class AetherSignalService : IAsyncDisposable
             _log.Information($"[AetherSignalService] ModeratorMessageIssued push: {payload.Message.Id}.");
             AppendModeratorMessageToCachedSnapshot(payload.Message);
 
-            // Phone open: show it now and mark it seen. Minimised/closed: defer to the next phone open with no
-            // mini-phone surface — moderator messages deliberately show in fewer places than warnings.
+            // Unlike warnings, no mini-phone surface; while minimised this defers to the next phone open.
             if (_services.GetRequiredService<MainPluginWindow>().IsOpen)
             {
                 _services.GetRequiredService<ModeratorMessageScreen>().RequestLiveAcknowledge();
@@ -410,8 +435,6 @@ public sealed class AetherSignalService : IAsyncDisposable
             _log.Information($"[AetherSignalService] NewsPublished push: {payload.Summary.Id}.");
             _services.GetRequiredService<SessionBootstrapper>().AppendNewsToSnapshot(payload.Summary);
 
-            // Phone open: interrupt and show it now. Minimised/closed: badge + a chat-line notification,
-            // and defer the news screen until the user opens the phone.
             if (_services.GetRequiredService<MainPluginWindow>().IsOpen)
             {
                 _services.GetRequiredService<NewsScreen>().RequestLiveUnseenFlow();
@@ -450,17 +473,13 @@ public sealed class AetherSignalService : IAsyncDisposable
         return hub;
     }
 
-    /// <summary>Drops cached profile copies on every (re)connect so server-side changes made while away are re-fetched.</summary>
     private void InvalidateProfileCaches()
     {
         _services.GetRequiredService<ProfileScreen>().InvalidateMyProfileCache();
         _services.GetRequiredService<MyProfileScreen>().InvalidateEditCache();
     }
 
-    /// <summary>Fire-and-forget re-fetch of the connection snapshot so warnings / match count / ban state
-    /// self-heal after a (re)connect — the startup bootstrap fetches it only once, which a flaky link can
-    /// miss. Fire-and-forget (not awaited) because the connect paths hold <c>_gate</c> and the fetch
-    /// re-enters <c>EnsureConnectedAsync</c>.</summary>
+    /// <summary>Not awaited: the connect paths hold <c>_gate</c> and the fetch re-enters <see cref="EnsureConnectedAsync"/>.</summary>
     private void RefreshConnectionInfo()
     {
         _ = _services.GetRequiredService<SessionBootstrapper>().RefreshConnectionInfoAsync();
@@ -475,7 +494,6 @@ public sealed class AetherSignalService : IAsyncDisposable
         {
             return;
         }
-        // Idempotent.
         if (conn.Warnings.Any(w => w.Id == warning.Id))
         {
             return;
@@ -494,7 +512,6 @@ public sealed class AetherSignalService : IAsyncDisposable
         {
             return;
         }
-        // Idempotent.
         if (conn.ModeratorMessages.Any(m => m.Id == message.Id))
         {
             return;
@@ -524,7 +541,6 @@ public sealed class AetherSignalService : IAsyncDisposable
     private static bool IsAppScreen(Screen s) => s is Screen.Deck or Screen.Match
         or Screen.ChatList or Screen.Chat or Screen.Profile or Screen.Settings or Screen.MyProfile;
 
-    /// <summary>Defers the Offline screen so brief drops that recover within the grace window stay invisible.</summary>
     private void ScheduleGoOffline()
     {
         CancelOfflineDebounce();

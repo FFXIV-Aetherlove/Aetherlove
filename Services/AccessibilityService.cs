@@ -40,7 +40,6 @@ public static class AccessibilityService
         }
     }
 
-    /// <summary>True when Dalamud's Reduce Motion accessibility setting is enabled.</summary>
     public static bool ReduceMotion =>
         Plugin.PluginInterface.UiBuilder.ShouldUseReducedMotion;
 }

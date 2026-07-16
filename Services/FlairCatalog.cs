@@ -8,9 +8,7 @@ using AetherLove.Shared.Profile.Enums;
 
 namespace AetherLove.Services;
 
-/// <summary>Client-side cache of the server flair catalog. Fetched on every (re)connect; each entry carries
-/// all languages, so text/description resolve to the current UI language locally. Deck cards and profiles
-/// reference flairs by id only and look them up here.</summary>
+/// <summary>Client-side cache of the server flair catalog, refreshed on every (re)connect; entries carry all languages.</summary>
 public sealed class FlairCatalog
 {
     private readonly AetherLoveHubClient _hub;

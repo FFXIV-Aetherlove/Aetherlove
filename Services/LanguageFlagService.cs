@@ -21,7 +21,6 @@ public static class LanguageFlagService
     private static readonly Dictionary<string, ISharedImmediateTexture?> Cache = new();
     private static string? _mediaDir;
 
-    /// <summary>Returns the cached flag texture for a language, or null if unknown/missing.</summary>
     public static ISharedImmediateTexture? GetFlag(string languageName)
     {
         if (Cache.TryGetValue(languageName, out var existing))

@@ -27,7 +27,6 @@ public sealed class MaintenanceNoticeService
         _httpFactory = httpFactory;
     }
 
-    /// <summary>The parsed maintenance notice, or null when there is none. Read on the UI thread.</summary>
     public string? Notice => _notice;
 
     /// <summary>Kicks a fetch if one hasn't run recently. Safe to call every frame.</summary>

@@ -37,10 +37,29 @@ internal static class HubErrorsEs
         ["huberror.reswipe_nothing_to_undo"] = "No hay nada que deshacer.",
         ["huberror.reswipe_already_matched"] = "No puedes deshacer en un perfil con el que ya tienes match.",
         ["huberror.reswipe_quota_exhausted"] = "Ya has usado tu deshacer de hoy.",
+        ["huberror.superlike_quota_exhausted"] = "Te has quedado sin superlikes por hoy.",
 
         // added after update 1.4.3
         ["huberror.character_limit_reached"] = "Puedes tener como máximo {0} personajes de rol.",
         ["huberror.character_name_invalid"] = "Los nombres de personaje deben tener entre 3 y 50 caracteres.",
         ["huberror.character_not_found"] = "Ese personaje ya no existe. Recarga e inténtalo de nuevo.",
+
+        // added after update 1.5.0
+        ["huberror.patreon_disabled"] = "La vinculación con Patreon no está disponible ahora mismo.",
+        ["huberror.patreon_already_linked"] = "Ya hay una cuenta de Patreon vinculada a tu perfil.",
+        ["huberror.patreon_not_linked"] = "No hay ninguna cuenta de Patreon vinculada a tu perfil.",
+        ["huberror.patreon_account_taken"] = "Esa cuenta de Patreon ya está vinculada a otra cuenta de AetherLove.",
+        ["huberror.patreon_link_failed"] = "No pudimos completar la vinculación con Patreon. Inténtalo de nuevo.",
+        ["huberror.places_disabled"] = "Lugares no está disponible ahora mismo.",
+        ["huberror.venue_not_found"] = "Este local ya no existe.",
+        ["huberror.venue_limit_reached"] = "Has alcanzado el límite de {0} locales.",
+        ["huberror.venue_name_invalid"] = "El nombre del local debe tener entre 3 y 60 caracteres.",
+        ["huberror.venue_description_too_long"] = "La descripción supera el límite de {0} caracteres.",
+        ["huberror.venue_times_invalid"] = "Uno de los horarios de apertura no es válido.",
+        ["huberror.venue_times_too_many"] = "Un local puede tener como máximo {0} horarios de apertura.",
+        ["huberror.venue_review_own"] = "No puedes reseñar tu propio local.",
+        ["huberror.venue_review_too_long"] = "Tu reseña supera el límite de {0} caracteres.",
+        ["huberror.venue_review_rating_invalid"] = "Elige una valoración de 1 a 5 estrellas.",
+        ["huberror.venue_rsvp_invalid"] = "Esa apertura ya no admite asistencias.",
     };
 }

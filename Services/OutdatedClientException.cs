@@ -4,8 +4,7 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace AetherLove.Services;
 
-/// <summary>Thrown from <see cref="Hub.AetherLoveHubClient"/> when the server rejects this plugin's
-/// <see cref="ApiVersion.Current"/>. Surfaced as a terminal "update the plugin" screen.</summary>
+/// <summary>Thrown when the server rejects this plugin's <see cref="ApiVersion.Current"/>.</summary>
 public sealed class OutdatedClientException : Exception
 {
     /// <summary>The version the server expects, if it was included in the payload.</summary>
@@ -17,8 +16,7 @@ public sealed class OutdatedClientException : Exception
         ServerVersion = serverVersion;
     }
 
-    /// <summary>Returns a typed exception if the hub error matches the server's
-    /// <c>API_VERSION_MISMATCH|serverVersion</c> sentinel, else <c>null</c>.</summary>
+    /// <summary>Parses the server's <c>API_VERSION_MISMATCH|serverVersion</c> sentinel, else null.</summary>
     public static OutdatedClientException? TryParse(HubException ex)
     {
         var msg = ex.Message;

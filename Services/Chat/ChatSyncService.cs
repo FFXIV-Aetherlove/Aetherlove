@@ -6,9 +6,8 @@ using AetherLove.Shared.Messaging;
 
 namespace AetherLove.Services.Chat;
 
-/// <summary>Pulls the "everything changed since my cursor" delta from the server into <see cref="ChatCacheStore"/>.
-/// Single-flight: overlapping callers (connect, screen opens, reconnects) coalesce into one run. Errors are logged,
-/// never surfaced. On a fresh install the first run is the full build; afterwards each run is a cheap increment.</summary>
+/// <summary>Pulls the chat delta from the server into <see cref="ChatCacheStore"/>. Single-flight:
+/// overlapping callers coalesce into one run.</summary>
 public sealed class ChatSyncService
 {
     private readonly AetherLoveHubClient _hub;
@@ -23,8 +22,6 @@ public sealed class ChatSyncService
 
     public ChatCacheStore Cache => _cache;
 
-    /// <summary>Drains the delta (paging until <c>HasMore</c> is false) into the cache. No-op when disconnected or
-    /// when a sync is already running.</summary>
     public async Task SyncAsync(CancellationToken ct = default)
     {
         if (!_hub.IsConnected)

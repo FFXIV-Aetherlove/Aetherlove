@@ -108,8 +108,7 @@ public partial class OnboardingScreen
         }
 
         ImGui.Spacing();
-        // Checkbox label drawn separately so the text can wrap. ImGui's built-in
-        // Checkbox label uses RenderText which ignores PushTextWrapPos.
+        // ImGui's built-in Checkbox label ignores PushTextWrapPos, so the label is drawn separately.
         ImGui.Checkbox("##ackPassphrase", ref _passphraseAcknowledged);
         ImGui.SameLine();
         ImGui.PushTextWrapPos(availW);
@@ -132,7 +131,7 @@ public partial class OnboardingScreen
         ImGui.Spacing();
     }
 
-    /// <summary>True when the passphrase inputs are valid enough to advance. Strength is shown but never blocks.</summary>
+    /// <summary>Strength is shown but never blocks advancing.</summary>
     private bool CanAdvancePassphrase()
     {
         return _passphrase.Length >= PassphraseMinLength
@@ -201,11 +200,8 @@ public partial class OnboardingScreen
         };
     }
 
-    /// <summary>Provisions the user's end-to-end encryption identity from their passphrase. Generates the
-    /// X25519 keypair, derives a key-encryption key from the passphrase with Argon2id, encrypts ("wraps")
-    /// the private key with it, and uploads the bundle — public key, wrapped private key, and KDF parameters
-    /// — to the server, then stores the keys locally and advances. The passphrase itself never leaves the
-    /// device; the server only ever holds the encrypted private key, so it cannot read messages.</summary>
+    /// <summary>Wraps the private key with a passphrase-derived KEK and uploads the bundle; the passphrase
+    /// itself never leaves the device.</summary>
     private void StartPassphraseUpload()
     {
         if (_passphraseProcessing || _passphraseBundleUploaded)

@@ -25,7 +25,7 @@ public class CryptoKeys
     public byte[] PrivateKey { get; set; } = [];
 }
 
-/// <summary>Background presence cadence. Persisted so the schedule survives restarts.</summary>
+/// <summary>Background presence cadence.</summary>
 [Serializable]
 public class PulseState
 {
@@ -40,6 +40,52 @@ public class PulseState
 
     /// <summary>User opted out.</summary>
     public bool MutePulse { get; set; }
+}
+
+/// <summary>Places browse preferences.</summary>
+[Serializable]
+public class PlacesState
+{
+    /// <summary>Set once the filters and the 18+ toggle have been seeded to their defaults.</summary>
+    public bool FilterDefaultsSeeded { get; set; }
+
+    /// <summary>Selected <c>VenueTag</c> bits; 0 = every tag.</summary>
+    public int TagMask { get; set; }
+
+    /// <summary>Selected <c>Region</c> bits; 0 = every region.</summary>
+    public short RegionMask { get; set; }
+
+    /// <summary>Include 18+ venues in the browse feed; seeded from the profile's NSFW consent.</summary>
+    public bool IncludeNsfw { get; set; }
+
+    /// <summary>Venues hidden from the browse feed, id → name; the stored name renders the unhide list.</summary>
+    public Dictionary<Guid, string> HiddenVenues { get; set; } = new();
+
+    /// <summary>Set after the one-time hide explainer; the first hide attempt only shows the popup.</summary>
+    public bool SeenHideVenueIntro { get; set; }
+}
+
+/// <summary>Client-side hangout preferences, first-run flags, and dismissals.</summary>
+[Serializable]
+public class HangoutClientState
+{
+    /// <summary>Game-chat line when someone clicks "on my way" on the user's hangout.</summary>
+    public bool NotifyRsvp { get; set; } = true;
+
+    /// <summary>Game-chat line when a hangout the user signed up for ends early or is cancelled.</summary>
+    public bool NotifyEnded { get; set; } = true;
+
+    /// <summary>Game-chat line + in-app toast when one of the user's matches starts a hangout.</summary>
+    public bool NotifyMatchStarted { get; set; } = true;
+
+    /// <summary>Show hangout frames on the match list.</summary>
+    public bool ShowInMatchList { get; set; } = true;
+
+    /// <summary>Set once the Hangouts-tab intro popup has been shown, on first visit.</summary>
+    public bool SeenDirectoryIntro { get; set; }
+
+    /// <summary>Set once the create-a-hangout intro popup has been shown, on first open.</summary>
+    public bool SeenCreateIntro { get; set; }
 }
 
 [Serializable]
@@ -60,7 +106,7 @@ public class Configuration : IPluginConfiguration
     /// <summary>When set, the user can't drag either phone window; a programmatic recenter still works.</summary>
     public bool LockPhonePosition { get; set; } = false;
 
-    /// <summary>Chat-bubble colour overrides; null means "use the theme default" (see <see cref="ChatColors"/>).</summary>
+    /// <summary>Chat-bubble colour overrides; null means "use the theme default".</summary>
     public Vector4? OwnChatBg { get; set; }
     public Vector4? OwnChatFg { get; set; }
     public Vector4? PeerChatBg { get; set; }
@@ -84,8 +130,8 @@ public class Configuration : IPluginConfiguration
     /// <summary>Mutes the lub-dub heartbeat that plays on the startup splash.</summary>
     public bool DisableStartupHeartbeatSound { get; set; } = false;
 
-    /// <summary>Per-machine WebP-decode capability, probed at startup. Null until first probed; null/false makes
-    /// the server transcode photos to JPEG (safe default — never gray blocks).</summary>
+    /// <summary>Per-machine WebP-decode capability; null until first probed. Null/false makes the server
+    /// send JPEG.</summary>
     public bool? WebpSupported { get; set; } = null;
 
     /// <summary>Debug-screen override: force the server to send JPEG photos regardless of the WebP probe.</summary>
@@ -127,20 +173,21 @@ public class Configuration : IPluginConfiguration
     /// <summary>Hide AetherLove during cutscenes (Dalamud's default). Unset to keep it drawing through them.</summary>
     public bool HideDuringCutscenes { get; set; } = true;
 
-    /// <summary>Window state captured at the last unload so a mid-session reload (e.g. a Dalamud update that
-    /// restarts the plugin) can reopen as the user left it. Unused on a normal game boot; Login handles that.</summary>
+    /// <summary>Window state captured at the last unload so a mid-session reload reopens as the user left
+    /// it; unused on a normal game boot.</summary>
     public WindowOpenState LastWindowState { get; set; } = WindowOpenState.Minimized;
 
     /// <summary>Set after the first launch so onboarding is only force-opened on a fresh install.</summary>
     public bool HasCompletedFirstLaunch { get; set; } = false;
 
-    /// <summary>Set once the user has acknowledged the link-safety warning shown the first time they copy
-    /// another player's profile text, so it appears only once.</summary>
+    /// <summary>Set once the link-safety copy warning has been acknowledged.</summary>
     public bool AcknowledgedProfileCopyTextWarning { get; set; } = false;
 
-    /// <summary>Set once the reswipe (undo) intro popup has been shown, the first time the player taps the
-    /// undo pill, so it appears only once. Showing it does not consume the daily reswipe allowance.</summary>
+    /// <summary>Set once the reswipe intro has been shown; showing it does not consume the daily allowance.</summary>
     public bool SeenReswipeIntro { get; set; } = false;
+
+    /// <summary>Set once the superlike intro has been shown; showing it does not consume a superlike.</summary>
+    public bool SeenSuperlikeIntro { get; set; } = false;
 
     /// <summary>Set once the "My RP Profiles" intro popup has been shown, on first open of that menu.</summary>
     public bool SeenRpProfilesIntro { get; set; } = false;
@@ -148,20 +195,19 @@ public class Configuration : IPluginConfiguration
     /// <summary>Changelog versions ("Major.Minor.Build") whose "What's New" window has already been shown.</summary>
     public HashSet<string> ShownChangelogVersions { get; set; } = [];
 
-    /// <summary>Peer profile ids of matches whose chat the user has opened at least once. Client-side only;
-    /// clears the "needs a first hello" highlight on an empty match once it has been acknowledged.</summary>
+    /// <summary>Peer profile ids of matches whose chat has been opened; clears the "needs a first hello"
+    /// highlight. Client-side only.</summary>
     public HashSet<Guid> OpenedChats { get; set; } = [];
 
-    /// <summary>Legacy archived-matches set, kept only so older configs can be migrated into the "Archive"
-    /// chat category on startup (see <see cref="ChatCategoryStore"/>); emptied by that migration.</summary>
+    /// <summary>Legacy archived-matches set, kept only for migration into the "Archive" chat category;
+    /// emptied by that migration.</summary>
     public List<Guid> ArchivedMatches { get; set; } = [];
 
-    /// <summary>User-created chat categories in display order. Client-side only (per install);
-    /// <see cref="ChatCategoryStore"/> owns the live access.</summary>
+    /// <summary>User-created chat categories in display order. Client-side only.</summary>
     public List<ChatCategoryConfig> ChatCategories { get; set; } = [];
 
-    /// <summary>Which category each categorized chat lives in (peer profile id → category id). Chats absent
-    /// from the map are top-level. Client-side only; <see cref="ChatCategoryStore"/> owns the live access.</summary>
+    /// <summary>Which category each chat lives in (peer profile id → category id); chats absent from the
+    /// map are top-level. Client-side only.</summary>
     public Dictionary<Guid, Guid> ChatCategoryMembers { get; set; } = [];
 
     /// <summary>Show the search row on the matches screen (toggled from its overflow menu).</summary>
@@ -170,12 +216,16 @@ public class Configuration : IPluginConfiguration
     /// <summary>Background presence cadence state.</summary>
     public PulseState Pulse { get; set; } = new();
 
-    /// <summary>Per-install tally of how often each emoji shortcode was used as a reaction; powers the
-    /// "most-used" quick-react bar. Client-side only.</summary>
+    /// <summary>Places browse preferences.</summary>
+    public PlacesState Places { get; set; } = new();
+
+    /// <summary>Hangout preferences, first-run flags, and dismissals.</summary>
+    public HangoutClientState Hangouts { get; set; } = new();
+
+    /// <summary>Per-install tally of emoji reaction usage; powers the "most-used" quick-react bar.</summary>
     public Dictionary<string, int> ReactionUsage { get; set; } = new();
 
-    /// <summary>Bare emoji shortcodes the user favorited, in add order; the picker surfaces them as a
-    /// "Favorites" category shown first. Client-side only (per install).</summary>
+    /// <summary>Favorited emoji shortcodes in add order; the picker shows them first. Client-side only.</summary>
     public List<string> FavoriteEmojis { get; set; } = new();
 
     public void Save() => Plugin.PluginInterface.SavePluginConfig(this);

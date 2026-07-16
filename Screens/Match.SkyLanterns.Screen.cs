@@ -11,7 +11,7 @@ using static AetherLove.Screens.MatchFx;
 
 namespace AetherLove.Screens;
 
-/// <summary>Match effect — Sky Lanterns: a swarm of glowing paper lanterns drifts
+/// <summary>Match effect - Sky Lanterns: a swarm of glowing paper lanterns drifts
 /// upward over a starry night while two larger avatar-lanterns rise together toward the top.</summary>
 public sealed class MatchSkyLanternsScreen : IMatchEffect
 {

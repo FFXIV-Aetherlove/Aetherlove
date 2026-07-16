@@ -3,9 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace AetherLove.Services;
 
-/// <summary>Best-effort, fully-managed system facts for the debug screen. Every probe is guarded and returns
-/// "Unavailable" rather than throwing, so a value the runtime (or Wine) won't surface is reported honestly.
-/// No P/Invoke or registry — only cross-platform framework APIs, so it stays safe under Wine.</summary>
+/// <summary>Best-effort system facts for the debug screen; no P/Invoke or registry, so it stays safe under Wine.</summary>
 public static class SystemInfo
 {
     public static string PluginVersion()

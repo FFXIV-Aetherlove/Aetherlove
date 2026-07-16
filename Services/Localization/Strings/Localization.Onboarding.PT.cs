@@ -32,7 +32,7 @@ internal static class OnboardingPt
         ["onboarding.crop_main_photo"] = "Recortar Foto Principal",
         ["onboarding.crop_extra_photo"] = "Recortar Foto Extra {0}",
 
-        // Step 2 — How It Works
+        // Step 2 - How It Works
         ["onboarding.how_intro"] = "Veja como o AetherLove funciona — desde criar seu perfil até conversar com seu primeiro match.",
         ["onboarding.how1_title"] = "Criar Perfil",
         ["onboarding.how1_body"] = "Conta sobre o teu personagem — a raça, servidor, idiomas e o que procuras. Adiciona uma foto de perfil. E o teu cartão de visitas está pronto.",
@@ -48,7 +48,7 @@ internal static class OnboardingPt
         ["onboarding.how6_body"] = "Atualiza o perfil, ajusta preferências ou desfaz algum match a qualquer momento na tela de Configurações. O AetherLove NUNCA vai compartilhar o nome completo de jogador, localização ou informações de conta com outros jogadores.",
         ["onboarding.how_ready"] = "Pronto para começar? Cliqua em Avançar para continuar.",
 
-        // Step 2 — Terms of Service
+        // Step 2 - Terms of Service
         ["onboarding.tos_p1"] = "O AetherLove é um plugin social de matchmaking para Final Fantasy XIV, destinado a usuários adultos. Ao continuar, confirma que tem pelo menos 18 anos de idade e consente em participar de uma plataforma social adulta.",
         ["onboarding.tos_p2"] = "Eu entendo que as informações de perfil que forneço — incluindo meu nome de exibição, bio, servidor de origem, detalhes do personagem e quaisquer fotos que eu enviar — podem ser visíveis para outros usuários do AetherLove. Sou responsável pela exatidão do meu perfil e por garantir que quaisquer fotos que eu envie sejam apropriadas e que eu tenha o direito de compartilhá-las.",
         ["onboarding.tos_ownership"] = "Os personagens que aparecerem em qualquer foto que eu enviar devem ser meus. Se o personagem de outro jogador aparecer em uma imagem, confirmo que tenho a permissão dele para compartilhá-la. Não enviarei capturas de tela ou poses de personagens que não sejam meus sem o consentimento do proprietário.",
@@ -65,7 +65,7 @@ internal static class OnboardingPt
         ["onboarding.tos_scroll_bottom"] = "Deslize até o final para aceitar.",
         ["onboarding.tos_i_agree"] = "Eu Concordo",
 
-        // Step 3 — XIVAuth
+        // Step 3 - XIVAuth
         ["onboarding.auth_signin_with_xivauth"] = "Entrar com XIVAuth",
         ["onboarding.auth_intro"] = "O AetherLove usa o XIVAuth para verificar a identidade do jogador ativo de Final Fantasy XIV. Nenhuma senha é necessária — a autenticação é feita com segurança através do cliente.",
         ["onboarding.auth_contacting"] = "Contactando o AetherLove",
@@ -85,7 +85,7 @@ internal static class OnboardingPt
         ["onboarding.auth_failed"] = "Falha no login.",
         ["onboarding.auth_try_again"] = "Tentar novamente",
 
-        // Step 3a — Passphrase
+        // Step 3a - Passphrase
         ["onboarding.pass_heading"] = "Proteje as tuas mensagens",
         ["onboarding.pass_intro"] = "A equipe do AetherLove não consegue ler as tuas mensagens privadas — nem agora, nem nunca. Para tornar isso possível, criptografamos cada mensagem usando uma chave que só TU conheces. Define uma frase-senha abaixo. Uma frase-senha é como uma senha, mas que tu precisa lembrar e guardar — não existe botão de \"esqueci minha frase-senha\". Toma nota, guarda em um gerenciador de senhas, faça o que faria com uma senha importante.",
         ["onboarding.pass_warning"] = "Se usares o AetherLove em outro computador — ou comprar um computador novo — Vais precisar digitar esta frase-senha de novo para ler os teus chats. Sem ela, as mensagens ficam ilegíveis.",
@@ -103,7 +103,7 @@ internal static class OnboardingPt
         ["onboarding.pass_strength_good"] = "Boa",
         ["onboarding.pass_strength_strong"] = "Forte",
 
-        // Step 4 — Profile (data labels)
+        // Step 4 - Profile (data labels)
         ["onboarding.region_na"] = "América do Norte (NA)",
         ["onboarding.region_eu"] = "Europa (EU)",
         ["onboarding.region_oceania"] = "Oceania",
@@ -145,7 +145,7 @@ internal static class OnboardingPt
         ["onboarding.lf_rp_partners"] = "Parceiros de Roleplay",
         ["onboarding.lf_erp"] = "Roleplay 18+ (ERP)",
 
-        // Step 4 — Profile (body)
+        // Step 4 - Profile (body)
         ["onboarding.profile_intro"] = "Estes campos aparecem no teu cartão de perfil público e são usados para sugerir matches.",
         ["onboarding.profile_identity"] = "Identidade",
         ["onboarding.profile_display_name"] = "Nome de Exibição",
@@ -177,7 +177,7 @@ internal static class OnboardingPt
         ["onboarding.profile_timezone"] = "Fuso horário",
         ["onboarding.profile_timezone_hint"] = "Mostrado para possíveis matches ter conhecimento quando estás ativo.",
 
-        // Step 5 — Avatar
+        // Step 5 - Avatar
         ["onboarding.avatar_heading"] = "Foto de Perfil",
         ["onboarding.avatar_intro"] = "A foto de perfil é exibida no chat e durante o matching. Exigimos uma imagem quadrada que contenha uma foto do rosto do seu personagem de FFXIV.",
         ["onboarding.avatar_tip"] = "Dica: uma captura de tela de G-Pose no formato portrait, focado no rosto funciona bem.",
@@ -190,7 +190,7 @@ internal static class OnboardingPt
         ["onboarding.avatar_its_a_match"] = "Deu Match!",
         ["onboarding.avatar_match_preview_caption"] = "pré-visualizar: como o avatar aparece nos cartões de match",
 
-        // Step 5 — Image Disclaimer
+        // Step 5 - Image Disclaimer
         ["onboarding.disclaimer_intro"] = "O AetherLove é feito para jogadores de Final Fantasy XIV. Antes de enviar qualquer imagem, por favor leia as seguintes diretrizes com atenção.",
         ["onboarding.disclaimer_moderation"] = "Todos os envios estão sujeitos à moderação automática e manual.",
         ["onboarding.disclaimer_general_heading"] = "Geral",
@@ -218,7 +218,7 @@ internal static class OnboardingPt
         ["onboarding.disclaimer_permanent_ban"] = "Banimento permanente da conta.",
         ["onboarding.disclaimer_continue"] = "Eu entendi, continuar",
 
-        // Step 6 — Photos
+        // Step 6 - Photos
         ["onboarding.photos_heading"] = "Fotos do perfil",
         ["onboarding.photos_intro"] = "Adiciona fotos de retrato ao teu perfil (proporção 10:16). O primeiro espaço é obrigatório; os espaços 2 a 4 são opcionais. Para melhores resultados, usa imagens de pelo menos 480 × 768 px.",
         ["onboarding.photos_main_thumb"] = "Principal",
@@ -236,7 +236,7 @@ internal static class OnboardingPt
         ["onboarding.photos_required"] = "Esta foto é obrigatória.",
         ["onboarding.photos_optional"] = "Esta foto é opcional.",
 
-        // Step 7 — Optional
+        // Step 7 - Optional
         ["onboarding.expansion_none"] = "(Nenhuma)",
         ["onboarding.opt_heading"] = "Conta mais sobre ti",
         ["onboarding.opt_intro"] = "Todos os campos desta página são opcionais. Preenche quanto quiser — estes detalhes aparecem no seu cartão de perfil e ajudam os outros a encontrar você.",
@@ -270,7 +270,7 @@ internal static class OnboardingPt
         ["onboarding.time_am"] = "AM",
         ["onboarding.time_pm"] = "PM",
 
-        // Step 8 — Filters
+        // Step 8 - Filters
         ["onboarding.filters_intro"] = "Conta-nos com quem gostaria de dar match. Estas preferências ajudam a mostrar as pessoas certas — Podes ajustá-las a qualquer momento nas Configurações.",
         ["onboarding.filters_heading"] = "Quero Dar Match Com",
         ["onboarding.filters_race"] = "Raça",
@@ -286,7 +286,7 @@ internal static class OnboardingPt
         ["onboarding.filters_any_region"] = "  Sem seleção — qualquer região",
         ["onboarding.filters_any_language"] = "  Sem seleção — sem preferência de idioma",
 
-        // Step 9 — Finished
+        // Step 9 - Finished
         ["onboarding.finished_heading"] = "Tudo Pronto!",
         ["onboarding.finished_intro"] = "O Teu perfil foi criado e as preferências de match foram salvas. Estás pronto para começar a conectar com outros jogadores de Final Fantasy XIV.",
         ["onboarding.finished_verification_heading"] = "Verificação de Perfil",
@@ -298,7 +298,7 @@ internal static class OnboardingPt
         ["onboarding.finished_rejected_body"] = "Se alguma das suas imagens violar nossas diretrizes durante a revisão, vais receber uma notificação. A imagem será removida e pediremos que a substitua. O perfil continua ativo nesse meio-tempo.",
         ["onboarding.finished_good_luck"] = "Boa sorte! — o AetherLove acredita em ti! ♥",
 
-        // Step 10 — Preferences
+        // Step 10 - Preferences
         ["onboarding.prefs_intro"] = "Deixa o AetherLove personalizado — escolhe um tema de cores e um tamanho de telefone. Podes mudar ambos a qualquer momento nas Configurações.",
         ["onboarding.prefs_theme"] = "Tema",
         ["onboarding.prefs_phone_size"] = "Tamanho do telefone",

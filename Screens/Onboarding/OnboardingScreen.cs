@@ -209,8 +209,6 @@ public partial class OnboardingScreen
         var dotsX = wPos.X + (wSize.X - dotsW) * 0.5f;
         var dotsY = wPos.Y + H - Px(14f);
 
-        // Progress dots: one per step. Completed steps are filled accent, the current step is a filled
-        // white dot, and steps still ahead are hollow.
         for (int i = 0; i < TotalDisplaySteps; i++)
         {
             var c = new Vector2(dotsX + i * DotSpacing + DotR, dotsY);
@@ -346,8 +344,7 @@ public partial class OnboardingScreen
                 return;
 
             case OnboardingStep.Photos:
-                // Snapshot the slots on the UI thread; the heavy decode/resize/encode runs in the hub-call
-                // task (off-thread). A PhotoProcessingException there localizes via the save catch.
+                // Snapshot the slots on the UI thread; the heavy image work runs in the hub-call task.
                 var photoInputs = SnapshotPhotoInputs();
                 BeginSave("photos", () => photoInputs,
                     (inputs, ct) => _hubClient.SavePhotosAsync(BuildPhotoBatch(inputs), ct));
@@ -436,7 +433,7 @@ public partial class OnboardingScreen
             return;
         }
         _step = (OnboardingStep)((int)_step - 1);
-        // Skip the passphrase-setup step backwards too when a key bundle already exists (mirrors OnShow).
+        // Skip the passphrase-setup step backwards too when a key bundle already exists.
         if (_step == OnboardingStep.EncryptionSetup && _bootstrap.LastConnection?.HasKeyBundle == true)
         {
             _step = (OnboardingStep)((int)_step - 1);
@@ -491,7 +488,6 @@ public partial class OnboardingScreen
         _selfieOverlay.Start(aspect, minW, (path, crop) => HandlePicked(path, crop));
     }
 
-    /// <summary>Gates a photo-slot pick behind the "declare your extras" modal, then runs the picker or selfie.</summary>
     private void TryPickPhoto(Action open)
     {
         if (AnyConfirmedExtraIsUndeclared())

@@ -26,7 +26,7 @@ public sealed class SegmentText : ISegment
         {
             if (li > 0)
             {
-                // Hard newline: move to the next line and reset the SameLine anchor to x=0.
+                // Hard newline: reset the SameLine anchor to x=0.
                 ImGui.NewLine();
                 ImGui.Dummy(System.Numerics.Vector2.Zero);
                 ImGui.SameLine(0, 0);
@@ -35,9 +35,8 @@ public sealed class SegmentText : ISegment
         }
     }
 
-    // Draws one line preserving the typed spaces: a run of spaces becomes one space-wide gap before the next
-    // item. The first token emits no SameLine of its own, so it inherits the gap the previous segment left —
-    // that's how a space straddling a text↔emoji boundary survives.
+    // Preserves typed spaces: a run of spaces becomes one gap before the next item. The first token emits
+    // no SameLine of its own, so a space straddling a text/emoji boundary survives.
     private static void DrawLine(string line, float spaceW)
     {
         var i = 0;
@@ -69,12 +68,11 @@ public sealed class SegmentText : ISegment
             if (wordW <= lineW || lineW < 1f)
             {
                 ImGui.TextUnformatted(word);
-                ImGui.SameLine(0, 0); // keep following content inline; a following space run widens the gap
+                ImGui.SameLine(0, 0);
             }
             else
             {
-                // A single unbroken token wider than the whole line (e.g. a long URL with no spaces):
-                // break it by character so it wraps down the bubble instead of overflowing and clipping.
+                // A token wider than the whole line: break it by character so it wraps instead of clipping.
                 var chunks = ParsedMessage.BreakToken(word, lineW);
                 for (int c = 0; c < chunks.Count; c++)
                 {

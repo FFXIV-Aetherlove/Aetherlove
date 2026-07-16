@@ -11,10 +11,7 @@ using static AetherLove.Screens.MatchFx;
 
 namespace AetherLove.Screens;
 
-/// <summary>Match effect (Slot Machine): a gilded Vegas cabinet whose three reels
-/// spin in a vertical blur of symbols then snap to the left avatar, a heart, and the right avatar;
-/// "JACKPOT!" flashes and marquee bulbs chase around the frame.
-///</summary>
+/// <summary>Match effect - Slot Machine: three reels snap to avatar, heart, avatar; "JACKPOT!" flashes.</summary>
 public sealed class MatchSlotMachineScreen : IMatchEffect
 {
     private readonly ScreenRouter _router;
@@ -148,8 +145,7 @@ public sealed class MatchSlotMachineScreen : IMatchEffect
         }
     }
 
-    /// <summary>Draws the gilded cabinet: a layered gold bezel around a dark felt face, with a chase of
-    /// alternating marquee bulbs around the perimeter.</summary>
+    /// <summary>Gilded cabinet with a chase of marquee bulbs around the perimeter.</summary>
     private static void DrawCabinet(ImDrawListPtr dl, Vector2 min, Vector2 max, ThemeDefinition t,
         float time, bool reduce)
     {
@@ -225,9 +221,8 @@ public sealed class MatchSlotMachineScreen : IMatchEffect
         }
     }
 
-    /// <summary>Draws one reel: a recessed slot that scrolls a blurred ribbon of symbols while spinning,
-    /// then snaps to its final face — the left avatar (reel 0), a heart (reel 1), or the right avatar
-    /// (reel 2). A central pay-line band marks the landed symbol.</summary>
+    /// <summary>One reel: scrolls a blurred symbol ribbon while spinning, then snaps to its final face
+    /// (left avatar, heart, right avatar).</summary>
     private void DrawReel(ImDrawListPtr dl, int reelIndex, Vector2 min, Vector2 max, float avatarR,
         ThemeDefinition t, float time, bool reduce)
     {

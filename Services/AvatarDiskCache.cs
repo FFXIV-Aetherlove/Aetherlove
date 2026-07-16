@@ -5,11 +5,8 @@ using Dalamud.Interface.Textures;
 
 namespace AetherLove.Services;
 
-/// <summary>
-/// Writes avatar bytes to disk under a content-hashed filename (<c>{key}_{hash}.{ext}</c>) and returns the
-/// texture. The hash makes <c>GetFromFile</c> reload when the avatar changes — overwriting one fixed path
-/// would keep serving the texture it already cached for that path. Older copies for the same key are swept.
-/// </summary>
+/// <summary>Writes avatar bytes under a content-hashed filename; overwriting one fixed path would keep
+/// serving the texture <c>GetFromFile</c> already cached for it.</summary>
 public static class AvatarDiskCache
 {
     public static ISharedImmediateTexture? Store(string cacheDir, string key, byte[] bytes)

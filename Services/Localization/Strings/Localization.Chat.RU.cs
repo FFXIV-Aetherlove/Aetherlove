@@ -50,6 +50,7 @@ internal static class ChatRu
 
         // ChatListScreen
         ["chat.preview_me_prefix"] = "Я: ",
+        ["chat.preview_venue"] = "Поделились заведением",
         ["chat.matches_title"] = "Пары",
         ["chat.show_search"] = "Показать поиск",
         ["chat.hide_search"] = "Скрыть поиск",
@@ -96,5 +97,16 @@ internal static class ChatRu
         ["chat.category_count"] = "Чаты: {0}",
         ["chat.category_archive_default"] = "Архив",
         ["chat.all_categorized"] = "Все ваши чаты разложены по категориям",
+
+        // added after update 1.5.1
+        ["chat.menu_view_blocked"] = "Заблокированные",
+        ["blocked.title"] = "Заблокированные пользователи",
+        ["blocked.intro_body"] = "Здесь можно разблокировать профили, которые вы блокировали раньше. После разблокировки мэтч не восстановится автоматически, но вы снова сможете увидеть друг друга в колоде.",
+        ["blocked.empty"] = "Вы никого не заблокировали.",
+        ["blocked.loading"] = "Загрузка...",
+        ["blocked.since"] = "Заблокирован {0}",
+        ["blocked.unblock"] = "Разблокировать",
+        ["blocked.confirm_title"] = "Разблокировать {0}?",
+        ["blocked.confirm_body"] = "Мэтч не восстановится автоматически, но вы снова сможете увидеть друг друга в колоде.",
     };
 }

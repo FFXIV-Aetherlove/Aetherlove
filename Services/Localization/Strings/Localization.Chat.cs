@@ -50,6 +50,7 @@ internal static class ChatEn
 
         // ChatListScreen
         ["chat.preview_me_prefix"] = "Me: ",
+        ["chat.preview_venue"] = "Shared a venue",
         ["chat.matches_title"] = "Matches",
         ["chat.show_search"] = "Show search",
         ["chat.hide_search"] = "Hide search",
@@ -96,5 +97,16 @@ internal static class ChatEn
         ["chat.category_count"] = "Chats: {0}",
         ["chat.category_archive_default"] = "Archive",
         ["chat.all_categorized"] = "All your chats are tucked into categories",
+
+        // added after update 1.5.1
+        ["chat.menu_view_blocked"] = "View blocked",
+        ["blocked.title"] = "Blocked users",
+        ["blocked.intro_body"] = "You can unblock profiles here that you have blocked in the past. When you unblock a person you will not rematch automatically, but you have a chance at seeing each other in the deck again.",
+        ["blocked.empty"] = "You haven't blocked anyone.",
+        ["blocked.loading"] = "Loading...",
+        ["blocked.since"] = "Blocked {0}",
+        ["blocked.unblock"] = "Unblock",
+        ["blocked.confirm_title"] = "Unblock {0}?",
+        ["blocked.confirm_body"] = "You won't be rematched automatically, but you may see each other in the deck again.",
     };
 }

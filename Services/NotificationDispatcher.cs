@@ -18,6 +18,9 @@ public sealed class NotificationDispatcher : IDisposable
     private const uint ChatLinkCommandId = 1;
     private const uint PulseLinkCommandId = 2;
     private const uint NewsLinkCommandId = 3;
+    private const uint HangoutRsvpLinkCommandId = 4;
+    private const uint HangoutsLinkCommandId = 5;
+    private const uint HangoutOpenLinkCommandId = 6;
     private const ushort LinkColor = 539;
 
     private readonly IChatGui _chat;
@@ -28,6 +31,12 @@ public sealed class NotificationDispatcher : IDisposable
     private readonly DalamudLinkPayload? _chatLink;
     private readonly DalamudLinkPayload? _pulseLink;
     private readonly DalamudLinkPayload? _newsLink;
+    private readonly DalamudLinkPayload? _hangoutRsvpLink;
+    private readonly DalamudLinkPayload? _hangoutsLink;
+    private readonly DalamudLinkPayload? _hangoutOpenLink;
+
+    /// <summary>Link payloads can't carry data, so clicking any match-started line opens the most recently announced hangout.</summary>
+    private Shared.Hangouts.HangoutSummaryDto? _lastMatchHangout;
 
     public NotificationDispatcher(IChatGui chat, Configuration config, IServiceProvider services)
     {
@@ -40,6 +49,9 @@ public sealed class NotificationDispatcher : IDisposable
             _chatLink = _chat.AddChatLinkHandler(ChatLinkCommandId, (_, _) => OpenChat());
             _pulseLink = _chat.AddChatLinkHandler(PulseLinkCommandId, (_, _) => OpenDeck());
             _newsLink = _chat.AddChatLinkHandler(NewsLinkCommandId, (_, _) => OpenNews());
+            _hangoutRsvpLink = _chat.AddChatLinkHandler(HangoutRsvpLinkCommandId, (_, _) => OpenMyHangout());
+            _hangoutsLink = _chat.AddChatLinkHandler(HangoutsLinkCommandId, (_, _) => OpenHangouts());
+            _hangoutOpenLink = _chat.AddChatLinkHandler(HangoutOpenLinkCommandId, (_, _) => OpenNotifiedHangout());
         }
         catch (Exception ex)
         {
@@ -47,12 +59,9 @@ public sealed class NotificationDispatcher : IDisposable
         }
     }
 
-    /// <summary>Hard requirement for every notification: a character must be logged in. Message/match/news
-    /// pushes arrive over the live hub even at the title screen or character select, where a chat line or
-    /// toast would be wrong.</summary>
+    /// <summary>Pushes arrive over the live hub even at the title screen, where a chat line or toast would be wrong.</summary>
     private static bool LoggedIn => Plugin.ClientState.IsLoggedIn;
 
-    /// <summary>When the user has opted in, suppress every notification while in combat.</summary>
     private bool CombatSuppressed => _config.HideNotificationsDuringCombat && Plugin.Condition[ConditionFlag.InCombat];
 
     public void NotifyChatMessage()
@@ -138,7 +147,6 @@ public sealed class NotificationDispatcher : IDisposable
         }
     }
 
-    /// <summary>Announces a freshly-published news item in the game chat with a link that opens News.</summary>
     public void NotifyNews(string title)
     {
         if (!_config.EnableNotifications || !LoggedIn || CombatSuppressed)
@@ -178,7 +186,118 @@ public sealed class NotificationDispatcher : IDisposable
         }
     }
 
-    /// <summary>Prints a presence line into the game chat with a clickable link that opens the deck.</summary>
+    public void NotifyHangoutRsvp(string rsvperName)
+    {
+        if (!_config.EnableNotifications || !LoggedIn || CombatSuppressed)
+        {
+            return;
+        }
+        var name = string.IsNullOrWhiteSpace(rsvperName) ? Loc.T("notif.someone_new") : rsvperName;
+        PrintWithLink(Loc.T("hangout.notif_rsvp", name), _hangoutRsvpLink, Loc.T("hangout.notif_rsvp_link"));
+        if (_config.EnableNotificationSounds)
+        {
+            NotificationSoundPlayer.Play(_config.NotificationSoundChoice);
+        }
+    }
+
+    public void NotifyHangoutEnded(bool cancelled)
+    {
+        if (!_config.EnableNotifications || !LoggedIn || CombatSuppressed)
+        {
+            return;
+        }
+        var text = cancelled ? Loc.T("hangout.notif_cancelled") : Loc.T("hangout.notif_ended_early");
+        PrintWithLink(text, _hangoutsLink, Loc.T("hangout.notif_browse_link"));
+        if (_config.EnableNotificationSounds)
+        {
+            NotificationSoundPlayer.Play(_config.NotificationSoundChoice);
+        }
+    }
+
+    public void NotifyMatchHangout(Shared.Hangouts.HangoutSummaryDto hangout)
+    {
+        if (!_config.EnableNotifications || !LoggedIn || CombatSuppressed)
+        {
+            return;
+        }
+        _lastMatchHangout = hangout;
+        var name = string.IsNullOrWhiteSpace(hangout.OwnerDisplayName)
+            ? Loc.T("notif.someone_new")
+            : hangout.OwnerDisplayName;
+        PrintWithLink(Loc.T("hangout.notif_match_started", name), _hangoutOpenLink, Loc.T("hangout.menu_view"));
+        Popup(Loc.T("hangout.notif_match_title"), Loc.T("hangout.notif_match_started", name));
+        if (_config.EnableNotificationSounds)
+        {
+            NotificationSoundPlayer.Play(_config.NotificationSoundChoice);
+        }
+    }
+
+    private void OpenNotifiedHangout()
+    {
+        try
+        {
+            if (_lastMatchHangout is { } hangout)
+            {
+                _services.GetService<Screens.HangoutsScreen>()?.RequestOpenHangout(hangout);
+            }
+            _services.GetService<MainPluginWindow>()?.OpenToHangouts();
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Warning(ex, "[NotificationDispatcher] OpenNotifiedHangout failed.");
+        }
+    }
+
+    private void PrintWithLink(string text, DalamudLinkPayload? link, string linkLabel)
+    {
+        try
+        {
+            var sb = new SeStringBuilder()
+                .AddText("[AetherLove] ")
+                .AddText(text);
+
+            if (link is not null)
+            {
+                sb.AddText(" ")
+                  .Add(link)
+                  .AddUiForeground(LinkColor)
+                  .AddText($"[{linkLabel}]")
+                  .AddUiForegroundOff()
+                  .Add(RawPayload.LinkTerminator);
+            }
+
+            _chat.Print(sb.BuiltString);
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Warning(ex, "[NotificationDispatcher] Hangout print failed.");
+        }
+    }
+
+    private void OpenMyHangout()
+    {
+        try
+        {
+            _services.GetService<MainPluginWindow>()?.OpenToMyHangout();
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Warning(ex, "[NotificationDispatcher] OpenMyHangout failed.");
+        }
+    }
+
+    private void OpenHangouts()
+    {
+        try
+        {
+            _services.GetService<MainPluginWindow>()?.OpenToHangouts();
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Warning(ex, "[NotificationDispatcher] OpenHangouts failed.");
+        }
+    }
+
     public void PrintPulse(string text)
     {
         if (!LoggedIn || CombatSuppressed)
@@ -269,6 +388,9 @@ public sealed class NotificationDispatcher : IDisposable
             _chat.RemoveChatLinkHandler(ChatLinkCommandId);
             _chat.RemoveChatLinkHandler(PulseLinkCommandId);
             _chat.RemoveChatLinkHandler(NewsLinkCommandId);
+            _chat.RemoveChatLinkHandler(HangoutRsvpLinkCommandId);
+            _chat.RemoveChatLinkHandler(HangoutsLinkCommandId);
+            _chat.RemoveChatLinkHandler(HangoutOpenLinkCommandId);
         }
         catch (Exception ex)
         {

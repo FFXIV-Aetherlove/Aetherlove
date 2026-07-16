@@ -3,14 +3,13 @@ using AetherLove.Services;
 
 namespace AetherLove.UI;
 
-/// <summary>Resolves the chat-bubble colours: the user's overrides from the configuration when set, otherwise
-/// the live theme defaults. Own bubbles default to the theme accent; peer bubbles to a neutral grey; bubble text
-/// defaults to white (near-black on the light-accent themes so it stays readable).</summary>
+/// <summary>Chat-bubble colours: the user's overrides when set, otherwise the live theme defaults.</summary>
 public static class ChatColors
 {
     public static Vector4 OwnBgDefault => ThemeService.Current.Accent;
 
-    public static Vector4 OwnFgDefault => ThemeService.CurrentTheme is AppTheme.VanillaSunrise or AppTheme.YorhaTypeAe
+    public static Vector4 OwnFgDefault => ThemeService.CurrentTheme
+            is AppTheme.VanillaSunrise or AppTheme.YorhaTypeAe or AppTheme.WorldOfLovecraft
         ? new Vector4(0.13f, 0.10f, 0.03f, 1f)
         : new Vector4(1f, 1f, 1f, 1f);
 

@@ -12,8 +12,7 @@ using UiFlags = FFXIVClientStructs.FFXIV.Client.UI.UiFlags;
 
 namespace AetherLove.Services;
 
-/// <summary>Reads the game backbuffer on demand (for the selfie flow) via the swapchain buffer FCS exposes,
-/// copied through a D3D11 staging texture on the render thread. No Present hook; works on DX11 and Wine/DXVK.</summary>
+/// <summary>Reads the game backbuffer on demand through a D3D11 staging texture on the render thread.</summary>
 public sealed unsafe class ScreenCaptureService : IDisposable
 {
     private enum CaptureState
@@ -26,7 +25,7 @@ public sealed unsafe class ScreenCaptureService : IDisposable
 
     private const int HideDelayFrames = 2;
 
-    // HUD groups toggled off for a selfie and restored afterwards (each only if it was on). Unk32 (32) is left alone.
+    // HUD groups toggled off for a selfie; each restored afterwards only if it was on.
     private static readonly UiFlags[] HideGroups =
     {
         UiFlags.Shortcuts,
@@ -51,7 +50,6 @@ public sealed unsafe class ScreenCaptureService : IDisposable
     private UiFlags _hiddenGroups;
     private int _hideFramesLeft;
 
-    /// <summary>True while a capture has been requested but not yet delivered.</summary>
     public bool CaptureInProgress
     {
         get
@@ -73,8 +71,7 @@ public sealed unsafe class ScreenCaptureService : IDisposable
         _subscribed = true;
     }
 
-    /// <summary>Requests one backbuffer capture, fulfilled over the next render frames (idempotent while pending).
-    /// When <paramref name="hideHud"/> is set, the selfie HUD groups are toggled off for the shot and restored after.</summary>
+    /// <summary>Requests one backbuffer capture, fulfilled over the next render frames.</summary>
     public void RequestCapture(bool hideHud = true)
     {
         lock (_lock)
@@ -90,8 +87,7 @@ public sealed unsafe class ScreenCaptureService : IDisposable
         }
     }
 
-    /// <summary>Polls for a finished capture. Returns true exactly once when the attempt has completed; a null
-    /// <paramref name="pixels"/> then means the capture failed. Tight BGRA/RGBA rows, top-down.</summary>
+    /// <summary>Returns true exactly once per attempt; a null <paramref name="pixels"/> then means the capture failed.</summary>
     public bool TryGetResult(out byte[]? pixels, out int width, out int height, out DXGI_FORMAT format)
     {
         lock (_lock)
@@ -148,7 +144,7 @@ public sealed unsafe class ScreenCaptureService : IDisposable
             return;
         }
 
-        // Give the game a couple of frames to render without the hidden HUD groups before we read the backbuffer.
+        // The hidden HUD needs a couple of frames to leave the backbuffer before the readback.
         if (_hideFramesLeft > 0)
         {
             _hideFramesLeft--;
@@ -184,8 +180,7 @@ public sealed unsafe class ScreenCaptureService : IDisposable
         {
             return;
         }
-        // A UiFlag being set means that group is shown; toggle off only those (and restore only those) so a player
-        // who already hid one keeps it hidden. Per-group toggles never trip the global UI-hidden flag Dalamud watches.
+        // A set UiFlag means the group is shown; only those are toggled, so a player's own hidden groups stay hidden.
         foreach (var group in HideGroups)
         {
             if (ram->IsUiFlagsSet(group))
@@ -362,8 +357,6 @@ public sealed unsafe class ScreenCaptureService : IDisposable
         }
     }
 
-    /// <summary>Encodes captured pixels to a PNG, forcing opaque alpha, optionally cropped to a region (in
-    /// backbuffer pixels). Runs off the render thread.</summary>
     public static byte[] EncodePng(byte[] pixels, int w, int h, DXGI_FORMAT fmt, Rectangle? crop = null)
     {
         var copy = (byte[])pixels.Clone();

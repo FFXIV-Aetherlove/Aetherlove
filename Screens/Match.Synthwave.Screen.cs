@@ -11,7 +11,7 @@ using static AetherLove.Screens.MatchFx;
 
 namespace AetherLove.Screens;
 
-/// <summary>Match effect — Synthwave Sunset: a retro outrun scene with a perspective
+/// <summary>Match effect - Synthwave Sunset: a retro outrun scene with a perspective
 /// neon grid floor, a sliced gradient sun and two glowing avatars.</summary>
 public sealed class MatchSynthwaveScreen : IMatchEffect
 {

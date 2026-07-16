@@ -50,7 +50,7 @@ internal static class ProfileEs
         ["profile.closing_in"] = "Cerrando en {0} segundos",
         ["profile.close"] = "Cerrar",
 
-        // ProfileScreen — copy profile text (viewing others only)
+        // ProfileScreen - copy profile text (viewing others only)
         ["profile.copy_text"] = "Copiar texto del perfil",
         ["profile.copy_warning_title"] = "Advertencia",
         ["profile.copy_warning_body"] = "Has copiado el texto de otra persona. Ten cuidado al hacer clic o seguir cualquier enlace que contenga — lo haces bajo tu propia responsabilidad.",
@@ -176,5 +176,36 @@ internal static class ProfileEs
         ["profile.rp_crop_image"] = "Recortar imagen del personaje",
         ["profile.rp_back"] = "Volver",
         ["profile.rp_details"] = "Detalles del personaje:",
+
+        // added after update 1.5.1
+        ["profile.slot_locked"] = "Este espacio de foto requiere una suscripción de colaborador activa. Puedes quitar la foto o volver a suscribirte para usarlo de nuevo.",
+        ["profile.rp_extra_image"] = "Imagen extra {0} (colaborador)",
+        ["profile.section_supporter"] = "Colaborador",
+        ["profile.menu_sup_vanity"] = "Diseños de estilo",
+        ["profile.menu_sup_stats"] = "Estadísticas extra",
+        ["profile.sup_intro"] = "¡Gracias por apoyar AetherLove! Elige un estilo para tu nombre y si quieres mostrar la insignia de colaborador. Todos pueden verlos.",
+        ["profile.sup_name_style"] = "Estilo del nombre",
+        ["profile.sup_show_badge"] = "Mostrar insignia de colaborador",
+        ["profile.sup_badge_hint"] = "Muestra la etiqueta de colaborador en tu perfil. La estrella junto a tu nombre siempre se muestra.",
+        ["profile.sup_stats_intro"] = "Información exclusiva para colaboradores sobre cómo le va a tu perfil por todo el reino.",
+        ["profile.sup_stat_likes_received"] = "Likes recibidos",
+        ["profile.sup_stat_superlikes"] = "Superlikes recibidos",
+        ["profile.sup_stat_views"] = "Visitas al perfil",
+        ["profile.sup_stat_impressions"] = "Apariciones en mazos",
+        ["profile.sup_stat_likes_given"] = "Likes dados",
+        ["profile.sup_stat_passes_given"] = "Rechazos dados",
+        ["profile.sup_stat_matches"] = "Matches",
+        ["profile.sup_stat_like_rate"] = "Tu tasa de likes",
+        ["profile.sup_stat_match_rate"] = "Tu tasa de match",
+        ["profile.style_none"] = "Predeterminado",
+        ["profile.style_crimson"] = "Carmesí",
+        ["profile.style_gold"] = "Dorado",
+        ["profile.style_emerald"] = "Esmeralda",
+        ["profile.style_sapphire"] = "Zafiro",
+        ["profile.style_violet"] = "Violeta",
+        ["profile.style_rose"] = "Rosa",
+        ["profile.style_rainbow"] = "Arcoíris (animado)",
+        ["profile.style_shimmer"] = "Brillo dorado (animado)",
+        ["profile.style_pulse"] = "Pulso rosa (animado)",
     };
 }

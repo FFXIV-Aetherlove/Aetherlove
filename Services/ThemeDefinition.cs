@@ -22,6 +22,21 @@ public sealed class ThemeDefinition
     public required Vector4 ButtonHovered { get; init; }
     public required Vector4 ButtonActive { get; init; }
 
+    /// <summary>Window width in design pixels; height is always 835.</summary>
+    public float WindowWidth { get; init; } = 464f;
+
+    /// <summary>Content insets over the bezel art, in design pixels; defaults fit the v3 frames.</summary>
+    public float BezelTop { get; init; } = 34f;
+    public float BezelBottom { get; init; } = 48f;
+    public float BezelLeft { get; init; } = 44f;
+    public float BezelRight { get; init; } = 44f;
+
+    /// <summary>Hit rects (design px) of the minimize and close buttons drawn into the bezel art.</summary>
+    public Vector2 MinimizeButtonTL { get; init; } = new(370f, 0f);
+    public Vector2 MinimizeButtonSize { get; init; } = new(30f, 27f);
+    public Vector2 CloseButtonTL { get; init; } = new(401f, 0f);
+    public Vector2 CloseButtonSize { get; init; } = new(26f, 27f);
+
 
     public uint AccentU32 => ToU32(Accent);
     public uint AccentLightU32 => ToU32(AccentLight);
@@ -37,8 +52,7 @@ public sealed class ThemeDefinition
     public uint AccentLightRgb => AccentLightU32 & 0x00FFFFFF;
     public uint AccentDarkRgb => AccentDarkU32 & 0x00FFFFFF;
 
-    /// <summary>Secondary gradient endpoints darkened for a small filled pill: vivid two-tone yet keeps a white
-    /// glyph legible (mirrors how <see cref="AccentDarkRgb"/> backs the primary pills). Alpha applied at draw time.</summary>
+    /// <summary>Secondary endpoints darkened for a small filled pill; alpha is applied at draw time.</summary>
     public uint SecondaryPillStartRgb => ToU32(PillDark(SecondaryStart)) & 0x00FFFFFF;
     public uint SecondaryPillEndRgb => ToU32(PillDark(SecondaryEnd)) & 0x00FFFFFF;
 
@@ -60,9 +74,9 @@ public sealed class ThemeDefinition
         ((uint)MathF.Round(Math.Clamp(c.Y, 0f, 1f) * 255f) << 8) |
         ((uint)MathF.Round(Math.Clamp(c.X, 0f, 1f) * 255f));
 
-    /// <summary>Dark, legible chip-fill tint for a bright secondary colour (keeps white text readable).</summary>
+    /// <summary>Chip-fill tint dark enough to keep white text readable.</summary>
     private static Vector4 Dark(Vector4 c) => new(c.X * 0.22f, c.Y * 0.22f, c.Z * 0.22f, 1f);
 
-    /// <summary>Moderate darkening for a small pill fill: vivid enough to read the secondary hue, dark enough for a white glyph.</summary>
+    /// <summary>Milder darkening for a small pill fill; still legible under a white glyph.</summary>
     private static Vector4 PillDark(Vector4 c) => new(c.X * 0.55f, c.Y * 0.55f, c.Z * 0.55f, 1f);
 }

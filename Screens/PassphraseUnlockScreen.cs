@@ -147,7 +147,7 @@ public sealed class PassphraseUnlockScreen
             ImGui.PopFont();
             ImGui.Spacing();
 
-            // Read once per frame — the click handler can flip _unlocking mid-frame.
+            // Read once per frame - the click handler can flip _unlocking mid-frame.
             var unlocking = _unlocking;
 
             if (_error is not null && !unlocking)
@@ -254,7 +254,6 @@ public sealed class PassphraseUnlockScreen
 
     private void NavigateToTarget()
     {
-        // The key is stored, so the passphrase gate is satisfied; advance to the next gate (news → target).
         _router.Navigate(_bootstrap.ResolveNextStartupScreen());
     }
 }

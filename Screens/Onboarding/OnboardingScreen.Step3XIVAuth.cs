@@ -84,8 +84,6 @@ public partial class OnboardingScreen
         DrawNoXivAuthSection(t, centerX);
     }
 
-    /// <summary>Overlays the XIVAuth logo just left of the (centered) button label, scaled to the button height
-    /// while preserving the source 25×30 aspect ratio.</summary>
     private void DrawXivAuthButtonIcon(string label)
     {
         EnsureXivAuthLogo();
@@ -210,25 +208,21 @@ public partial class OnboardingScreen
             return;
         }
 
-        // Authenticated, but the hub is unreachable (server down): show the same Offline screen as startup
-        // rather than walking them into profile steps that can't save. It retries the bootstrap and routes
-        // back into the wizard (or the deck) once the server answers.
+        // Authenticated but the hub is unreachable: show the Offline screen rather than steps that can't save.
         if (_bootstrap.LastResult == SessionBootstrapResult.ServerUnreachable)
         {
             _router.Navigate(Screen.Offline);
             return;
         }
 
-        // New device / existing account: server has a key bundle but this machine has no private key.
-        // Route to the passphrase screen to rebuild it, else messaging has no chat key. Mirrors SplashScreen.
+        // New device on an existing account: no local private key, so unlock via passphrase first.
         if (_bootstrap.NeedsPassphraseUnlock)
         {
             _router.Navigate(Screen.PassphraseUnlock);
             return;
         }
 
-        // Active account with no server key bundle (e.g. re-registered after deletion): set up encryption
-        // once before reaching the deck, otherwise messaging stays broken with no in-app fix.
+        // Active account with no server key bundle: set up encryption before reaching the deck.
         if (_bootstrap.NeedsEncryptionRecovery)
         {
             _router.Navigate(Screen.EncryptionRecovery);

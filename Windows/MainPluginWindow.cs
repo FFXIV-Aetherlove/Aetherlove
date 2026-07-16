@@ -42,9 +42,12 @@ public class MainPluginWindow : Window, IDisposable
     private readonly NewsScreen _newsScreen;
     private readonly OfflineScreen _offlineScreen;
     private readonly OutdatedScreen _outdatedScreen;
+    private readonly PlacesScreen _placesScreen;
+    private readonly MyVenuesScreen _myVenuesScreen;
     private readonly NotificationCenter _notifications;
     private readonly AetherLoveHubClient _hubClient;
     private readonly OwnAvatarCache _ownAvatar;
+    private readonly Services.Auth.SessionBootstrapper _bootstrap;
 
     private MiniWindow? _miniWindow;
 
@@ -75,15 +78,22 @@ public class MainPluginWindow : Window, IDisposable
         NewsScreen newsScreen,
         OfflineScreen offlineScreen,
         OutdatedScreen outdatedScreen,
+        PlacesScreen placesScreen,
+        MyVenuesScreen myVenuesScreen,
+        HangoutsScreen hangoutsScreen,
+        BlockedScreen blockedScreen,
+        Widgets.SupporterThanksScene supporterThanks,
         NotificationCenter notifications,
         AetherLoveHubClient hubClient,
-        OwnAvatarCache ownAvatar
+        OwnAvatarCache ownAvatar,
+        Services.Auth.SessionBootstrapper bootstrap
     ) : base("AetherLove##MainWindow",
              ImGuiWindowFlags.NoResize
            | ImGuiWindowFlags.NoScrollbar
            | ImGuiWindowFlags.NoScrollWithMouse
            | ImGuiWindowFlags.NoTitleBar
-           | ImGuiWindowFlags.NoDocking)
+           | ImGuiWindowFlags.NoDocking
+           | ImGuiWindowFlags.NoBackground)
     {
         Size = UiScale.Design;
         SizeCondition = ImGuiCond.Always;
@@ -108,10 +118,19 @@ public class MainPluginWindow : Window, IDisposable
         _newsScreen = newsScreen;
         _offlineScreen = offlineScreen;
         _outdatedScreen = outdatedScreen;
+        _placesScreen = placesScreen;
+        _myVenuesScreen = myVenuesScreen;
+        _hangoutsScreen = hangoutsScreen;
+        _blockedScreen = blockedScreen;
+        _supporterThanks = supporterThanks;
         _notifications = notifications;
         _hubClient = hubClient;
         _ownAvatar = ownAvatar;
+        _bootstrap = bootstrap;
     }
+    private readonly HangoutsScreen _hangoutsScreen;
+    private readonly BlockedScreen _blockedScreen;
+    private readonly Widgets.SupporterThanksScene _supporterThanks;
 
     public void SetMiniWindow(MiniWindow mini) => _miniWindow = mini;
 
@@ -124,8 +143,7 @@ public class MainPluginWindow : Window, IDisposable
     {
         _ownAvatar.Refresh(onlyIfCold: true);
 
-        // A warning that arrived while minimised was deferred; surface it now that the phone is open. Runs
-        // before this frame's navigation is processed, so it wins over the open path's target (e.g. chat).
+        // Runs before this frame's navigation is processed, so it wins over the open path's target.
         if (_notifications.HasPendingWarning)
         {
             _notifications.ClearPendingWarning();
@@ -148,7 +166,6 @@ public class MainPluginWindow : Window, IDisposable
 
     public void OpenToChat()
     {
-        // The phone and the bubble are mutually exclusive; opening one closes the other.
         if (_miniWindow != null)
         {
             _miniWindow.IsOpen = false;
@@ -178,6 +195,27 @@ public class MainPluginWindow : Window, IDisposable
         _router.Navigate(Screen.News);
     }
 
+    public void OpenToHangouts()
+    {
+        if (_miniWindow != null)
+        {
+            _miniWindow.IsOpen = false;
+        }
+        IsOpen = true;
+        _router.Navigate(Screen.Hangouts);
+    }
+
+    public void OpenToMyHangout()
+    {
+        if (_miniWindow != null)
+        {
+            _miniWindow.IsOpen = false;
+        }
+        IsOpen = true;
+        _myProfileScreen.RequestHangoutView();
+        _router.Navigate(Screen.MyProfile);
+    }
+
     public void Dispose()
     {
         _splashScreen.Dispose();
@@ -196,7 +234,7 @@ public class MainPluginWindow : Window, IDisposable
 
     public override void PreDraw()
     {
-        Size = Px(UiScale.Design);
+        Size = Px(ThemeService.Current.WindowWidth, UiScale.Design.Y);
 
         if (Plugin.Configuration.LockPhonePosition)
         {
@@ -217,8 +255,7 @@ public class MainPluginWindow : Window, IDisposable
                 if (_lastScreen.HasValue)
                 {
                     OnScreenHidden(_lastScreen.Value);
-                    // Leaving the deck's browse context (the deck itself or its view-profile page) for anything
-                    // else drops the pinned card, so returning to the deck later shows fresh profiles.
+                    // Leaving the deck's browse context drops the pinned card so a later return shows fresh profiles.
                     if (IsDeckEngaged(_lastScreen.Value) && !IsDeckEngaged(newScreen))
                     {
                         _deckScreen.MarkDeckLeft();
@@ -236,10 +273,9 @@ public class MainPluginWindow : Window, IDisposable
 
         ImGui.PushStyleVar(ImGuiStyleVar.Alpha, _transitionAlpha);
 
-        // The phone is authored at a fixed canvas × our own size preset. Dalamud's global font scale would
-        // multiply every glyph (and font-derived widget heights) on top of that and overflow the fixed
-        // window — so pin it to 1 for our draw and restore it in PostDraw. Dalamud's scale slider then has
-        // zero effect inside the phone. Pinned last so no fallible PreDraw code runs between pin and restore.
+        // Dalamud's global font scale would multiply every glyph on top of the phone's own scaling and
+        // overflow the fixed window; pin it to 1 for our draw and restore in PostDraw. Pinned last so no
+        // fallible PreDraw code runs between pin and restore.
         var io = ImGui.GetIO();
         _savedFontGlobalScale = io.FontGlobalScale;
         io.FontGlobalScale = 1f;
@@ -247,10 +283,10 @@ public class MainPluginWindow : Window, IDisposable
 
     private const float NavBarHeight = 70f;
 
-    private const float BezelLeft = 44f;
-    private const float BezelRight = 44f;
-    private const float BezelTop = 50f;
-    private const float BezelBottom = 60f;
+    private static float BezelLeft => ThemeService.Current.BezelLeft;
+    private static float BezelRight => ThemeService.Current.BezelRight;
+    private static float BezelTop => ThemeService.Current.BezelTop;
+    private static float BezelBottom => ThemeService.Current.BezelBottom;
 
     public override void Draw()
     {
@@ -262,7 +298,7 @@ public class MainPluginWindow : Window, IDisposable
         }
 
         // While a size-preset change rebuilds the fonts, drawing would fall back to the default font at the
-        // wrong size — show the phone shell with a spinner until every handle is ready.
+        // wrong size.
         if (!UiFonts.Ready)
         {
             DrawFontRebuildLoader();
@@ -271,16 +307,12 @@ public class MainPluginWindow : Window, IDisposable
 
         using var bodyFont = UiFonts.Body?.Push();
 
-        // Pin the modal host over the phone so its dim backdrop follows us onto whatever viewport/monitor
-        // the window is on (Dalamud's "Enable multiple screens").
         ModalHost.Instance?.SetAnchor(ImGui.GetWindowPos(), ImGui.GetWindowSize());
 
         _phoneShell.DrawBackground(ImGui.GetWindowPos(), ImGui.GetWindowSize());
 
-        DrawHiddenCloseAffordance();
+        DrawBezelButtons();
 
-        // While the deck isn't the active screen, let it fetch the next deck in the background once the slot
-        // elapses, so returning to it shows fresh profiles with no visible swap of the old card.
         if (_router.Current != Screen.Deck)
         {
             _deckScreen.MaybeBackgroundRefresh();
@@ -290,7 +322,9 @@ public class MainPluginWindow : Window, IDisposable
         var contentW = winSize.X - Px(BezelLeft) - Px(BezelRight);
         var contentH = winSize.Y - Px(BezelTop) - Px(BezelBottom);
         var isMainScreen = _router.Current is Screen.Deck or Screen.ChatList or Screen.ChatCategory or Screen.Chat
-                                                           or Screen.Settings or Screen.MyProfile;
+                                                           or Screen.Settings or Screen.MyProfile
+                                                           or Screen.Places or Screen.MyVenues or Screen.Hangouts
+                                                           or Screen.Blocked;
         var isSplash = _router.Current is Screen.Splash;
 
         ImGui.SetCursorPos(Px(BezelLeft, BezelTop));
@@ -365,6 +399,18 @@ public class MainPluginWindow : Window, IDisposable
             case Screen.Outdated:
                 _outdatedScreen.Draw();
                 break;
+            case Screen.Places:
+                _placesScreen.Draw();
+                break;
+            case Screen.MyVenues:
+                _myVenuesScreen.Draw();
+                break;
+            case Screen.Hangouts:
+                _hangoutsScreen.Draw();
+                break;
+            case Screen.Blocked:
+                _blockedScreen.Draw();
+                break;
         }
 
         if (isMainScreen)
@@ -380,12 +426,14 @@ public class MainPluginWindow : Window, IDisposable
             DrawBottomNav();
         }
 
+        _supporterThanks.Draw(ImGui.GetWindowPos(), ImGui.GetWindowSize());
+
         HandleBezelDoubleClickMinimize();
     }
 
     private static bool IsNavActive(Screen navTarget, Screen current) => navTarget switch
     {
-        Screen.ChatList => current is Screen.ChatList or Screen.ChatCategory or Screen.Chat,
+        Screen.ChatList => current is Screen.ChatList or Screen.ChatCategory or Screen.Chat or Screen.Blocked,
         _ => current == navTarget,
     };
 
@@ -398,15 +446,25 @@ public class MainPluginWindow : Window, IDisposable
 
         var drawList = ImGui.GetWindowDrawList();
 
-        // Null target = Minimize. Profile draws the avatar (DrawProfileNavButton), so its label is unused.
-        var items = new (FontAwesomeIcon icon, string label, Screen? target)[]
+        // Profile draws the avatar, so its label is unused.
+        var placesEnabled = _bootstrap.LastConnection?.PlacesEnabled != false;
+        var hangoutsEnabled = _bootstrap.LastConnection?.HangoutsEnabled != false;
+        var itemList = new System.Collections.Generic.List<(FontAwesomeIcon icon, string label, Screen target)>(6)
         {
+            (FontAwesomeIcon.User, string.Empty, Screen.MyProfile),
             (FontAwesomeIcon.LayerGroup, Loc.T("common.nav_swipe"), Screen.Deck),
             (FontAwesomeIcon.Comment, Loc.T("common.nav_matches"), Screen.ChatList),
-            (FontAwesomeIcon.User, string.Empty, Screen.MyProfile),
-            (FontAwesomeIcon.Cog, Loc.T("common.nav_settings"), Screen.Settings),
-            (FontAwesomeIcon.MobileAlt, Loc.T("common.nav_minimize"), null),
         };
+        if (placesEnabled)
+        {
+            itemList.Add((FontAwesomeIcon.MapMarkedAlt, Loc.T("common.nav_places"), Screen.Places));
+        }
+        if (hangoutsEnabled)
+        {
+            itemList.Add((FontAwesomeIcon.Bullhorn, Loc.T("common.nav_hangouts"), Screen.Hangouts));
+        }
+        itemList.Add((FontAwesomeIcon.Cog, Loc.T("common.nav_settings"), Screen.Settings));
+        var items = itemList.ToArray();
 
         var slotWidth = (winSize.X - Px(BezelLeft) - Px(BezelRight)) / items.Length;
         var iconFont = Plugin.PluginInterface.UiBuilder.FontIcon;
@@ -419,7 +477,7 @@ public class MainPluginWindow : Window, IDisposable
         for (int i = 0; i < items.Length; i++)
         {
             var (icon, label, target) = items[i];
-            var isActive = target.HasValue && IsNavActive(target.Value, _router.Current);
+            var isActive = IsNavActive(target, _router.Current);
             var color = isActive ? accentCol : UiColors.TextMuted;
 
             var slotCenterX = barLeft + slotWidth * i + slotWidth * 0.5f;
@@ -445,7 +503,7 @@ public class MainPluginWindow : Window, IDisposable
                 }
                 ImGui.PopFont();
 
-                if (target.HasValue && target.Value == Screen.ChatList)
+                if (target == Screen.ChatList)
                 {
                     var total = _notifications.TotalBadge;
                     if (total > 0)
@@ -479,28 +537,20 @@ public class MainPluginWindow : Window, IDisposable
             ImGui.SetCursorScreenPos(new Vector2(barLeft + slotWidth * i, barTop));
             if (ImGui.InvisibleButton($"##nav_{i}", new Vector2(slotWidth, Px(NavBarHeight))))
             {
-                if (target.HasValue)
+                if (target != _router.Current)
                 {
-                    if (target.Value != _router.Current)
-                    {
-                        _router.Navigate(target.Value);
-                    }
-                }
-                else
-                {
-                    Minimize();
+                    _router.Navigate(target);
                 }
             }
         }
     }
 
-    /// <summary>Draws the Profile nav slot as the user's circular avatar, falling back to the user icon while it loads.</summary>
     private void DrawProfileNavButton(ImDrawListPtr drawList, float centerX, float iconY,
                                       bool isActive, FontAwesomeIcon fallbackIcon, uint iconColor)
     {
         var fontSize = ImGui.GetFontSize();
         var baseRadius = fontSize + Px(2f);
-        // Enlarged centre avatar that grows up and out from a fixed bottom edge (a FAB-style button).
+        // Grows up from a fixed bottom edge.
         const float avatarScale = 1.44f;
         var radius = baseRadius * avatarScale;
         var center = new Vector2(centerX, iconY + baseRadius * 2f - radius);
@@ -522,7 +572,6 @@ public class MainPluginWindow : Window, IDisposable
             ImGui.PopFont();
         }
 
-        // Permanent soft-grey ring so the avatar reads against the dark background.
         drawList.AddCircle(center, radius, UiColors.AvatarRing, 64, Px(1f));
 
         if (isActive)
@@ -537,10 +586,19 @@ public class MainPluginWindow : Window, IDisposable
                 DrawGradientRing(drawList, center, radius, Px(2.5f), th.SecondaryStart, th.SecondaryEnd);
             }
         }
+
+        if (_bootstrap.LastConnection is { IsSupporter: true })
+        {
+            var badgeCenter = center + new Vector2(radius * 0.74f, -radius * 0.74f);
+            var badgeR = Px(9f);
+            drawList.AddCircleFilled(badgeCenter, badgeR, 0xFF1E1E24u, 24);
+            drawList.AddCircle(badgeCenter, badgeR, UiColors.FavoriteStar, 24, Px(1.2f));
+            // The star glyph's empty descent makes box-centring sit visually high; nudge down to compensate.
+            IconDraw.AddCentered(drawList, FontAwesomeIcon.Star, badgeR * 1.2f,
+                badgeCenter + new Vector2(0f, Px(0.5f)), UiColors.FavoriteStar);
+        }
     }
 
-    /// <summary>Strokes a circular ring whose colour sweeps between the two colours around the
-    /// circumference and slowly rotates over time — the selected bottom-nav avatar's accent border.</summary>
     private static void DrawGradientRing(ImDrawListPtr dl, Vector2 center, float radius, float thickness,
         Vector4 colorA, Vector4 colorB)
     {
@@ -635,6 +693,18 @@ public class MainPluginWindow : Window, IDisposable
             case Screen.Outdated:
                 _outdatedScreen.OnShow();
                 break;
+            case Screen.Places:
+                _placesScreen.OnShow();
+                break;
+            case Screen.MyVenues:
+                _myVenuesScreen.OnShow();
+                break;
+            case Screen.Hangouts:
+                _hangoutsScreen.OnShow();
+                break;
+            case Screen.Blocked:
+                _blockedScreen.OnShow();
+                break;
         }
     }
 
@@ -657,16 +727,29 @@ public class MainPluginWindow : Window, IDisposable
         }
     }
 
-    private void DrawHiddenCloseAffordance()
+    /// <summary>Invisible hit areas over the bezel art's minimize and exit buttons (per-theme rects).</summary>
+    private void DrawBezelButtons()
     {
         var winPos = ImGui.GetWindowPos();
-        var winSize = ImGui.GetWindowSize();
-        var hitH = Px(54f);
-        var hitW = winSize.X / 6f * 0.8f;
-        var hitTL = winPos + new Vector2((winSize.X - hitW) * 0.5f, winSize.Y - hitH);
+        var theme = ThemeService.Current;
 
-        ImGui.SetCursorScreenPos(hitTL);
-        ImGui.InvisibleButton("##fullClose", new Vector2(hitW, hitH));
+        var minTL = winPos + Px(theme.MinimizeButtonTL.X, theme.MinimizeButtonTL.Y);
+        var minSize = Px(theme.MinimizeButtonSize.X, theme.MinimizeButtonSize.Y);
+        ImGui.SetCursorScreenPos(minTL);
+        ImGui.InvisibleButton("##bezelMinimize", minSize);
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetTooltip(Loc.T("common.minimize_tooltip"));
+        }
+        if (ImGui.IsItemClicked(ImGuiMouseButton.Left))
+        {
+            Minimize();
+        }
+
+        var closeTL = winPos + Px(theme.CloseButtonTL.X, theme.CloseButtonTL.Y);
+        var closeSize = Px(theme.CloseButtonSize.X, theme.CloseButtonSize.Y);
+        ImGui.SetCursorScreenPos(closeTL);
+        ImGui.InvisibleButton("##bezelClose", closeSize);
         if (ImGui.IsItemHovered())
         {
             ImGui.SetTooltip(Loc.T("common.close_plugin_tooltip"));
@@ -677,8 +760,7 @@ public class MainPluginWindow : Window, IDisposable
         }
     }
 
-    /// <summary>Closes AetherLove, first asking for confirmation unless the user has opted out. Shared by
-    /// the full window's close affordance and the minimised bubble's power button.</summary>
+    /// <summary>Closes AetherLove, first asking for confirmation unless the user has opted out.</summary>
     public void RequestClose()
     {
         if (Plugin.Configuration.SkipCloseConfirmation)
@@ -754,12 +836,8 @@ public class MainPluginWindow : Window, IDisposable
         ImGui.PopStyleColor(3);
     }
 
-    /// <summary>Hides the phone and shows the minimised bubble: the bottom-nav minimise action, also
-    /// triggered by double-clicking the phone bezel.</summary>
     public void Minimize()
     {
-        // Minimising while browsing the deck (or its view-profile page) counts as leaving it, so an elapsed
-        // slot yields a fresh deck on return rather than the pinned stale card.
         if (IsDeckEngaged(_router.Current))
         {
             _deckScreen.MarkDeckLeft();
@@ -771,13 +849,12 @@ public class MainPluginWindow : Window, IDisposable
         }
     }
 
-    /// <summary>True while the given screen is part of the deck's browse flow: the deck itself, or a profile
-    /// view opened from the deck. Used to decide whether leaving keeps or drops the current deck card.</summary>
+    /// <summary>True while the screen is part of the deck's browse flow: the deck itself, or a profile view
+    /// opened from it.</summary>
     private bool IsDeckEngaged(Screen screen) =>
         screen == Screen.Deck || (screen == Screen.Profile && _profileScreen.Source == ProfileSource.Deck);
 
-    /// <summary>Double-clicking the phone bezel (the frame around the content area) minimises, mirroring the
-    /// bottom-nav button. Ignores double-clicks over the content area or any bezel widget, so it never steals input.</summary>
+    /// <summary>Ignores double-clicks over the content area or any bezel widget so it never steals input.</summary>
     private void HandleBezelDoubleClickMinimize()
     {
         if (!ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left))
@@ -808,8 +885,6 @@ public class MainPluginWindow : Window, IDisposable
     private void PerformClose()
     {
         // Closing keeps the hub connected (it lives for the plugin's lifetime), so notifications keep arriving.
-        // Closing while browsing the deck counts as leaving it, so a slot that elapses while closed yields a
-        // fresh deck on reopen rather than the pinned stale card.
         if (IsDeckEngaged(_router.Current))
         {
             _deckScreen.MarkDeckLeft();

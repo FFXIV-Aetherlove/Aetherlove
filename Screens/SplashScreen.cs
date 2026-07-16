@@ -46,7 +46,7 @@ public sealed class SplashScreen : IDisposable
     private static string LogoFileName => ThemeService.CurrentTheme switch
     {
         AppTheme.AllaganPassion => "logo_allagan.png",
-        AppTheme.VanillaSunrise => "logo_yellow.png",
+        AppTheme.VanillaSunrise or AppTheme.WorldOfLovecraft => "logo_yellow.png",
         _ => "logo_purple.png",
     };
 
@@ -226,7 +226,6 @@ public sealed class SplashScreen : IDisposable
 
         ImGui.SetCursorPos(Vector2.Zero);
         ImGui.InvisibleButton("##splashTap", avail);
-        // Only allow skip once bootstrap has resolved.
         if (ImGui.IsItemClicked() && bootstrapDone)
         {
             Advance();

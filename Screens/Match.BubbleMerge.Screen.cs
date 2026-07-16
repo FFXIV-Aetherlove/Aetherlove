@@ -11,7 +11,7 @@ using static AetherLove.Screens.MatchFx;
 
 namespace AetherLove.Screens;
 
-/// <summary>Match effect — Bubble Merge: a drift of iridescent soap bubbles rises
+/// <summary>Match effect - Bubble Merge: a drift of iridescent soap bubbles rises
 /// while two avatar-bearing bubbles float together and merge into one at centre.</summary>
 public sealed class MatchBubbleMergeScreen : IMatchEffect
 {
@@ -185,8 +185,7 @@ public sealed class MatchBubbleMergeScreen : IMatchEffect
         DrawActionButtons(_router, pos, size, reduce ? 1f : _settle);
     }
 
-    /// <summary>Draws a translucent soap bubble: a tinted fill, a bright rim, and a small offset white
-    /// highlight for the iridescent sheen.</summary>
+    /// <summary>Translucent soap bubble: tinted fill, bright rim, offset white highlight.</summary>
     private static void DrawBubble(ImDrawListPtr dl, Vector2 c, float r, Vector4 tint, float alpha, ThemeDefinition theme)
     {
         dl.AddCircleFilled(c, r, U32(Rgba(tint, alpha * 0.7f)), 40);
@@ -196,8 +195,7 @@ public sealed class MatchBubbleMergeScreen : IMatchEffect
         dl.AddCircleFilled(hi, r * 0.18f, U32(new Vector4(1f, 1f, 1f, MathF.Min(0.9f, alpha * 2.6f))), 16);
     }
 
-    /// <summary>Draws the large bubble shell that surrounds an avatar (no inner fill so the avatar reads
-    /// clearly).</summary>
+    /// <summary>Bubble shell around an avatar; no inner fill so the avatar reads clearly.</summary>
     private static void DrawBubbleShell(ImDrawListPtr dl, Vector2 c, float r, ThemeDefinition theme, float alpha)
     {
         var tint = Vector4.Lerp(theme.SecondaryStart, theme.SecondaryEnd, 0.4f);

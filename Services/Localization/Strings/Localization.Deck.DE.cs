@@ -56,5 +56,20 @@ internal static class DeckDe
 
         // added after update 1.5.0
         ["deck.cooldown_reswipe_btn"] = "Letzte Karte zurückholen",
+
+        // added after update 1.5.1
+        ["deck.superlike_tooltip"] = "Superlikes: {0}/{1} übrig",
+        ["deck.superlike_cooldown"] = "Neue Superlikes in {0}h:{1:00}m",
+        ["deck.superlike_intro_title"] = "Superlike",
+        ["deck.superlike_intro"] = "Mit einem Superlike zeigst du jemandem, dass er dir wirklich aufgefallen ist: Dein Profil landet mit goldenem Auftritt ganz oben in seinem Deck. Liked die Person zurück, matcht ihr sofort. {0} Wenn du diesen Hinweis schließt, wird kein Superlike verbraucht. Tippe also einfach noch einmal auf den Stern, wenn du bereit bist.",
+        ["deck.superlike_intro_daily"] = "Du hast {0} pro Tag.",
+        ["deck.superlike_intro_weekly"] = "Du hast 1 kostenlosen pro Woche.",
+        ["deck.superliked_you"] = "Du hast einen Superlike erhalten!",
+        ["deck.superliked_you_sub"] = "Ein Like zurück und ihr matcht sofort.",
+        ["deck.superlikes_waiting"] = "Wartende Superlikes: {0}",
+
+        ["deck.superlike_supporter_pitch"] = "Supporter bekommen mehr Superlikes: jeden Tag ein frisches Kontingent, dazu weitere Extras wie zusätzliche Fotos, exklusive Namensstile, Bonus-Statistiken und mehr.",
+        ["deck.superlike_free_tooltip"] = "Dein kostenloser Superlike der Woche",
+        ["deck.superlike_weekly_cooldown"] = "Nächster kostenloser Superlike in {0} T {1} Std.",
     };
 }

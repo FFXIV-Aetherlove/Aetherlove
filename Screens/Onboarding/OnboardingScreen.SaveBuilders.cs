@@ -42,13 +42,10 @@ public partial class OnboardingScreen
             SyncTool: MaskOr(SyncToolValues, _syncToolsSelected, (a, b) => (SyncTool)((short)a | (short)b)));
     }
 
-    /// <summary>One slot's upload inputs, snapshotted on the UI thread. The heavy decode/resize/encode is
-    /// deferred to <see cref="BuildPhotoBatch"/>, which runs off-thread.</summary>
+    /// <summary>One slot's upload inputs, snapshotted on the UI thread.</summary>
     private readonly record struct PhotoInput(bool Send, string Path, Vector4 Crop, bool IsNsfw, PhotoKind Kind);
 
-    // Snapshots the five photo slots (avatar, main, three extras) on the UI thread — cheap field reads only.
-    // A slot only contributes bytes when the user picked a new local image: unconfirmed slots, or slots
-    // unchanged from the server copy, are skipped (sent as null) and left untouched server-side.
+    // Unconfirmed slots and slots unchanged from the server copy are sent as null and left untouched server-side.
     private PhotoInput[] SnapshotPhotoInputs()
     {
         var inputs = new PhotoInput[5];
@@ -68,7 +65,7 @@ public partial class OnboardingScreen
         return inputs;
     }
 
-    // Decodes/crops/resizes/encodes each snapshotted slot. CPU-bound — call off the UI thread.
+    // CPU-bound; call off the UI thread.
     private PhotoBatchDto BuildPhotoBatch(PhotoInput[] inputs)
     {
         static PhotoUploadDto? Make(PhotoInput inp) =>

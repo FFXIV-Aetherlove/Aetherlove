@@ -10,6 +10,7 @@ using AetherLove.Services;
 using AetherLove.Services.Auth;
 using AetherLove.Services.Hub;
 using AetherLove.Services.Localization;
+using AetherLove.Shared.Flairs;
 using AetherLove.Shared.Moderation;
 using AetherLove.Shared.Profile;
 using AetherLove.Shared.Profile.Enums;
@@ -22,9 +23,8 @@ using Dalamud.Interface.Utility.Raii;
 namespace AetherLove.Screens;
 
 /// <summary>Determines the back-button icon on the profile screen.</summary>
-public enum ProfileSource { Deck, Self, Chat }
+public enum ProfileSource { Deck, Self, Chat, Hangout }
 
-/// <summary>Full-page profile detail view for a single player.</summary>
 public class ProfileScreen
 {
     private readonly ScreenRouter _router;
@@ -36,7 +36,6 @@ public class ProfileScreen
     private string _photoSubtitle = string.Empty;
     private ProfileSource _source = ProfileSource.Deck;
 
-    /// <summary>Where this profile view was opened from; a Deck-sourced view is part of the deck's browse flow.</summary>
     public ProfileSource Source => _source;
 
     private Guid _loadingProfileId;
@@ -44,22 +43,18 @@ public class ProfileScreen
     private volatile string? _loadError;
     private CancellationTokenSource _cts = new();
 
-    // Cached own-profile; invalidated after a local save and on every (re)connect.
     private ProfileDetailDto? _myProfileCache;
 
     private readonly Dictionary<int, ISharedImmediateTexture?> _photoTextures = new();
 
-    /// <summary>NSFW photos the viewer has explicitly chosen to reveal this session.</summary>
     private readonly HashSet<(Guid ProfileId, int Order)> _revealedNsfw = new();
-
-    /// <summary>NSFW RP-character images the viewer has explicitly chosen to reveal this session.</summary>
     private readonly HashSet<(Guid ProfileId, Guid CharacterId)> _revealedNsfwChars = new();
     private readonly Dictionary<Guid, ISharedImmediateTexture?> _characterTextures = new();
-    /// <summary>Set while the in-phone fullscreen view of an RP-character image is open.</summary>
+    private readonly Dictionary<(Guid CharacterId, short Sort), ISharedImmediateTexture?> _characterExtraTextures = new();
     private Guid? _fullscreenCharacterId;
+    /// <summary>Which image of the fullscreen character is shown: 0 = primary, else the extra's SortOrder.</summary>
+    private short _fullscreenCharacterExtra;
 
-    /// <summary>True while the RP-character fullscreen image view is open, so surrounding chrome (e.g. the
-    /// My-Profile hub back button) can hide instead of catching clicks underneath the overlay.</summary>
     public bool IsCharacterFullscreenOpen => _fullscreenCharacterId is not null;
 
     private int _photoIndex = 0;
@@ -72,14 +67,13 @@ public class ProfileScreen
     private int _scrollGen;
     private string _scrollChildId = "##profileScroll";
 
-    // Report flow state.
     private bool _reportPendingOpen;
     private string _reportReason = string.Empty;
     private bool _reportAgree;
     private volatile bool _reportSubmitting;
     private volatile string? _reportError;
     private float _reportSubmittedTimer;
-    /// <summary>Sticky once reported; hides the triangle and gates the modal into success-mode. Cleared by <see cref="ResetState"/>.</summary>
+    /// <summary>Sticky once reported; hides the triangle and gates the modal into success mode.</summary>
     private bool _reportedThisProfile;
 
     private const float ReportAutoCloseSeconds = 5f;
@@ -97,12 +91,29 @@ public class ProfileScreen
     private const uint GraphInactive = 0xFF2D2D2D;
 
     public ProfileScreen(ScreenRouter router, AetherLoveHubClient hub, FlairCatalog flairCatalog,
-                         SessionBootstrapper bootstrap)
+                         SessionBootstrapper bootstrap, SettingsScreen settingsScreen,
+                         Services.Hangouts.HangoutStateService hangoutState, Widgets.HangoutOverlay hangoutOverlay,
+                         Widgets.HangoutSharePicker hangoutSharePicker)
     {
         _router = router;
         _hub = hub;
         _flairCatalog = flairCatalog;
         _bootstrap = bootstrap;
+        _settingsScreen = settingsScreen;
+        _hangoutState = hangoutState;
+        _hangoutOverlay = hangoutOverlay;
+        _hangoutSharePicker = hangoutSharePicker;
+    }
+
+    private readonly SettingsScreen _settingsScreen;
+    private readonly Services.Hangouts.HangoutStateService _hangoutState;
+    private readonly Widgets.HangoutOverlay _hangoutOverlay;
+    private readonly Widgets.HangoutSharePicker _hangoutSharePicker;
+
+    private void OpenSupporterSettings()
+    {
+        _settingsScreen.RequestSupporterView(returnTo: _router.Current);
+        _router.Navigate(Screen.Settings);
     }
 
     public void SetProfile(Guid profileId, ProfileSource source)
@@ -148,7 +159,6 @@ public class ProfileScreen
         }, ct);
     }
 
-    /// <summary>Fetches the signed-in user's profile from the server (or reuses a fresh cache).</summary>
     public void SetMyProfile()
     {
         _source = ProfileSource.Self;
@@ -191,7 +201,6 @@ public class ProfileScreen
         }, ct);
     }
 
-    /// <summary>Drops the cached "My Profile" copy so the next <see cref="SetMyProfile"/> re-fetches.</summary>
     public void InvalidateMyProfileCache() => _myProfileCache = null;
 
     private void ResetState()
@@ -257,8 +266,6 @@ public class ProfileScreen
             return;
         }
 
-        // Keep only the profile being viewed; a viewed profile's full photo set shouldn't linger on disk once
-        // the user moves on to the next one.
         ImageCacheCleaner.ClearDir(cacheDir);
 
         foreach (var photo in dto.Photos)
@@ -296,13 +303,34 @@ public class ProfileScreen
                     $"[ProfileScreen] Failed to cache character image {ch.Id} for {dto.ProfileId}.");
             }
         }
+        foreach (var ch in dto.Characters ?? [])
+        {
+            foreach (var extra in ch.ExtraImages ?? [])
+            {
+                if (extra.Webp is not { Length: > 0 })
+                {
+                    continue;
+                }
+                try
+                {
+                    var path = Path.Combine(cacheDir,
+                        $"{dto.ProfileId}_char_{ch.Id:N}_x{extra.SortOrder}{ImageFormat.ExtensionFor(extra.Webp)}");
+                    File.WriteAllBytes(path, extra.Webp);
+                    _characterExtraTextures[(ch.Id, extra.SortOrder)] = Plugin.TextureProvider.GetFromFile(path);
+                }
+                catch (Exception ex)
+                {
+                    Plugin.Log.Warning(ex,
+                        $"[ProfileScreen] Failed to cache character extra image {ch.Id}/{extra.SortOrder}.");
+                }
+            }
+        }
     }
 
     public void OnShow()
     {
         _backPillPulseTimer = 0f;
-        // A fresh child id per open makes ImGui treat the scroll region as a brand-new window that begins at
-        // the top, so the prior profile's retained scroll never carries over — and there's no late-frame snap.
+        // Fresh child id per open so ImGui doesn't carry over the prior profile's retained scroll position.
         _scrollChildId = "##profileScroll" + (++_scrollGen);
     }
 
@@ -365,6 +393,7 @@ public class ProfileScreen
                 ImGui.Spacing();
                 ImGui.Spacing();
 
+                DrawHangoutBanner(winSize.X, dl);
                 DrawFlairs(winSize.X, dl);
                 DrawAbout(winSize.X, dl);
                 DrawCharacters(winSize.X, dl);
@@ -378,8 +407,7 @@ public class ProfileScreen
                 DrawFavoriteMovie(winSize.X, dl);
                 DrawFavoriteAnime(winSize.X, dl);
                 DrawFavoriteFFCharacter(winSize.X, dl);
-                // Peer play-times are stored in the owner's timezone; re-base into the viewer's so the
-                // hours match the viewer's clock. Own-profile view (and the edit form) keep raw data.
+                // Play-times are stored in the owner's timezone; re-base peer views into the viewer's clock.
                 var weekdayMask = _profile.WeekdayHoursMask;
                 var weekendMask = _profile.WeekendHoursMask;
                 if (_source != ProfileSource.Self)
@@ -403,6 +431,10 @@ public class ProfileScreen
 
         DrawBackPill(scrollViewportTL + Px(10f, 10f));
 
+        Widgets.SupporterInfoPopup.Draw(ImGui.GetWindowPos(), ImGui.GetWindowSize(), OpenSupporterSettings);
+        _hangoutOverlay.Draw(ImGui.GetWindowPos(), ImGui.GetWindowSize());
+        _hangoutSharePicker.Draw(ImGui.GetWindowPos(), ImGui.GetWindowSize());
+
         if (_source != ProfileSource.Self)
         {
             if (_reportSubmittedTimer > 0f)
@@ -417,6 +449,69 @@ public class ProfileScreen
         }
     }
 
+    private void DrawHangoutBanner(float winW, ImDrawListPtr dl)
+    {
+        if (_source == ProfileSource.Self)
+        {
+            return;
+        }
+        var hg = _hangoutState.ForMatchPeer(_profile.ProfileId) ?? _profile.ActiveHangout;
+        if (hg is null || hg.EndUtc <= DateTimeOffset.UtcNow)
+        {
+            return;
+        }
+
+        var t = ThemeService.Current;
+        var live = HangoutFields.IsLiveNow(hg);
+        var accent = live ? UiColors.LiveGreen : t.Accent;
+        var pad = Px(12f);
+        var start = ImGui.GetCursorScreenPos();
+        var tl = start + new Vector2(pad, 0f);
+        var size = new Vector2(winW - pad * 2f, Px(58f));
+        var br = tl + size;
+
+        ImGui.SetCursorScreenPos(tl);
+        var clicked = ImGui.InvisibleButton("##hgBanner", size);
+        var hovered = ImGui.IsItemHovered();
+
+        var glow = AccessibilityService.ReduceMotion ? 0.85f : 0.65f + 0.3f * MathF.Sin((float)ImGui.GetTime() * 2.4f);
+        dl.AddRectFilled(tl, br, ImGui.GetColorU32(accent with { W = hovered ? 0.20f : 0.13f }), Px(10f));
+        dl.AddRect(tl, br, ImGui.GetColorU32(accent with { W = glow }), Px(10f), ImDrawFlags.None, Px(1.5f));
+
+        IconDraw.AddCentered(dl, HangoutFields.CategoryIcon(hg.Category), Px(20f),
+            new Vector2(tl.X + Px(24f), (tl.Y + br.Y) * 0.5f), ImGui.GetColorU32(accent));
+        var textX = tl.X + Px(46f);
+        var status = (live ? Loc.T("hangout.status_live") : HangoutFields.TimeLabel(hg))
+            + "  ·  " + HangoutFields.CategoryLabel(hg.Category);
+        dl.AddText(new Vector2(textX, tl.Y + Px(10f)), ImGui.GetColorU32(accent), status);
+        var snippet = TruncateToWidth(hg.Description, br.X - textX - Px(30f));
+        dl.AddText(new Vector2(textX, tl.Y + Px(32f)), UiColors.TextMuted, snippet);
+        IconDraw.AddCentered(dl, FontAwesomeIcon.ChevronRight, Px(13f),
+            new Vector2(br.X - Px(18f), (tl.Y + br.Y) * 0.5f), UiColors.TextMuted);
+
+        if (clicked)
+        {
+            _hangoutOverlay.Open(hg);
+        }
+
+        ImGui.SetCursorScreenPos(new Vector2(start.X, br.Y));
+        ImGui.Spacing();
+        ImGui.Spacing();
+    }
+
+    private static string TruncateToWidth(string text, float maxW)
+    {
+        text = text.Replace('\n', ' ');
+        if (ImGui.CalcTextSize(text).X <= maxW)
+        {
+            return text;
+        }
+        while (text.Length > 1 && ImGui.CalcTextSize(text + "…").X > maxW)
+        {
+            text = text[..^1];
+        }
+        return text + "…";
+    }
 
     private void DrawImageScroller(int photoCount, float winW, ImDrawListPtr dl)
     {
@@ -482,7 +577,25 @@ public class ProfileScreen
         var nameY = photoTL.Y + PhotoHeight - nameFontSz - subFontSz - Px(30f);
         dl.AddText(nameFont, nameFontSz,
             new Vector2(photoTL.X + PadX, nameY),
-            0xFFFFFFFF, _profile.DisplayName);
+            SupporterStyle.NameColor(_profile.NameStyle, 0xFFFFFFFF), _profile.DisplayName);
+        if (_profile.IsSupporter)
+        {
+            var nameW = ImGui.CalcTextSize(_profile.DisplayName).X * (nameFontSz / ImGui.GetFontSize());
+            var starPx = nameFontSz * 0.55f;
+            var starTL = new Vector2(photoTL.X + PadX + nameW + Px(6f), nameY + nameFontSz * 0.24f);
+            IconDraw.Add(dl, FontAwesomeIcon.Star, starPx, starTL, UiColors.FavoriteStar);
+            var savedCursor = ImGui.GetCursorPos();
+            ImGui.SetCursorScreenPos(starTL - Px(2f, 2f));
+            if (ImGui.InvisibleButton("##peerSupStar", new Vector2(starPx + Px(4f), starPx + Px(4f))))
+            {
+                Widgets.SupporterInfoPopup.Open();
+            }
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.SetTooltip(Loc.T("profile.section_supporter"));
+            }
+            ImGui.SetCursorPos(savedCursor);
+        }
 
         var subY = nameY + nameFontSz + Px(4f);
         dl.AddText(subFont, subFontSz,
@@ -497,8 +610,7 @@ public class ProfileScreen
             var FlagGap = Px(4f);
 
             var flagX = photoTL.X + PadX + subWidth + Px(8f);
-            // Nudge down: text glyphs sit below the line's vertical centre, so centring the flag on the
-            // raw font height reads slightly high.
+            // Glyphs sit below the line's vertical centre; nudge the flags down to match.
             var flagY = subY + (subFontSz - FlagH) * 0.5f + Px(2f);
 
             foreach (var lang in languageNames)
@@ -540,8 +652,7 @@ public class ProfileScreen
 
         ImGui.Dummy(photoSz);
 
-        // Arrows first so their hover is captured before the reveal hit-test below: the reveal button covers
-        // the whole photo and overlaps the edge arrows, so a click on an arrow must not also reveal the photo.
+        // Arrows are submitted first so their hover wins over the full-photo reveal button below.
         var overArrow = false;
         if (photoCount > 1)
         {
@@ -777,8 +888,6 @@ public class ProfileScreen
     }
 
 
-    /// <summary>"Flairs" section (between the photos and About): the profile's flair pills, each showing its
-    /// description on hover. Renders nothing when the profile has no resolvable flairs.</summary>
     private void DrawFlairs(float winW, ImDrawListPtr dl)
     {
         if (_profile!.FlairIds is not { Length: > 0 })
@@ -821,28 +930,26 @@ public class ProfileScreen
                 curY += pillH + Px(6f);
             }
             ImGui.SetCursorPos(new Vector2(curX, curY));
-            DrawFlairPill(dl, ImGui.GetCursorScreenPos(), label,
+            var pillTL = ImGui.GetCursorScreenPos();
+            DrawFlairPill(dl, pillTL, label,
                 FlairCatalog.Description(f, flairLang), f.BackgroundColor);
+            // Open on release: opening on press arms the same-frame scrim, which dismisses the popup on mouse-up.
+            if (string.Equals(f.Key, FlairKeys.Supporter, StringComparison.OrdinalIgnoreCase)
+                && ImGui.IsMouseHoveringRect(pillTL, pillTL + new Vector2(pillW, pillH))
+                && ImGui.IsMouseReleased(ImGuiMouseButton.Left))
+            {
+                Widgets.SupporterInfoPopup.Open();
+            }
             curX += pillW + Px(8f);
         }
         ImGui.SetCursorPosY(curY + pillH + Px(4f));
         SpaceDivide(dl, winW);
     }
 
-    /// <summary>Session-open accordion cards for the "Characters" section, keyed per character.</summary>
     private readonly HashSet<Guid> _openCharacters = new();
 
-    /// <summary>"Characters" section: one closed-by-default card per RP character (monogram + name + chevron),
-    /// expanding to the rich-text bio and an optional left-aligned image (NSFW blur + click-to-show; clicking
-    /// the revealed image opens the in-phone fullscreen view).</summary>
-    /// <summary>Whether the current viewer has consented to see NSFW content, read from the connection
-    /// snapshot. Defaults to false when absent (e.g. an older server that doesn't send the flag), so we err
-    /// toward hiding rather than exposing.</summary>
     private bool ViewerSeesNsfw => _bootstrap.LastConnection?.NsfwEnabled ?? false;
 
-    /// <summary>The RP characters visible to the current viewer. On someone else's profile a viewer who has
-    /// not consented to NSFW never sees characters whose image is NSFW; viewing your own profile always shows
-    /// all of yours.</summary>
     private ProfileCharacterDto[] VisibleCharacters()
     {
         var all = _profile?.Characters ?? [];
@@ -879,8 +986,7 @@ public class ProfileScreen
         ImGui.SetCursorPosX(PadX);
         var cardTL = ImGui.GetCursorScreenPos();
 
-        // Content renders in the foreground channel; the card background is measured afterwards and drawn
-        // behind it in channel 0, so the rounded card hugs whatever the expanded body turned out to be.
+        // Body draws in channel 1; the card background is measured afterwards and drawn behind in channel 0.
         dl.ChannelsSplit(2);
         dl.ChannelsSetCurrent(1);
 
@@ -943,6 +1049,7 @@ public class ProfileScreen
             }
             ImGui.SetCursorPosX(PadX + innerPad);
             DrawCharacterImage(ch, dl);
+            DrawCharacterExtraImages(ch, dl, PadX + innerPad);
             contentBottom = ImGui.GetCursorScreenPos().Y + Px(4f);
         }
 
@@ -955,8 +1062,6 @@ public class ProfileScreen
         ImGui.Dummy(new Vector2(1f, Px(8f)));
     }
 
-    /// <summary>Monogram fill fading through the theme's secondary gradient down the list, darkened a touch
-    /// so the white initial stays legible on light theme stops.</summary>
     private static uint MonogramColor(int index, int count)
     {
         var t = ThemeService.Current;
@@ -966,8 +1071,6 @@ public class ProfileScreen
         return ImGui.ColorConvertFloat4ToU32(col);
     }
 
-    /// <summary>The in-card image, left-aligned at 80% of half-portrait size. The revealed image is itself
-    /// the fullscreen trigger (hover tooltip, click to open); a blurred one reveals first.</summary>
     private void DrawCharacterImage(ProfileCharacterDto ch, ImDrawListPtr dl)
     {
         if (!_characterTextures.TryGetValue(ch.Id, out var tex) || tex is null)
@@ -979,16 +1082,14 @@ public class ProfileScreen
         var tl = ImGui.GetCursorScreenPos();
         var fallback = AvatarFallbackColor(_profile!.ProfileId);
 
-        // Unlike profile photos, the guard also applies to the owner's own view (explicit product choice).
+        // Unlike profile photos, this blur deliberately also applies to the owner's own view.
         var blurred = ch.ImageIsNsfw
             && Plugin.Configuration.AlwaysBlurNsfw
             && !_revealedNsfwChars.Contains((_profile.ProfileId, ch.Id));
 
         if (blurred)
         {
-            // The pseudo-blur draws offset copies of the image; clip them to the image rect so the smear
-            // can't bleed over the card. The full-width reveal pill is wider than this small image, so a
-            // compact icon badge + tooltip stands in for it here.
+            // Clip the offset blur copies to the image rect so the smear can't bleed over the card.
             dl.PushClipRect(tl, tl + imgSz, true);
             DrawBlurredPhoto(dl, tex, tl, imgSz, fallback, 1f);
             dl.PopClipRect();
@@ -1024,17 +1125,78 @@ public class ProfileScreen
         if (ImGui.IsItemClicked())
         {
             _fullscreenCharacterId = ch.Id;
+            _fullscreenCharacterExtra = 0;
         }
     }
 
-    /// <summary>In-phone fullscreen view of one character image: fit-to-content on a dark backdrop with a
-    /// back pill returning to the profile (scroll position is retained by the scroll child's id).</summary>
+    private void DrawCharacterExtraImages(ProfileCharacterDto ch, ImDrawListPtr dl, float leftX)
+    {
+        if (ch.ExtraImages is not { Length: > 0 } extras)
+        {
+            return;
+        }
+
+        ImGui.Spacing();
+        ImGui.SetCursorPosX(leftX);
+        var thumbSz = Px(66f, 106f);
+        var fallback = AvatarFallbackColor(_profile!.ProfileId);
+        var first = true;
+        foreach (var extra in extras)
+        {
+            if (!_characterExtraTextures.TryGetValue((ch.Id, extra.SortOrder), out var tex))
+            {
+                continue;
+            }
+            if (!first)
+            {
+                ImGui.SameLine(0f, Px(6f));
+            }
+            first = false;
+
+            var tl = ImGui.GetCursorScreenPos();
+            var blurred = extra.IsNsfw
+                && Plugin.Configuration.AlwaysBlurNsfw
+                && !_revealedNsfwChars.Contains((_profile.ProfileId, ch.Id));
+            if (blurred)
+            {
+                dl.PushClipRect(tl, tl + thumbSz, true);
+                DrawBlurredPhoto(dl, tex, tl, thumbSz, fallback, 1f);
+                dl.PopClipRect();
+                ImGui.SetCursorScreenPos(tl);
+                ImGui.InvisibleButton($"##rpxReveal{ch.Id:N}_{extra.SortOrder}", thumbSz);
+                if (ImGui.IsItemClicked())
+                {
+                    _revealedNsfwChars.Add((_profile.ProfileId, ch.Id));
+                }
+                if (ImGui.IsItemHovered())
+                {
+                    ImGui.SetTooltip(Loc.T("profile.nsfw_reveal"));
+                }
+                continue;
+            }
+
+            DrawPhoto(dl, tex, tl, thumbSz, fallback, 1f);
+            ImGui.SetCursorScreenPos(tl);
+            ImGui.InvisibleButton($"##rpxOpenFs{ch.Id:N}_{extra.SortOrder}", thumbSz);
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.SetTooltip(Loc.T("profile.rp_image_expand"));
+            }
+            if (ImGui.IsItemClicked())
+            {
+                _fullscreenCharacterId = ch.Id;
+                _fullscreenCharacterExtra = extra.SortOrder;
+            }
+        }
+    }
+
     private void DrawCharacterFullscreen(Guid characterId)
     {
         var ch = VisibleCharacters().FirstOrDefault(c => c.Id == characterId);
-        if (ch is null
-            || !_characterTextures.TryGetValue(characterId, out var tex)
-            || tex?.GetWrapOrDefault() is not { } wrap)
+        var tex = _fullscreenCharacterExtra == 0
+            ? _characterTextures.GetValueOrDefault(characterId)
+            : _characterExtraTextures.GetValueOrDefault((characterId, _fullscreenCharacterExtra));
+        if (ch is null || tex?.GetWrapOrDefault() is not { } wrap)
         {
             _fullscreenCharacterId = null;
             return;
@@ -1045,8 +1207,6 @@ public class ProfileScreen
         var dl = ImGui.GetWindowDrawList();
         dl.AddRectFilled(winPos, winPos + winSize, 0xF2000000);
 
-        // Full-window scrim: swallows every click that isn't the back pill (nothing underneath may react)
-        // and closes the viewer, so any tap outside the pill also returns to the profile.
         ImGui.SetCursorScreenPos(winPos);
         if (ImGui.InvisibleButton("##rpcharFsScrim", winSize))
         {
@@ -1095,7 +1255,6 @@ public class ProfileScreen
             ImGui.TextColored(ThemeService.Current.Accent, Loc.T("profile.about"));
         }
         ImGui.Spacing();
-        // DrawWrapped renders in the default text colour; push ImGuiCol.Text for the tint.
         var bioW = winW - PadX * 2f;
         ImGui.SetCursorPosX(PadX);
         ImGui.PushStyleColor(ImGuiCol.Text, UiColors.BioText);
@@ -1246,8 +1405,7 @@ public class ProfileScreen
         SpaceDivide(dl, winW);
     }
 
-    /// <summary>Draws one clickable brand-coloured "favourite song" pill; no-ops when the ref is empty.
-    /// Spotify stores a bare track id (rebuilt into a URL); the other providers store a full URL.</summary>
+    /// <summary>Spotify stores a bare track id; the other providers store a full URL.</summary>
     private void DrawMusicPill(float winW, ImDrawListPtr dl, string idSuffix, string? rawRef, string? name,
         uint baseCol, uint hoverCol, FontAwesomeIcon icon, bool isSpotifyId)
     {
@@ -1274,7 +1432,6 @@ public class ProfileScreen
         ImGui.PopFont();
 
         var gap = Px(8f);
-        // Keep the pill inside the card: clip the label to the remaining width with a trailing ellipsis.
         var maxTextW = (winW - PadX * 2f) - (ChipPadX * 2f + iconW + gap);
         var display = TruncateToWidth(fullLabel, maxTextW);
 
@@ -1413,10 +1570,8 @@ public class ProfileScreen
     }
 
 
-    /// <summary>Sticky "back" pill in the profile's top-left corner. Drawn in its own overlay child window
-    /// (not the foreground draw list) so it sits above the scrolled profile content and stays clickable —
-    /// a hit-area submitted into the scroll list loses the click to sections scrolling under it, and a
-    /// foreground pill would float over unrelated Dalamud windows.</summary>
+    /// <summary>An overlay child keeps the pill clickable above the scroll content; the foreground draw list
+    /// would float over unrelated Dalamud windows.</summary>
     private void DrawBackPill(Vector2 pos)
     {
         if (_source == ProfileSource.Self)
@@ -1430,14 +1585,18 @@ public class ProfileScreen
 
         var t = ThemeService.Current;
 
-        // A profile opened from a chat returns to that chat; everywhere else returns to the swipe deck.
         var isChat = _source == ProfileSource.Chat;
-        var backTarget = isChat ? Screen.Chat : Screen.Deck;
-        var backTooltip = isChat ? Loc.T("profile.back_to_chat") : Loc.T("profile.back_to_swiping");
+        var isHangout = _source == ProfileSource.Hangout;
+        var backTarget = isChat ? Screen.Chat : isHangout ? Screen.Hangouts : Screen.Deck;
+        var backTooltip = isChat ? Loc.T("profile.back_to_chat")
+            : isHangout ? Loc.T("hangout.back_to_hangouts")
+            : Loc.T("profile.back_to_swiping");
 
         ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
         var backStr = FontAwesomeIcon.ArrowLeft.ToIconString();
-        var deckStr = (isChat ? FontAwesomeIcon.Comment : FontAwesomeIcon.LayerGroup).ToIconString();
+        var deckStr = (isChat ? FontAwesomeIcon.Comment
+            : isHangout ? FontAwesomeIcon.Bullhorn
+            : FontAwesomeIcon.LayerGroup).ToIconString();
         var backSz = ImGui.CalcTextSize(backStr);
         var deckSz = ImGui.CalcTextSize(deckStr);
         ImGui.PopFont();
@@ -1501,9 +1660,7 @@ public class ProfileScreen
     }
 
 
-    /// <summary>Warning triangle in the photo header's top-right corner; opens the report modal.</summary>
-    /// <summary>Draws the top-corner report button over the photo. Returns whether it is hovered, so the NSFW
-    /// reveal underneath can exclude the button's rect from its own click.</summary>
+    /// <summary>Returns whether the button is hovered so the NSFW reveal underneath can ignore that click.</summary>
     private bool DrawReportTriangleButton(Vector2 photoTL, Vector2 photoSz, ImDrawListPtr dl)
     {
         var BtnSize = Px(36f);
@@ -1595,7 +1752,7 @@ public class ProfileScreen
         ImGui.PopTextWrapPos();
         ImGui.Spacing();
         ImGui.SetNextItemWidth(availW);
-        ImGui.InputTextMultiline("##profReportReason", ref _reportReason, 500,
+        InputTextMultilineWithPaste("##profReportReason", ref _reportReason, 500,
             new Vector2(availW, Px(90f)));
         ImGui.Spacing();
 
@@ -1665,14 +1822,12 @@ public class ProfileScreen
     {
         var availW = ImGui.GetContentRegionAvail().X;
 
-        ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIconFixedWidth);
-        ImGui.SetWindowFontScale(2.2f * UiScale.S);
-        var icon = FontAwesomeIcon.CheckCircle.ToIconString();
-        var iconSz = ImGui.CalcTextSize(icon);
-        ImGui.SetCursorPosX((availW - iconSz.X) * 0.5f);
-        ImGui.TextColored(UiColors.Success, icon);
-        ImGui.SetWindowFontScale(1.0f);
-        ImGui.PopFont();
+        var iconPx = Px(37f);
+        var iconSz = IconDraw.Measure(FontAwesomeIcon.CheckCircle, iconPx);
+        var iconOrigin = ImGui.GetCursorScreenPos();
+        IconDraw.Add(ImGui.GetWindowDrawList(), FontAwesomeIcon.CheckCircle, iconPx,
+            new Vector2(iconOrigin.X + (availW - iconSz.X) * 0.5f, iconOrigin.Y), ImGui.GetColorU32(UiColors.Success));
+        ImGui.Dummy(new Vector2(availW, iconSz.Y));
         ImGui.Spacing();
 
         using (UiFonts.H3?.Push())
@@ -1808,8 +1963,7 @@ public class ProfileScreen
         dl.AddText(ImGui.GetFont(), ImGui.GetFontSize(), pos + Px(0f, 2f), iconColor, iconStr);
         ImGui.PopFont();
 
-        // The icon is on the draw list; draw the text as a real wrapped widget after it so long values wrap
-        // within the card and ImGui advances the cursor for the (possibly multi-line) height.
+        // The text is a real widget (not draw-list) so it wraps and advances the cursor for multi-line heights.
         ImGui.SetCursorPosX(PadX + iconSz.X + Px(10f));
         ImGui.PushTextWrapPos(winW - PadX);
         ImGui.TextColored(ImGui.ColorConvertU32ToFloat4(TextPrimary), text);
@@ -1843,8 +1997,6 @@ public class ProfileScreen
             th.Accent, th.AccentLight);
     }
 
-    /// <summary>Chips whose fill and border lerp across the set, from (fillStart, borderStart) to
-    /// (fillEnd, borderEnd). A single chip uses the start colours, so one-item rows look unchanged.</summary>
     private static void DrawGradientChips(string[] tags, float windowW, ImDrawListPtr dl,
         Vector4 fillStart, Vector4 fillEnd, Vector4 borderStart, Vector4 borderEnd)
     {
@@ -1915,7 +2067,6 @@ public class ProfileScreen
         return tex;
     }
 
-    /// <summary>Resolves the scroller slot index to a photo Order, or -1 if out of range.</summary>
     private int GetPhotoOrderAt(int scrollerIndex)
     {
         var portraitOrders = new List<int>(4);
@@ -1941,7 +2092,6 @@ public class ProfileScreen
         _profile is not null
         && _profile.Photos.Any(p => p.Order == order && p.IsNsfw);
 
-    /// <summary>True when the profile carries the "NPC" flair, matched on its English text.</summary>
     private bool HasNpcFlair()
     {
         if (_profile?.FlairIds is not { Length: > 0 })
@@ -1959,7 +2109,6 @@ public class ProfileScreen
         return false;
     }
 
-    /// <summary>True when an NSFW extra photo should be blurred until the viewer reveals it.</summary>
     private bool ShouldBlur(int order) =>
         Plugin.Configuration.AlwaysBlurNsfw
         && _source != ProfileSource.Self

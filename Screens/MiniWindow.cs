@@ -51,7 +51,8 @@ public sealed class MiniWindow : Window, IDisposable
       | ImGuiWindowFlags.NoScrollWithMouse
       | ImGuiWindowFlags.NoTitleBar
       | ImGuiWindowFlags.NoMove
-      | ImGuiWindowFlags.NoDocking)
+      | ImGuiWindowFlags.NoDocking
+      | ImGuiWindowFlags.NoBackground)
     {
         _main = main;
         _notifications = notifications;
@@ -78,7 +79,7 @@ public sealed class MiniWindow : Window, IDisposable
             return;
         }
         _shakeRemaining = ShakeTotalSeconds;
-        // Anchor is sampled in Draw() on the first shake frame — no valid window pos yet here.
+        // Anchor is sampled in Draw() on the first shake frame - no valid window pos yet here.
         _shakeAnchorPos = Vector2.Zero;
     }
 
@@ -92,8 +93,7 @@ public sealed class MiniWindow : Window, IDisposable
         _shakeAnchorPos = Vector2.Zero;
     }
 
-    /// <summary>Visibility rule: always hidden while logged out. Mirrors MainPluginWindow —
-    /// Hide = auto-hide during combat; Minimize / LeaveOpen = always visible.</summary>
+    /// <summary>Always hidden while logged out; Hide = auto-hide during combat, Minimize/LeaveOpen = always visible.</summary>
     public override bool DrawConditions()
         => Plugin.ClientState.IsLoggedIn
            && (Plugin.Configuration.CombatBehavior != CombatBehavior.Hide
@@ -103,9 +103,10 @@ public sealed class MiniWindow : Window, IDisposable
 
     public override void PreDraw()
     {
-        Size = MiniScale.Px(85f, 153f);
+        // Width follows the theme's window aspect so wide bezel art (e.g. NieR) isn't squeezed.
+        Size = MiniScale.Px(85f * (ThemeService.Current.WindowWidth / UiScale.Design.X), 153f);
         ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Vector2.Zero);
-        // Pin out Dalamud's global font scale so the mini phone stays its fixed size (see MainPluginWindow).
+        // Pin out Dalamud's global font scale so the mini phone stays its fixed size.
         var io = ImGui.GetIO();
         _savedFontGlobalScale = io.FontGlobalScale;
         io.FontGlobalScale = 1f;
@@ -189,13 +190,9 @@ public sealed class MiniWindow : Window, IDisposable
 
         var iconCol = iconHovered ? 0xFFFF6060u : 0xFFAAAAAAu;
         ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
-        var iconStr = FontAwesomeIcon.PowerOff.ToIconString();
-        var iconBaseSize = ImGui.GetFontSize();
-        var iconRenderSz = iconBaseSize * 1.4f * MiniScale.S;
-        var iconGlyphSz = ImGui.CalcTextSize(iconStr) * (iconRenderSz / iconBaseSize);
-        var iconGlyphPos = iconBoxTL + (iconBoxSize - iconGlyphSz) * 0.5f;
-        dl.AddText(ImGui.GetFont(), iconRenderSz, iconGlyphPos, iconCol, iconStr);
+        var iconRenderSz = ImGui.GetFontSize() * 1.4f * MiniScale.S;
         ImGui.PopFont();
+        IconDraw.AddCentered(dl, FontAwesomeIcon.PowerOff, iconRenderSz, iconBoxTL + iconBoxSize * 0.5f, iconCol);
 
         if (iconClicked)
         {

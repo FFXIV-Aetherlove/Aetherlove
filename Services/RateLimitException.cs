@@ -20,8 +20,6 @@ public sealed class RateLimitException : Exception
         RetryAtUtc = retryAtUtc;
     }
 
-    /// <summary>Returns a typed <see cref="RateLimitException"/> if the hub error matches the
-    /// server's <c>RATE_LIMITED|bucket|max|unixSeconds</c> protocol, else <c>null</c>.</summary>
     public static RateLimitException? TryParse(HubException ex)
     {
         var msg = ex.Message;

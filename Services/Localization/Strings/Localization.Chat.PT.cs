@@ -50,6 +50,7 @@ internal static class ChatPt
 
         // ChatListScreen
         ["chat.preview_me_prefix"] = "Eu: ",
+        ["chat.preview_venue"] = "Compartilhou um local",
         ["chat.matches_title"] = "Matches",
         ["chat.show_search"] = "Mostrar busca",
         ["chat.hide_search"] = "Ocultar busca",
@@ -96,5 +97,16 @@ internal static class ChatPt
         ["chat.category_count"] = "Conversas: {0}",
         ["chat.category_archive_default"] = "Arquivo",
         ["chat.all_categorized"] = "Todas as tuas conversas estão organizadas em categorias",
+
+        // added after update 1.5.1
+        ["chat.menu_view_blocked"] = "Ver bloqueados",
+        ["blocked.title"] = "Usuários bloqueados",
+        ["blocked.intro_body"] = "Aqui você pode desbloquear perfis que bloqueou no passado. Ao desbloquear alguém, não haverá match automático, mas vocês podem voltar a se ver no deck.",
+        ["blocked.empty"] = "Você não bloqueou ninguém.",
+        ["blocked.loading"] = "Carregando...",
+        ["blocked.since"] = "Bloqueado em {0}",
+        ["blocked.unblock"] = "Desbloquear",
+        ["blocked.confirm_title"] = "Desbloquear {0}?",
+        ["blocked.confirm_body"] = "Não haverá match automático, mas vocês podem voltar a se ver no deck.",
     };
 }

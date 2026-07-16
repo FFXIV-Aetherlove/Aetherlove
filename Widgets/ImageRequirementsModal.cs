@@ -8,8 +8,8 @@ using Dalamud.Interface;
 
 namespace AetherLove.Widgets;
 
-/// <summary>Shown when a picked image can't be used — it doesn't decode, or it's smaller than the size the
-/// server crops to. Always spells out the minimum sizes. Routes through the shared <see cref="ModalHost"/>.</summary>
+/// <summary>Shown when a picked image can't be used: it doesn't decode or is smaller than the server's
+/// crop target.</summary>
 public sealed class ImageRequirementsModal
 {
     private string _message = "";
@@ -23,8 +23,7 @@ public sealed class ImageRequirementsModal
     public void ShowTooSmall(int actualW, int actualH) =>
         Show(Loc.T("common.img_too_small", actualW, actualH), Loc.T("common.img_requirements_title"), FontAwesomeIcon.Image, true);
 
-    /// <summary>The picked file is an un-hydrated cloud placeholder (e.g. OneDrive "online-only"), so its
-    /// bytes aren't on disk and can't be read.</summary>
+    /// <summary>The picked file is a cloud placeholder whose bytes aren't on disk.</summary>
     public void ShowCloudUnavailable() =>
         Show(Loc.T("common.img_cloud_unavailable"), Loc.T("common.img_cloud_title"), FontAwesomeIcon.CloudDownloadAlt, false);
 

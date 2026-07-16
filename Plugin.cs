@@ -106,6 +106,8 @@ public sealed class Plugin : IDalamudPlugin
         services.AddSingleton<ChatEventBus>();
         services.AddSingleton<Services.Chat.ChatCacheStore>();
         services.AddSingleton<Services.Chat.ChatSyncService>();
+        services.AddSingleton<Services.Hangouts.HangoutStateService>();
+        services.AddSingleton<Widgets.HangoutOverlay>();
         services.AddSingleton<WebpCapabilityProbe>();
         services.AddSingleton<ScreenCaptureService>();
         services.AddSingleton<Widgets.SelfieCaptureOverlay>();
@@ -125,13 +127,20 @@ public sealed class Plugin : IDalamudPlugin
 
         services.AddSingleton<AetherSignalService>();
         services.AddSingleton<AetherLoveHubClient>();
+        services.AddSingleton<Services.Patreon.PatreonLinkFlow>();
         services.AddSingleton<SessionBootstrapper>();
         services.AddSingleton<PendingMatchContext>();
+        services.AddSingleton<VenueShareContext>();
+        services.AddSingleton<HangoutShareContext>();
+        services.AddSingleton<Widgets.HangoutSharePicker>();
+        services.AddSingleton<Widgets.SupporterThanksScene>();
         services.AddSingleton<OwnAvatarCache>();
         services.AddSingleton<FlairCatalog>();
 
         services.AddSingleton<SplashScreen>();
         services.AddSingleton<OnboardingScreen>();
+        services.AddSingleton<HangoutsScreen>();
+        services.AddSingleton<BlockedScreen>();
         services.AddSingleton<ProfileScreen>();
         services.AddSingleton<DeckScreen>();
         services.AddSingleton<MatchScreen>();
@@ -160,6 +169,8 @@ public sealed class Plugin : IDalamudPlugin
         services.AddSingleton<ChatScreen>();
         services.AddSingleton<SettingsScreen>();
         services.AddSingleton<MyProfileScreen>();
+        services.AddSingleton<PlacesScreen>();
+        services.AddSingleton<MyVenuesScreen>();
         services.AddSingleton<BannedScreen>();
         services.AddSingleton<WarningAcknowledgeScreen>();
         services.AddSingleton<ModeratorMessageScreen>();

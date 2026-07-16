@@ -11,9 +11,7 @@ using static AetherLove.Screens.MatchFx;
 
 namespace AetherLove.Screens;
 
-/// <summary>Match effect — Vinyl Spin: a turning black record with concentric grooves
-/// and a gradient label spins beneath two avatars, ringed by an equalizer of bars pulsing to a fake
-/// beat with a tonearm resting on top.</summary>
+/// <summary>Match effect - Vinyl Spin: a turning record beneath two avatars, ringed by a pulsing equalizer.</summary>
 public sealed class MatchVinylScreen : IMatchEffect
 {
     private const int BarCount = 40;

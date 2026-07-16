@@ -7,13 +7,10 @@ using MessagePack;
 
 namespace AetherLove.Services.Chat;
 
-/// <summary>Persistent local chat cache: the match list and every conversation's E2E ciphertext, plus the server
-/// delta cursor. Only ciphertext (never plaintext) is written to disk; message text is decrypted in memory in the
-/// screens. Files are MessagePack under <c>ConfigDirectory/ChatCache</c>. A corrupt file is dropped, never fatal.</summary>
+/// <summary>Persistent local chat cache; only ciphertext is written to disk, plaintext stays in memory.</summary>
 public sealed class ChatCacheStore
 {
-    /// <summary>The client's "changes since X" cursor: last applied message (UpdatedAtUtc, CreatedAtUtc) and the
-    /// separate match cursor. Serialized alongside the cache so a new session resumes incrementally.</summary>
+    /// <summary>The "changes since X" delta cursor, persisted so a new session resumes incrementally.</summary>
     [MessagePackObject(keyAsPropertyName: true)]
     public sealed record CacheCursor(DateTimeOffset MsgUtc, DateTimeOffset MsgCreatedUtc, DateTimeOffset MatchUtc);
 
@@ -22,6 +19,7 @@ public sealed class ChatCacheStore
     private readonly List<MatchSummaryDto> _matches = new();
     private readonly Dictionary<Guid, List<EncryptedMessageDto>> _conversations = new();
     private CacheCursor _cursor = new(DateTimeOffset.MinValue, DateTimeOffset.MinValue, DateTimeOffset.MinValue);
+    private Guid _owner = Guid.Empty;
 
     public ChatCacheStore()
     {
@@ -48,7 +46,6 @@ public sealed class ChatCacheStore
         }
     }
 
-    /// <summary>The peer's public key, taken from the cached match summary (needed to derive the message key).</summary>
     public byte[]? GetPeerPublicKey(Guid peer)
     {
         lock (_lock)
@@ -74,8 +71,6 @@ public sealed class ChatCacheStore
         }
     }
 
-    /// <summary>Seeds a conversation from a one-shot full fetch, the fallback used when the delta has not yet
-    /// covered a brand-new match.</summary>
     public void SeedConversation(Guid peer, EncryptedMessageDto[] messages)
     {
         lock (_lock)
@@ -87,8 +82,64 @@ public sealed class ChatCacheStore
         WriteConversation(peer);
     }
 
-    /// <summary>Applies one delta page: upserts changed messages by id, upserts/removes matches, advances and
-    /// persists the cursor. Called off the UI thread by <see cref="ChatSyncService"/>.</summary>
+    /// <summary>Scopes the cache to the signed-in profile; a different owner wipes it. <see cref="Guid.Empty"/> (a server that predates the field) is a no-op.</summary>
+    public void EnsureOwner(Guid profileId)
+    {
+        if (profileId == Guid.Empty)
+        {
+            return;
+        }
+        bool wipe;
+        lock (_lock)
+        {
+            if (_owner == profileId)
+            {
+                return;
+            }
+            wipe = _owner != Guid.Empty;
+            if (wipe)
+            {
+                _matches.Clear();
+                _conversations.Clear();
+                _cursor = new CacheCursor(DateTimeOffset.MinValue, DateTimeOffset.MinValue, DateTimeOffset.MinValue);
+            }
+            _owner = profileId;
+        }
+        if (wipe)
+        {
+            Plugin.Log.Information("[ChatCache] Cache belongs to a different profile; wiping it.");
+            DeleteAllFiles();
+        }
+        WriteOwner();
+    }
+
+    public void Clear()
+    {
+        lock (_lock)
+        {
+            _matches.Clear();
+            _conversations.Clear();
+            _cursor = new CacheCursor(DateTimeOffset.MinValue, DateTimeOffset.MinValue, DateTimeOffset.MinValue);
+            _owner = Guid.Empty;
+        }
+        DeleteAllFiles();
+    }
+
+    public void RemovePeer(Guid peer)
+    {
+        bool matchesDirty;
+        lock (_lock)
+        {
+            matchesDirty = _matches.RemoveAll(x => x.PeerProfileId == peer) > 0;
+            _conversations.Remove(peer);
+        }
+        if (matchesDirty)
+        {
+            WriteMatches();
+        }
+        TryDelete(ConvPath(peer));
+    }
+
     public void ApplyDelta(ChatDeltaDto d)
     {
         var dirtyPeers = new List<Guid>();
@@ -152,6 +203,7 @@ public sealed class ChatCacheStore
 
     private string MatchesPath => Path.Combine(_dir, "matches.mp");
     private string CursorPath => Path.Combine(_dir, "cursor.mp");
+    private string OwnerPath => Path.Combine(_dir, "owner.mp");
     private string ConvPath(Guid peer) => Path.Combine(_dir, $"c_{peer:N}.mp");
 
     private void Load()
@@ -166,6 +218,10 @@ public sealed class ChatCacheStore
             if (File.Exists(CursorPath))
             {
                 _cursor = MessagePackSerializer.Deserialize<CacheCursor>(File.ReadAllBytes(CursorPath)) ?? _cursor;
+            }
+            if (File.Exists(OwnerPath))
+            {
+                _owner = MessagePackSerializer.Deserialize<Guid>(File.ReadAllBytes(OwnerPath));
             }
             foreach (var f in Directory.EnumerateFiles(_dir, "c_*.mp"))
             {
@@ -239,6 +295,40 @@ public sealed class ChatCacheStore
         catch (Exception ex)
         {
             Plugin.Log.Warning(ex, "[ChatCache] writing a conversation failed.");
+        }
+    }
+
+    private void WriteOwner()
+    {
+        try
+        {
+            Guid owner;
+            lock (_lock)
+            {
+                owner = _owner;
+            }
+            File.WriteAllBytes(OwnerPath, MessagePackSerializer.Serialize(owner));
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Warning(ex, "[ChatCache] writing the owner stamp failed.");
+        }
+    }
+
+    private void DeleteAllFiles()
+    {
+        TryDelete(MatchesPath);
+        TryDelete(CursorPath);
+        TryDelete(OwnerPath);
+        try
+        {
+            foreach (var f in Directory.EnumerateFiles(_dir, "c_*.mp"))
+            {
+                TryDelete(f);
+            }
+        }
+        catch
+        {
         }
     }
 

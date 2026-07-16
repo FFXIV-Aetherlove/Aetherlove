@@ -1,3 +1,4 @@
+using AetherLove.Shared.Hangouts;
 using AetherLove.Shared.Profile.Enums;
 using MessagePack;
 
@@ -54,4 +55,9 @@ public sealed record ProfileDetailDto(
 
     ProfilePhotoDto[] Photos,
     Guid[] FlairIds,
-    ProfileCharacterDto[]? Characters = null);
+    ProfileCharacterDto[]? Characters = null,
+    // Supporter cosmetics; the server sends None/false unless the profile currently holds the flag.
+    NameStyle NameStyle = NameStyle.None,
+    bool IsSupporter = false,
+    // The peer's live hangout, when the caller may see it; drives the profile banner.
+    HangoutSummaryDto? ActiveHangout = null);

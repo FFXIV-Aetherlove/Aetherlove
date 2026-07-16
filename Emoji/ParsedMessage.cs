@@ -23,12 +23,10 @@ public sealed class ParsedMessage
     // authorities can't disagree at a sub-pixel boundary and force a word to break mid-glyph at line end.
     internal const float WrapSlack = 2f;
 
-    /// <summary>End of the wrap token starting at <paramref name="i"/> (a non-space): a single Japanese
-    /// character (Japanese allows a line break between any two characters), or the run up to the next
-    /// space or Japanese character. Shared by <see cref="SegmentText"/>'s renderer and
-    /// <see cref="MeasureHeight"/> so their line breaks can't diverge; without the per-character split a
-    /// spaceless Japanese sentence is one giant "word" whose modelled wrap height underestimates ImGui's
-    /// real wrap, and the bubble clips the tail.</summary>
+    /// <summary>End of the wrap token starting at <paramref name="i"/>: a single Japanese character
+    /// (Japanese breaks between any two characters), or the run up to the next space or Japanese character.
+    /// Shared by the renderer and <see cref="MeasureHeight"/> so their line breaks can't diverge; a
+    /// spaceless Japanese sentence measured as one giant word would clip the bubble's tail.</summary>
     internal static int WrapTokenEnd(string line, int i)
     {
         if (IsJapanese(line, i, out var len))
@@ -60,11 +58,9 @@ public sealed class ParsedMessage
             or (>= 0x20000 and <= 0x2FA1F);     // CJK ideographs extensions B and beyond
     }
 
-    /// <summary>Greedily splits an over-wide, unbroken token (e.g. a long URL with no spaces) into chunks
-    /// that each fit within <paramref name="lineW"/>, so it wraps down across lines instead of overflowing
-    /// off the right edge and clipping. Surrogate-pair aware; a single glyph wider than the line is emitted
-    /// alone. Shared by <see cref="SegmentText"/>'s renderer and <see cref="MeasureHeight"/> so their line
-    /// counts stay identical.</summary>
+    /// <summary>Greedily splits an over-wide, unbroken token (e.g. a long URL) into chunks that each fit
+    /// within <paramref name="lineW"/>. Surrogate-pair aware; shared by the renderer and
+    /// <see cref="MeasureHeight"/> so their line counts stay identical.</summary>
     internal static List<string> BreakToken(string token, float lineW)
     {
         var chunks = new List<string>();
@@ -193,12 +189,11 @@ public sealed class ParsedMessage
         {
             if (seg is SegmentText textSeg)
             {
-                // Mirror SegmentText.Draw(): split on \n first so hard newlines are accounted
-                // for in the height measurement, not treated as wide "words".
+                // Mirror SegmentText.Draw(): split on \n so hard newlines aren't measured as wide words.
                 var textLines = textSeg.Text.Split('\n');
                 for (int li = 0; li < textLines.Length; li++)
                 {
-                    if (li > 0) // hard newline resets the pen to x=0
+                    if (li > 0)
                     {
                         Break();
                     }
@@ -213,7 +208,7 @@ public sealed class ParsedMessage
                             {
                                 i++;
                             }
-                            x += (i - spaceStart) * spaceW; // every typed space advances the pen
+                            x += (i - spaceStart) * spaceW;
                             continue;
                         }
 
@@ -227,8 +222,7 @@ public sealed class ParsedMessage
                         }
                         if (wordW > width)
                         {
-                            // Over-wide unbroken token: mirror the renderer's per-character break so the
-                            // reserved height matches the number of wrapped lines exactly.
+                            // Mirror the renderer's per-character break so the reserved height matches.
                             var chunks = BreakToken(word, width);
                             for (var r = 1; r < chunks.Count; r++)
                             {
@@ -266,9 +260,8 @@ public sealed class ParsedMessage
     public string PlainText =>
         string.Concat(Segments.Select(s => s is SegmentText st ? st.Text : " "));
 
-    /// <summary>True if the message renders anything: visible text, or at least one shortcode that resolves
-    /// to a real emoji. A message of only whitespace and unknown <c>:shortcodes:</c> (which draw as nothing)
-    /// is treated as empty, so it can be blocked before sending an empty bubble.</summary>
+    /// <summary>True when the message renders anything; whitespace plus unknown <c>:shortcodes:</c> (which
+    /// draw as nothing) counts as empty.</summary>
     public bool HasVisibleContent => Segments.Any(s => s switch
     {
         SegmentText t => !string.IsNullOrWhiteSpace(t.Text),

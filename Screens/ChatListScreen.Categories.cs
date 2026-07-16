@@ -17,8 +17,7 @@ using Dalamud.Interface.Utility.Raii;
 
 namespace AetherLove.Screens;
 
-/// <summary>Category support for the matches list: category rows, the move/reorder drag-and-drop with its
-/// animations, the row-departure animation, and the create/edit overlay.</summary>
+/// <summary>Category rows, the move/reorder drag-and-drop, the row-departure animation, and the create/edit overlay.</summary>
 public partial class ChatListScreen
 {
     private const float CategoryRowHeight = 64f;
@@ -150,10 +149,21 @@ public partial class ChatListScreen
             _reorderInsertIndex = Math.Clamp(slot, 0, cats.Count);
         }
 
+        // Value = whether any hangout in the category is live now (drives the icon colour).
+        var hangoutCats = new Dictionary<Guid, bool>();
+        foreach (var (peerId, catId) in _categories.GetMembership())
+        {
+            if (HangoutChipFor(peerId) is { } hg)
+            {
+                hangoutCats[catId] = hangoutCats.GetValueOrDefault(catId) || HangoutFields.IsLiveNow(hg);
+            }
+        }
+
         for (var i = 0; i < cats.Count; i++)
         {
             DrawCategoryRow(cats[i], countByCat.GetValueOrDefault(cats[i].Id),
-                unreadByCat.GetValueOrDefault(cats[i].Id));
+                unreadByCat.GetValueOrDefault(cats[i].Id),
+                hangoutCats.TryGetValue(cats[i].Id, out var live) ? live : null);
         }
 
         if (_reorderInsertIndex >= 0)
@@ -167,7 +177,7 @@ public partial class ChatListScreen
         }
     }
 
-    private void DrawCategoryRow(ChatCategoryConfig cat, int chatCount, int unread)
+    private void DrawCategoryRow(ChatCategoryConfig cat, int chatCount, int unread, bool? hangoutLive)
     {
         var dl = ImGui.GetWindowDrawList();
         var cursorStart = ImGui.GetCursorScreenPos();
@@ -267,6 +277,22 @@ public partial class ChatListScreen
             hovered ? t.AccentLightU32 : UiColors.TextMuted, chevron);
         ImGui.PopFont();
 
+        if (hangoutLive is { } live)
+        {
+            var accent = live ? UiColors.LiveGreen : t.Accent;
+            var glow = AccessibilityService.ReduceMotion
+                ? 1f
+                : 0.65f + 0.35f * MathF.Sin((float)ImGui.GetTime() * 2.6f);
+            var iconCenter = new Vector2(cursorStart.X + width - chevSz.X - Px(38f), avatarCenter.Y);
+            IconDraw.AddCentered(dl, FontAwesomeIcon.Bullhorn, Px(17f), iconCenter,
+                ImGui.GetColorU32(accent with { W = glow }));
+            var half = Px(13f);
+            if (ImGui.IsMouseHoveringRect(iconCenter - new Vector2(half), iconCenter + new Vector2(half)))
+            {
+                ImGui.SetTooltip(Loc.T("hangout.category_tooltip"));
+            }
+        }
+
         if (beingDragged)
         {
             dl.AddRectFilled(cursorStart, rowMax, DragDim);
@@ -299,8 +325,8 @@ public partial class ChatListScreen
         ImGui.EndPopup();
     }
 
-    /// <summary>The "Move to category" submenu plus "Remove from category", for a chat row's context menu.
-    /// Moves triggered here animate the row away in list views and apply instantly in search results.</summary>
+    /// <summary>"Move to category" submenu plus "Remove from category"; list-view moves animate the row
+    /// away, search-result moves apply instantly.</summary>
     private void DrawCategoryMenuItems(Guid peerId, RowContext ctx, Vector2 rowAvatarCenter)
     {
         DrawCategoryMenuCore(peerId, instant: ctx == RowContext.Search,
@@ -319,18 +345,14 @@ public partial class ChatListScreen
         var current = _categories.CategoryOf(peerId);
         var dl = ImGui.GetWindowDrawList();
 
-        // The visible label is blank padding sized to DrawIconMenuItem's layout; icon and text are then drawn
-        // at that helper's offsets, centred on the item's real rect. Menu items are text-height based, so the
-        // widened item spacing grows their hover band to match the frame-height sibling rows.
+        // The visible label is blank padding sized to DrawIconMenuItem's layout; icon and text are drawn at that helper's offsets.
         var style = ImGui.GetStyle();
         var moveLabel = Loc.T("chat.menu_move_to_category");
         var moveLabelSz = ImGui.CalcTextSize(moveLabel);
         var spaceW = MathF.Max(1f, ImGui.CalcTextSize(" ").X);
         var fontSize = ImGui.GetFontSize();
         var padCount = (int)MathF.Ceiling(MathF.Max(0f, Px(38f) - style.FramePadding.X + moveLabelSz.X) / spaceW);
-        // Anchor on the pre-submit cursor: the item's own rect is unreliable once the submenu opens (BeginMenu
-        // has already begun the child window), while the label always renders at the cursor and the widened
-        // hover band sits symmetrically around it.
+        // Anchor on the pre-submit cursor: the item's own rect is unreliable once BeginMenu opens the child window.
         var itemPos = ImGui.GetCursorScreenPos();
         ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing,
             new Vector2(style.ItemSpacing.X, style.FramePadding.Y * 2f));
@@ -468,14 +490,13 @@ public partial class ChatListScreen
         _dragPeerId = Guid.Empty;
         _reorderInsertIndex = -1;
         _hoverDropCategoryId = Guid.Empty;
-        // Also drop the press candidates: the row's button stays ImGui-active until the mouse releases, and a
-        // surviving candidate would re-arm the drag on the very next frame after an Escape cancel.
+        // A surviving press candidate would re-arm the drag on the next frame after an Escape cancel.
         _pressPeerId = Guid.Empty;
         _pressCategoryId = Guid.Empty;
     }
 
-    /// <summary>Finishes a drag on mouse release: drops a chat into the hovered category (or springs the ghost
-    /// back), or applies a category reorder. Escape cancels.</summary>
+    /// <summary>Finishes a drag on release: drop into the hovered category, apply a reorder, or spring back.
+    /// Escape cancels.</summary>
     private void ResolveDragAndDrop()
     {
         if (!_dragActive)
@@ -623,8 +644,7 @@ public partial class ChatListScreen
         }
     }
 
-    /// <summary>Applies any in-flight moves immediately and clears every transient animation/drag state;
-    /// called when the screen hides so nothing is lost mid-animation.</summary>
+    /// <summary>Applies in-flight moves immediately and clears transient animation/drag state; called on hide.</summary>
     private void FinalizeCategoryAnimations()
     {
         foreach (var (peerId, anim) in _departing)
@@ -641,8 +661,7 @@ public partial class ChatListScreen
         _deleteConfirmCatId = Guid.Empty;
     }
 
-    /// <summary>Foreground effects: the drag ghost following the cursor, avatars flying into categories,
-    /// arrival particle bursts, and the failed-drop spring-back.</summary>
+    /// <summary>Drag ghost, fly-to-category avatars, arrival bursts, and the failed-drop spring-back.</summary>
     private void DrawDragOverlays(Vector2 winPos, Vector2 winSize)
     {
         var fg = ImGui.GetForegroundDrawList();
@@ -747,8 +766,7 @@ public partial class ChatListScreen
         fg.PopClipRect();
     }
 
-    /// <summary>Same page ease-in the chat screen uses: covers the content with the window background and fades
-    /// it out, so entering a category glides in instead of flashing. No-op under reduce-motion.</summary>
+    /// <summary>Same page ease-in the chat screen uses; no-op under reduce-motion.</summary>
     private void DrawCategoryOpenFade(Vector2 contentTL, Vector2 contentSize)
     {
         if (AccessibilityService.ReduceMotion)
@@ -781,8 +799,7 @@ public partial class ChatListScreen
         _editorPanelH = 0f;
     }
 
-    /// <summary>Renders the create/edit overlay over the calling screen's window; ChatScreen calls this so
-    /// "New category…" from the in-chat menu works without leaving the chat.</summary>
+    /// <summary>Renders the create/edit overlay over the calling screen's window; also hosted by the chat screen.</summary>
     public void DrawCategoryEditorOverlay()
     {
         DrawCategoryEditor(ImGui.GetWindowPos(), ImGui.GetWindowSize());

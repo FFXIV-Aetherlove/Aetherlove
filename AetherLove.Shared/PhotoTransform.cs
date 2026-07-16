@@ -17,6 +17,9 @@ public enum PhotoKind
 
     /// <summary>10:16, output 350x560.</summary>
     Portrait,
+
+    /// <summary>25:9, output 500x180. Venue banner image.</summary>
+    VenueBanner,
 }
 
 /// <summary>Crop rectangle in original-image pixel coordinates.</summary>
@@ -52,6 +55,7 @@ public static class PhotoTransform
     {
         PhotoKind.Avatar => (PhotoSpec.AvatarSize, PhotoSpec.AvatarSize),
         PhotoKind.Portrait => (PhotoSpec.PortraitWidth, PhotoSpec.PortraitHeight),
+        PhotoKind.VenueBanner => (PhotoSpec.VenueBannerWidth, PhotoSpec.VenueBannerHeight),
         _ => throw new ArgumentOutOfRangeException(nameof(kind)),
     };
 

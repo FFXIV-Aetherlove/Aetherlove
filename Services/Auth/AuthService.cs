@@ -15,7 +15,6 @@ using Dalamud.Plugin.Services;
 
 namespace AetherLove.Services.Auth;
 
-/// <summary>State of the XIVAuth sign-in polling flow.</summary>
 public enum AuthFlowState
 {
     Idle = 0,
@@ -61,7 +60,6 @@ public sealed class AuthService
     public string? ErrorMessage => _errorMessage;
     public bool LastFailureWasExpiry => _lastFailureWasExpiry;
 
-    /// <summary>Begins a new sign-in flow, cancelling any in-flight one.</summary>
     public void StartSignIn()
     {
         lock (_flowLock)
@@ -82,7 +80,6 @@ public sealed class AuthService
         }
     }
 
-    /// <summary>Cancels the in-flight sign-in flow and resets state to Idle. Idempotent.</summary>
     public void Cancel()
     {
         lock (_flowLock)
@@ -98,7 +95,6 @@ public sealed class AuthService
         SetState(AuthFlowState.Idle);
     }
 
-    /// <summary>Reopens the browser at the current <see cref="LoginUrl"/>. No-op if not set.</summary>
     public void ReopenBrowser()
     {
         var url = _loginUrl;
@@ -166,7 +162,6 @@ public sealed class AuthService
 
                     if (resp.StatusCode == HttpStatusCode.Accepted)
                     {
-                        // 202 = still awaiting the user's XIVAuth flow. Fall through to the poll delay.
                         _log.Information("[XIVAuth] Poll: still awaiting user action in browser (202).");
                     }
                     else if (resp.IsSuccessStatusCode)
@@ -271,7 +266,6 @@ public sealed class AuthService
         }
     }
 
-    /// <summary>Returns the persisted device id, generating one if missing.</summary>
     private string GetOrCreateDeviceId()
     {
         if (!string.IsNullOrEmpty(_config.DeviceId))

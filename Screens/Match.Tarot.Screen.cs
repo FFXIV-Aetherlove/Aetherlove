@@ -11,9 +11,7 @@ using static AetherLove.Screens.MatchFx;
 
 namespace AetherLove.Screens;
 
-/// <summary>Match effect — Tarot Lovers: two ornate tarot cards with a double gold
-/// border and corner flourishes flip open over a candle-warm glow, a slow zodiac ring and drifting
-/// gold sparkles, revealing the two avatars as "The Lovers".</summary>
+/// <summary>Match effect - Tarot Lovers: two tarot cards flip open, revealing the avatars as "The Lovers".</summary>
 public sealed class MatchTarotScreen : IMatchEffect
 {
     private readonly ScreenRouter _router;
@@ -179,8 +177,7 @@ public sealed class MatchTarotScreen : IMatchEffect
         DrawActionButtons(_router, pos, size, reduce ? 1f : _settle);
     }
 
-    /// <summary>Draws one ornate tarot card: a double gold border, corner flourishes, and the avatar
-    /// revealed inside as the card's width scales from a thin seam to fully open.</summary>
+    /// <summary>One tarot card; the avatar is revealed as the card's width scales from a seam to fully open.</summary>
     private static void DrawTarotCard(ImDrawListPtr dl, Vector2 cardCenter, float fullW, float fullH,
         float avatarR, float open, Vector4 gold, Vector4 goldDeep, Vector4 candle, string name,
         ISharedImmediateTexture? avatar, float time, bool reduce)

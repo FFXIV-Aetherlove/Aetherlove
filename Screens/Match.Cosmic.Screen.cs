@@ -11,7 +11,7 @@ using static AetherLove.Screens.MatchFx;
 
 namespace AetherLove.Screens;
 
-/// <summary>Match effect — Cosmic Collision: two avatars hurtle together into a
+/// <summary>Match effect - Cosmic Collision: two avatars hurtle together into a
 /// shockwave of light over a twinkling starfield.</summary>
 public sealed class MatchCosmicScreen : IMatchEffect
 {

@@ -18,9 +18,7 @@ using Dalamud.Interface.Utility.Raii;
 
 namespace AetherLove.Screens;
 
-/// <summary>News reader. Two entry modes: the startup/live "unseen flow" (steps through each unseen item, marks
-/// it seen, then hands back to the regular flow) and the Settings "list" mode (all published news grouped per
-/// day, tap to read). The body itself is drawn by <see cref="NewsBodyRenderer"/>.</summary>
+/// <summary>News reader with two entry modes: the startup/live unseen flow and the browse-all list mode.</summary>
 public sealed class NewsScreen : IDisposable
 {
     private enum View { Loading, List, Entry, Empty, Error }
@@ -43,6 +41,7 @@ public sealed class NewsScreen : IDisposable
     private int _unseenIndex;
 
     private NewsSummaryDto[] _list = [];
+    private readonly EntranceAnimation _entrance = new();
     private Guid _currentEntryId;
     private volatile NewsDto? _entry;
     private volatile bool _entryMissing;
@@ -58,17 +57,14 @@ public sealed class NewsScreen : IDisposable
         _hub = hub;
     }
 
-    /// <summary>Ask the next <see cref="OnShow"/> to open the per-day list (Settings / chat-link entry) instead
-    /// of the unseen flow.</summary>
+    /// <summary>The next OnShow opens the list view instead of the unseen flow.</summary>
     public void RequestListView() => _requestListView = true;
 
-    /// <summary>Queue a staff-only preview (the admin "test push to staff") to show on the next
-    /// <see cref="OnShow"/>. The preview shows any status, marks nothing seen, and returns to the deck.</summary>
+    /// <summary>Queues a staff-only preview for the next OnShow; a preview marks nothing seen.</summary>
     public void QueuePreview(Guid id) => _pendingPreviewId = id;
 
-    /// <summary>Queue the unseen flow as a live mid-session push (vs a startup gate): on completion it returns
-    /// to the deck instead of re-running the startup ladder, which mid-session would re-trigger a still-pending
-    /// gate (passphrase / onboarding) for an already-active user.</summary>
+    /// <summary>Marks the unseen flow as a live mid-session push: on completion it returns to the deck
+    /// instead of re-running the startup gate ladder.</summary>
     public void RequestLiveUnseenFlow() => _pendingLiveUnseen = true;
 
     public void OnShow()
@@ -121,8 +117,6 @@ public sealed class NewsScreen : IDisposable
         LoadEntry(_unseenQueue[0]);
     }
 
-    /// <summary>End of the unseen flow: a live (mid-session) push returns to the deck; a startup gate chains on
-    /// through the ladder (passphrase → the regular target).</summary>
     private void FinishUnseenFlow()
     {
         if (_liveUnseen)
@@ -133,8 +127,6 @@ public sealed class NewsScreen : IDisposable
         _router.Navigate(_bootstrap.ResolveNextStartupScreen());
     }
 
-    /// <summary>"← Back" out of the list / empty / error views: the per-day list is reached from the "My" hub,
-    /// so it returns there; a preview or unseen-flow error falls back to its normal exit.</summary>
     private void NavigateBack()
     {
         if (_listMode)
@@ -192,6 +184,7 @@ public sealed class NewsScreen : IDisposable
                     return;
                 }
                 _list = list;
+                _entrance.Arm();
                 _view = list.Length == 0 ? View.Empty : View.List;
             }
             catch (Exception ex)
@@ -246,15 +239,11 @@ public sealed class NewsScreen : IDisposable
         });
     }
 
-    /// <summary>The "Next / Got it / Back" action on an open entry: marks it seen, then either steps to the
-    /// next unseen item (or hands back to the regular flow) or returns to the list.</summary>
     private void DismissEntry()
     {
         if (_isPreview)
         {
-            // A mid-session staff preview marks nothing seen and returns straight to the deck — never via the
-            // startup gate ladder, which would re-trigger a still-pending gate (passphrase / onboarding) for an
-            // already-active user.
+            // Previews mark nothing seen and must not re-enter the startup gate ladder.
             _router.Navigate(Screen.Deck);
             return;
         }
@@ -264,6 +253,7 @@ public sealed class NewsScreen : IDisposable
         if (_listMode)
         {
             _entry = null;
+            _entrance.Arm();
             _view = View.List;
             return;
         }
@@ -315,7 +305,7 @@ public sealed class NewsScreen : IDisposable
 
         ImGui.Spacing();
         ImGui.SetCursorPosX(PadX);
-        if (DrawBackButton(Loc.T("profile.back_to_my")))
+        if (DrawFloatingBackPill(ImGui.GetCursorScreenPos(), Loc.T("profile.back_to_my"), FontAwesomeIcon.User))
         {
             NavigateBack();
         }
@@ -324,16 +314,16 @@ public sealed class NewsScreen : IDisposable
         ImGui.Spacing();
 
         var listW = ImGui.GetContentRegionAvail().X;
+        _entrance.BeginFrame();
         ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(0f, Px(10f)));
         foreach (var item in _list)
         {
             DrawNewsCard(item, listW);
         }
         ImGui.PopStyleVar();
+        _entrance.EndFrame();
     }
 
-    /// <summary>One news overview card: a "DATE - Title" header over a short body preview, with a "Read more"
-    /// button that opens the full entry.</summary>
     private void DrawNewsCard(NewsSummaryDto item, float listW)
     {
         var t = ThemeService.Current;
@@ -412,14 +402,13 @@ public sealed class NewsScreen : IDisposable
         if (_listMode)
         {
             ImGui.SetCursorPosX(PadX);
-            if (DrawBackButton(Loc.T("profile.back_to_my")))
+            if (DrawFloatingBackPill(ImGui.GetCursorScreenPos(), Loc.T("profile.back_to_my"), FontAwesomeIcon.User))
             {
                 DismissEntry();
             }
             ImGui.Spacing();
         }
 
-        // [News icon] Title
         ImGui.SetCursorPosX(PadX);
         ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
         ImGui.TextColored(t.Accent, FontAwesomeIcon.Newspaper.ToIconString());
@@ -439,7 +428,6 @@ public sealed class NewsScreen : IDisposable
             ImGui.TextColored(new Vector4(0.95f, 0.78f, 0.30f, 1f), Loc.T("news.preview_badge"));
         }
 
-        // Divider
         ImGui.Spacing();
         var dl = ImGui.GetWindowDrawList();
         ImGui.SetCursorPosX(PadX);
@@ -460,7 +448,7 @@ public sealed class NewsScreen : IDisposable
             ImGui.PopTextWrapPos();
         }
 
-        // In list mode the top "← Back" handles return, so there's no bottom action button.
+        // List mode has the top back pill instead of a bottom action button.
         if (_listMode)
         {
             return;
@@ -500,7 +488,7 @@ public sealed class NewsScreen : IDisposable
         if (back)
         {
             ImGui.SetCursorPosX(PadX);
-            if (DrawBackButton(Loc.T("profile.back_to_my")))
+            if (DrawFloatingBackPill(ImGui.GetCursorScreenPos(), Loc.T("profile.back_to_my"), FontAwesomeIcon.User))
             {
                 NavigateBack();
             }

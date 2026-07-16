@@ -9,8 +9,7 @@ using Dalamud.Interface.Textures;
 
 namespace AetherLove.Widgets;
 
-/// <summary>Shared theme and phone-size pickers used by Settings and onboarding.
-/// <paramref name="padX"/> is the unscaled design-pixel left/right margin (run through UiScale.Px).</summary>
+/// <summary>Shared theme and phone-size pickers; <c>padX</c> is the unscaled design-pixel margin.</summary>
 public static class AppearancePicker
 {
     public static void DrawThemeCards(float winW, float padX)
@@ -53,10 +52,10 @@ public static class AppearancePicker
             dl.AddRectFilled(tl, br, def.AccentDarkWithAlpha(bgAlpha), Rounding);
 
             var swatchBR = new Vector2(br.X, tl.Y + SwatchH);
-            dl.AddRectFilledMultiColor(
-                tl, swatchBR,
-                def.AccentDarkU32, def.AccentLightU32,
-                def.AccentLightU32, def.AccentDarkU32);
+            var accU32 = ImGui.ColorConvertFloat4ToU32(def.Accent);
+            var secU32 = ImGui.ColorConvertFloat4ToU32(def.SecondaryEnd);
+            dl.AddRectFilledMultiColor(tl, swatchBR, accU32, secU32, secU32, accU32);
+            DrawSwatchShine(dl, tl, swatchBR, i);
 
             var borderAlpha = selected ? 1.0f : (hovered ? 0.55f : 0.28f);
             var borderThick = selected ? 2.0f : 1.0f;
@@ -70,9 +69,35 @@ public static class AppearancePicker
             dl.AddText(new Vector2(nameX, nameY), (nameA << 24) | 0x00FFFFFF, def.Name);
         }
 
-        // Advance past the WHOLE grid, not one row — otherwise extra theme rows overlap the next section.
+        // Advance past the whole grid, not one row; extra theme rows would overlap the next section.
         var gridH = rows * CardH + (rows - 1) * Gap;
         ImGui.SetCursorPos(new Vector2(originLocal.X, originLocal.Y + gridH + Px(6f)));
+    }
+
+    private static void DrawSwatchShine(ImDrawListPtr dl, Vector2 min, Vector2 max, int index)
+    {
+        if (AccessibilityService.ReduceMotion)
+        {
+            return;
+        }
+        const double period = 4.0;
+        const double sweep = 0.8;
+        var phase = (ImGui.GetTime() + period - index * 0.65) % period;
+        if (phase > sweep)
+        {
+            return;
+        }
+
+        var t = (float)(phase / sweep);
+        var bandW = (max.Y - min.Y) * 2.2f;
+        var centerX = min.X - bandW + t * (max.X - min.X + bandW * 2f);
+        const uint peak = 0x59FFFFFFu;
+        const uint edge = 0x00FFFFFFu;
+
+        dl.PushClipRect(min, max, true);
+        dl.AddRectFilledMultiColor(new Vector2(centerX - bandW, min.Y), new Vector2(centerX, max.Y), edge, peak, peak, edge);
+        dl.AddRectFilledMultiColor(new Vector2(centerX, min.Y), new Vector2(centerX + bandW, max.Y), peak, edge, edge, peak);
+        dl.PopClipRect();
     }
 
     public static void DrawPhoneSizeButtons(float winW, float padX, ThemeDefinition t)
@@ -98,11 +123,9 @@ public static class AppearancePicker
         DrawSizeCaption(winW, padX, Loc.T("settings.mini_phone_size_caption"));
     }
 
-    /// <summary>A live, true-to-size preview of the minimised bubble at the chosen mini size: the theme shell
-    /// background plus the mini logo, drawn through <see cref="MiniScale"/> so it matches the real bubble.</summary>
     public static void DrawMiniSizePreview(float winW, float padX)
     {
-        var w = MiniScale.Px(85f);
+        var w = MiniScale.Px(85f * (ThemeService.Current.WindowWidth / UiScale.Design.X));
         var h = MiniScale.Px(153f);
         var avail = winW - Px(padX) * 2f;
         ImGui.SetCursorPosX(Px(padX) + MathF.Max(0f, (avail - w) * 0.5f));

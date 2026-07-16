@@ -11,9 +11,7 @@ using static AetherLove.Screens.MatchFx;
 
 namespace AetherLove.Screens;
 
-/// <summary>Match effect — Vortex Spiral: a swirling galaxy of gradient motes streams
-/// inward along rotating logarithmic spiral arms toward a glowing core, while the two avatars ride
-/// opposite arms and spiral in to meet at the hub.</summary>
+/// <summary>Match effect - Vortex Spiral: the avatars ride opposite spiral arms in to meet at the hub.</summary>
 public sealed class MatchVortexScreen : IMatchEffect
 {
     private readonly ScreenRouter _router;

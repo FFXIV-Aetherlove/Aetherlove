@@ -5,11 +5,11 @@ internal static class ProfileDe
     public static readonly System.Collections.Generic.Dictionary<string, string> Strings = new()
     {
         // Profile
-        // ProfileScreen — load / empty states
+        // ProfileScreen - load / empty states
         ["profile.load_failed"] = "Profil konnte nicht geladen werden: {0}",
         ["profile.none_loaded"] = "Kein Profil geladen.",
 
-        // ProfileScreen — sections
+        // ProfileScreen - sections
         ["profile.about"] = "Über",
         ["profile.flairs"] = "Abzeichen",
         ["profile.looking_for"] = "Sucht nach",
@@ -34,14 +34,14 @@ internal static class ProfileDe
         ["profile.weekend_playtimes"] = "Spielzeiten am Wochenende  (Sa–So)",
         ["profile.timezone_value"] = "{0} (aktuelle Zeit: {1})",
 
-        // ProfileScreen — Spotify / NSFW pill
+        // ProfileScreen - Spotify / NSFW pill
         ["profile.nsfw_reveal"] = "Klicken, um NSFW-Bild anzuzeigen",
 
-        // ProfileScreen — back pill
+        // ProfileScreen - back pill
         ["profile.back_to_chat"] = "Zurück zum Chat",
         ["profile.back_to_swiping"] = "Zurück zum Wischen",
 
-        // ProfileScreen — report flow
+        // ProfileScreen - report flow
         ["profile.report_profile"] = "Profil melden",
         ["profile.report_warning"] = "Falsche oder böswillige Meldungen führen zu Verwarnungen für dein eigenes Konto, und wiederholter Missbrauch kann zu einer Sperrung führen. Melde nur Profile, die tatsächlich gegen die Regeln verstoßen.",
         ["profile.report_prompt"] = "Sag unseren Moderatoren, was mit {0} nicht stimmt:",
@@ -56,7 +56,7 @@ internal static class ProfileDe
         ["profile.closing_in"] = "Schließt in {0} Sekunden",
         ["profile.close"] = "Schließen",
 
-        // ProfileScreen — copy profile text (viewing others only)
+        // ProfileScreen - copy profile text (viewing others only)
         ["profile.copy_text"] = "Profiltext kopieren",
         ["profile.copy_warning_title"] = "Warnung",
         ["profile.copy_warning_body"] = "Du hast den Text einer anderen Person kopiert. Sei vorsichtig, wenn du darin enthaltene Links anklickst oder ihnen folgst — das geschieht auf eigene Gefahr.",
@@ -73,14 +73,14 @@ internal static class ProfileDe
         ["profile.stat_match_rate"] = "Match-Rate",
         ["profile.back_to_my"] = "← Zurück",
 
-        // MyProfileScreen — edit tab load / save
+        // MyProfileScreen - edit tab load / save
         ["profile.load_profile_failed"] = "Dein Profil konnte nicht geladen werden: {0}",
         ["profile.retry"] = "Erneut versuchen",
         ["profile.saving"] = "Wird gespeichert…",
         ["profile.saved"] = "Gespeichert  ✓",
         ["profile.save_changes"] = "Änderungen speichern",
 
-        // MyProfileScreen — edit form section headings
+        // MyProfileScreen - edit form section headings
         ["profile.heading_character"] = "Charakter",
         ["profile.heading_location"] = "Standort",
         ["profile.heading_languages"] = "Sprachen, die ich spreche",
@@ -93,7 +93,7 @@ internal static class ProfileDe
         ["profile.heading_sync_tool"] = "Sync-Tool",
         ["profile.heading_match_prefs"] = "Match-Einstellungen",
 
-        // MyProfileScreen — edit form labels / hints
+        // MyProfileScreen - edit form labels / hints
         ["profile.display_name"] = "Anzeigename",
         ["profile.about_me"] = "Über mich",
         ["profile.char_count"] = "{0} / 500 Zeichen",
@@ -123,7 +123,7 @@ internal static class ProfileDe
         ["profile.spoken_language"] = "Gesprochene Sprache",
         ["profile.spoken_language_tooltip"] = "Lass alles deaktiviert, um unabhängig von der Sprache zu matchen.",
 
-        // MyProfileScreen.Images — tab text
+        // MyProfileScreen.Images - tab text
         ["profile.load_photos_failed"] = "Deine Fotos konnten nicht geladen werden: {0}",
         ["profile.profile_picture"] = "Profilbild",
         ["profile.profile_picture_desc"] = "Dein Profilbild wird in der Chatliste und auf Match-Karten angezeigt. Verwende ein quadratisches Nahaufnahme-Porträt deines FFXIV-Charakters.",
@@ -131,14 +131,14 @@ internal static class ProfileDe
         ["profile.profile_photos_desc"] = "Füge deinem Profil Porträtfotos hinzu (Verhältnis 10:16). Der erste Platz ist erforderlich; die Plätze 2–4 sind optional.",
         ["profile.declare_before_save"] = "Kennzeichne jedes Zusatzfoto vor dem Speichern als SFW oder NSFW.",
 
-        // MyProfileScreen.Images — avatar section
+        // MyProfileScreen.Images - avatar section
         ["profile.new_photo_ready"] = "Neues Foto bereit, noch nicht gespeichert.",
         ["profile.change_photo"] = "Foto ändern",
         ["profile.profile_picture_set"] = "Profilbild: Festgelegt  ✓",
         ["profile.no_profile_picture"] = "Kein Profilbild festgelegt.",
         ["profile.upload_avatar"] = "Avatar hochladen…",
 
-        // MyProfileScreen.Images — slot grid + active slot controls
+        // MyProfileScreen.Images - slot grid + active slot controls
         ["profile.slot_main"] = "Haupt",
         ["profile.tap_slot"] = "Tippe oben auf einen Platz, um ein Foto hinzuzufügen oder zu ändern.",
         ["profile.main_photo"] = "Hauptfoto",
@@ -158,7 +158,7 @@ internal static class ProfileDe
         ["profile.photo_optional"] = "Dieses Foto ist optional.",
         ["profile.upload_photo"] = "Foto hochladen…",
 
-        // MyProfileScreen.Images — file picker / crop popup
+        // MyProfileScreen.Images - file picker / crop popup
         ["profile.select_image"] = "Bild auswählen",
         ["profile.image_files_filter"] = "Bilddateien",
         ["profile.crop_avatar"] = "Avatar zuschneiden",
@@ -190,5 +190,36 @@ internal static class ProfileDe
         ["profile.rp_crop_image"] = "Charakterbild zuschneiden",
         ["profile.rp_back"] = "Zurück",
         ["profile.rp_details"] = "Charakterdetails:",
+
+        // added after update 1.5.1
+        ["profile.slot_locked"] = "Dieser Foto-Slot erfordert ein aktives Supporter-Abo. Du kannst das Foto entfernen oder erneut abonnieren, um den Slot wieder zu nutzen.",
+        ["profile.rp_extra_image"] = "Zusatzbild {0} (Supporter)",
+        ["profile.section_supporter"] = "Supporter",
+        ["profile.menu_sup_vanity"] = "Vanity-Designs",
+        ["profile.menu_sup_stats"] = "Extra-Statistiken",
+        ["profile.sup_intro"] = "Danke, dass du AetherLove unterstützt! Wähle einen Stil für deinen Namen und ob du das Supporter-Abzeichen zeigen willst. Beides ist für alle sichtbar.",
+        ["profile.sup_name_style"] = "Namensstil",
+        ["profile.sup_show_badge"] = "Supporter-Abzeichen anzeigen",
+        ["profile.sup_badge_hint"] = "Zeigt den Supporter-Tag auf deinem Profil. Der Stern neben deinem Namen wird immer angezeigt.",
+        ["profile.sup_stats_intro"] = "Exklusive Supporter-Einblicke, wie dein Profil im ganzen Reich ankommt.",
+        ["profile.sup_stat_likes_received"] = "Erhaltene Likes",
+        ["profile.sup_stat_superlikes"] = "Erhaltene Superlikes",
+        ["profile.sup_stat_views"] = "Profilaufrufe",
+        ["profile.sup_stat_impressions"] = "Deck-Einblendungen",
+        ["profile.sup_stat_likes_given"] = "Vergebene Likes",
+        ["profile.sup_stat_passes_given"] = "Vergebene Passes",
+        ["profile.sup_stat_matches"] = "Matches",
+        ["profile.sup_stat_like_rate"] = "Deine Like-Quote",
+        ["profile.sup_stat_match_rate"] = "Deine Match-Quote",
+        ["profile.style_none"] = "Standard",
+        ["profile.style_crimson"] = "Karmesinrot",
+        ["profile.style_gold"] = "Gold",
+        ["profile.style_emerald"] = "Smaragd",
+        ["profile.style_sapphire"] = "Saphir",
+        ["profile.style_violet"] = "Violett",
+        ["profile.style_rose"] = "Rosé",
+        ["profile.style_rainbow"] = "Regenbogen (animiert)",
+        ["profile.style_shimmer"] = "Goldschimmer (animiert)",
+        ["profile.style_pulse"] = "Rosé-Puls (animiert)",
     };
 }

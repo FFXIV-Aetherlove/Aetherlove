@@ -33,14 +33,12 @@ public sealed class OutdatedScreen
             ImGui.Spacing();
             ImGui.Spacing();
 
-            ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIconFixedWidth);
-            ImGui.SetWindowFontScale(2.4f * UiScale.S);
-            var icon = FontAwesomeIcon.CloudDownloadAlt.ToIconString();
-            var iconSz = ImGui.CalcTextSize(icon);
-            ImGui.SetCursorPosX((winW - iconSz.X) * 0.5f);
-            ImGui.TextColored(UiColors.Amber, icon);
-            ImGui.SetWindowFontScale(1.0f);
-            ImGui.PopFont();
+            var iconPx = Px(40f);
+            var iconSz = IconDraw.Measure(FontAwesomeIcon.CloudDownloadAlt, iconPx);
+            var iconOrigin = ImGui.GetCursorScreenPos();
+            IconDraw.Add(ImGui.GetWindowDrawList(), FontAwesomeIcon.CloudDownloadAlt, iconPx,
+                new Vector2(iconOrigin.X + (winW - iconSz.X) * 0.5f, iconOrigin.Y), ImGui.GetColorU32(UiColors.Amber));
+            ImGui.Dummy(new Vector2(winW, iconSz.Y));
             ImGui.Spacing();
 
             using (UiFonts.H2?.Push())

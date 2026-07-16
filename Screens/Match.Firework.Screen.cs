@@ -11,7 +11,7 @@ using static AetherLove.Screens.MatchFx;
 
 namespace AetherLove.Screens;
 
-/// <summary>Match effect — Firework Finale: staggered bursts arc up and bloom into
+/// <summary>Match effect - Firework Finale: staggered bursts arc up and bloom into
 /// gravity-pulled rings of sparks over a night sky, lighting the two avatars below.</summary>
 public sealed class MatchFireworkScreen : IMatchEffect
 {

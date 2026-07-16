@@ -1,11 +1,7 @@
 namespace AetherLove.Navigation;
 
-/// <summary>
-/// Holds which screen the phone is currently showing, and flags when it changes. Screens never switch to
-/// each other directly — they call <see cref="Navigate"/>, and the main window reads <see cref="Current"/>
-/// each frame to draw the matching screen. Access is locked because navigation can be triggered off the
-/// UI thread (e.g. from a server push).
-/// </summary>
+/// <summary>Which screen the phone is showing, and a flag set when it changes. Access is locked because
+/// navigation can be triggered off the UI thread.</summary>
 public class ScreenRouter
 {
     private readonly object _lock = new();

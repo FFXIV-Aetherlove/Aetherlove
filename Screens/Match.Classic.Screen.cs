@@ -9,7 +9,7 @@ using static AetherLove.Screens.MatchFx;
 
 namespace AetherLove.Screens;
 
-/// <summary>Match effect "Classic" — the original celebration: a dimming overlay, confetti, and two
+/// <summary>Match effect "Classic" - the original celebration: a dimming overlay, confetti, and two
 /// avatars sliding in to meet beneath the title. One of the random match-effect pool.</summary>
 public sealed class MatchClassicScreen : IMatchEffect
 {

@@ -51,6 +51,7 @@ internal static class ChatDe
 
         // ChatListScreen
         ["chat.preview_me_prefix"] = "Ich: ",
+        ["chat.preview_venue"] = "Hat eine Venue geteilt",
         ["chat.matches_title"] = "Matches",
         ["chat.show_search"] = "Suche anzeigen",
         ["chat.hide_search"] = "Suche ausblenden",
@@ -97,5 +98,16 @@ internal static class ChatDe
         ["chat.category_count"] = "Chats: {0}",
         ["chat.category_archive_default"] = "Archiv",
         ["chat.all_categorized"] = "Alle deine Chats sind in Kategorien einsortiert",
+
+        // added after update 1.5.1
+        ["chat.menu_view_blocked"] = "Blockierte anzeigen",
+        ["blocked.title"] = "Blockierte Nutzer",
+        ["blocked.intro_body"] = "Hier kannst du Profile entsperren, die du früher blockiert hast. Wenn du jemanden entsperrst, entsteht kein automatisches Match, aber ihr könnt euch wieder im Deck begegnen.",
+        ["blocked.empty"] = "Du hast niemanden blockiert.",
+        ["blocked.loading"] = "Lade...",
+        ["blocked.since"] = "Blockiert am {0}",
+        ["blocked.unblock"] = "Entsperren",
+        ["blocked.confirm_title"] = "{0} entsperren?",
+        ["blocked.confirm_body"] = "Es entsteht kein automatisches Match, aber ihr könnt euch wieder im Deck begegnen.",
     };
 }

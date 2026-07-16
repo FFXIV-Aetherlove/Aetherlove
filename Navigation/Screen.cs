@@ -22,4 +22,8 @@ public enum Screen
     News,
     Offline,
     Outdated,
+    Places,
+    MyVenues,
+    Hangouts,
+    Blocked,
 }

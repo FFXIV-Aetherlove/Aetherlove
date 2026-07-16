@@ -50,7 +50,7 @@ public static class NotificationSoundExtensions
     };
 }
 
-/// <summary>Plays a bundled notification .wav off-thread. No-ops gracefully when the file is absent.</summary>
+/// <summary>Plays a bundled notification .wav off-thread.</summary>
 public static class NotificationSoundPlayer
 {
     public static void Play(NotificationSound sound)

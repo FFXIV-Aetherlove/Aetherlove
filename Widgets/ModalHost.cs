@@ -7,10 +7,8 @@ using AetherLove.UI;
 
 namespace AetherLove.Widgets;
 
-/// <summary>A single top-level, full-viewport window that hosts the app's modals. It draws its own dim
-/// and centred panel, so the backdrop is always behind the modal — sidestepping ImGui's auto-dim, whose
-/// layering breaks when popups are opened inside the phone's nested windows. Only one modal shows at a
-/// time, so one shared host suffices. Callers use <see cref="Open"/> / <see cref="Close"/>.</summary>
+/// <summary>Single full-viewport window hosting the app's modals. It draws its own dim and panel because
+/// ImGui's popup auto-dim layers wrongly when opened inside the phone's nested windows.</summary>
 public sealed class ModalHost : Window
 {
     public static ModalHost? Instance { get; private set; }
@@ -52,9 +50,8 @@ public sealed class ModalHost : Window
         _body = null;
     }
 
-    /// <summary>Pins the modal over the host phone window's rect so the dim + panel follow the phone to
-    /// whatever viewport it's on — fixes "Enable multiple screens", where the phone can live on a viewport
-    /// other than the game's main one.</summary>
+    /// <summary>Pins the modal over the phone window's rect; under multi-viewport the phone can live on an
+    /// OS viewport a main-viewport window can't cover.</summary>
     public void SetAnchor(Vector2 pos, Vector2 size)
     {
         _anchorPos = pos;
@@ -66,9 +63,6 @@ public sealed class ModalHost : Window
     {
         var io = ImGui.GetIO();
 
-        // Multi-viewport ("Enable multiple screens") can put the phone on its own OS viewport that a
-        // main-viewport window can't cover — anchor the dim to the phone's rect then. Otherwise pin to the
-        // main viewport for a real full-screen backdrop behind a screen-centred modal.
         var multiViewport = io.ConfigFlags.HasFlag(ImGuiConfigFlags.ViewportsEnable);
 
         if (multiViewport && _hasAnchor)
@@ -87,8 +81,7 @@ public sealed class ModalHost : Window
         PositionCondition = ImGuiCond.Always;
         SizeCondition = ImGuiCond.Always;
 
-        // Raise the modal above the phone once, when it opens — not every frame, which would steal focus
-        // from text fields inside the modal.
+        // Focus once on open; refocusing every frame steals focus from text fields inside the modal.
         if (_justOpened)
         {
             ImGui.SetNextWindowFocus();
@@ -111,8 +104,6 @@ public sealed class ModalHost : Window
     {
         using var bodyFont = UiFonts.Body?.Push();
 
-        // PreDraw sizes this window to whatever it dims — the full main viewport normally, or the phone's
-        // rect under multi-viewport — so its own pos/size is the backdrop area in both cases.
         var winPos = ImGui.GetWindowPos();
         var winSize = ImGui.GetWindowSize();
         var dl = ImGui.GetWindowDrawList();
@@ -135,7 +126,7 @@ public sealed class ModalHost : Window
         var w = Px(_panelWidthDesign);
         var pad = Px(18f, 14f);
 
-        // Panel auto-sizes to content: centre using last frame's measured height, then re-measure.
+        // Centre using last frame's measured height, then re-measure.
         var h = _lastPanelHeight > 0f ? _lastPanelHeight : Px(160f);
         var panelPos = winPos + (winSize - new Vector2(w, h)) * 0.5f;
 
