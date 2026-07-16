@@ -193,5 +193,10 @@ internal static class PlacesPt
         ["places.filters_247"] = "Mostrar locais 24/7",
         ["places.tag_lgbtq"] = "LGBTQ+",
         ["places.tag_minigames"] = "Minijogos",
+
+        // added after update 1.6.1
+        ["places.venue_discord"] = "Link do Discord",
+        ["places.venue_discord_button"] = "Discord",
+        ["places.err_discord"] = "O link do Discord precisa conter discord.gg.",
     };
 }

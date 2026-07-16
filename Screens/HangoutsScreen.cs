@@ -40,8 +40,9 @@ public sealed class HangoutsScreen
     private volatile bool _loadingMore;
     private volatile string? _error;
     private bool _hasMore;
-    // Pill states parallel to HangoutFields.CategoryValues; none selected = every hangout.
+    // Pill states parallel to HangoutFields.CategoryValues / RegionValues; none selected = every hangout.
     private readonly bool[] _filterCategories = new bool[HangoutFields.CategoryValues.Length];
+    private readonly bool[] _filterRegions = new bool[RegionValues.Length];
     private bool _filterOpen;
     private float _filterPanelH;
     private bool _startInfoOpen;
@@ -112,6 +113,9 @@ public sealed class HangoutsScreen
         return mask;
     }
 
+    private Shared.Profile.Enums.Region SelectedRegionMask() =>
+        MaskOr(RegionValues, _filterRegions, (a, b) => a | b);
+
     private static bool PassesMask(int mask, HangoutSummaryDto h) =>
         mask == 0 || (mask & (1 << (short)h.Category)) != 0;
 
@@ -127,7 +131,7 @@ public sealed class HangoutsScreen
         }
         _error = null;
         var skip = reset ? 0 : _items.Count;
-        var filter = new HangoutDirectoryFilterDto(SelectedCategoryMask(), MatchesOnly: false);
+        var filter = new HangoutDirectoryFilterDto(SelectedCategoryMask(), MatchesOnly: false, SelectedRegionMask());
         _ = Task.Run(async () =>
         {
             try
@@ -438,7 +442,7 @@ public sealed class HangoutsScreen
             ImGui.EndPopup();
         }
 
-        if (_filterCategories.Any(c => c))
+        if (_filterCategories.Any(c => c) || _filterRegions.Any(r => r))
         {
             ImGui.SetCursorPosX(Px(PadX));
             var labels = HangoutFields.CategoryLabels();
@@ -448,6 +452,13 @@ public sealed class HangoutsScreen
                 if (_filterCategories[i])
                 {
                     parts.Add(labels[i]);
+                }
+            }
+            for (var i = 0; i < _filterRegions.Length; i++)
+            {
+                if (_filterRegions[i])
+                {
+                    parts.Add(Regions[i]);
                 }
             }
             ImGui.PushTextWrapPos(winW - Px(PadX));
@@ -637,6 +648,11 @@ public sealed class HangoutsScreen
             ImGui.TextColored(UiColors.Subtle, Loc.T("hangout.filter_activities"));
             ImGui.Spacing();
             VenueFields.DrawPillToggleRow("hgcat", HangoutFields.CategoryLabels(), _filterCategories, w);
+
+            ImGui.Spacing();
+            ImGui.TextColored(UiColors.Subtle, Loc.T("hangout.filter_regions"));
+            ImGui.Spacing();
+            VenueFields.DrawPillToggleRow("hgreg", Regions, _filterRegions, w);
 
             ImGui.Spacing();
             ImGui.PushTextWrapPos(w);

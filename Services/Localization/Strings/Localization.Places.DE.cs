@@ -193,5 +193,10 @@ internal static class PlacesDe
         ["places.filters_247"] = "24/7-Venues anzeigen",
         ["places.tag_lgbtq"] = "LGBTQ+",
         ["places.tag_minigames"] = "Minispiele",
+
+        // added after update 1.6.1
+        ["places.venue_discord"] = "Discord-Link",
+        ["places.venue_discord_button"] = "Discord",
+        ["places.err_discord"] = "Der Discord-Link muss discord.gg enthalten.",
     };
 }

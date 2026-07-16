@@ -913,7 +913,7 @@ public class SettingsScreen
                 ResetFeedback();
                 _view = View.Feedback;
             }),
-            new(FontAwesomeIcon.Comments, UiColors.Discord, "Discord", 0, true, OpenDiscord),
+            new(FontAwesomeIcon.Comments, UiColors.Discord, "Discord", 0, true, () => OpenDiscord()),
             new(FontAwesomeIcon.Heart, t.Accent, Loc.T("settings.contributors"), 0, false, () =>
             {
                 _thanksConfetti.Reset();

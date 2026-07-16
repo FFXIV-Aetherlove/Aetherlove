@@ -132,5 +132,6 @@ internal static class HangoutsEs
 
         // added after update 1.6.0
         ["hangout.nsfw_warning"] = "No se permiten quedadas NSFW.",
+        ["hangout.filter_regions"] = "Regiones",
     };
 }

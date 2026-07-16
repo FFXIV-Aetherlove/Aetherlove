@@ -13,6 +13,9 @@ public static class PlacesLimits
     /// longer than its visible <see cref="VenueDescriptionMaxLength"/> chars.</summary>
     public const int VenueDescriptionRawMaxLength = 16000;
 
+    /// <summary>Raw length of the optional discord.gg invite link.</summary>
+    public const int VenueDiscordMaxLength = 200;
+
     /// <summary>Visible characters per review.</summary>
     public const int ReviewMaxLength = 500;
 

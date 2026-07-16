@@ -104,7 +104,9 @@ public sealed record VenueDetailDto(
     VenueOccurrenceDto[] Occurrences,
     VenueReviewDto[] Reviews,
     VenueReviewDto? MyReview,
-    VenueBannerDto[]? Banners = null);
+    VenueBannerDto[]? Banners = null,
+    // Owner-provided discord.gg invite; empty when the venue has none.
+    string Discord = "");
 
 /// <summary>Owner-side venue snapshot for the My Venues editor.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
@@ -128,7 +130,8 @@ public sealed record MyVenueDto(
     int LikeCount,
     double AverageRating,
     int ReviewCount,
-    VenueBannerDto[]? Banners = null);
+    VenueBannerDto[]? Banners = null,
+    string Discord = "");
 
 /// <summary>Create (null <see cref="Id"/>) or update a venue definition. Images travel separately via
 /// <c>SetVenueImageAsync</c> (a <see cref="PhotoUploadDto"/> per slot).</summary>
@@ -146,4 +149,5 @@ public sealed record VenueEditDto(
     short Plot,
     short Room,
     string Timezone,
-    VenueOpeningTimeDto[] OpeningTimes);
+    VenueOpeningTimeDto[] OpeningTimes,
+    string Discord = "");

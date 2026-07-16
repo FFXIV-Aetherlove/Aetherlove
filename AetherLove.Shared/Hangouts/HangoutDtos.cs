@@ -97,11 +97,13 @@ public sealed record HangoutCardDto(
     byte[]? OwnerAvatarWebp);
 
 /// <summary>Directory filters sent with every page fetch. <see cref="CategoryMask"/> is a bitmask of
-/// <c>1 &lt;&lt; (short)HangoutCategory</c> values; 0 = every category.</summary>
+/// <c>1 &lt;&lt; (short)HangoutCategory</c> values; 0 = every category. <see cref="RegionMask"/> maps
+/// each hangout's data center to a region server-side; 0 (and any omitted field) = every region.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record HangoutDirectoryFilterDto(
     int CategoryMask,
-    bool MatchesOnly);
+    bool MatchesOnly,
+    Profile.Enums.Region RegionMask = 0);
 
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record HangoutDirectoryPageDto(

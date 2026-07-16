@@ -593,7 +593,7 @@ internal static class SharedUiHelpers
 
     internal const string DiscordInvite = "https://discord.gg/SkyQmpxWhB";
 
-    internal static void DrawDiscordButton(string label, Vector2 size)
+    internal static void DrawDiscordButton(string label, Vector2 size, string? url = null)
     {
         ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.345f, 0.396f, 0.949f, 1f));
         ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.42f, 0.47f, 1.0f, 1f));
@@ -601,18 +601,18 @@ internal static class SharedUiHelpers
         ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
         if (ImGui.Button(label, size))
         {
-            OpenDiscord();
+            OpenDiscord(url);
         }
         ImGui.PopStyleVar();
         ImGui.PopStyleColor(3);
     }
 
-    internal static void OpenDiscord()
+    internal static void OpenDiscord(string? url = null)
     {
         try
         {
             System.Diagnostics.Process.Start(
-                new System.Diagnostics.ProcessStartInfo(DiscordInvite) { UseShellExecute = true });
+                new System.Diagnostics.ProcessStartInfo(url ?? DiscordInvite) { UseShellExecute = true });
         }
         catch (Exception ex)
         {

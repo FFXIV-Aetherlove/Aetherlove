@@ -132,5 +132,6 @@ internal static class HangoutsPt
 
         // added after update 1.6.0
         ["hangout.nsfw_warning"] = "Encontros NSFW não são permitidos.",
+        ["hangout.filter_regions"] = "Regiões",
     };
 }

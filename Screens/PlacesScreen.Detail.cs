@@ -233,6 +233,14 @@ public partial class PlacesScreen
             parsed.DrawWrapped("##venueDesc", cardW);
         }
 
+        if (detail.Discord.Length > 0)
+        {
+            ImGui.Dummy(new Vector2(1f, Px(8f)));
+            ImGui.SetCursorPosX(pad);
+            DrawDiscordButton($"{Loc.T("places.venue_discord_button")}##venueDiscord",
+                new Vector2(cardW, Px(30f)), detail.Discord);
+        }
+
         ImGui.Spacing();
         DrawH2Header(Loc.T("places.schedule"));
         if (detail.Occurrences.Length == 0)

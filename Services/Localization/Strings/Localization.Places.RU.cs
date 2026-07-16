@@ -193,5 +193,10 @@ internal static class PlacesRu
         ["places.filters_247"] = "Показывать заведения 24/7",
         ["places.tag_lgbtq"] = "ЛГБТК+",
         ["places.tag_minigames"] = "Мини-игры",
+
+        // added after update 1.6.1
+        ["places.venue_discord"] = "Ссылка на Discord",
+        ["places.venue_discord_button"] = "Discord",
+        ["places.err_discord"] = "Ссылка на Discord должна содержать discord.gg.",
     };
 }

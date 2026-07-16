@@ -36,6 +36,7 @@ public partial class MyVenuesScreen
     private Guid _editId = Guid.Empty;
     private string _editName = "";
     private string _editDescription = "";
+    private string _editDiscord = "";
     private readonly bool[] _editTags = new bool[VenueFields.VenueTagValues.Length];
     private int _editRegionIdx;
     private string _editDataCenter = "";
@@ -104,6 +105,7 @@ public partial class MyVenuesScreen
             _editId = Guid.Empty;
             _editName = "";
             _editDescription = "";
+            _editDiscord = "";
             Array.Clear(_editTags);
             _editRegionIdx = 0;
             _editDataCenter = "";
@@ -119,6 +121,7 @@ public partial class MyVenuesScreen
             _editId = venue.Id;
             _editName = venue.Name;
             _editDescription = venue.Description;
+            _editDiscord = venue.Discord;
             MaskToBools(VenueFields.VenueTagValues, venue.Tags, (v, m) => (m & v) != 0, _editTags);
             _editRegionIdx = Math.Max(0, IndexOf(RegionValues, venue.Region, 0));
             _editDataCenter = venue.DataCenter;
@@ -284,6 +287,18 @@ public partial class MyVenuesScreen
             ImGui.Spacing();
             var parsed = ParsedMessage.Parse(_editDescription);
             parsed.DrawWrapped("##venDescPreview", w);
+        }
+
+        ImGui.Spacing();
+        DrawFieldLabel(Loc.T("places.venue_discord"), t);
+        ImGui.SetNextItemWidth(w);
+        ImGui.InputText("##venDiscord", ref _editDiscord, PlacesLimits.VenueDiscordMaxLength);
+        if (_editDiscord.Trim() is { Length: > 0 } discordDraft
+            && !discordDraft.Contains("discord.gg", StringComparison.OrdinalIgnoreCase))
+        {
+            ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + w);
+            ImGui.TextColored(UiColors.Danger, Loc.T("places.err_discord"));
+            ImGui.PopTextWrapPos();
         }
 
         DrawSectionHeading(Loc.T("places.section_tags"), t);
@@ -837,6 +852,12 @@ public partial class MyVenuesScreen
             _editValidationError = Loc.T("places.err_tags");
             return null;
         }
+        var discord = _editDiscord.Trim();
+        if (discord.Length > 0 && !discord.Contains("discord.gg", StringComparison.OrdinalIgnoreCase))
+        {
+            _editValidationError = Loc.T("places.err_discord");
+            return null;
+        }
         var hasServerBanner = _editId != Guid.Empty && _bannerTex.GetValueOrDefault(_editId) is not null;
         var hasServerLogo = _editId != Guid.Empty && _logoTex.GetValueOrDefault(_editId) is not null;
         var bannerOk = _bannerConfirmed || (hasServerBanner && !_bannerPendingRemove);
@@ -921,7 +942,8 @@ public partial class MyVenuesScreen
             Timezone: _editTimezoneIdx >= 0 && _editTimezoneIdx < AllTimezones.Length
                 ? AllTimezones[_editTimezoneIdx].Id
                 : "UTC",
-            OpeningTimes: times.ToArray());
+            OpeningTimes: times.ToArray(),
+            Discord: discord);
     }
 
     private void SaveVenue()
