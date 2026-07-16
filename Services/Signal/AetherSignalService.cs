@@ -484,6 +484,8 @@ public sealed class AetherSignalService : IAsyncDisposable
     {
         _ = _services.GetRequiredService<SessionBootstrapper>().RefreshConnectionInfoAsync();
         _ = _services.GetRequiredService<FlairCatalog>().RefreshAsync();
+        // A superlike that landed while disconnected sent no push; only a fresh pull can surface it.
+        _notifications.NotifyDeckRefreshRequested();
     }
 
     private void AppendWarningToCachedSnapshot(WarningDto warning)

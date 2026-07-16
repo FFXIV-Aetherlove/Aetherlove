@@ -146,16 +146,26 @@ public partial class DeckScreen : IDisposable
     public void MarkDeckLeft() => _discardCurrentOnRefresh = true;
 
     /// <summary>Runs each frame while the deck is not the active screen; pre-fetches the next deck once the
-    /// slot elapses so it is already in hand on return.</summary>
+    /// slot elapses (or a refresh push arrives) so it is already in hand on return.</summary>
     public void MaybeBackgroundRefresh()
     {
         var now = DateTimeOffset.UtcNow;
+        if (_refreshInFlight
+            || _pendingDeck is not null
+            || now - _lastBackgroundRefreshUtc < BackgroundRefreshRetry)
+        {
+            return;
+        }
+        if (_forceRefresh)
+        {
+            _forceRefresh = false;
+            _lastBackgroundRefreshUtc = now;
+            StartRefresh();
+            return;
+        }
         if (_discardCurrentOnRefresh
-            && !_refreshInFlight
-            && _pendingDeck is null
             && _nextPullAtUtc.HasValue
-            && now >= _nextPullAtUtc.Value
-            && now - _lastBackgroundRefreshUtc >= BackgroundRefreshRetry)
+            && now >= _nextPullAtUtc.Value)
         {
             _lastBackgroundRefreshUtc = now;
             StartRefresh();
@@ -175,8 +185,6 @@ public partial class DeckScreen : IDisposable
         _cts.Dispose();
         _cts = new CancellationTokenSource();
 
-        _forceRefresh = false;
-
         // Warm the own-avatar cache so a first-ever match overlay never shows the grey fallback.
         _ownAvatar.Refresh(onlyIfCold: true);
 
@@ -188,8 +196,10 @@ public partial class DeckScreen : IDisposable
             _cards.Clear();
             _processedThisPeriod.Clear();
         }
-        if (_cards.Count == 0 || pullDue)
+        // _forceRefresh survives OnShow: a push that arrived off-deck must still refetch here.
+        if (_cards.Count == 0 || pullDue || _forceRefresh)
         {
+            _forceRefresh = false;
             StartRefresh();
         }
     }
@@ -381,6 +391,8 @@ public partial class DeckScreen : IDisposable
                 var deck = await _hubClient.GetMatchDeckAsync(ct).ConfigureAwait(false);
                 if (ct.IsCancellationRequested)
                 {
+                    // A cancelled fetch still owes a refresh (OnShow recycles the token mid-flight).
+                    _forceRefresh = true;
                     return;
                 }
 
@@ -389,7 +401,10 @@ public partial class DeckScreen : IDisposable
                 // Draw applies it at a safe point, never mid-gesture.
                 _pendingDeck = deck;
             }
-            catch (OperationCanceledException) { }
+            catch (OperationCanceledException)
+            {
+                _forceRefresh = true;
+            }
             catch (Exception ex)
             {
                 if (ct.IsCancellationRequested)
@@ -430,8 +445,19 @@ public partial class DeckScreen : IDisposable
         {
             // The fetch wiped the portrait cache and the pinned card isn't in the fresh deck; rebuild its image or it renders blank.
             EnsurePortraitCached(pinned);
-            _cards.Add(pinned);
-            _cards.AddRange(pending.Cards.Where(c => c.ProfileId != pinned.ProfileId));
+            var incoming = pending.Cards.Where(c => c.ProfileId != pinned.ProfileId).ToArray();
+            // Superlikers outrank even the card in hand: the reveal fires the moment the deck lands.
+            if (!pinned.SuperlikedYou)
+            {
+                _cards.AddRange(incoming.Where(c => c.SuperlikedYou));
+                _cards.Add(pinned);
+                _cards.AddRange(incoming.Where(c => !c.SuperlikedYou));
+            }
+            else
+            {
+                _cards.Add(pinned);
+                _cards.AddRange(incoming);
+            }
         }
         else
         {
