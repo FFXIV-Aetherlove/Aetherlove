@@ -48,7 +48,7 @@ internal static class OsEs
         ["os.about_demo"] = "Demo de la interfaz de AetherOS",
 
         // Love settings hub after the appearance move
-        ["settings.menu_language"] = "Idioma",
+        ["settings.menu_language"] = "Idioma y hora",
 
         // Weatherman app
         ["os.app_weather"] = "Tiempo",

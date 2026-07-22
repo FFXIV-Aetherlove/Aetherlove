@@ -11,6 +11,10 @@ public sealed class OsSettingsConfig
     /// <summary>UI language for the plugin (e.g. "English", "French").</summary>
     public string PluginLanguage { get; set; } = "English";
 
+    /// <summary>Show wall clocks (home screen + status bar) in 24-hour form (22:23) rather than 12-hour (10:23).
+    /// No AM/PM either way: the digits-only Clock font can't render letters.</summary>
+    public bool Use24HourClock { get; set; } = true;
+
     /// <summary>Skip the "close AetherLove?" confirmation modal and close the windows immediately.</summary>
     public bool SkipCloseConfirmation { get; set; } = false;
 

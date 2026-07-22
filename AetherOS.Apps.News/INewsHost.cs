@@ -19,11 +19,13 @@ public interface INewsHost
     /// <summary>Marks an entry seen in both the cached connection snapshot and server-side.</summary>
     void MarkSeen(Guid newsId);
 
+    /// <summary>Marks every unseen entry seen (snapshot + server): opening the app counts as reading the news,
+    /// so the tile badge clears without tapping each article.</summary>
+    void MarkAllSeen();
+
     /// <summary>The snapshot's unseen entries, for an instant first paint before the full list fetch lands.</summary>
     IReadOnlyList<NewsSummaryDto> KnownNews { get; }
 
     /// <summary>Server-side unseen count; drives the tile badge.</summary>
     int UnreadCount { get; }
-
-    bool IsUnread(Guid newsId);
 }

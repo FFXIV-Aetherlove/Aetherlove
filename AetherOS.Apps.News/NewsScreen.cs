@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Threading;
@@ -59,6 +60,12 @@ public sealed class NewsScreen
     /// there instead of the news list. Null for entries opened from within the app.</summary>
     private string? _entryReturnApp;
 
+    // Entering the app marks everything seen (the tile badge clears), so the "new" card accents come from
+    // this session-local capture of what was unseen at that moment, not the live snapshot.
+    private readonly HashSet<Guid> _accented = new();
+    private readonly List<string> _pendingDismissTags = new();
+    private NewsSummaryDto[]? _knownAtOpen;
+
     public NewsScreen(INewsHost host)
     {
         _host = host;
@@ -80,6 +87,20 @@ public sealed class NewsScreen
     {
         _entryReturnApp = null;
         _listEntrance.Arm();
+
+        // Capture the unseen set BEFORE marking, so the instant-paint seed and the accents survive the clear.
+        var known = _host.KnownNews;
+        if (known.Count > 0)
+        {
+            _knownAtOpen ??= known.OrderByDescending(n => n.PublishedAtUtc).ToArray();
+            foreach (var n in known)
+            {
+                _accented.Add(n.Id);
+                _pendingDismissTags.Add($"news:{n.Id:N}");
+            }
+            _host.MarkAllSeen();
+        }
+
         if (_seeded && (_list is null || DateTimeOffset.UtcNow - _listFetchedAtUtc > TimeSpan.FromMinutes(2)))
         {
             StartLoadList();
@@ -91,13 +112,21 @@ public sealed class NewsScreen
         _shell = ctx.Shell;
         _share = ctx.Capabilities.Share;
 
+        if (_pendingDismissTags.Count > 0)
+        {
+            foreach (var tag in _pendingDismissTags)
+            {
+                _shell.DismissByTag(tag);
+            }
+            _pendingDismissTags.Clear();
+        }
+
         if (!_seeded)
         {
             _seeded = true;
-            var known = _host.KnownNews;
-            if (known.Count > 0)
+            if (_knownAtOpen is { Length: > 0 })
             {
-                _list = known.OrderByDescending(n => n.PublishedAtUtc).ToArray();
+                _list = _knownAtOpen;
             }
             StartLoadList();
             _listEntrance.Arm();
@@ -384,7 +413,7 @@ public sealed class NewsScreen
     {
         var t = ThemeService.Current;
         var dl = ImGui.GetWindowDrawList();
-        var unread = _host.IsUnread(item.Id);
+        var unread = _accented.Contains(item.Id);
 
         var pad = Px(Pad);
         var cardW = listW - pad * 2f;
@@ -491,7 +520,7 @@ public sealed class NewsScreen
     {
         var t = ThemeService.Current;
         var dl = ImGui.GetWindowDrawList();
-        var unread = _host.IsUnread(item.Id);
+        var unread = _accented.Contains(item.Id);
 
         var pad = Px(Pad);
         var cardW = listW - pad * 2f;

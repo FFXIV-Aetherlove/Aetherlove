@@ -173,7 +173,9 @@ public sealed class CalendarApp : IAetherApp
 
         var overlay = this.addOpen || this.confirmDeleteId != null;
         var flags = overlay ? ImGuiWindowFlags.NoScrollWithMouse : ImGuiWindowFlags.None;
-        ImGui.BeginChild("##calendarScroll", ImGui.GetContentRegionAvail(), false, flags);
+        var contentTL = ImGui.GetCursorScreenPos();
+        var contentSize = ImGui.GetContentRegionAvail();
+        ImGui.BeginChild("##calendarScroll", contentSize, false, flags);
         if (overlay)
         {
             ImGui.BeginDisabled();
@@ -194,15 +196,26 @@ public sealed class CalendarApp : IAetherApp
         {
             ImGui.EndDisabled();
         }
-        if (this.addOpen)
-        {
-            this.DrawAddOverlay(ctx, storage);
-        }
-        else if (this.confirmDeleteId != null)
-        {
-            this.DrawDeleteConfirm(ctx, storage);
-        }
         ImGui.EndChild();
+
+        // The overlays live in their OWN child on top of the scroll child: even disabled, the agenda rows'
+        // full-width buttons claim hover for their rects, so a same-window dialog drawn after them loses any
+        // click landing on a row. A later sibling child wins hover over everything beneath it.
+        if (overlay)
+        {
+            ImGui.SetCursorScreenPos(contentTL);
+            ImGui.BeginChild("##calendarOverlay", contentSize, false,
+                ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse);
+            if (this.addOpen)
+            {
+                this.DrawAddOverlay(ctx, storage);
+            }
+            else if (this.confirmDeleteId != null)
+            {
+                this.DrawDeleteConfirm(ctx, storage);
+            }
+            ImGui.EndChild();
+        }
     }
 
     private void DrawHeader(OsAppContext ctx, float x, float width)

@@ -221,8 +221,19 @@ public sealed class MessengerStore
         lock (_lock)
         {
             _sync = sync;
+            // The chat the user is actively viewing must never resurrect an unread count. A full sync that
+            // lands while a chat is open (e.g. the one OnForeground fires) carries the server's still-stale
+            // unread until its mark-read round trip completes, which otherwise re-lights the tile/chat badge.
+            if (ActiveChatId is { } active)
+            {
+                _sync = _sync with
+                {
+                    Contacts = _sync.Contacts.Select(c => c.ContactId == active ? c with { Unread = 0 } : c).ToArray(),
+                    Groups = _sync.Groups.Select(g => g.GroupId == active ? g with { Unread = 0 } : g).ToArray(),
+                };
+            }
             // Conversations for chats that no longer exist (removed by me, disbanded groups) are dropped.
-            var live = sync.Contacts.Select(c => c.ContactId).Concat(sync.Groups.Select(g => g.GroupId)).ToHashSet();
+            var live = _sync.Contacts.Select(c => c.ContactId).Concat(_sync.Groups.Select(g => g.GroupId)).ToHashSet();
             foreach (var stale in _conversations.Keys.Where(id => !live.Contains(id)).ToList())
             {
                 _conversations.Remove(stale);

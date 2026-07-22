@@ -214,5 +214,10 @@ internal static class SettingsFr
 
         // Messenger (added after update 1.5.1)
         ["dtr.messenger"] = "Messenger",
+
+        // added after update 2.0.0.0
+        ["settings.section_time_format"] = "Format de l'heure",
+        ["settings.time_24h"] = "24 heures",
+        ["settings.time_12h"] = "12 heures",
     };
 }

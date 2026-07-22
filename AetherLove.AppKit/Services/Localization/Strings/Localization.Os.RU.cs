@@ -48,7 +48,7 @@ internal static class OsRu
         ["os.about_demo"] = "Демонстрация интерфейса AetherOS",
 
         // Love settings hub after the appearance move
-        ["settings.menu_language"] = "Язык",
+        ["settings.menu_language"] = "Язык и время",
 
         // Weatherman app
         ["os.app_weather"] = "Погода",

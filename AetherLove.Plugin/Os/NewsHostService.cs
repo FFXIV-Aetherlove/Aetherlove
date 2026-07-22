@@ -48,10 +48,28 @@ public sealed class NewsHostService : INewsHost
         });
     }
 
+    public void MarkAllSeen()
+    {
+        var ids = _bootstrap.LastConnection?.UnseenNews.Select(n => n.Id).ToArray() ?? [];
+        if (ids.Length == 0)
+        {
+            return;
+        }
+        _bootstrap.MarkNewsSeenInSnapshot(ids);
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _hub.MarkNewsSeenAsync(ids, CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.Warning(ex, "[NewsHostService] MarkNewsSeenAsync (all) failed.");
+            }
+        });
+    }
+
     public IReadOnlyList<NewsSummaryDto> KnownNews => _bootstrap.LastConnection?.UnseenNews ?? [];
 
     public int UnreadCount => _bootstrap.LastConnection?.UnseenNews.Length ?? 0;
-
-    public bool IsUnread(Guid newsId) =>
-        _bootstrap.LastConnection?.UnseenNews.Any(n => n.Id == newsId) ?? false;
 }

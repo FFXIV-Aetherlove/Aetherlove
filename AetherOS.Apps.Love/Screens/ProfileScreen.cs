@@ -80,6 +80,10 @@ public class ProfileScreen
     private const float AutoInterval = 4.5f;
     private const float FadeSpeed = 2.5f;
 
+    // Order 0 = avatar, 1 = main, 2.. = extra portraits. Supporters get up to SupporterExtraPhotos extras, so the
+    // portrait scroller must range to Order 1 + SupporterExtraPhotos or the supporter bonus photos never render.
+    private const int MaxPortraitOrder = 1 + AetherLove.Shared.SupporterLimits.SupporterExtraPhotos;
+
     private static float PhotoHeight => Px(560f);
     private static float PadX => Px(18f);
     private static float ChipPadX => Px(13f);
@@ -1963,7 +1967,7 @@ public class ProfileScreen
             return 0;
         }
         var count = 0;
-        for (var i = 1; i <= 4; i++)
+        for (var i = 1; i <= MaxPortraitOrder; i++)
         {
             if (_photoTextures.ContainsKey(i))
             {
@@ -1991,7 +1995,7 @@ public class ProfileScreen
     private int GetPhotoOrderAt(int scrollerIndex)
     {
         var portraitOrders = new List<int>(4);
-        for (var i = 1; i <= 4; i++)
+        for (var i = 1; i <= MaxPortraitOrder; i++)
         {
             if (_photoTextures.ContainsKey(i))
             {

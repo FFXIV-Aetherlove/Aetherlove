@@ -64,7 +64,7 @@ public sealed class StatusBar
         }
 
         // Clock: placed by the theme's align factor, clamped to clear the icon cluster and the left edge.
-        var time = DateTime.Now.ToString("HH:mm");
+        var time = OsClock.Format(DateTime.Now);
         var timeSz = ImGui.CalcTextSize(time) * 0.76f;
         var usableW = stripBR.X - stripTL.X;
         var timeLeft = stripTL.X + (usableW - timeSz.X) * Math.Clamp(theme.StatusBarTimeAlign, 0f, 1f);

@@ -1051,7 +1051,7 @@ public sealed class HomeScreen
         {
             // Invariant so the digits stay ASCII: the Clock font is baked with a digits-only glyph range,
             // and some system locales (Arabic/Persian) would otherwise substitute glyphs it doesn't carry.
-            var txt = now.ToString("HH:mm", CultureInfo.InvariantCulture);
+            var txt = OsClock.Format(now);
             var sz = ImGui.CalcTextSize(txt);
             var pos = new Vector2(origin.X + (avail.X - sz.X) * 0.5f, y);
             dl.AddText(ImGui.GetFont(), ImGui.GetFontSize(), pos + Px(0f, 2f), OsDraw.Black(0.35f), txt);
@@ -1154,8 +1154,7 @@ public sealed class HomeScreen
         var now = DateTime.Now;
         using (UiFonts.Clock?.Push())
         {
-            dl.AddText(new Vector2(x + Px(16f), y + Px(10f)), OsDraw.White(0.97f),
-                now.ToString("HH:mm", CultureInfo.InvariantCulture));
+            dl.AddText(new Vector2(x + Px(16f), y + Px(10f)), OsDraw.White(0.97f), OsClock.Format(now));
         }
         var eorzea = EorzeaNow();
         var rowY = y + Px(68f);
@@ -1165,7 +1164,7 @@ public sealed class HomeScreen
         var utc = DateTime.UtcNow;
         var utcX = x + w * 0.5f;
         dl.AddText(new Vector2(utcX, rowY), OsDraw.White(0.62f), "UTC");
-        dl.AddText(new Vector2(utcX, rowY + Px(23f)), OsDraw.White(0.9f), utc.ToString("HH:mm"));
+        dl.AddText(new Vector2(utcX, rowY + Px(23f)), OsDraw.White(0.9f), OsClock.Format(utc));
         return y + h + Px(12f);
     }
 

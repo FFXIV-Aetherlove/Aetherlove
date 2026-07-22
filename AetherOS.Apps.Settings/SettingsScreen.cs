@@ -568,7 +568,28 @@ public sealed class SettingsScreen
         DrawSectionHeader(Loc.T("settings.section_plugin_language"), PadX);
         ImGui.Spacing();
         DrawLanguagePills(winW);
+
         ImGui.Spacing();
+        ImGui.Spacing();
+        DrawSectionHeader(Loc.T("settings.section_time_format"), PadX);
+        ImGui.Spacing();
+        DrawTimeFormatRow(true, Loc.T("settings.time_24h"));
+        DrawTimeFormatRow(false, Loc.T("settings.time_12h"));
+        ImGui.Spacing();
+    }
+
+    private static void DrawTimeFormatRow(bool is24h, string label)
+    {
+        var os = UiHost.Configuration.OsSettings;
+        ImGui.SetCursorPosX(Px(PadX));
+        if (ImGui.RadioButton($"{label}##timefmt{(is24h ? 24 : 12)}", os.Use24HourClock == is24h))
+        {
+            os.Use24HourClock = is24h;
+            UiHost.Configuration.Save();
+        }
+        SharedUiHelpers.HandOnHover();
+        ImGui.SameLine();
+        ImGui.TextColored(new Vector4(0.60f, 0.60f, 0.60f, 1f), OsClock.Format(DateTime.Now, is24h));
     }
 
     private void DrawNotificationsPage()
