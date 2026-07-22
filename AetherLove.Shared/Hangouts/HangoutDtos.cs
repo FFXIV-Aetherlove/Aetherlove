@@ -29,12 +29,14 @@ public enum HangoutEndKind : short
     Cancelled = 2,
 }
 
-/// <summary>The hangout payload shared by every surface (banner, frame, directory, card, manage view).
-/// Caller-agnostic: the caller's own RSVP state travels separately (sync ids / RSVP results).</summary>
+/// <summary>The hangout payload shared by every surface (contact marker, directory, card, manage view).
+/// Hangouts are an OS-ACCOUNT concept: the owner presents as their OS identity (OS display name + OS
+/// avatar), never as a dating profile. Caller-agnostic: the caller's own RSVP state travels separately
+/// (sync ids / RSVP results).</summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record HangoutSummaryDto(
     Guid Id,
-    Guid OwnerProfileId,
+    Guid OwnerAccountId,
     string OwnerDisplayName,
     HangoutCategory Category,
     string Description,
@@ -72,37 +74,39 @@ public sealed record HangoutRsvpResultDto(
     bool Going,
     int RsvpCount);
 
-/// <summary>One person who clicked "on my way" on the caller's own hangout (the manage view's list).</summary>
+/// <summary>One person who clicked "on my way" on the caller's own hangout (the manage view's list),
+/// presented as their OS identity.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record HangoutRsvperDto(
-    Guid ProfileId,
+    Guid AccountId,
     string DisplayName);
 
 /// <summary>On-connect reconciliation snapshot: the caller's own live hangout, the live hangouts of their
-/// active matches, and the ids of every hangout the caller has an active RSVP on. Always a full replace of
-/// the client's in-memory state, never a merge.</summary>
+/// messenger contacts, and the ids of every hangout the caller has an active RSVP on. Always a full replace
+/// of the client's in-memory state, never a merge.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record HangoutSyncDto(
     HangoutSummaryDto? MyHangout,
-    HangoutSummaryDto[] MatchHangouts,
+    HangoutSummaryDto[] ContactHangouts,
     Guid[] MyRsvpHangoutIds,
     // Who's coming to the caller's own hangout; empty when MyHangout is null.
     HangoutRsvperDto[]? MyHangoutRsvpers = null);
 
-/// <summary>Lean payload for a hangout rendered outside its owner's profile: chat share cards and
-/// directory rows.</summary>
+/// <summary>Lean payload for a hangout rendered outside its owner's manage view: chat share cards and
+/// directory rows. The avatar is the owner's OS avatar.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record HangoutCardDto(
     HangoutSummaryDto Summary,
     byte[]? OwnerAvatarWebp);
 
 /// <summary>Directory filters sent with every page fetch. <see cref="CategoryMask"/> is a bitmask of
-/// <c>1 &lt;&lt; (short)HangoutCategory</c> values; 0 = every category. <see cref="RegionMask"/> maps
-/// each hangout's data center to a region server-side; 0 (and any omitted field) = every region.</summary>
+/// <c>1 &lt;&lt; (short)HangoutCategory</c> values; 0 = every category. <see cref="FriendsOnly"/> limits
+/// to hangouts hosted by the caller's messenger contacts. <see cref="RegionMask"/> limits by the physical
+/// region the hangout's data center belongs to; 0 = every region.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record HangoutDirectoryFilterDto(
     int CategoryMask,
-    bool MatchesOnly,
+    bool FriendsOnly,
     Profile.Enums.Region RegionMask = 0);
 
 [MessagePackObject(keyAsPropertyName: true)]
@@ -115,24 +119,25 @@ public sealed record ReportHangoutRequest(
     Guid HangoutId,
     string Reason);
 
-/// <summary>Push to the owner's active matches (and the owner's own other clients) when a hangout goes up.</summary>
+/// <summary>Push to the owner's messenger contacts (and the owner's own other clients) when a hangout
+/// goes up.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record HangoutStartedPushDto(
     HangoutSummaryDto Hangout);
 
-/// <summary>Push to the owner, active RSVPers, and the owner's matches when a hangout reaches a terminal
+/// <summary>Push to the owner, active RSVPers, and the owner's contacts when a hangout reaches a terminal
 /// state. Natural expiry is not surfaced as a notification client-side.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record HangoutEndedPushDto(
     Guid HangoutId,
-    Guid OwnerProfileId,
+    Guid OwnerAccountId,
     HangoutEndKind Kind);
 
 /// <summary>Push to the hangout owner when someone toggles "on my way".</summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record HangoutRsvpChangedPushDto(
     Guid HangoutId,
-    Guid RsvperProfileId,
+    Guid RsvperAccountId,
     string RsvperDisplayName,
     bool Going,
     int RsvpCount);

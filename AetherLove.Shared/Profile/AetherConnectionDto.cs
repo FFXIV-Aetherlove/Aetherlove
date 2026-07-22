@@ -24,21 +24,26 @@ public enum UserRole : short
     Translator = 3,
 }
 
-/// <summary>One moderation warning issued against a profile.</summary>
+/// <summary>One moderation warning that follows the human (account-owned). <see cref="SourceProfileName"/> names
+/// the profile it was issued against, if any, so the client can show "regarding your profile X"; null means it
+/// was issued at the account level.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record WarningDto(
     Guid Id,
     string Reason,
     bool Seen,
-    DateTimeOffset CreatedAtUtc);
+    DateTimeOffset CreatedAtUtc,
+    string? SourceProfileName = null);
 
-/// <summary>One informational message a moderator sent to a profile (no warning sentiment).</summary>
+/// <summary>One informational message a moderator sent to the human (no warning sentiment). Account-owned; see
+/// <see cref="SourceProfileName"/> for the profile context.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record ModeratorMessageDto(
     Guid Id,
     string Body,
     bool Seen,
-    DateTimeOffset CreatedAtUtc);
+    DateTimeOffset CreatedAtUtc,
+    string? SourceProfileName = null);
 
 /// <summary>Snapshot the server hands the plugin right after a hub connection comes up.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
@@ -52,16 +57,12 @@ public sealed record AetherConnectionDto(
     int NewMatchCount,
     bool HasKeyBundle,
     NewsSummaryDto[] UnseenNews,
-    // Trailing default keeps this wire-safe: the map-keyed MessagePack payload simply carries an extra key
-    // that older clients ignore. The caller's consent to see NSFW content, used client-side to hide NSFW
-    // RP characters from non-consenting viewers.
+    // Trailing default for MessagePack wire-safety; player consent for NSFW visibility.
     bool NsfwEnabled = false,
     bool IsVenueOwner = false,
     bool PlacesEnabled = true,
     bool IsSupporter = false,
-    // The caller's own supporter cosmetics, so the options screen can hydrate without a fetch.
     Enums.NameStyle NameStyle = Enums.NameStyle.None,
     bool ShowSupporterBadge = true,
-    // The caller's own profile id, so the client can scope per-identity local caches.
     Guid ProfileId = default,
     bool HangoutsEnabled = true);

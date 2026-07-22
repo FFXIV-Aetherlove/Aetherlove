@@ -1,0 +1,91 @@
+namespace AetherLove.Services.Localization;
+
+internal static class HubErrorsFr
+{
+    public static readonly System.Collections.Generic.Dictionary<string, string> Strings = new()
+    {
+        ["huberror.generic"] = "Une erreur serveur inattendue s'est produite.",
+        ["huberror.generic_detail"] = "Une erreur s'est produite : {0}",
+        ["huberror.invalid_request"] = "Le serveur a rejeté la requête. Si cela se reproduit, mettez à jour le plugin.",
+        ["huberror.unauthenticated"] = "Votre session n'est plus valide. Veuillez vous reconnecter.",
+        ["huberror.banned"] = "Ce profil AetherLove est banni.",
+        ["huberror.account_banned"] = "Votre compte a été banni.",
+        ["huberror.rate_limited"] = "Vous faites cela trop souvent. Veuillez réessayer dans un instant.",
+        ["huberror.profile_not_found"] = "Profil introuvable.",
+        ["huberror.profile_not_visible"] = "Ce profil n'est pas disponible.",
+        ["huberror.deck_expired"] = "Ce profil n'est plus dans votre deck. Actualisez votre deck et réessayez.",
+        ["huberror.no_active_match"] = "Vous n'êtes plus en match avec ce joueur.",
+        ["huberror.peer_keys_missing"] = "Cet utilisateur n'a pas encore configuré le chiffrement E2E et ne peut pas discuter, réessayez plus tard.",
+        ["huberror.key_bundle_exists"] = "Les clés de chiffrement sont déjà configurées pour ce compte.",
+        ["huberror.message_too_large"] = "Ce message est trop long pour être envoyé.",
+        ["huberror.bio_too_long"] = "Votre bio dépasse la limite de {0} caractères.",
+        ["huberror.lalafell_erp"] = "Le roleplay adulte n'est pas disponible pour les personnages Lalafell.",
+        ["huberror.lalafell_nsfw"] = "Les fonctionnalités NSFW ne sont pas disponibles pour les personnages Lalafell.",
+        ["huberror.lalafell_nsfw_photo"] = "Les photos NSFW ne sont pas disponibles pour les personnages Lalafell.",
+        ["huberror.nsfw_disable_blocked"] = "Retirez vos photos NSFW et désactivez le roleplay 18+ avant de désactiver le NSFW.",
+        ["huberror.img_too_large"] = "L'image est trop volumineuse ({0} Mo). Le maximum est de {1} Mo.",
+        ["huberror.img_dimensions_too_large"] = "L'image est trop grande ({0}×{1}). Le côté le plus long ne peut dépasser {2}px.",
+        ["huberror.img_crop_too_small"] = "La zone de recadrage est trop petite (min {0}px par côté).",
+        ["huberror.img_decode_failed"] = "Impossible de lire l'image. Formats pris en charge : PNG, JPEG, WebP, GIF.",
+        ["huberror.img_payload_invalid"] = "La photo n'a pas pu être envoyée. Veuillez resélectionner l'image.",
+        ["huberror.report_self"] = "Vous ne pouvez pas vous signaler vous-même.",
+        ["huberror.report_reason_required"] = "Veuillez décrire le problème.",
+        ["huberror.report_reason_too_long"] = "Cette description est trop longue (max {0} caractères).",
+        ["huberror.report_target_gone"] = "Ce profil n'existe plus.",
+        ["huberror.report_duplicate"] = "Vous avez déjà signalé cet utilisateur récemment. Notre équipe examine le cas.",
+        ["huberror.feedback_required"] = "Veuillez saisir un message avant d'envoyer.",
+        // added after update (1.3.1)
+        ["huberror.reswipe_nothing_to_undo"] = "Il n'y a rien à annuler.",
+        ["huberror.reswipe_already_matched"] = "Vous ne pouvez pas annuler sur un profil avec lequel vous avez déjà un match.",
+        ["huberror.reswipe_quota_exhausted"] = "Vous avez déjà utilisé votre annulation pour aujourd'hui.",
+        ["huberror.superlike_quota_exhausted"] = "Vous n'avez plus de superlikes pour aujourd'hui.",
+
+        // added after update 1.4.3
+        ["huberror.character_limit_reached"] = "Vous pouvez avoir au maximum {0} personnages RP.",
+        ["huberror.character_name_invalid"] = "Les noms de personnage doivent comporter entre 3 et 50 caractères.",
+        ["huberror.character_not_found"] = "Ce personnage n'existe plus. Rechargez et réessayez.",
+
+        // added after update 1.5.0
+        ["huberror.patreon_disabled"] = "La liaison Patreon est actuellement indisponible.",
+        ["huberror.patreon_already_linked"] = "Un compte Patreon est déjà lié à votre profil.",
+        ["huberror.patreon_not_linked"] = "Aucun compte Patreon n'est lié à votre profil.",
+        ["huberror.patreon_account_taken"] = "Ce compte Patreon est déjà lié à un autre compte AetherLove.",
+        ["huberror.patreon_link_failed"] = "Nous n'avons pas pu finaliser la liaison Patreon. Veuillez réessayer.",
+        ["huberror.places_disabled"] = "Les Lieux sont actuellement indisponibles.",
+        ["huberror.venue_not_found"] = "Cet établissement n'existe plus.",
+        ["huberror.venue_limit_reached"] = "Vous avez atteint la limite de {0} établissements.",
+        ["huberror.venue_name_invalid"] = "Le nom de l'établissement doit comporter de 3 à 60 caractères.",
+        ["huberror.venue_description_too_long"] = "La description dépasse la limite de {0} caractères.",
+        ["huberror.venue_times_invalid"] = "L'un des horaires d'ouverture n'est pas valide.",
+        ["huberror.venue_times_too_many"] = "Un établissement peut avoir au maximum {0} horaires d'ouverture.",
+        ["huberror.venue_review_own"] = "Vous ne pouvez pas laisser d'avis sur votre propre établissement.",
+        ["huberror.venue_review_too_long"] = "Votre avis dépasse la limite de {0} caractères.",
+        ["huberror.venue_review_rating_invalid"] = "Choisissez une note de 1 à 5 étoiles.",
+        ["huberror.venue_rsvp_invalid"] = "Cette ouverture n'accepte plus de participations.",
+
+        // Multi-profile (added after update 1.5.1)
+        ["huberror.profile_locked"] = "Ce profil occupe un emplacement supporter et est actuellement verrouillé.",
+        ["huberror.profile_limit_reached"] = "Vous avez atteint votre limite de profils.",
+
+        // Messenger (added after update 1.5.1)
+        ["huberror.messenger_disabled"] = "Le messenger est actuellement indisponible.",
+        ["huberror.msgr_code_not_found"] = "Aucun utilisateur trouvé avec ce code.",
+        ["huberror.msgr_self"] = "C'est votre propre code.",
+        ["huberror.msgr_already_contact"] = "Vous êtes déjà contacts.",
+        ["huberror.msgr_request_pending"] = "Votre demande est toujours en attente.",
+        ["huberror.msgr_contact_limit"] = "Vous avez atteint votre limite de {0} contacts.",
+        ["huberror.msgr_pending_limit"] = "Vous avez trop de demandes en attente (max. {0}).",
+        ["huberror.msgr_not_contact"] = "Vous n'êtes pas contacts.",
+        ["huberror.msgr_group_limit"] = "Vous pouvez posséder au plus {0} groupes.",
+        ["huberror.msgr_group_full"] = "Les groupes peuvent avoir au plus {0} membres.",
+        ["huberror.msgr_not_owner"] = "Seul le propriétaire du groupe peut faire cela.",
+        ["huberror.msgr_not_member"] = "Vous n'êtes pas membre de ce groupe.",
+        ["huberror.msgr_group_name_invalid"] = "Ce nom de groupe ne peut pas être utilisé.",
+        ["huberror.msgr_adds_disabled"] = "Cet utilisateur n'accepte pas les demandes de contact.",
+        ["huberror.msgr_keys_missing"] = "Les clés de chiffrement sont obsolètes ; réessayez dans un instant.",
+        ["huberror.msgr_image_rejected"] = "Cette image ne peut pas être envoyée. Choisis une autre image ou contacte le support si tu penses que c'est une erreur.",
+        ["huberror.msgr_storage_full"] = "Ton espace de stockage d'images est plein. Supprime des images ou attends que les plus anciennes expirent, puis réessaie.",
+        ["huberror.msgr_image_too_large"] = "Cette image est trop volumineuse.",
+        ["huberror.msgr_image_invalid"] = "Cette image n'a pas pu être lue.",
+    };
+}

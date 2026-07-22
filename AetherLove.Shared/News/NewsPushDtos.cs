@@ -1,3 +1,4 @@
+using System;
 using MessagePack;
 
 namespace AetherLove.Shared.News;
@@ -9,4 +10,4 @@ public sealed record NewsPublishedPushDto(NewsSummaryDto Summary);
 /// <summary>Server→client push of an admin "test push to staff": a live preview of a (possibly unpublished)
 /// news item, sent only to connected moderators/admins. Doesn't change the item's status or seen-state.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
-public sealed record NewsTestPushDto(NewsSummaryDto Summary);
+public sealed record NewsTestPushDto(NewsSummaryDto Summary, Guid ForProfileId = default);

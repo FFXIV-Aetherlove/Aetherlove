@@ -1,0 +1,13 @@
+<Project Sdk="Dalamud.NET.Sdk/15.0.0">
+  <PropertyGroup>
+    <RootNamespace>AetherOS.Shell</RootNamespace>
+    <AssemblyName>AetherOS.Shell</AssemblyName>
+    <Use_DalamudPackager>false</Use_DalamudPackager>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Dalamud.Bindings.ImGui" Private="false" />
+    <ProjectReference Include="..\AetherLove.AppKit\AetherLove.AppKit.csproj" />
+    <ProjectReference Include="..\AetherLove.Shared\AetherLove.Shared.csproj" />
+    <ProjectReference Include="..\AetherOS.Sdk\AetherOS.Sdk.csproj" />
+  </ItemGroup>
+</Project>

@@ -59,5 +59,5 @@ public sealed record ProfileDetailDto(
     // Supporter cosmetics; the server sends None/false unless the profile currently holds the flag.
     NameStyle NameStyle = NameStyle.None,
     bool IsSupporter = false,
-    // The peer's live hangout, when the caller may see it; drives the profile banner.
+    // Retired: hangouts are account-level and never surface on dating profiles. Always null.
     HangoutSummaryDto? ActiveHangout = null);

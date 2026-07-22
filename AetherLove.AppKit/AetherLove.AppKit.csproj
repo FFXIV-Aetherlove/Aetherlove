@@ -1,0 +1,27 @@
+<Project Sdk="Dalamud.NET.Sdk/15.0.0">
+  <PropertyGroup>
+    <RootNamespace>AetherLove</RootNamespace>
+    <AssemblyName>AetherLove.AppKit</AssemblyName>
+    <Use_DalamudPackager>false</Use_DalamudPackager>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="AetherLovePlugin" />
+    <InternalsVisibleTo Include="AetherLove.Core" />
+    <InternalsVisibleTo Include="AetherOS.Shell" />
+    <InternalsVisibleTo Include="AetherOS.Apps.Hangouts" />
+    <InternalsVisibleTo Include="AetherOS.Apps.Places" />
+    <InternalsVisibleTo Include="AetherOS.Apps.Settings" />
+    <InternalsVisibleTo Include="AetherOS.Apps.News" />
+    <InternalsVisibleTo Include="AetherOS.Apps.Feedback" />
+    <InternalsVisibleTo Include="AetherOS.Apps.Love" />
+    <InternalsVisibleTo Include="AetherOS.Apps.Messenger" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="System.Windows.Extensions" Version="10.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.10" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\AetherLove.Shared\AetherLove.Shared.csproj" />
+    <ProjectReference Include="..\AetherOS.Sdk\AetherOS.Sdk.csproj" />
+  </ItemGroup>
+</Project>

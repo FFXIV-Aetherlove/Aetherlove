@@ -1,0 +1,11 @@
+<Project Sdk="Dalamud.NET.Sdk/15.0.0">
+  <PropertyGroup>
+    <RootNamespace>AetherOS.Apps.Photos</RootNamespace>
+    <AssemblyName>AetherOS.Apps.Photos</AssemblyName>
+    <Use_DalamudPackager>false</Use_DalamudPackager>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Dalamud.Bindings.ImGui" Private="false" />
+    <ProjectReference Include="..\AetherOS.Sdk\AetherOS.Sdk.csproj" />
+  </ItemGroup>
+</Project>

@@ -19,10 +19,17 @@ public static class HubErrors
     public const string InvalidRequest = "invalid_request";
     public const string Unauthenticated = "unauthenticated";
     public const string Banned = "banned";
+    /// <summary>The whole account is banned (AetherAccount.DisabledAtUtc): every non-info hub method aborts with this,
+    /// and the shell gates all server-backed apps off AetherAccountInfoDto.AccountDisabled.</summary>
+    public const string AccountBanned = "account_banned";
     public const string RateLimited = "rate_limited";
 
     public const string ProfileNotFound = "profile_not_found";
     public const string ProfileNotVisible = "profile_not_visible";
+    /// <summary>The target profile sits past the account's allowance (supporter lapsed); selecting it is refused.</summary>
+    public const string ProfileLocked = "profile_locked";
+    /// <summary>The account is at its profile allowance; creating another needs supporter status (or is capped).</summary>
+    public const string ProfileLimitReached = "profile_limit_reached";
     public const string DeckExpired = "deck_expired";
     public const string NoActiveMatch = "no_active_match";
     public const string PeerKeysMissing = "peer_keys_missing";
@@ -86,6 +93,32 @@ public static class HubErrors
     public const string HangoutTimesInvalid = "hangout_times_invalid";
     /// <summary>Arg 0: max visible characters.</summary>
     public const string HangoutDescriptionTooLong = "hangout_description_too_long";
+
+    public const string MessengerDisabled = "messenger_disabled";
+    public const string MsgrCodeNotFound = "msgr_code_not_found";
+    public const string MsgrSelf = "msgr_self";
+    public const string MsgrAlreadyContact = "msgr_already_contact";
+    public const string MsgrRequestPending = "msgr_request_pending";
+    /// <summary>Arg 0: the contact cap.</summary>
+    public const string MsgrContactLimit = "msgr_contact_limit";
+    /// <summary>Arg 0: the outstanding-request cap.</summary>
+    public const string MsgrPendingLimit = "msgr_pending_limit";
+    public const string MsgrNotContact = "msgr_not_contact";
+    /// <summary>Arg 0: the created-groups cap.</summary>
+    public const string MsgrGroupLimit = "msgr_group_limit";
+    /// <summary>Arg 0: the group size cap.</summary>
+    public const string MsgrGroupFull = "msgr_group_full";
+    public const string MsgrNotOwner = "msgr_not_owner";
+    public const string MsgrNotMember = "msgr_not_member";
+    public const string MsgrGroupNameInvalid = "msgr_group_name_invalid";
+    public const string MsgrAddsDisabled = "msgr_adds_disabled";
+    public const string MsgrKeysMissing = "msgr_keys_missing";
+    /// <summary>An uploaded image was rejected by automated moderation (CSAM).</summary>
+    public const string MsgrImageRejected = "msgr_image_rejected";
+    /// <summary>The account's concurrent image-storage quota is full.</summary>
+    public const string MsgrStorageFull = "msgr_storage_full";
+    public const string MsgrImageTooLarge = "msgr_image_too_large";
+    public const string MsgrImageInvalid = "msgr_image_invalid";
 
     public const string PatreonDisabled = "patreon_disabled";
     public const string PatreonAlreadyLinked = "patreon_already_linked";

@@ -1,0 +1,20 @@
+<Project Sdk="Dalamud.NET.Sdk/15.0.0">
+  <PropertyGroup>
+    <RootNamespace>AetherLove</RootNamespace>
+    <AssemblyName>AetherLove.Core</AssemblyName>
+    <Use_DalamudPackager>false</Use_DalamudPackager>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="AetherLovePlugin" />
+    <InternalsVisibleTo Include="AetherOS.Apps.Love" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="10.0.10" />
+    <PackageReference Include="BouncyCastle.Cryptography" Version="2.6.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\AetherLove.AppKit\AetherLove.AppKit.csproj" />
+    <ProjectReference Include="..\AetherLove.Shared\AetherLove.Shared.csproj" />
+  </ItemGroup>
+</Project>

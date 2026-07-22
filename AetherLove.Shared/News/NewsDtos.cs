@@ -34,3 +34,13 @@ public sealed record NewsDto(
     NewsStatus Status,
     DateTimeOffset? PublishedAtUtc,
     NewsLineDto[] Lines);
+
+/// <summary>A compact card for a chat news share (<c>[news=guid]</c>). Like the venue card it is fetched live
+/// by the receiving client, so the server never stores that a card was shared and it always reflects the
+/// current published entry (missing / unpublished entries fetch as null and render a tombstone).</summary>
+[MessagePackObject(keyAsPropertyName: true)]
+public sealed record NewsCardDto(
+    Guid Id,
+    string Title,
+    string Preview,
+    DateTimeOffset? PublishedAtUtc);

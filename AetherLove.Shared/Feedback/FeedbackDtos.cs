@@ -10,8 +10,9 @@ public enum FeedbackKind : byte
     Other = 2,
 }
 
-/// <summary>Plugin → server payload for a piece of user feedback.</summary>
+/// <summary>User feedback payload; App field (optional for wire compatibility) identifies the target app.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record SubmitFeedbackRequest(
     FeedbackKind Kind,
-    string Message);
+    string Message,
+    string App = "");

@@ -3,7 +3,10 @@ using MessagePack;
 
 namespace AetherLove.Shared.Messaging;
 
-/// <summary>X25519 identity bundle. Server stores opaque; private key is wrapped under the user's passphrase.</summary>
+/// <summary>X25519 identity bundle. Server stores opaque; private key is wrapped under the user's passphrase
+/// KEK. The trailing profile-wrap fields (account bundles only, default null) carry a second wrap of the same
+/// private key under a key derived from one profile's private key, so a device that has that profile unlocked
+/// provisions the account keypair without ever holding the passphrase KEK.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record KeyBundleDto(
     byte[] PublicKey,
@@ -12,7 +15,10 @@ public sealed record KeyBundleDto(
     int KdfMemoryKb,
     int KdfIterations,
     int KdfParallelism,
-    byte[] WrapNonce);
+    byte[] WrapNonce,
+    Guid? WrapProfileId = null,
+    byte[]? ProfileWrappedPrivateKey = null,
+    byte[]? ProfileWrapNonce = null);
 
 /// <summary>One ciphertext message as the server stores and serves it. The reaction/reply/pin fields are
 /// additive (default null) so an older client that lacks them simply ignores the extra keys.
@@ -33,12 +39,30 @@ public sealed record EncryptedMessageDto(
     DateTimeOffset? PinnedAtUtc = null,
     DateTimeOffset UpdatedAtUtc = default);
 
-/// <summary>Load-all conversation snapshot with the peer's public key.</summary>
+/// <summary>One era of a user's public-key timeline. Messages sent inside [FromUtc, UntilUtc) were encrypted
+/// against this public key; UntilUtc null = the active key. Produced by a passphrase reset, which retires the
+/// old bundle but keeps its public half so the PEER's history stays readable.</summary>
+[MessagePackObject(keyAsPropertyName: true)]
+public sealed record KeyHistoryEntryDto(
+    byte[] PublicKey,
+    DateTimeOffset FromUtc,
+    DateTimeOffset? UntilUtc);
+
+/// <summary>Load-all conversation snapshot with the peer's public key. The trailing fields are additive
+/// (default null) so older clients ignore them: <see cref="PeerKeyHistory"/> is the peer's full key timeline
+/// (reset boundaries render the "keys reset" notice), <see cref="MyKeysCreatedAtUtc"/> is when the CALLER's
+/// active keypair was created (anything older cannot be decrypted after an own reset).</summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record ConversationHistoryDto(
     Guid PeerProfileId,
     byte[] PeerPublicKey,
-    EncryptedMessageDto[] Messages);
+    EncryptedMessageDto[] Messages,
+    KeyHistoryEntryDto[]? PeerKeyHistory = null,
+    DateTimeOffset? MyKeysCreatedAtUtc = null);
+
+/// <summary>Push to every active match peer when a user resets their E2E keys.</summary>
+[MessagePackObject(keyAsPropertyName: true)]
+public sealed record PeerKeysResetPushDto(Guid PeerProfileId, byte[] NewPublicKey, Guid ForProfileId = default);
 
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record SendMessageRequest(
@@ -60,22 +84,24 @@ public sealed record MessageReceivedPushDto(
     byte[] Ciphertext,
     byte[] Nonce,
     DateTimeOffset CreatedAtUtc,
-    Guid? ReplyToMessageId = null);
+    Guid? ReplyToMessageId = null,
+    Guid ForProfileId = default);
 
 /// <summary>Push from server to the sender when the recipient marks the conversation read.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record MessageReadPushDto(
     Guid ByProfileId,
     DateTimeOffset ReadAtUtc,
-    Guid[] MessageIds);
+    Guid[] MessageIds,
+    Guid ForProfileId = default);
 
 /// <summary>Push to both sides when one of them unmatches.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
-public sealed record UnmatchedPushDto(Guid OtherProfileId);
+public sealed record UnmatchedPushDto(Guid OtherProfileId, Guid ForProfileId = default);
 
 /// <summary>Push to the blocked side; their plugin should close the chat and drop the row.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
-public sealed record BlockedByPeerPushDto(Guid OtherProfileId);
+public sealed record BlockedByPeerPushDto(Guid OtherProfileId, Guid ForProfileId = default);
 
 /// <summary>One row on the caller's blocked-users page.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
@@ -102,7 +128,9 @@ public sealed record MatchSummaryDto(
     bool IsPinned,
     // Supporter cosmetics; the server sends None/false unless the peer currently holds the flag.
     Profile.Enums.NameStyle PeerNameStyle = Profile.Enums.NameStyle.None,
-    bool PeerIsSupporter = false);
+    bool PeerIsSupporter = false,
+    // The peer's key timeline; more than one entry means they reset their E2E keys at some point.
+    KeyHistoryEntryDto[]? PeerKeyHistory = null);
 
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record MatchListDto(MatchSummaryDto[] Matches);
@@ -140,7 +168,11 @@ public sealed record ChatDeltaDto(
     DateTimeOffset NextMsgCursorUtc,
     DateTimeOffset NextMsgCursorCreatedUtc,
     DateTimeOffset NextMatchCursorUtc,
-    bool HasMore);
+    bool HasMore,
+    // The profile this delta was computed for (the caller's acting profile). The client drops a delta whose
+    // ForProfileId doesn't match its current cache owner, so a switch that changes the acting profile mid-sync
+    // can never merge one profile's chats into the other's cache. Defaulted for wire compatibility.
+    Guid ForProfileId = default);
 
 /// <summary>Add (<see cref="Add"/> = true) or remove a reaction shortcode on a message. The server only ever
 /// touches the caller's own reaction column, so a user can never remove another user's reactions.</summary>
@@ -167,7 +199,8 @@ public sealed record MessageReactionsChangedPushDto(
     Guid PeerProfileId,
     Guid MessageId,
     string[] MyReactions,
-    string[] TheirReactions);
+    string[] TheirReactions,
+    Guid ForProfileId = default);
 
 /// <summary>Returned to the caller and pushed to the peer when a message is pinned or unpinned.
 /// <see cref="PeerProfileId"/> is the conversation peer from the receiver's perspective.</summary>
@@ -175,4 +208,5 @@ public sealed record MessageReactionsChangedPushDto(
 public sealed record MessagePinChangedPushDto(
     Guid PeerProfileId,
     Guid MessageId,
-    DateTimeOffset? PinnedAtUtc);
+    DateTimeOffset? PinnedAtUtc,
+    Guid ForProfileId = default);

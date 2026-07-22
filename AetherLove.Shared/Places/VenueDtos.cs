@@ -52,6 +52,13 @@ public sealed record VenueOccurrenceDto(
     byte[][]? RsvpAvatars,
     byte[]? BannerWebp = null);
 
+/// <summary>One of the caller's own venue RSVPs, past or upcoming, for the calendar.</summary>
+[MessagePackObject(keyAsPropertyName: true)]
+public sealed record MyVenueRsvpDto(
+    Guid VenueId,
+    string VenueName,
+    DateTimeOffset StartUtc);
+
 /// <summary>Client-side Places preferences sent with every browse call. Empty masks = no filtering.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record PlacesFilterDto(

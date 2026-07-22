@@ -1,0 +1,56 @@
+<Solution>
+  <Project Path="AetherLove.Plugin/AetherLovePlugin.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="AetherLove.Shared/AetherLove.Shared.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="AetherLove.AppKit/AetherLove.AppKit.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="AetherLove.Core/AetherLove.Core.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="AetherOS.Apps.Calendar/AetherOS.Apps.Calendar.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="AetherOS.Apps.Camera/AetherOS.Apps.Camera.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="AetherOS.Apps.Clock/AetherOS.Apps.Clock.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="AetherOS.Apps.Feedback/AetherOS.Apps.Feedback.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="AetherOS.Apps.Hangouts/AetherOS.Apps.Hangouts.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="AetherOS.Apps.Love/AetherOS.Apps.Love.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="AetherOS.Apps.Messenger/AetherOS.Apps.Messenger.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="AetherOS.Apps.News/AetherOS.Apps.News.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="AetherOS.Apps.Photos/AetherOS.Apps.Photos.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="AetherOS.Apps.Places/AetherOS.Apps.Places.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="AetherOS.Apps.Settings/AetherOS.Apps.Settings.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="AetherOS.Apps.Weather/AetherOS.Apps.Weather.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="AetherOS.Sdk/AetherOS.Sdk.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="AetherOS.Shell/AetherOS.Shell.csproj">
+    <Platform Project="x64" />
+  </Project>
+</Solution>

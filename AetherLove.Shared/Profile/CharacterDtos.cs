@@ -3,10 +3,7 @@ using MessagePack;
 
 namespace AetherLove.Shared.Profile;
 
-/// <summary>One RP character (OC) on a profile. Presentational metadata only: never matchable and never
-/// filtered on. <see cref="ImageBytes"/> is null when the character has no image or the viewer may not see
-/// it (peers only ever receive approved images); <see cref="ImageIsNsfw"/> drives the client-side blur
-/// exactly like <see cref="ProfilePhotoDto.IsNsfw"/>.</summary>
+/// <summary>Presentational RP character; never matchable or filtered. ImageBytes null when not visible to peer; ImageIsNsfw mirrors ProfilePhotoDto blur.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record ProfileCharacterDto(
     Guid Id,
@@ -14,7 +11,7 @@ public sealed record ProfileCharacterDto(
     string Bio,
     byte[]? ImageBytes,
     bool ImageIsNsfw,
-    // Supporter-only extra images; peers only ever receive approved ones while the owner holds the flag.
+    // Supporter-only extra images; peers see only approved ones while owner holds flag.
     CharacterImageDto[]? ExtraImages = null);
 
 /// <summary>One supporter extra image on an RP character.</summary>
@@ -24,10 +21,7 @@ public sealed record CharacterImageDto(
     byte[] Webp,
     bool IsNsfw);
 
-/// <summary>The caller's own RP characters plus their allowance. <see cref="MaxCharacters"/> is resolved
-/// server-side (config, per-role) so a future supporter tier can raise it without client changes.
-/// <see cref="ProfileIsNsfw"/> mirrors the caller's own NSFW flag so the editor knows whether the
-/// per-image NSFW toggle is available.</summary>
+/// <summary>Caller's RP characters with allowance. MaxCharacters is server-resolved; ProfileIsNsfw gates the per-image NSFW toggle.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record MyCharactersDto(
     ProfileCharacterDto[] Characters,

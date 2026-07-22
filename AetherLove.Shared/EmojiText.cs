@@ -10,8 +10,7 @@ public static class EmojiText
     /// <summary>Max user-visible bio length (each emoji shortcode counts as one).</summary>
     public const int MaxBioLength = 500;
 
-    /// <summary>Hard cap on the raw stored/typed bio. Emoji shortcodes make the raw far longer than the
-    /// visible length, but this bounds abuse from a tampered client. Matches the plugin's input buffer.</summary>
+    /// <summary>Hard cap on raw bio to bound tampered-client abuse; shortcodes make raw far longer than visible.</summary>
     public const int MaxBioRawLength = 4096;
 
     private static readonly Regex EmojiPattern =

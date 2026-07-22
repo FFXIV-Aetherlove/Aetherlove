@@ -46,14 +46,22 @@ public sealed record SwipeResultDto(
 public sealed record ReswipeResultDto(
     int ReswipesRemaining);
 
-/// <summary>SignalR push to the other side of a fresh match.</summary>
+/// <summary>SignalR push to the other side of a fresh match. Delivered on the account channel;
+/// <see cref="ForProfileId"/> names which of the account's profiles the match belongs to.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record MatchCreatedPushDto(
     Guid MatchId,
     Guid OtherProfileId,
     string OtherDisplayName,
-    DateTimeOffset CreatedAtUtc);
+    DateTimeOffset CreatedAtUtc,
+    Guid ForProfileId = default);
 
-/// <summary>SignalR push telling the client to re-fetch its deck (e.g. a moderator reset the user's swipes).</summary>
+/// <summary>SignalR push telling the client to re-fetch its deck (e.g. a moderator reset the user's swipes).
+/// <see cref="ForProfileId"/> is the profile whose deck changed.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
-public sealed record DeckRefreshPushDto(string Reason);
+public sealed record DeckRefreshPushDto(string Reason, Guid ForProfileId = default);
+
+/// <summary>SignalR push nudging the recipient that a superlike landed; their next deck fetch surfaces the
+/// superliker on top. <see cref="ForProfileId"/> is the recipient profile.</summary>
+[MessagePackObject(keyAsPropertyName: true)]
+public sealed record SuperlikeReceivedPushDto(Guid ForProfileId = default);
