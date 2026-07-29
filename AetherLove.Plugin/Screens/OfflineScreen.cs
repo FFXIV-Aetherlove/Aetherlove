@@ -74,9 +74,17 @@ public sealed class OfflineScreen
             new Vector2(pos.X, bandTop - Px(36f)), new Vector2(pos.X + size.X, pos.Y + size.Y),
             clear, clear, solid, solid);
 
+        var titleBottom = bandTop + Px(34f);
         using (UiFonts.H2?.Push())
         {
-            CenterText(dl, cx, bandTop, Loc.T("common.offline_title"), U32(new Vector4(0.96f, 0.58f, 0.58f, 1f)));
+            var lineH = ImGui.GetTextLineHeightWithSpacing();
+            var lines = WrapLines(Loc.T("common.offline_title"), size.X - Px(40f));
+            var col = U32(new Vector4(0.96f, 0.58f, 0.58f, 1f));
+            for (var i = 0; i < lines.Count; i++)
+            {
+                CenterText(dl, cx, bandTop + i * lineH, lines[i], col);
+            }
+            titleBottom = bandTop + (lines.Count - 1) * lineH + Px(34f);
         }
 
         using (UiFonts.H3?.Push())
@@ -87,11 +95,10 @@ public sealed class OfflineScreen
                 ? Loc.T("common.offline_body")
                 : $"{Loc.T("common.offline_maintenance")} {notice}";
             var lines = WrapLines(body, size.X - Px(56f));
-            var y = bandTop + Px(34f);
             var col = U32(new Vector4(0.82f, 0.82f, 0.90f, 1f));
             for (var i = 0; i < lines.Count; i++)
             {
-                CenterText(dl, cx, y + i * lineH, lines[i], col);
+                CenterText(dl, cx, titleBottom + i * lineH, lines[i], col);
             }
         }
 

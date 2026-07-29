@@ -206,10 +206,14 @@ public sealed class SelfieCaptureOverlay : Window
         var cancelMin = new Vector2(bx + takeW + gap, by);
         var cancelMax = new Vector2(cancelMin.X + cancelW, by + btnH);
 
-        var overTake = InRect(mouse, takeMin, takeMax);
-        var overCancel = InRect(mouse, cancelMin, cancelMax);
-        var overResize = InRect(mouse, handleMin, br);
-        var overMove = !overResize && InRect(mouse, tl, moveMax);
+        // Yield to any real ImGui window under the cursor (another plugin's, for example): reacting anyway
+        // made dragging that window drag the cutout along with it. WantCaptureMouse is the wrong signal here
+        // because the overlay claims it itself below; hovered-window state is what NoInputs excludes us from.
+        var mouseFree = !ImGui.IsWindowHovered(ImGuiHoveredFlags.AnyWindow);
+        var overTake = mouseFree && InRect(mouse, takeMin, takeMax);
+        var overCancel = mouseFree && InRect(mouse, cancelMin, cancelMax);
+        var overResize = mouseFree && InRect(mouse, handleMin, br);
+        var overMove = mouseFree && !overResize && InRect(mouse, tl, moveMax);
 
         DrawHint(origin, size);
         DrawButton(takeMin, takeMax, Loc.T("common.selfie_take"), overTake, primary: true);

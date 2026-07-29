@@ -55,6 +55,8 @@ public sealed partial class AetherLoveApp : IAetherApp, IAppSettings
     private readonly ILoveHost _host;
     private readonly IAppCapabilities _caps;
     private readonly VenueShareContext _venueShare;
+    private readonly LevemeteShareContext _levemeteShare;
+    private readonly MarketShareContext _marketShare;
     private readonly HangoutShareContext _hangoutShare;
     private readonly NewsShareContext _newsShare;
     private readonly CalendarShareContext _calendarShare;
@@ -68,7 +70,7 @@ public sealed partial class AetherLoveApp : IAetherApp, IAppSettings
     private bool _entered;
     private Guid _enteredProfileId;
 
-    private static readonly string[] AcceptedTypes = [ShareTypes.Venue, ShareTypes.Hangout, ShareTypes.News, ShareTypes.CalendarEvent];
+    private static readonly string[] AcceptedTypes = [ShareTypes.Venue, ShareTypes.Hangout, ShareTypes.News, ShareTypes.CalendarEvent, ShareTypes.Levemete, ShareTypes.MarketItem];
 
     public AetherLoveApp(
         ILoveHost host,
@@ -91,9 +93,13 @@ public sealed partial class AetherLoveApp : IAetherApp, IAppSettings
         HangoutShareContext hangoutShare,
         NewsShareContext newsShare,
         CalendarShareContext calendarShare,
+        LevemeteShareContext levemeteShare,
+        MarketShareContext marketShare,
         PatreonLinkFlow patreon,
         SiblingBadgeStore siblingBadges,
-        AetherLove.Services.Messenger.MessengerStore messengerStore)
+        AetherLove.Services.Messenger.MessengerStore messengerStore,
+        AetherLove.Services.Market.MarketDataService marketData,
+        AetherLove.Services.Market.MarketItemIndex marketIndex)
     {
         _host = host;
         _caps = caps;
@@ -106,6 +112,8 @@ public sealed partial class AetherLoveApp : IAetherApp, IAppSettings
         _hangoutShare = hangoutShare;
         _newsShare = newsShare;
         _calendarShare = calendarShare;
+        _levemeteShare = levemeteShare;
+        _marketShare = marketShare;
         _keys = keys;
         _crypto = crypto;
         _sharePicker = new ShareMatchPickerView(chatCache);
@@ -122,6 +130,7 @@ public sealed partial class AetherLoveApp : IAetherApp, IAppSettings
         _settings = new SettingsScreen(_router, hub, signal, tokens, chatCache, _shell, bootstrap);
         _profile = new ProfileScreen(_router, hub, flairCatalog, bootstrap, _settings, _shell);
         _deck = new DeckScreen(_router, _profile, hub, pendingMatch, notifications, ownAvatar, host, flairCatalog, _settings);
+        _profile.OnProfileHidden = id => _deck.RemoveCard(id);
 
         var effects = new IMatchEffect[]
         {
@@ -152,14 +161,14 @@ public sealed partial class AetherLoveApp : IAetherApp, IAppSettings
         _chatCategory = new ChatCategoryScreen(_chatList);
         _encVerify = new EncryptionVerificationScreen(_router, keys);
         _chat = new ChatScreen(_shell, _router, _chatList, _profile, _encVerify, hub, crypto, keys, chatEvents,
-            notifications, chatSync, _settings, venueShare, hangoutShare, newsShare, calendarShare, hangoutOpener,
-            messengerStore);
+            notifications, chatSync, _settings, venueShare, hangoutShare, newsShare, calendarShare, levemeteShare,
+            marketShare, hangoutOpener, messengerStore, marketData, marketIndex, caps);
         _myProfile = new MyProfileScreen(_shell, _profile, hub, ownAvatar, rateLimit, saveErr, imageReq, caps,
             bootstrap);
         _blocked = new BlockedScreen(_router, hub);
         _onboarding = new OnboardingScreen(_router, hub, bootstrap, rateLimit, saveErr, imageReq, caps, _shell);
         _supporterThanks = new SupporterThanksScene(patreon);
-        _profilePicker = new ProfilePickerScreen(_router, hub, bootstrap, keys, crypto, _settings);
+        _profilePicker = new ProfilePickerScreen(_router, hub, bootstrap, keys, _settings);
         _settings.OpenProfilePicker = () =>
         {
             _profilePicker.OpenedFromSettings = true;
@@ -170,9 +179,6 @@ public sealed partial class AetherLoveApp : IAetherApp, IAppSettings
         _siblingBadges = siblingBadges;
         siblingBadges.Changed += () =>
         {
-            var active = UiHost.Configuration.Auth.ActiveProfileId ?? Guid.Empty;
-            var (sm, su) = siblingBadges.TotalsExcluding(active);
-            UiHost.Log.Debug("[SIB] tile recompute: active {Active:N} activeBadge={ActiveBadge} + siblings(matches={SibMatches}, unread={SibUnread}) = tile {Tile}.", active, _notifications.TotalBadge, sm, su, _notifications.TotalBadge + sm + su);
             if (_router.Current == LoveView.ProfilePicker)
             {
                 _profilePicker.Refetch();
@@ -373,6 +379,8 @@ public sealed partial class AetherLoveApp : IAetherApp, IAppSettings
             ShareTypes.Hangout when Guid.TryParse(item.RefId, out var hangoutId) => HangoutShare.Compose(hangoutId),
             ShareTypes.News when Guid.TryParse(item.RefId, out var newsId) => NewsShare.Compose(newsId),
             ShareTypes.CalendarEvent => CalendarEventShare.TryComposeFromShareItem(item),
+            ShareTypes.Levemete when Guid.TryParse(item.RefId, out var adId) => LevemeteShare.Compose(adId),
+            ShareTypes.MarketItem when uint.TryParse(item.RefId, out var marketItemId) => MarketShare.Compose(marketItemId),
             _ => null,
         };
         var myPriv = _keys.GetPrivateKey();
@@ -406,6 +414,12 @@ public sealed partial class AetherLoveApp : IAetherApp, IAppSettings
                 break;
             case ShareTypes.CalendarEvent when CalendarEventShare.TryComposeFromShareItem(item) is { } calToken:
                 _calendarShare.PendingShareToken = calToken;
+                break;
+            case ShareTypes.Levemete when Guid.TryParse(item.RefId, out var adId):
+                _levemeteShare.PendingShareLevemeteId = adId;
+                break;
+            case ShareTypes.MarketItem when uint.TryParse(item.RefId, out var marketItemId):
+                _marketShare.PendingShareItemId = marketItemId;
                 break;
             default:
                 return;

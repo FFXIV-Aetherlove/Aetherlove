@@ -159,6 +159,41 @@ public sealed class ChatCacheStore
         WriteConversation(peer);
     }
 
+    /// <summary>Author delete arrived by push: scrub the cached ciphertext right away instead of waiting for
+    /// the next delta, so the deleted content leaves this device's disk as soon as it leaves the server.</summary>
+    public void ApplyMessageDeleted(Guid peer, Guid messageId)
+    {
+        var found = false;
+        lock (_lock)
+        {
+            if (!_conversations.TryGetValue(peer, out var list))
+            {
+                return;
+            }
+            for (var i = 0; i < list.Count; i++)
+            {
+                if (list[i].Id == messageId)
+                {
+                    list[i] = list[i] with
+                    {
+                        Ciphertext = [],
+                        Nonce = [],
+                        DeletedAtUtc = DateTimeOffset.UtcNow,
+                        PinnedAtUtc = null,
+                        MyReactions = [],
+                        TheirReactions = [],
+                    };
+                    found = true;
+                    break;
+                }
+            }
+        }
+        if (found)
+        {
+            WriteConversation(peer);
+        }
+    }
+
     /// <summary>Scopes the cache to the signed-in profile. Each profile has its own subfolder, so switching
     /// swaps folders in place and never destroys a sibling's cache. <see cref="Guid.Empty"/> (a server that
     /// predates the field) is a no-op.</summary>
@@ -172,10 +207,8 @@ public sealed class ChatCacheStore
         {
             if (_owner == profileId)
             {
-                UiHost.Log.Debug("[PSW] ChatCache.EnsureOwner: already owned by {Profile:N} ({Count} matches), no-op.", profileId, _matches.Count);
                 return;
             }
-            var prev = _owner;
             _matches.Clear();
             _conversations.Clear();
             _cursor = new CacheCursor(DateTimeOffset.MinValue, DateTimeOffset.MinValue, DateTimeOffset.MinValue);
@@ -189,7 +222,6 @@ public sealed class ChatCacheStore
             {
             }
             Load();
-            UiHost.Log.Debug("[PSW] ChatCache.EnsureOwner: swapped {Prev:N} -> {Profile:N}, loaded {Count} matches from {Dir}.", prev, profileId, _matches.Count, _dir);
         }
         WriteOwner();
     }
@@ -233,10 +265,8 @@ public sealed class ChatCacheStore
             // Drop deltas for mismatched profiles (prevents chat merge during no-reconnect switches); Empty pre-field servers keep as-is.
             if (d.ForProfileId != Guid.Empty && d.ForProfileId != _owner)
             {
-                UiHost.Log.Debug("[PSW] ChatCache.ApplyDelta: DROPPED delta for {For:N} (owner={Owner:N}) - {Msgs} convos / {Matches} changed / {Removed} removed.", d.ForProfileId, _owner, d.Conversations.Length, d.ChangedMatches.Length, d.RemovedMatches.Length);
                 return;
             }
-            UiHost.Log.Debug("[PSW] ChatCache.ApplyDelta: applying delta for {For:N} to owner {Owner:N} - {Msgs} convos / {Matches} changed / {Removed} removed.", d.ForProfileId, _owner, d.Conversations.Length, d.ChangedMatches.Length, d.RemovedMatches.Length);
             foreach (var c in d.Conversations)
             {
                 var list = _conversations.TryGetValue(c.PeerProfileId, out var existing) ? existing : new List<EncryptedMessageDto>();

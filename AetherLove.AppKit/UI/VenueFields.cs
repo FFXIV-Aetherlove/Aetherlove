@@ -352,7 +352,12 @@ internal static class VenueFields
     internal const uint DimStar = 0x40FFFFFFu;
 
     internal static void DrawReviewCard(VenueReviewDto review, ISharedImmediateTexture? avatarTex,
-        float cardW, float padX)
+        float cardW, float padX) =>
+        DrawReviewCard(review.Id, review.Rating, review.Text, review.CreatedAtUtc, review.Mine,
+            avatarTex, cardW, padX);
+
+    internal static void DrawReviewCard(Guid id, short rating, string text, DateTimeOffset createdAtUtc,
+        bool mine, ISharedImmediateTexture? avatarTex, float cardW, float padX)
     {
         var dl = ImGui.GetWindowDrawList();
         var pad = Px(padX);
@@ -361,8 +366,8 @@ internal static class VenueFields
         var textX = avatarLeft + avatarR * 2f + Px(12f);
         var contentW = cardW - textX - Px(12f);
 
-        var parsed = ParsedMessage.Parse(review.Text);
-        var textH = review.Text.Length > 0 ? parsed.MeasureHeight(contentW) : 0f;
+        var parsed = ParsedMessage.Parse(text);
+        var textH = text.Length > 0 ? parsed.MeasureHeight(contentW) : 0f;
 
         var starPx = ImGui.GetFontSize() * 0.82f;
         var starSz = IconDraw.Measure(FontAwesomeIcon.Star, starPx);
@@ -377,7 +382,7 @@ internal static class VenueFields
         var br = tl + new Vector2(cardW, cardH);
 
         dl.AddRectFilled(tl, br, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.045f)), Px(10f));
-        if (review.Mine)
+        if (mine)
         {
             dl.AddRect(tl, br, ImGui.GetColorU32(ThemeService.Current.Accent with { W = 0.40f }), Px(10f));
         }
@@ -400,10 +405,10 @@ internal static class VenueFields
         {
             IconDraw.Add(dl, FontAwesomeIcon.Star, starPx,
                 new Vector2(tl.X + textX + i * (starSz.X + Px(2f)), tl.Y + starY),
-                i < review.Rating ? GoldStar : DimStar);
+                i < rating ? GoldStar : DimStar);
         }
 
-        var dateStr = review.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd");
+        var dateStr = createdAtUtc.ToLocalTime().ToString("yyyy-MM-dd");
         var dateSz = ImGui.CalcTextSize(dateStr);
         dl.AddText(new Vector2(br.X - dateSz.X - Px(12f), tl.Y + avatarCenterY - dateSz.Y * 0.5f),
             ImGui.GetColorU32(UiColors.Muted), dateStr);
@@ -411,7 +416,7 @@ internal static class VenueFields
         if (textH > 0f)
         {
             ImGui.SetCursorScreenPos(new Vector2(tl.X + textX, tl.Y + textY));
-            parsed.DrawWrapped($"##rev_{review.Id:N}", contentW);
+            parsed.DrawWrapped($"##rev_{id:N}", contentW);
         }
 
         ImGui.SetCursorScreenPos(new Vector2(origin.X, br.Y));

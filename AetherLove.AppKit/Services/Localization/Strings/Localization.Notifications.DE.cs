@@ -14,6 +14,8 @@ internal static class NotificationsDe
 
         // Messenger (added after update 1.5.1)
         ["notif.msgr_message"] = "Du hast eine Messenger-Nachricht erhalten.",
+        ["notif.market_below"] = "{0} ist auf {1} gefallen",
+        ["notif.market_above"] = "{0} ist auf {1} gestiegen",
         ["notif.msgr_request"] = "{0} möchte dich im Messenger hinzufügen.",
         ["notif.msgr_open_link"] = "Messenger öffnen",
         ["notif.msgr_request_title"] = "Messenger-Anfrage",

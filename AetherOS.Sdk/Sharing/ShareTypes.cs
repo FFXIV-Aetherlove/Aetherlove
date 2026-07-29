@@ -8,4 +8,6 @@ public static class ShareTypes
     public const string Photo = "photo";
     public const string News = "news";
     public const string CalendarEvent = "calendar_event";
+    public const string Levemete = "levemete";
+    public const string MarketItem = "market_item";
 }

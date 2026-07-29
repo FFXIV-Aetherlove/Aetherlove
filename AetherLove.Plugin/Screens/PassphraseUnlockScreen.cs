@@ -22,7 +22,7 @@ public sealed class PassphraseUnlockScreen
     private readonly ScreenRouter _router;
     private readonly SessionBootstrapper _bootstrap;
     private readonly AetherHubContext _hub;
-    private readonly CryptoService _crypto;
+    private readonly AccountUnlockService _unlock;
     private readonly KeyStorageService _keys;
     private readonly TokenService _tokens;
 
@@ -45,7 +45,7 @@ public sealed class PassphraseUnlockScreen
         ScreenRouter router,
         SessionBootstrapper bootstrap,
         AetherHubContext hub,
-        CryptoService crypto,
+        AccountUnlockService unlock,
         KeyStorageService keys,
         TokenService tokens,
         PassphraseResetFlow resetFlow)
@@ -53,7 +53,7 @@ public sealed class PassphraseUnlockScreen
         _router = router;
         _bootstrap = bootstrap;
         _hub = hub;
-        _crypto = crypto;
+        _unlock = unlock;
         _keys = keys;
         _tokens = tokens;
         _resetFlow = resetFlow;
@@ -271,24 +271,18 @@ public sealed class PassphraseUnlockScreen
         {
             try
             {
-                var kek = _crypto.DeriveKEK(
-                    passphrase,
-                    bundle.KdfSalt,
-                    bundle.KdfMemoryKb,
-                    bundle.KdfIterations,
-                    bundle.KdfParallelism);
-                var privKey = _crypto.UnwrapPrivateKey(bundle.EncryptedPrivateKey, bundle.WrapNonce, kek);
-                if (privKey is null)
+                switch (await _unlock.UnlockAsync(passphrase, bundle).ConfigureAwait(false))
                 {
-                    _error = Loc.T("common.passphrase_incorrect");
-                    return;
+                    case AccountUnlockOutcome.Success:
+                        NavigateToTarget();
+                        return;
+                    case AccountUnlockOutcome.Unrecoverable:
+                        _error = Loc.T("common.passphrase_correct_unrecoverable");
+                        return;
+                    default:
+                        _error = Loc.T("common.passphrase_incorrect");
+                        return;
                 }
-                _keys.Store(bundle.PublicKey, privKey);
-                // The KEK is account-level: keep it so sibling profiles unlock and provision silently, and
-                // backfill the account passphrase parameters for a pre-passphrase-era account.
-                _keys.StoreKek(kek);
-                await TryBackfillAccountPassphraseAsync(bundle, kek).ConfigureAwait(false);
-                NavigateToTarget();
             }
             catch (Exception ex)
             {
@@ -300,29 +294,6 @@ public sealed class PassphraseUnlockScreen
                 _unlocking = false;
             }
         });
-    }
-
-    /// <summary>Publishes the account passphrase parameters when the account predates them, using this
-    /// bundle's KDF inputs (the passphrase just proved itself against them). Best-effort.</summary>
-    private async Task TryBackfillAccountPassphraseAsync(KeyBundleDto bundle, byte[] kek)
-    {
-        try
-        {
-            if (await _hub.GetAccountPassphraseAsync(CancellationToken.None).ConfigureAwait(false) is not null)
-            {
-                return;
-            }
-            var (verifier, verifierNonce) = _crypto.CreatePassphraseVerifier(kek);
-            await _hub.SetAccountPassphraseAsync(
-                new AetherLove.Shared.Profile.AccountPassphraseDto(
-                    bundle.KdfSalt, bundle.KdfMemoryKb, bundle.KdfIterations, bundle.KdfParallelism,
-                    verifier, verifierNonce),
-                CancellationToken.None).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            Plugin.Log.Warning(ex, "[PassphraseUnlock] Account passphrase backfill failed.");
-        }
     }
 
     private void NavigateToTarget()

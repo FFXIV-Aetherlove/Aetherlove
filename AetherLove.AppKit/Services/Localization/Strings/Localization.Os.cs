@@ -93,7 +93,7 @@ internal static class OsEn
         // OS account avatar (added after update 1.5.1)
         ["os_onboarding.header_avatar"] = "Avatar",
         ["os_onboarding.avatar_title"] = "Add a photo",
-        ["os_onboarding.avatar_body"] = "Pick a picture for your AetherOS profile. It's optional and only you see it — you can change it any time.",
+        ["os_onboarding.avatar_body"] = "Pick a picture for your AetherOS profile. It's optional and only you see it; you can change it any time.",
         ["os_onboarding.avatar_choose"] = "Choose photo",
         ["os_onboarding.avatar_change"] = "Change photo",
         // two-onboarding split (added after update 1.5.1)
@@ -217,5 +217,18 @@ internal static class OsEn
         ["os.home_menu_wallpaper"] = "Change wallpaper",
         // news app tile rename (added after update 2.0.0)
         ["os.app_news_tile"] = "News",
+
+        // battery easter egg (added after update 2.0.1)
+        ["os.battery_grass_body"] = "We care about your health, don't forget to go out, hydrate and touch some grass ;-)",
+        ["os.battery_grass_hint"] = "Please touch grass below to continue",
+        ["os.settings_hide_battery_grass"] = "Hide the touch grass notification after empty battery",
+        // levemetes (added after update 2.0.1)
+        ["os.app_levemetes"] = "Levemetes",
+        ["os.battery_grass_settings_hint"] = "(You can disable this joke under General in the Settings app)",
+
+        // added after update 2.0.1
+        ["os.menu_audio"] = "Audio settings",
+        ["os.app_market"] = "Market",
+        ["os.app_realtor"] = "Realtor",
     };
 }

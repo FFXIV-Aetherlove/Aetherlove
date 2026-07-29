@@ -14,6 +14,7 @@ public sealed class ChatEventBus
     public event Action<MatchCreatedPushDto>? MatchCreated;
     public event Action<MessageReactionsChangedPushDto>? ReactionsChanged;
     public event Action<MessagePinChangedPushDto>? PinChanged;
+    public event Action<MessageDeletedPushDto>? MessageDeleted;
     public event Action<PeerKeysResetPushDto>? PeerKeysReset;
 
     public void RaiseMessageReceived(MessageReceivedPushDto p) => MessageReceived?.Invoke(p);
@@ -23,5 +24,6 @@ public sealed class ChatEventBus
     public void RaiseMatchCreated(MatchCreatedPushDto p) => MatchCreated?.Invoke(p);
     public void RaiseReactionsChanged(MessageReactionsChangedPushDto p) => ReactionsChanged?.Invoke(p);
     public void RaisePinChanged(MessagePinChangedPushDto p) => PinChanged?.Invoke(p);
+    public void RaiseMessageDeleted(MessageDeletedPushDto p) => MessageDeleted?.Invoke(p);
     public void RaisePeerKeysReset(PeerKeysResetPushDto p) => PeerKeysReset?.Invoke(p);
 }

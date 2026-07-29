@@ -59,7 +59,7 @@ internal static class SettingsEn
         ["settings.popup_messages"] = "Show a popup for new messages",
         ["settings.popup_matches"] = "Show a popup for new matches",
         ["settings.hide_notifications_in_combat"] = "Hide notifications during combat",
-        ["settings.hide_notifications_in_combat_tooltip"] = "When enabled, you won't receive any notifications — chat announcements, popups, or sounds — while you're in combat.",
+        ["settings.hide_notifications_in_combat_tooltip"] = "When enabled, you won't receive any notifications (chat announcements, popups, or sounds) while you're in combat.",
         ["settings.auto_open_minimized"] = "Open minimized automatically when you log in",
         ["settings.pulse_optout"] = "Receive amazing messages from the Aethernet team to remind you to swipe",
         ["settings.pulse_optout_tooltip"] = "Every so often, AetherLove may drop a playful line into your game chat. Turn this off to stop them.",
@@ -227,5 +227,19 @@ internal static class SettingsEn
         ["settings.section_time_format"] = "Time format",
         ["settings.time_24h"] = "24-hour",
         ["settings.time_12h"] = "12-hour",
+
+        // added after update 2.0.1
+        ["settings.audio_sounds_off"] = "Notification sounds are currently turned off.",
+        ["settings.audio_sounds_enable"] = "Enable notification sounds",
+        ["settings.audio_volume"] = "Notification volume",
+        ["settings.audio_device"] = "Output device",
+        ["settings.audio_device_default"] = "System default",
+        ["settings.audio_test"] = "Play test sound",
+        ["settings.audio_test_ok"] = "Playing! If you hear nothing, try another output device above.",
+        ["settings.font_header"] = "Font",
+        ["settings.font_caption"] = "Applies to all text on the phone. Characters a font is missing fall back to the default font.",
+        ["settings.font_default"] = "Default",
+        ["settings.phone_size_header"] = "Phone size",
+        ["settings.mini_phone_size_header"] = "Miniature size",
     };
 }

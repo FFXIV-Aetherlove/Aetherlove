@@ -86,7 +86,7 @@ internal static class OsRu
         ["os_onboarding.finish"] = "Готово",
         ["os_onboarding.header_signin"] = "Вход",
         ["os_onboarding.header_passphrase"] = "Кодовая фраза",
-        ["os_onboarding.tos_1"] = "AetherOS — это фанатский плагин, предоставляемый «как есть», без каких-либо гарантий. Он может сломаться, потерять данные или перестать работать в любой момент, и вы используете его на свой страх и риск.",
+        ["os_onboarding.tos_1"] = "Фанатский плагин AetherOS предоставляется «как есть», без каких-либо гарантий. Он может сломаться, потерять данные или перестать работать в любой момент, и вы используете его на свой страх и риск.",
         ["os_onboarding.tos_2"] = "AetherOS не связан со Square Enix и не одобрен и не спонсируется ею.",
         ["os_onboarding.tos_3"] = "FINAL FANTASY и FINAL FANTASY XIV являются зарегистрированными товарными знаками Square Enix Holdings Co., Ltd. Все прочие товарные знаки принадлежат их владельцам.",
         ["os_onboarding.tos_4"] = "Продолжая, вы принимаете эти условия.",
@@ -217,5 +217,18 @@ internal static class OsRu
         ["os.home_menu_wallpaper"] = "Сменить обои",
         // news app tile rename (added after update 2.0.0)
         ["os.app_news_tile"] = "Новости",
+
+        // battery easter egg (added after update 2.0.1)
+        ["os.battery_grass_body"] = "Нам важно ваше здоровье: не забывайте выходить на улицу, пить воду и трогать травку ;-)",
+        ["os.battery_grass_hint"] = "Потрогайте травку внизу, чтобы продолжить",
+        ["os.settings_hide_battery_grass"] = "Скрывать напоминание про травку при разряженной батарее",
+        // levemetes (added after update 2.0.1)
+        ["os.app_levemetes"] = "Levemetes",
+        ["os.battery_grass_settings_hint"] = "(Эту шутку можно отключить в разделе «Общие» приложения «Настройки»)",
+
+        // added after update 2.0.1
+        ["os.menu_audio"] = "ÐÐ°ÑÑÑÐ¾Ð¹ÐºÐ¸ Ð·Ð²ÑÐºÐ°",
+        ["os.app_market"] = "Маркет",
+        ["os.app_realtor"] = "Риелтор",
     };
 }

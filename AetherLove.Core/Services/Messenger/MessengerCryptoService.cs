@@ -73,6 +73,16 @@ public sealed class MessengerCryptoService
                         return true;
                     }
                 }
+                if (bundle is { WrapProfileId: { } wrapper, ProfileWrappedPrivateKey: { Length: > 0 } stashWrapped, ProfileWrapNonce.Length: > 0 }
+                    && _keys.GetStashedPrivateKey(wrapper) is { } stashPriv)
+                {
+                    var stashKey = _crypto.DeriveAccountWrapKey(stashPriv, bundle.PublicKey);
+                    if (_crypto.UnwrapPrivateKey(stashWrapped, bundle.ProfileWrapNonce, stashKey) is { } viaStash)
+                    {
+                        _keys.StoreAccountKeys(bundle.PublicKey, viaStash);
+                        return true;
+                    }
+                }
                 _log.Warning("[MessengerCrypto] Neither the stored KEK nor the profile key opens the account bundle; recovery gate will prompt.");
                 return false;
             }

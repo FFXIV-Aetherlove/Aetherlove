@@ -217,5 +217,18 @@ internal static class OsPt
         ["os.home_menu_wallpaper"] = "Alterar papel de parede",
         // news app tile rename (added after update 2.0.0)
         ["os.app_news_tile"] = "Notícias",
+
+        // battery easter egg (added after update 2.0.1)
+        ["os.battery_grass_body"] = "A tua saúde importa-nos: não te esqueças de sair, hidratar-te e tocar na relva ;-)",
+        ["os.battery_grass_hint"] = "Toca na relva abaixo para continuar",
+        ["os.settings_hide_battery_grass"] = "Ocultar o aviso da relva quando a bateria acabar",
+        // levemetes (added after update 2.0.1)
+        ["os.app_levemetes"] = "Levemetes",
+        ["os.battery_grass_settings_hint"] = "(Podes desativar esta piada em Geral, na app Definições)",
+
+        // added after update 2.0.1
+        ["os.menu_audio"] = "DefiniÃ§Ãµes de Ã¡udio",
+        ["os.app_market"] = "Mercado",
+        ["os.app_realtor"] = "Imobiliária",
     };
 }

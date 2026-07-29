@@ -108,7 +108,8 @@ public sealed record MessengerMessageDto(
     Guid? ReplyToMessageId = null,
     MessengerReactionsDto[]? Reactions = null,
     DateTimeOffset? PinnedAtUtc = null,
-    MessengerImageDto? Image = null);
+    MessengerImageDto? Image = null,
+    DateTimeOffset? DeletedAtUtc = null);
 
 /// <summary>A plaintext (moderated, NOT E2E) image attachment on a message. The bytes live server-side and
 /// are fetched by <see cref="ImageId"/>; the server deletes the blob after <see cref="ExpiresAtUtc"/>.</summary>
@@ -248,6 +249,11 @@ public sealed record MessengerReactionPushDto(
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record MessengerPinPushDto(
     Guid ChatId, MessengerChatKind Kind, Guid MessageId, DateTimeOffset? PinnedAtUtc);
+
+/// <summary>The author deleted a message: every participant's client blanks its copy and renders the
+/// tombstone.</summary>
+[MessagePackObject(keyAsPropertyName: true)]
+public sealed record MessengerMessageDeletedPushDto(Guid ChatId, MessengerChatKind Kind, Guid MessageId);
 
 /// <summary>Group meta or membership changed; the client replaces the group row (and refetches keys when
 /// <see cref="MessengerGroupDto.KeyEpoch"/> advanced past what it holds).</summary>

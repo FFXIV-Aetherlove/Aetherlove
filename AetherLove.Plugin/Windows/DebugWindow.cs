@@ -9,6 +9,7 @@ using AetherLove.Services.Hub;
 using AetherLove.Services.Signal;
 using AetherLove.Shared;
 using AetherLove.Shared.Diagnostics;
+using AetherLove.UI;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Textures;
@@ -131,13 +132,32 @@ public sealed class DebugWindow : Window
             ImGui.TextDisabled("loading server info...");
         }
 
+        if (!ImGui.BeginTabBar("##aetherDebugTabs"))
+        {
+            return;
+        }
+        if (ImGui.BeginTabItem("Diagnostics"))
+        {
+            DrawDiagnosticsTab(scale);
+            ImGui.EndTabItem();
+        }
+        if (ImGui.BeginTabItem("Fonts"))
+        {
+            DrawFontsTab();
+            ImGui.EndTabItem();
+        }
+        ImGui.EndTabBar();
+    }
+
+    private void DrawDiagnosticsTab(float scale)
+    {
         Section("Connection");
         Row("Status", _signal.State.ToString());
         Row("Transport", Server(_server?.Transport));
 
         Section("Account");
         Row("Account ID (partial)", Server(_server?.PartialAccountId));
-        Row("IP address", Server(_server?.IpAddress));
+        Row("IP address", Server(RedactIp(_server?.IpAddress)));
 
         Section("Versions");
         Row("Plugin", SystemInfo.PluginVersion());
@@ -176,6 +196,59 @@ public sealed class DebugWindow : Window
         ImGui.PopTextWrapPos();
         DrawSamples(scale);
     }
+
+    /// <summary>Every pickable family rendered live with its resolved file state, so a family that silently
+    /// falls back to the default is visible at a glance.</summary>
+    private void DrawFontsTab()
+    {
+        Section("Active font");
+        Row("Configured", Plugin.Configuration.Os.FontFamily);
+        Row("Resolved", UiFonts.ActiveFamily.Id);
+        Row("UI scale", UiScale.S.ToString("0.###"));
+        Row("Handles ready", UiFonts.Ready ? "Yes" : "No");
+        Row("Font directory", UiFonts.DiagnosticsFontDir);
+        if (ImGui.Button("Rebuild fonts now"))
+        {
+            UiFonts.Rebuild();
+        }
+
+        Section("Families");
+        foreach (var family in UiFonts.Families)
+        {
+            var path = UiFonts.DiagnosticsResolve(family);
+            var fileNote = family.File is null
+                ? "(built-in)"
+                : path is null
+                    ? $"FILE MISSING: {family.File}"
+                    : $"{family.File} ({new FileInfo(path).Length / 1024} KB)";
+            var active = family.Id == UiFonts.ActiveFamily.Id ? "  << ACTIVE" : "";
+            var preview = UiFonts.Preview(family);
+            ImGui.TextColored(path is null && family.File is not null ? ErrCol : WarnCol,
+                $"{family.Id}  trim {family.Trim:0.##}  {fileNote}  previewReady={preview is { Available: true }}{active}");
+            using (preview?.Push())
+            {
+                ImGui.TextUnformatted(FontSample);
+            }
+            ImGui.Spacing();
+        }
+
+        Section("Live phone handles");
+        using (UiFonts.Body?.Push())
+        {
+            ImGui.TextUnformatted($"Body: {FontSample}");
+        }
+        using (UiFonts.H3?.Push())
+        {
+            ImGui.TextUnformatted("H3: The quick brown fox 0123456789");
+        }
+        using (UiFonts.H1?.Push())
+        {
+            ImGui.TextUnformatted("H1: Quick fox 042");
+        }
+    }
+
+    private const string FontSample =
+        "The quick brown fox jumps over the lazy dog 0123456789 Съешь ещё этих мягких булок";
 
     private void DrawSamples(float scale)
     {
@@ -262,6 +335,35 @@ public sealed class DebugWindow : Window
         return _loading ? "(loading...)" : "(unavailable)";
     }
 
+    /// <summary>Masks the host part of the address: IPv4 keeps the first two octets, IPv6 the first two
+    /// groups. The result still distinguishes networks for support without exposing the full address.</summary>
+    private static string? RedactIp(string? ip)
+    {
+        if (string.IsNullOrEmpty(ip))
+        {
+            return ip;
+        }
+        if (ip.Contains(':'))
+        {
+            var groups = ip.Split(':');
+            return groups.Length <= 2 ? ip : $"{groups[0]}:{groups[1]}:****";
+        }
+        var octets = ip.Split('.');
+        return octets.Length == 4 ? $"{octets[0]}.{octets[1]}.***.***" : ip;
+    }
+
+    /// <summary>Masks the account-name segment of a filesystem path (Windows Users\name, Unix/Wine
+    /// home/name), keeping the first two characters so support can still tell paths apart.</summary>
+    private static string RedactPath(string path)
+    {
+        return System.Text.RegularExpressions.Regex.Replace(path,
+            @"(?i)([\\/](?:users|home)[\\/])([^\\/]+)",
+            m => m.Groups[1].Value + MaskName(m.Groups[2].Value));
+
+        static string MaskName(string name) =>
+            name.Length <= 2 ? "***" : name[..2] + "***";
+    }
+
     private string Skew()
     {
         var server = _server;
@@ -320,9 +422,9 @@ public sealed class DebugWindow : Window
         {
             blockers.Add("You are in combat and \"Mute in combat\" is on.");
         }
-        if (!AccessibilityService.SoundEffectsEnabled)
+        if (Plugin.Configuration.OsSettings.NotificationVolume <= 0f)
         {
-            blockers.Add("In-game Sound Effects are muted or at zero volume.");
+            blockers.Add("Notification volume is set to 0% in Settings > Audio settings.");
         }
         if (!File.Exists(NotificationSoundPlayer.ResolvePath(cfg.NotificationSoundChoice)))
         {
@@ -365,16 +467,9 @@ public sealed class DebugWindow : Window
             ? (inCombat ? "On -- and you are IN COMBAT now, so sounds are suppressed" : "On (not in combat)")
             : "Off");
 
-        var (masterMuted, seMuted, seVol, masterVol) = AccessibilityService.ReadSoundConfig();
-        var gateOk = AccessibilityService.SoundEffectsEnabled;
-        RowState("In-game SE audible", gateOk,
-            gateOk ? "Yes" : "No -- the in-game audio below blocks every notification sound");
-        Row("  Master muted", masterMuted == 1 ? "MUTED" : "no");
-        Row("  Master volume", masterVol.ToString());
-        Row("  Sound Effects muted", seMuted == 1 ? "MUTED" : "no");
-        Row("  Sound Effects volume", seVol.ToString());
-
-        Row("Sound folder", NotificationSoundPlayer.SoundDirectory);
+        Row("Output device", NotificationSoundPlayer.DescribeOutput());
+        Row("Volume", $"{Plugin.Configuration.OsSettings.NotificationVolume:P0}");
+        Row("Sound folder", RedactPath(NotificationSoundPlayer.SoundDirectory));
         var selPath = NotificationSoundPlayer.ResolvePath(cfg.NotificationSoundChoice);
         var exists = File.Exists(selPath);
         RowState("Selected file present", exists, exists ? "Yes" : "MISSING (reinstall the plugin)");
@@ -386,7 +481,7 @@ public sealed class DebugWindow : Window
         if (Dalamud.Utility.Util.IsWine())
         {
             ImGui.PushTextWrapPos(0f);
-            ImGui.TextColored(WarnCol, "Running under Wine/Proton: the Windows sound backend (winmm) these chimes use can stay silent depending on your audio setup, even when the game's own sound works.");
+            ImGui.TextColored(WarnCol, "Running under Wine/Proton: the Windows sound backend (waveOut) these chimes use can stay silent depending on your audio setup, even when the game's own sound works.");
             ImGui.PopTextWrapPos();
         }
 
@@ -408,12 +503,8 @@ public sealed class DebugWindow : Window
 
         if (ImGui.Button("Test play"))
         {
-            SetSoundTestResult(NotificationSoundPlayer.TestPlay(_testSound, bypassMuteGate: false));
-        }
-        ImGui.SameLine();
-        if (ImGui.Button("Test play (ignore game mute)"))
-        {
-            SetSoundTestResult(NotificationSoundPlayer.TestPlay(_testSound, bypassMuteGate: true));
+            SetSoundTestResult(NotificationSoundPlayer.TryPlay(_testSound)
+                ?? $"Playing on \"{NotificationSoundPlayer.DescribeOutput()}\". If you hear nothing, pick a different output device in Settings > Audio settings.");
         }
         ImGui.SameLine();
         if (ImGui.Button("Stop##sound"))
@@ -504,12 +595,13 @@ public sealed class DebugWindow : Window
         sb.AppendLine($"Connection: {_signal.State}");
         sb.AppendLine($"Transport: {Server(server?.Transport)}");
         sb.AppendLine($"Account (partial): {Server(server?.PartialAccountId)}");
-        sb.AppendLine($"IP: {Server(server?.IpAddress)}");
+        sb.AppendLine($"IP: {Server(RedactIp(server?.IpAddress))}");
         sb.AppendLine();
         sb.AppendLine($"Plugin: {SystemInfo.PluginVersion()}");
         sb.AppendLine($"Dalamud (assembly): {SystemInfo.DalamudVersion()}");
         sb.AppendLine($"API protocol: {ApiVersion.Current}");
         sb.AppendLine($".NET runtime: {SystemInfo.Runtime()}");
+        sb.AppendLine($"Font: {UiFonts.ActiveFamily.Id}");
         sb.AppendLine();
         sb.AppendLine($"OS: {SystemInfo.Os()}");
         sb.AppendLine($"Wine: {(Dalamud.Utility.Util.IsWine() ? "Yes" : "No")}");
@@ -533,7 +625,6 @@ public sealed class DebugWindow : Window
         sb.AppendLine($"WebP sample render: {RenderStatus(server?.SampleWebp, _webpTex)}");
 
         var cfg = Plugin.Configuration;
-        var (masterMuted, seMuted, seVol, masterVol) = AccessibilityService.ReadSoundConfig();
         var soundPath = NotificationSoundPlayer.ResolvePath(cfg.NotificationSoundChoice);
         sb.AppendLine();
         sb.AppendLine("--- Notification sound ---");
@@ -545,8 +636,9 @@ public sealed class DebugWindow : Window
         sb.AppendLine($"Play a sound: {(cfg.EnableNotificationSounds ? "Yes" : "No")}");
         sb.AppendLine($"Selected sound: {cfg.NotificationSoundChoice.DisplayName()}");
         sb.AppendLine($"Mute in combat: {(cfg.HideNotificationsDuringCombat ? "On" : "Off")} (in combat now: {(Plugin.Condition[ConditionFlag.InCombat] ? "Yes" : "No")})");
-        sb.AppendLine($"In-game SE audible: {(AccessibilityService.SoundEffectsEnabled ? "Yes" : "No")} (masterMuted={masterMuted}, masterVol={masterVol}, seMuted={seMuted}, seVol={seVol})");
-        sb.AppendLine($"Sound file: {soundPath}");
+        sb.AppendLine($"Output device: {NotificationSoundPlayer.DescribeOutput()}");
+        sb.AppendLine($"Volume: {Plugin.Configuration.OsSettings.NotificationVolume:P0}");
+        sb.AppendLine($"Sound file: {RedactPath(soundPath)}");
         sb.AppendLine($"Sound file present: {(File.Exists(soundPath) ? "Yes" : "MISSING")}");
         if (File.Exists(soundPath))
         {

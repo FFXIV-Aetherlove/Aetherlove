@@ -6,10 +6,10 @@ public sealed class EnglishLanguageService : ILanguageService
     public System.Collections.Generic.IReadOnlyDictionary<string, string> Strings => Map;
 
     public string WelcomeTitle => "Welcome to AetherLove";
-    public string WelcomeBody1 => "AetherLove is a social matchmaking plugin for Final Fantasy XIV — a place to find your people, whether that means a steadfast co-op partner, a roleplaying companion, or something deeper.";
-    public string WelcomeBody2 => "Browse other adventurers' profiles, express interest with a swipe, and when the feeling is mutual, start a private conversation — all without ever leaving Eorzea.";
+    public string WelcomeBody1 => "AetherLove is a social matchmaking plugin for Final Fantasy XIV: a place to find your people, whether that means a steadfast co-op partner, a roleplaying companion, or something deeper.";
+    public string WelcomeBody2 => "Browse other adventurers' profiles, express interest with a swipe, and when the feeling is mutual, start a private conversation, all without ever leaving Eorzea.";
     public string WelcomePrivacyHeading => "Your privacy:";
-    public string WelcomePrivacyBody => "All chats and private conversations are end-to-end encrypted — the owners of AetherLove cannot read your private messages.";
+    public string WelcomePrivacyBody => "All chats and private conversations are end-to-end encrypted: the owners of AetherLove cannot read your private messages.";
     public string WelcomeFeatureDiscoverTitle => "Discover";
     public string WelcomeFeatureDiscoverBody => "Browse beautifully crafted profile cards.";
     public string WelcomeFeatureConnectTitle => "Connect";

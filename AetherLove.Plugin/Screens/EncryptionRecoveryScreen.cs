@@ -271,7 +271,7 @@ public sealed class EncryptionRecoveryScreen
                     _error = Loc.T("common.passphrase_incorrect");
                     return;
                 }
-                _keys.StoreKek(kek);
+                _keys.StoreKek(kek, pass.KdfSalt, pass.KdfMemoryKb, pass.KdfIterations, pass.KdfParallelism);
 
                 var (pubKey, privKey) = _crypto.GenerateIdentityKeyPair();
                 var (wrapped, wrapNonce) = _crypto.WrapPrivateKey(privKey, kek);
@@ -365,7 +365,7 @@ public sealed class EncryptionRecoveryScreen
                     Plugin.Log.Warning(ex, "[EncryptionRecovery] SetAccountPassphrase failed; will backfill on the next unlock.");
                 }
                 _keys.Store(pubKey, privKey);
-                _keys.StoreKek(kek);
+                _keys.StoreKek(kek, salt, MemoryKb, Iterations, Parallelism);
 
                 // Reflect the freshly-published bundle so the recovery gate clears, then walk the ladder onward.
                 var snap = _bootstrap.LastConnection;

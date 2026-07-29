@@ -21,7 +21,7 @@ internal static class ProfileEs
         ["profile.favourite_song"] = "Canción favorita",
         ["music.fetching"] = "Obteniendo el nombre de la canción…",
         ["music.saved"] = "Enlace guardado (nombre pendiente)",
-        ["music.invalid"] = "No se pudo leer ese enlace — pega un enlace de canción de Spotify, SoundCloud, Apple Music o YouTube Music.",
+        ["music.invalid"] = "No se pudo leer ese enlace. Pega un enlace de canción de Spotify, SoundCloud, Apple Music o YouTube Music.",
         ["music.open_tooltip"] = "Haz clic para abrir",
         ["profile.favourite_movie"] = "Película favorita",
         ["profile.favourite_anime"] = "Anime favorito",
@@ -45,7 +45,7 @@ internal static class ProfileEs
         ["profile.cancel"] = "Cancelar",
         ["profile.submit_report"] = "Enviar denuncia",
         ["profile.report_submitted"] = "Denuncia enviada",
-        ["profile.report_thanks"] = "Gracias — nuestros moderadores lo revisarán. No volverás a ver este perfil hasta que saques uno nuevo del mazo.",
+        ["profile.report_thanks"] = "Gracias, nuestros moderadores lo revisarán. Este perfil ya no volverá a aparecer en tu mazo.",
         ["profile.closing"] = "Cerrando…",
         ["profile.closing_in"] = "Cerrando en {0} segundos",
         ["profile.close"] = "Cerrar",
@@ -53,7 +53,7 @@ internal static class ProfileEs
         // ProfileScreen - copy profile text (viewing others only)
         ["profile.copy_text"] = "Copiar texto del perfil",
         ["profile.copy_warning_title"] = "Advertencia",
-        ["profile.copy_warning_body"] = "Has copiado el texto de otra persona. Ten cuidado al hacer clic o seguir cualquier enlace que contenga — lo haces bajo tu propia responsabilidad.",
+        ["profile.copy_warning_body"] = "Has copiado el texto de otra persona. Ten cuidado al hacer clic o seguir cualquier enlace que contenga; lo haces bajo tu propia responsabilidad.",
         ["profile.copy_warning_agree"] = "Lo entiendo y estoy de acuerdo",
 
         // MyProfileScreen hub: stats + menu
@@ -185,8 +185,8 @@ internal static class ProfileEs
         ["profile.menu_sup_stats"] = "Estadísticas extra",
         ["profile.sup_intro"] = "¡Gracias por apoyar AetherLove! Elige un estilo para tu nombre y si quieres mostrar la insignia de colaborador. Todos pueden verlos.",
         ["profile.sup_name_style"] = "Estilo del nombre",
-        ["profile.sup_show_badge"] = "Mostrar insignia de colaborador",
-        ["profile.sup_badge_hint"] = "Muestra la etiqueta de colaborador en tu perfil. La estrella junto a tu nombre siempre se muestra.",
+        ["profile.sup_show_badge"] = "Mostrar mi estado de colaborador",
+        ["profile.sup_badge_hint"] = "Si está desactivado, nadie verá tu estrella ni tu insignia de colaborador: ni en tus perfiles, ni en los chats, ni en los hangouts, y tu propia vista previa del perfil también las oculta. Tus ventajas de colaborador siguen funcionando. Se aplica a toda tu cuenta.",
         ["profile.sup_stats_intro"] = "Información exclusiva para colaboradores sobre cómo le va a tu perfil por todo el reino.",
         ["profile.sup_stat_likes_received"] = "Likes recibidos",
         ["profile.sup_stat_superlikes"] = "Superlikes recibidos",
@@ -207,5 +207,23 @@ internal static class ProfileEs
         ["profile.style_rainbow"] = "Arcoíris (animado)",
         ["profile.style_shimmer"] = "Brillo dorado (animado)",
         ["profile.style_pulse"] = "Pulso rosa (animado)",
+
+        // added after update 2.0.1
+        ["profile.more_options"] = "Más opciones",
+        ["profile.menu_hide"] = "Ocultar este perfil",
+        ["profile.menu_report"] = "Denunciar este perfil",
+        ["profile.hide_title"] = "¿Ocultar este perfil?",
+        ["profile.hide_body"] = "No volverás a ver este perfil en tu mazo nunca más. Esto no se puede deshacer.",
+        ["profile.hide_confirm"] = "Ocultar para siempre",
+        // holiday mode (added after update 2.0.1)
+        ["profile.menu_holiday"] = "Modo vacaciones",
+        ["profile.holiday_toggle"] = "Modo vacaciones activado",
+        ["profile.holiday_msg_label"] = "Mensaje de vacaciones",
+        ["profile.holiday_msg_hint"] = "Mientras el modo vacaciones esté activado, quienes vean tu perfil verán un aviso de ausencia con tu mensaje, y tus matches verán un indicador de ausencia en tu foto.",
+        ["profile.holiday_save"] = "Guardar",
+        ["profile.holiday_saved"] = "¡Guardado!",
+        ["profile.holiday_active_banner"] = "MODO VACACIONES ACTIVO",
+        ["profile.holiday_banner"] = "Este jugador tiene el modo vacaciones activado: {0}",
+        ["profile.holiday_banner_short"] = "Este jugador tiene el modo vacaciones activado.",
     };
 }

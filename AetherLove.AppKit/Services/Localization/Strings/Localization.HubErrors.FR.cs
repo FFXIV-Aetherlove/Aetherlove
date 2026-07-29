@@ -87,5 +87,20 @@ internal static class HubErrorsFr
         ["huberror.msgr_storage_full"] = "Ton espace de stockage d'images est plein. Supprime des images ou attends que les plus anciennes expirent, puis réessaie.",
         ["huberror.msgr_image_too_large"] = "Cette image est trop volumineuse.",
         ["huberror.msgr_image_invalid"] = "Cette image n'a pas pu être lue.",
+        // levemetes (added after update 2.0.1)
+        ["huberror.levemetes_disabled"] = "Levemetes est désactivé pour le moment.",
+        ["huberror.leve_not_found"] = "Cette annonce n'existe plus.",
+        ["huberror.leve_invalid"] = "L'annonce n'a pas pu être enregistrée. Vérifiez vos saisies.",
+        ["huberror.leve_limit_reached"] = "Vous avez déjà {0} annonces. Supprimez-en une ou laissez-en expirer une.",
+        ["huberror.leve_too_long"] = "Le texte est trop long (max. {0} caractères).",
+        ["huberror.leve_image_rejected"] = "Cette image ne peut pas être envoyée. Choisissez-en une autre ou contactez le support si vous pensez qu'il s'agit d'une erreur.",
+        ["huberror.leve_review_own"] = "Vous ne pouvez pas évaluer votre propre annonce.",
+        ["huberror.leve_review_too_long"] = "Votre avis est trop long (max. {0} caractères).",
+        ["huberror.leve_review_rating_invalid"] = "Choisissez une note entre 1 et 5 étoiles.",
+        ["huberror.leve_reviews_disabled"] = "L'auteur a désactivé les avis sur cette annonce.",
+        ["huberror.leve_renew_too_soon"] = "Cette annonce a été renouvelée récemment. Réessayez plus tard.",
+        // holiday mode (added after update 2.0.1)
+        ["huberror.holiday_message_too_long"] = "Votre message de vacances est trop long (max. {0} caractères).",
+        ["huberror.holiday_message_invalid"] = "Ce message de vacances ne peut pas être utilisé. Merci de le reformuler.",
     };
 }

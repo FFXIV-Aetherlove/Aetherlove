@@ -21,6 +21,7 @@ public static class OsIntents
 
     // Places / Hangouts / Settings / News deep links.
     public const string OpenVenue = "open.venue";
+    public const string OpenLevemete = "open.levemete";
     public const string OpenMyVenues = "open.myvenues";
     public const string OpenManage = "open.manage";
     public const string OpenSupporter = "open.supporter";
@@ -32,6 +33,9 @@ public static class OsIntents
 
     /// <summary>Open the Clock app straight to its Timers tab (a ringing-alarm chat link uses this).</summary>
     public const string OpenClockTimers = "open.clock_timers";
+
+    /// <summary>Open the Market app on a specific item (payload key "itemId", optional "returnApp").</summary>
+    public const string OpenMarketItem = "open.market_item";
 
     // The messenger's photo-attach round trip (a target-initiated pull, not sheet-based sharing).
     public const string PickPhoto = "pick.photo";
@@ -97,6 +101,39 @@ public static class OsIntents
         Type = CameraCaptured,
         PayloadJson = JsonSerializer.Serialize(new CameraShotPayload(path, crop.X, crop.Y, crop.Z, crop.W)),
     };
+
+    public static OsIntent CreateMarketItem(uint itemId, string? returnAppId = null) => new()
+    {
+        Type = OpenMarketItem,
+        PayloadJson = JsonSerializer.Serialize(new MarketItemPayload(itemId, returnAppId)),
+    };
+
+    public static bool TryGetMarketItem(OsIntent intent, out uint itemId)
+    {
+        itemId = 0;
+        if (string.IsNullOrEmpty(intent.PayloadJson))
+        {
+            return false;
+        }
+        try
+        {
+            using var doc = JsonDocument.Parse(intent.PayloadJson);
+            if (doc.RootElement.ValueKind == JsonValueKind.Object
+                && doc.RootElement.TryGetProperty("itemId", out var el)
+                && el.ValueKind == JsonValueKind.Number
+                && el.TryGetUInt32(out var value)
+                && value > 0)
+            {
+                itemId = value;
+                return true;
+            }
+            return false;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
 
     public static OsIntent CreateCalendarAdd(string title, string note, long startUnixSeconds) => new()
     {
@@ -289,6 +326,8 @@ public static class OsIntents
     private sealed record ReturnPayload(string returnApp);
 
     private sealed record IdReturnPayload(Guid id, string returnApp);
+
+    private sealed record MarketItemPayload(uint itemId, string? returnApp);
 
     private sealed record CameraCapturePayload(string returnApp, float aspect, int minWidth);
 

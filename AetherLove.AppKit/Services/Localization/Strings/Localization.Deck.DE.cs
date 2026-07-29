@@ -33,7 +33,7 @@ internal static class DeckDe
         ["deck.match_fx_constellation"] = "In den Sternen geschrieben",
         ["deck.match_fx_slot"] = "Dreimal die Liebe",
         ["deck.match_fx_slot_title"] = "JACKPOT!",
-        ["deck.match_fx_tarot"] = "Die Karten passen — zwei Schicksale vereint",
+        ["deck.match_fx_tarot"] = "Die Karten passen: zwei Schicksale vereint",
         ["deck.match_fx_tarot_title"] = "DIE LIEBENDEN",
         ["deck.match_fx_lavalamp"] = "Zwei Flammen, ein Glühen",
         ["deck.match_fx_lanterns"] = "Zwei Lichter, ein Himmel",

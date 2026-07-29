@@ -156,7 +156,6 @@ public partial class ChatListScreen
             _matches.Clear();
             _avatarTexCache.Clear();
         }
-        UiHost.Log.Debug("[PSW] ChatListScreen.OnProfileCachesInvalidated: cleared list, re-fetching for cache owner {Owner:N}.", _sync.Cache.Owner);
         StartFetch();
     }
 
@@ -191,7 +190,6 @@ public partial class ChatListScreen
                         {
                             return;
                         }
-                        UiHost.Log.Debug("[PSW] ChatListScreen: cache empty, GetMyMatches fallback returned {Count} matches (cache owner {Owner:N}).", dto.Matches.Length, _sync.Cache.Owner);
                         lock (_matchesLock)
                         {
                             _matches.Clear();
@@ -249,7 +247,6 @@ public partial class ChatListScreen
             _previewByPeer.Clear();
         }
         var cached = _sync.Cache.GetMatches();
-        UiHost.Log.Debug("[PSW] ChatListScreen.HydrateMatchesFromCache: cache owner {Owner:N} -> showing {Count} matches.", _sync.Cache.Owner, cached.Count);
         lock (_matchesLock)
         {
             _matches.Clear();
@@ -478,6 +475,14 @@ public partial class ChatListScreen
             else if (CalendarEventShare.TryParse(text, out _))
             {
                 text = Loc.T("chat.preview_calevent");
+            }
+            else if (LevemeteShare.TryParse(text, out _))
+            {
+                text = Loc.T("chat.preview_levemete");
+            }
+            else if (MarketShare.TryParse(text, out _))
+            {
+                text = Loc.T("chat.preview_market");
             }
             var full = (m.LastMessageFromMe ? Loc.T("chat.preview_me_prefix") : string.Empty) + text;
             return full.Length > 42 ? full[..41] + "…" : full;
@@ -1161,7 +1166,6 @@ public partial class ChatListScreen
                     _selectedPeerNameStyle = m.PeerNameStyle;
                     _selectedScrollMessageId = hit?.ContentMessageId ?? Guid.Empty;
                     _openedChatFromCategory = ctx == RowContext.Category;
-                    UiHost.Log.Debug("[PSW] ChatListScreen: opening chat with peer {Peer:N} ({Name}) as active profile {Active:N} (cache owner {Owner:N}).", m.PeerProfileId, m.PeerDisplayName, UiHost.Configuration.Auth.ActiveProfileId ?? Guid.Empty, _sync.Cache.Owner);
                     _router.Navigate(LoveView.Chat);
                 }
             }
@@ -1239,6 +1243,15 @@ public partial class ChatListScreen
             drawList.AddCircleFilled(avatarCenter, avatarRadius, UiColors.AvatarFallback);
         }
         drawList.AddCircle(avatarCenter, avatarRadius, 0xFFFFFFFF, 0, Px(2f));
+
+        if (m.PeerHolidayMode)
+        {
+            var awayR = Px(8f);
+            var awayCenter = avatarCenter + new Vector2(avatarRadius - Px(6f), avatarRadius - Px(6f));
+            drawList.AddCircleFilled(awayCenter, awayR, ImGui.GetColorU32(UiColors.HolidayPurple));
+            drawList.AddCircle(awayCenter, awayR, 0xFFFFFFFF, 0, Px(1.5f));
+            IconDraw.AddCentered(drawList, FontAwesomeIcon.Clock, awayR * 1.15f, awayCenter, 0xFFFFFFFFu);
+        }
 
         if (m.UnreadCount > 0)
         {

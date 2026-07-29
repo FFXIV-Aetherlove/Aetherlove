@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using AetherLove.Services.Localization;
+using AetherOS.Apps.Photos;
+using AetherOS.Sdk;
 
 namespace AetherLove.Os;
 
@@ -166,6 +168,11 @@ public sealed class ScreenshotImportService : IDisposable
         {
             return;
         }
+        // Read per file and before the _seen add: a shot that arrived while this was off must stay importable.
+        if (!(PhotoScope.Get<bool?>(PhotoSettings.AutoImportScreenshots) ?? true))
+        {
+            return;
+        }
         lock (_seen)
         {
             if (_seen.Count > 512)
@@ -223,9 +230,11 @@ public sealed class ScreenshotImportService : IDisposable
         }
     }
 
+    private IAppStorage PhotoScope => _storage.For(PhotoSettings.ScopeId);
+
     private string EnsureAlbum()
     {
-        var storage = _storage.For("photos");
+        var storage = PhotoScope;
         var id = storage.Get<string>(AlbumKey);
         if (id is { Length: > 0 })
         {

@@ -21,7 +21,7 @@ internal static class ProfileRu
         ["profile.favourite_song"] = "Любимая песня",
         ["music.fetching"] = "Получение названия песни…",
         ["music.saved"] = "Ссылка сохранена (название ожидается)",
-        ["music.invalid"] = "Не удалось распознать ссылку — вставьте ссылку на песню из Spotify, SoundCloud, Apple Music или YouTube Music.",
+        ["music.invalid"] = "Не удалось распознать ссылку. Вставьте ссылку на песню из Spotify, SoundCloud, Apple Music или YouTube Music.",
         ["music.open_tooltip"] = "Нажмите, чтобы открыть",
         ["profile.favourite_movie"] = "Любимый фильм",
         ["profile.favourite_anime"] = "Любимое аниме",
@@ -45,7 +45,7 @@ internal static class ProfileRu
         ["profile.cancel"] = "Отмена",
         ["profile.submit_report"] = "Отправить жалобу",
         ["profile.report_submitted"] = "Жалоба отправлена",
-        ["profile.report_thanks"] = "Спасибо — наши модераторы рассмотрят вашу жалобу. Вы больше не увидите этот профиль, пока не возьмёте новый из колоды.",
+        ["profile.report_thanks"] = "Спасибо, модераторы всё проверят. Этот профиль больше не появится в вашей колоде.",
         ["profile.closing"] = "Закрытие…",
         ["profile.closing_in"] = "Закрытие через {0} секунд",
         ["profile.close"] = "Закрыть",
@@ -53,7 +53,7 @@ internal static class ProfileRu
         // ProfileScreen - copy profile text (viewing others only)
         ["profile.copy_text"] = "Скопировать текст профиля",
         ["profile.copy_warning_title"] = "Предупреждение",
-        ["profile.copy_warning_body"] = "Вы скопировали чужой текст. Будьте осторожны, переходя по любым содержащимся в нём ссылкам, — вы делаете это на свой страх и риск.",
+        ["profile.copy_warning_body"] = "Вы скопировали чужой текст. Будьте осторожны, переходя по любым содержащимся в нём ссылкам: вы делаете это на свой страх и риск.",
         ["profile.copy_warning_agree"] = "Я понимаю и соглашаюсь",
 
         // MyProfileScreen hub: stats + menu
@@ -184,10 +184,10 @@ internal static class ProfileRu
         ["profile.section_supporter"] = "Для поддержавших",
         ["profile.menu_sup_vanity"] = "Оформление профиля",
         ["profile.menu_sup_stats"] = "Расширенная статистика",
-        ["profile.sup_intro"] = "Спасибо за поддержку AetherLove! Выберите стиль имени и видимость значка поддержки — они будут видны всем.",
+        ["profile.sup_intro"] = "Спасибо за поддержку AetherLove! Выберите стиль имени и видимость значка поддержки: они будут видны всем.",
         ["profile.sup_name_style"] = "Стиль имени",
-        ["profile.sup_show_badge"] = "Показывать значок поддержки",
-        ["profile.sup_badge_hint"] = "Показывает значок поддержки в вашем профиле. Звезда рядом с именем отображается всегда.",
+        ["profile.sup_show_badge"] = "Показывать статус поддержки",
+        ["profile.sup_badge_hint"] = "Если выключено, никто не увидит звезду или значок поддержки: ни в ваших профилях, ни в чатах, ни в хэнгаутах, и в предпросмотре собственного профиля их тоже не будет. Все преимущества поддержки продолжают работать. Действует на весь аккаунт.",
         ["profile.sup_stats_intro"] = "Эксклюзивная статистика для поддержавших: как ваш профиль показывает себя по всему миру.",
         ["profile.sup_stat_likes_received"] = "Полученные лайки",
         ["profile.sup_stat_superlikes"] = "Полученные суперлайки",
@@ -208,5 +208,23 @@ internal static class ProfileRu
         ["profile.style_rainbow"] = "Радуга (анимация)",
         ["profile.style_shimmer"] = "Золотое мерцание (анимация)",
         ["profile.style_pulse"] = "Розовый пульс (анимация)",
+
+        // added after update 2.0.1
+        ["profile.more_options"] = "Другие действия",
+        ["profile.menu_hide"] = "Скрыть этот профиль",
+        ["profile.menu_report"] = "Пожаловаться на этот профиль",
+        ["profile.hide_title"] = "Скрыть профиль?",
+        ["profile.hide_body"] = "Этот профиль больше никогда не появится в вашей колоде. Отменить это не получится.",
+        ["profile.hide_confirm"] = "Скрыть навсегда",
+        // holiday mode (added after update 2.0.1)
+        ["profile.menu_holiday"] = "Режим отпуска",
+        ["profile.holiday_toggle"] = "Режим отпуска включён",
+        ["profile.holiday_msg_label"] = "Сообщение об отпуске",
+        ["profile.holiday_msg_hint"] = "Пока включён режим отпуска, все, кто открывает ваш профиль, видят баннер с вашим сообщением, а ваши пары видят значок отсутствия на вашем фото.",
+        ["profile.holiday_save"] = "Сохранить",
+        ["profile.holiday_saved"] = "Сохранено!",
+        ["profile.holiday_active_banner"] = "РЕЖИМ ОТПУСКА ВКЛЮЧЁН",
+        ["profile.holiday_banner"] = "У этого игрока включён режим отпуска: {0}",
+        ["profile.holiday_banner_short"] = "У этого игрока включён режим отпуска.",
     };
 }

@@ -10,10 +10,10 @@ public sealed class GermanLanguageService : ILanguageService
         NotificationsDe.Strings, NewsDe.Strings, PlacesDe.Strings, HangoutsDe.Strings, OsDe.Strings);
 
     public string WelcomeTitle => "Willkommen bei AetherLove";
-    public string WelcomeBody1 => "AetherLove ist ein soziales Matchmaking-Plugin für Final Fantasy XIV — ein Ort, um deine Leute zu finden, ob das einen zuverlässigen Co-op-Partner, einen Rollenspiel-Gefährten oder etwas tiefgründigeres bedeutet.";
-    public string WelcomeBody2 => "Stöbere in den Profilen anderer Abenteurer, zeige Interesse mit einem Wisch und starte, wenn das Gefühl gegenseitig ist, ein privates Gespräch — alles ohne Eorzea je zu verlassen.";
+    public string WelcomeBody1 => "AetherLove ist ein soziales Matchmaking-Plugin für Final Fantasy XIV: ein Ort, um deine Leute zu finden, ob das einen zuverlässigen Co-op-Partner, einen Rollenspiel-Gefährten oder etwas tiefgründigeres bedeutet.";
+    public string WelcomeBody2 => "Stöbere in den Profilen anderer Abenteurer, zeige Interesse mit einem Wisch und starte, wenn das Gefühl gegenseitig ist, ein privates Gespräch, alles ohne Eorzea je zu verlassen.";
     public string WelcomePrivacyHeading => "Deine Privatsphäre:";
-    public string WelcomePrivacyBody => "Alle Chats und privaten Gespräche sind Ende-zu-Ende-verschlüsselt — die Betreiber von AetherLove können deine privaten Nachrichten nicht lesen.";
+    public string WelcomePrivacyBody => "Alle Chats und privaten Gespräche sind Ende-zu-Ende-verschlüsselt: die Betreiber von AetherLove können deine privaten Nachrichten nicht lesen.";
     public string WelcomeFeatureDiscoverTitle => "Entdecken";
     public string WelcomeFeatureDiscoverBody => "Stöbere in sorgfältig gestalteten Profilkarten.";
     public string WelcomeFeatureConnectTitle => "Verbinden";

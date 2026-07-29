@@ -53,7 +53,7 @@ internal static class SettingsRu
         ["settings.popup_messages"] = "Показывать всплывающее окно для новых сообщений",
         ["settings.popup_matches"] = "Показывать всплывающее окно для новых пар",
         ["settings.hide_notifications_in_combat"] = "Скрывать уведомления в бою",
-        ["settings.hide_notifications_in_combat_tooltip"] = "Когда включено, вы не будете получать никаких уведомлений — объявлений в игровом чате, всплывающих окон и звуков — пока находитесь в бою.",
+        ["settings.hide_notifications_in_combat_tooltip"] = "Когда включено, вы не будете получать никаких уведомлений (объявлений в игровом чате, всплывающих окон и звуков), пока находитесь в бою.",
         ["settings.auto_open_minimized"] = "Открывать свёрнутым автоматически при входе в игру",
         ["settings.pulse_optout"] = "Получайте потрясающие сообщения от команды Aethernet, напоминающие проверить анкеты",
         ["settings.pulse_optout_tooltip"] = "Время от времени AetherLove может оставлять шутливое сообщение в игровом чате. Отключите, чтобы они больше не появлялись.",
@@ -108,7 +108,7 @@ internal static class SettingsRu
 
         // added after update 1.4.0
         ["settings.lock_position"] = "Зафиксировать положение",
-        ["settings.lock_position_caption"] = "Зафиксировав положение, вы не сможете перемещать телефон (окно приложения и виджет) — они останутся на месте.",
+        ["settings.lock_position_caption"] = "Зафиксировав положение, вы не сможете перемещать телефон (окно приложения и виджет): они останутся на месте.",
 
         // added after update 1.4.3
         ["settings.show_during_gpose"] = "Показывать телефон во время GPose",
@@ -125,7 +125,7 @@ internal static class SettingsRu
         ["settings.supporter_awaiting_browser"] = "Завершите привязку в браузере, затем вернитесь сюда.",
         ["settings.supporter_open_again"] = "Открыть браузер снова",
         ["settings.supporter_cancel"] = "Отмена",
-        ["settings.supporter_you_are_title"] = "Вы — спонсор.",
+        ["settings.supporter_you_are_title"] = "Вы спонсор.",
         ["settings.supporter_you_are_body"] = "Ваш аккаунт Patreon успешно привязан, и статус поддержавшего включён.",
         ["settings.supporter_nomember_title"] = "Подписка не найдена",
         ["settings.supporter_nomember_body"] = "Ваш аккаунт Patreon привязан, но активная подписка не найдена. Если вы только что оформили её, статус поддержавшего будет выдан автоматически в течение нескольких часов. Вы также можете отвязать аккаунт и попробовать снова, когда подписка на Patreon станет активной.",
@@ -140,7 +140,7 @@ internal static class SettingsRu
         // added after update 1.5.1
         ["settings.supporter_linked"] = "Привязано",
         ["settings.supporter_title"] = "Станьте поддержавшим",
-        ["settings.supporter_intro"] = "Вы можете финансово поддержать проект через наш Patreon. Все функции AetherLove доступны бесплатно для всех, и ничто не находится и никогда не будет скрыто за оплатой. Спонсоры получают в благодарность за поддержку: небольшое расширение лимитов и пару «светяшек» — наш способ сказать, что без вас мы бы не справились.",
+        ["settings.supporter_intro"] = "Вы можете финансово поддержать проект через наш Patreon. Все функции AetherLove доступны бесплатно для всех, и ничто не находится и никогда не будет скрыто за оплатой. Спонсоры получают в благодарность за поддержку: небольшое расширение лимитов и пару «светяшек». Это наш способ сказать, что без вас мы бы не справились.",
         ["settings.supporter_perks_header"] = "Привилегии AetherLove",
         ["settings.supporter_msgr_perks_header"] = "Привилегии мессенджера",
         ["settings.supporter_perk_msgr_groups_title"] = "Большие групповые чаты",
@@ -162,7 +162,7 @@ internal static class SettingsRu
         ["settings.supporter_perk_badge_title"] = "Знак спонсора",
         ["settings.supporter_perk_badge_body"] = "Метка спонсора и маленькая звёздочка рядом с вашим именем. Тот самый тихий значок, заслуженный.",
         ["settings.supporter_how_heading"] = "Как это работает",
-        ["settings.supporter_how_intro"] = "У нас есть три уровня по разной цене — выберите тот, что пожелаете. И все они открывают ровно одни и те же бонусы. Ни один уровень не даёт больше другого.",
+        ["settings.supporter_how_intro"] = "У нас есть три уровня по разной цене. Выберите тот, что пожелаете. И все они открывают ровно одни и те же бонусы. Ни один уровень не даёт больше другого.",
         ["settings.supporter_step1_title"] = "1. Оформите подписку на Patreon",
         ["settings.supporter_step1_body"] = "Создайте аккаунт Patreon и оформите подписку на любой из наших спонсорских уровней, все они открывают одни и те же бонусы.",
         ["settings.supporter_step2_title"] = "2. Привяжите к AetherLove",
@@ -217,5 +217,19 @@ internal static class SettingsRu
         ["settings.section_time_format"] = "Формат времени",
         ["settings.time_24h"] = "24-часовой",
         ["settings.time_12h"] = "12-часовой",
+
+        // added after update 2.0.1
+        ["settings.audio_sounds_off"] = "ÐÐ²ÑÐºÐ¸ ÑÐ²ÐµÐ´Ð¾Ð¼Ð»ÐµÐ½Ð¸Ð¹ ÑÐµÐ¹ÑÐ°Ñ Ð¾ÑÐºÐ»ÑÑÐµÐ½Ñ.",
+        ["settings.audio_sounds_enable"] = "ÐÐºÐ»ÑÑÐ¸ÑÑ Ð·Ð²ÑÐºÐ¸ ÑÐ²ÐµÐ´Ð¾Ð¼Ð»ÐµÐ½Ð¸Ð¹",
+        ["settings.audio_volume"] = "ÐÑÐ¾Ð¼ÐºÐ¾ÑÑÑ ÑÐ²ÐµÐ´Ð¾Ð¼Ð»ÐµÐ½Ð¸Ð¹",
+        ["settings.audio_device"] = "Ð£ÑÑÑÐ¾Ð¹ÑÑÐ²Ð¾ Ð²ÑÐ²Ð¾Ð´Ð°",
+        ["settings.audio_device_default"] = "Ð¡Ð¸ÑÑÐµÐ¼Ð½Ð¾Ðµ Ð¿Ð¾ ÑÐ¼Ð¾Ð»ÑÐ°Ð½Ð¸Ñ",
+        ["settings.audio_test"] = "ÐÑÐ¾Ð¸Ð³ÑÐ°ÑÑ ÑÐµÑÑÐ¾Ð²ÑÐ¹ Ð·Ð²ÑÐº",
+        ["settings.audio_test_ok"] = "ÐÐ³ÑÐ°ÐµÑ! ÐÑÐ»Ð¸ Ð½Ð¸ÑÐµÐ³Ð¾ Ð½Ðµ ÑÐ»ÑÑÐ½Ð¾, Ð¿Ð¾Ð¿ÑÐ¾Ð±ÑÐ¹ÑÐµ Ð´ÑÑÐ³Ð¾Ðµ ÑÑÑÑÐ¾Ð¹ÑÑÐ²Ð¾ Ð²ÑÐ²Ð¾Ð´Ð° Ð²ÑÑÐµ.",
+        ["settings.font_header"] = "Шрифт",
+        ["settings.font_caption"] = "Применяется ко всему тексту на телефоне. Символы, которых нет в шрифте, отображаются стандартным шрифтом.",
+        ["settings.font_default"] = "Стандартный",
+        ["settings.phone_size_header"] = "Размер телефона",
+        ["settings.mini_phone_size_header"] = "Размер миниатюры",
     };
 }

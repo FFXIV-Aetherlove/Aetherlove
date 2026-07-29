@@ -55,7 +55,7 @@ internal static class SettingsFr
         ["settings.popup_messages"] = "Afficher une fenêtre contextuelle pour les nouveaux messages",
         ["settings.popup_matches"] = "Afficher une fenêtre contextuelle pour les nouvelles correspondances",
         ["settings.hide_notifications_in_combat"] = "Masquer les notifications en combat",
-        ["settings.hide_notifications_in_combat_tooltip"] = "Lorsque cette option est activée, vous ne recevez aucune notification — annonces dans le chat de jeu, fenêtres contextuelles ou sons — tant que vous êtes en combat.",
+        ["settings.hide_notifications_in_combat_tooltip"] = "Lorsque cette option est activée, vous ne recevez aucune notification (annonces dans le chat de jeu, fenêtres contextuelles ou sons) tant que vous êtes en combat.",
         ["settings.auto_open_minimized"] = "Ouvrir automatiquement en mode réduit à la connexion",
         ["settings.pulse_optout"] = "Reçois d'incroyables messages de l'équipe Aethernet pour te rappeler de swiper",
         ["settings.pulse_optout_tooltip"] = "De temps en temps, AetherLove peut glisser un message amusant dans votre chat de jeu. Désactivez pour les arrêter.",
@@ -219,5 +219,19 @@ internal static class SettingsFr
         ["settings.section_time_format"] = "Format de l'heure",
         ["settings.time_24h"] = "24 heures",
         ["settings.time_12h"] = "12 heures",
+
+        // added after update 2.0.1
+        ["settings.audio_sounds_off"] = "Les sons de notification sont actuellement dÃ©sactivÃ©s.",
+        ["settings.audio_sounds_enable"] = "Activer les sons de notification",
+        ["settings.audio_volume"] = "Volume des notifications",
+        ["settings.audio_device"] = "PÃ©riphÃ©rique de sortie",
+        ["settings.audio_device_default"] = "DÃ©faut du systÃ¨me",
+        ["settings.audio_test"] = "Jouer un son de test",
+        ["settings.audio_test_ok"] = "Lecture en cours ! Si vous n'entendez rien, essayez un autre pÃ©riphÃ©rique de sortie ci-dessus.",
+        ["settings.font_header"] = "Police",
+        ["settings.font_caption"] = "S'applique à tout le texte du téléphone. Les caractères absents d'une police utilisent la police par défaut.",
+        ["settings.font_default"] = "Par défaut",
+        ["settings.phone_size_header"] = "Taille du téléphone",
+        ["settings.mini_phone_size_header"] = "Taille miniature",
     };
 }

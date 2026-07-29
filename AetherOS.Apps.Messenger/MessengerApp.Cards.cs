@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using AetherLove.Services;
 using AetherLove.Services.Localization;
 using AetherLove.Shared.Hangouts;
+using AetherLove.Shared.Levemetes;
 using AetherLove.Shared.Messenger;
 using AetherLove.Shared.News;
 using AetherLove.Shared.Places;
@@ -28,25 +29,34 @@ namespace AetherOS.Apps.Messenger;
 public sealed partial class MessengerApp
 {
     private const float VenueCardH = 150f;
+    private const float LevemeteCardH = 120f;
     private const float HangoutCardH = 110f;
     private const float NewsCardH = 122f;
     private const float CalendarCardH = 92f;
+    private const float MarketCardH = 86f;
 
     private sealed record VenueCardVisual(VenueCardDto? Card, ISharedImmediateTexture? Tex, bool LogoBackdrop);
+
+    private sealed record LevemeteCardVisual(LevemeteCardDto? Card, ISharedImmediateTexture? Tex);
 
     // One fetched card per shared id (session cache); null content marks an id that could not be loaded
     // (ended, deleted, or not visible) so the row renders the tombstone.
     private readonly ConcurrentDictionary<Guid, VenueCardVisual> _venueCards = new();
     private readonly ConcurrentDictionary<Guid, HangoutCardDto?> _hangoutCards = new();
     private readonly ConcurrentDictionary<Guid, NewsCardDto?> _newsCards = new();
+    private readonly ConcurrentDictionary<Guid, LevemeteCardVisual> _levemeteCards = new();
     private readonly ConcurrentDictionary<Guid, byte> _cardFetches = new();
 
     private ShareItem? _pendingShare;
     private CalendarEventShare.Payload? _calPrompt;
     private float _calPromptH;
 
+    // Home-world min price per shared item id (session cache); 0 marks a fetch that found no listings.
+    private readonly ConcurrentDictionary<uint, long> _marketPrices = new();
+    private readonly ConcurrentDictionary<uint, byte> _marketPriceFetches = new();
+
     public IReadOnlyList<string> AcceptedShareTypes { get; } =
-        [ShareTypes.Venue, ShareTypes.Hangout, ShareTypes.News, ShareTypes.CalendarEvent];
+        [ShareTypes.Venue, ShareTypes.Hangout, ShareTypes.News, ShareTypes.CalendarEvent, ShareTypes.Levemete, ShareTypes.MarketItem];
 
     /// <summary>A share-sheet item landed on the messenger: the chat list enters share mode and the next
     /// tapped chat receives the composed card message.</summary>
@@ -63,6 +73,8 @@ public sealed partial class MessengerApp
         ShareTypes.Hangout when Guid.TryParse(item.RefId, out var hangoutId) => HangoutShare.Compose(hangoutId),
         ShareTypes.News when Guid.TryParse(item.RefId, out var newsId) => NewsShare.Compose(newsId),
         ShareTypes.CalendarEvent => CalendarEventShare.TryComposeFromShareItem(item),
+        ShareTypes.Levemete when Guid.TryParse(item.RefId, out var adId) => LevemeteShare.Compose(adId),
+        ShareTypes.MarketItem => MarketShare.TryComposeFromShareItem(item),
         _ => null,
     };
 
@@ -87,6 +99,7 @@ public sealed partial class MessengerApp
             ShareTypes.Venue => FontAwesomeIcon.Store,
             ShareTypes.Hangout => FontAwesomeIcon.Bullhorn,
             ShareTypes.CalendarEvent => FontAwesomeIcon.CalendarAlt,
+            ShareTypes.MarketItem => FontAwesomeIcon.Coins,
             _ => FontAwesomeIcon.Newspaper,
         };
         IconCentered(dl, icon, Px(13f), new Vector2(tl.X + Px(17f), (tl.Y + br.Y) * 0.5f),
@@ -194,6 +207,13 @@ public sealed partial class MessengerApp
             if (kv.Value is null)
             {
                 _newsCards.TryRemove(kv.Key, out _);
+            }
+        }
+        foreach (var kv in _levemeteCards)
+        {
+            if (kv.Value.Card is null)
+            {
+                _levemeteCards.TryRemove(kv.Key, out _);
             }
         }
     }
@@ -312,6 +332,37 @@ public sealed partial class MessengerApp
         return string.Join("  ·  ", kept);
     }
 
+    private void StartLevemeteCardFetch(Guid adId)
+    {
+        if (_levemeteCards.ContainsKey(adId) || !_cardFetches.TryAdd(adId, 0))
+        {
+            return;
+        }
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var dto = await _hub.GetLevemeteCardAsync(adId).ConfigureAwait(false);
+                ISharedImmediateTexture? tex = null;
+                if (dto?.CoverWebp is { Length: > 0 })
+                {
+                    var cacheDir = Path.Combine(AetherLove.UiHost.PluginInterface.ConfigDirectory.FullName, "LevemetesCache");
+                    tex = AvatarDiskCache.Store(cacheDir, $"msgrleve_{adId:N}", dto.CoverWebp);
+                }
+                _levemeteCards[adId] = new LevemeteCardVisual(dto, tex);
+            }
+            catch (Exception ex)
+            {
+                AetherLove.UiHost.Log.Warning(ex, $"[MessengerApp] Levemete card fetch failed for {adId}.");
+                _levemeteCards[adId] = new LevemeteCardVisual(null, null);
+            }
+            finally
+            {
+                _cardFetches.TryRemove(adId, out _);
+            }
+        });
+    }
+
     private float? CardRowHeight(string text, bool needsDivider, bool isGroupEnd, float lineH)
     {
         float? baseH = null;
@@ -334,6 +385,14 @@ public sealed partial class MessengerApp
         else if (LocationShare.TryParse(text, out _))
         {
             baseH = LocationCardHeight(lineH);
+        }
+        else if (LevemeteShare.TryParse(text, out _))
+        {
+            baseH = Px(LevemeteCardH);
+        }
+        else if (MarketShare.TryParse(text, out _))
+        {
+            baseH = Px(MarketCardH);
         }
         if (baseH is not { } h)
         {
@@ -373,6 +432,16 @@ public sealed partial class MessengerApp
         if (LocationShare.TryParse(text, out var location))
         {
             DrawLocationCardMessage(message, location, windowWidth, isGroupEnd);
+            return true;
+        }
+        if (LevemeteShare.TryParse(text, out var adId))
+        {
+            DrawLevemeteCardMessage(message, adId, windowWidth, isGroupEnd);
+            return true;
+        }
+        if (MarketShare.TryParse(text, out var marketItemId))
+        {
+            DrawMarketCardMessage(message, marketItemId, windowWidth, isGroupEnd);
             return true;
         }
         return false;
@@ -824,5 +893,174 @@ public sealed partial class MessengerApp
         }
         var hg = _hangoutState.ForContact(contact.PeerAccountId);
         return hg is null || hg.EndUtc <= DateTimeOffset.UtcNow ? null : hg;
+    }
+
+    private void DrawLevemeteCardMessage(MessengerMessageDto msg, Guid adId, float windowWidth, bool isGroupEnd)
+    {
+        StartLevemeteCardFetch(adId);
+        _levemeteCards.TryGetValue(adId, out var visual);
+
+        var t = ThemeService.Current;
+        var dl = ImGui.GetWindowDrawList();
+        var cardH = Px(LevemeteCardH);
+        var (tl, br, clicked, hovered, fading, cursorPos) = BeginCard(msg, windowWidth, cardH, "msgrLeveCard");
+        var cardW = br.X - tl.X;
+
+        if (visual?.Card is { } card)
+        {
+            var wrap = visual.Tex?.GetWrapOrDefault();
+            if (wrap != null)
+            {
+                var (uv0, uv1) = CoverFitUvs(wrap.Width, wrap.Height, cardW, cardH);
+                dl.AddImageRounded(wrap.Handle, tl, br, uv0, uv1, 0xFFFFFFFFu, Px(14f), ImDrawFlags.RoundCornersAll);
+            }
+            else
+            {
+                dl.AddRectFilled(tl, br, ImGui.GetColorU32(t.Accent with { W = 0.14f }), Px(14f));
+            }
+
+            dl.AddRectFilledMultiColor(new Vector2(tl.X, br.Y - Px(70f)), br,
+                0x00000000u, 0x00000000u, 0xD8000000u, 0xD8000000u);
+            dl.AddRect(tl, br, ImGui.GetColorU32(t.Accent with { W = hovered ? 0.90f : 0.55f }), Px(14f),
+                ImDrawFlags.None, Px(1.5f));
+
+            var textX = tl.X + Px(14f);
+            var textMaxW = cardW - Px(28f);
+            float nameH;
+            using (UiFonts.H3?.Push())
+            {
+                nameH = ImGui.GetFontSize();
+                dl.AddText(ImGui.GetFont(), nameH, new Vector2(textX, br.Y - Px(52f)),
+                    0xFFFFFFFFu, TruncateToWidth(card.Title, textMaxW));
+            }
+            var kindLabel = Loc.T(card.Kind == (short)LevemeteKind.Offering
+                ? "chat.leve_kind_offering"
+                : "chat.leve_kind_looking");
+            var catLabel = Enum.IsDefined((LevemeteCategory)card.Category)
+                ? Loc.T($"chat.leve_cat_{card.Category}")
+                : Loc.T("chat.leve_cat_unknown");
+            dl.AddText(new Vector2(textX, br.Y - Px(52f) + nameH + Px(3f)), ImGui.GetColorU32(UiColors.Body),
+                TruncateToWidth($"{kindLabel} · {catLabel}", textMaxW - Px(12f)));
+
+            if (hovered)
+            {
+                ImGui.SetTooltip(Loc.T("chat.leve_card_view"));
+            }
+            if (clicked)
+            {
+                _levemeteShare.PendingOpenLevemeteId = adId;
+                _levemeteShare.PendingOpenReturnApp = Id;
+                _shell?.OpenApp("levemetes");
+            }
+        }
+        else
+        {
+            dl.AddRectFilled(tl, br, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.05f)), Px(14f));
+            dl.AddRect(tl, br, ImGui.GetColorU32(t.Accent with { W = 0.35f }), Px(14f), ImDrawFlags.None, Px(1.5f));
+            var text = visual is null ? Loc.T("chat.leve_card_loading") : Loc.T("chat.leve_card_unavailable");
+            var textSz = ImGui.CalcTextSize(text);
+            dl.AddText(tl + (new Vector2(cardW, cardH) - textSz) * 0.5f, ImGui.GetColorU32(UiColors.Muted), text);
+        }
+
+        EndCard(msg, tl, br, cursorPos, cardH, isGroupEnd, fading);
+    }
+
+    private void StartMarketPriceFetch(uint itemId)
+    {
+        if (_marketPrices.ContainsKey(itemId) || !_marketPriceFetches.TryAdd(itemId, 0))
+        {
+            return;
+        }
+        var detected = AetherLove.Services.Market.MarketScopes.DetectCurrent();
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var scopes = detected;
+                if (scopes is null)
+                {
+                    return;
+                }
+                var agg = await _marketData.GetAggregatedAsync(scopes.Value.DataCenter, [itemId],
+                    System.Threading.CancellationToken.None).ConfigureAwait(false);
+                long price = 0;
+                if (agg.TryGetValue(itemId, out var result))
+                {
+                    price = result.Nq.MinListing?.At(AetherLove.Services.Market.MarketScopeKind.DataCenter)?.Price
+                        ?? result.Hq.MinListing?.At(AetherLove.Services.Market.MarketScopeKind.DataCenter)?.Price
+                        ?? 0;
+                }
+                _marketPrices[itemId] = price;
+            }
+            catch (Exception ex)
+            {
+                AetherLove.UiHost.Log.Debug($"[MessengerApp] Market card price fetch failed: {ex.Message}");
+            }
+            finally
+            {
+                _marketPriceFetches.TryRemove(itemId, out _);
+            }
+        });
+    }
+
+    private void DrawMarketCardMessage(MessengerMessageDto msg, uint itemId, float windowWidth, bool isGroupEnd)
+    {
+        StartMarketPriceFetch(itemId);
+        _marketIndex.EnsureBuildStarted();
+        _marketIndex.TryGet(itemId, out var entry);
+
+        var t = ThemeService.Current;
+        var dl = ImGui.GetWindowDrawList();
+        var cardH = Px(MarketCardH);
+        var (tl, br, clicked, hovered, fading, cursorPos) = BeginCard(msg, windowWidth, cardH, "msgrMarketCard");
+        var cardW = br.X - tl.X;
+
+        dl.AddRectFilled(tl, br, ImGui.GetColorU32(t.Accent with { W = 0.13f }), Px(14f));
+        dl.AddRect(tl, br, ImGui.GetColorU32(t.Accent with { W = hovered ? 0.90f : 0.55f }), Px(14f),
+            ImDrawFlags.None, Px(1.5f));
+
+        var padX = Px(12f);
+        var eyebrow = Loc.T("chat.market_card_label");
+        var iconPx = ImGui.GetFontSize() * 0.82f;
+        IconDraw.Add(dl, FontAwesomeIcon.Coins, iconPx, new Vector2(tl.X + padX, tl.Y + Px(10f)),
+            ImGui.GetColorU32(t.AccentLight));
+        dl.AddText(ImGui.GetFont(), iconPx,
+            new Vector2(tl.X + padX + IconDraw.Measure(FontAwesomeIcon.Coins, iconPx).X + Px(7f), tl.Y + Px(10f)),
+            ImGui.GetColorU32(t.AccentLight), eyebrow);
+
+        var itemIconSize = Px(36f);
+        var itemIconTl = new Vector2(tl.X + padX, tl.Y + Px(32f));
+        if (AetherLove.Services.Market.MarketItemIcons.Get(entry.Icon) is { } handle)
+        {
+            dl.AddImageRounded(handle, itemIconTl, itemIconTl + new Vector2(itemIconSize, itemIconSize),
+                Vector2.Zero, Vector2.One, 0xFFFFFFFFu, Px(6f));
+        }
+        else
+        {
+            dl.AddRectFilled(itemIconTl, itemIconTl + new Vector2(itemIconSize, itemIconSize),
+                ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.08f)), Px(6f));
+        }
+
+        var textX = itemIconTl.X + itemIconSize + Px(10f);
+        var textMaxW = br.X - padX - textX;
+        var name = entry.Name.Length > 0 ? entry.Name : $"#{itemId}";
+        dl.AddText(new Vector2(textX, tl.Y + Px(34f)), 0xFFFFFFFFu, TruncateToWidth(name, textMaxW));
+
+        var priceText = _marketPrices.TryGetValue(itemId, out var price) && price > 0
+            ? $"{AetherLove.Services.Market.MarketFormat.GilFull(price)} gil"
+            : Loc.T("places.share_loading");
+        dl.AddText(new Vector2(textX, tl.Y + Px(34f) + ImGui.GetTextLineHeight() + Px(3f)),
+            ImGui.GetColorU32(new Vector4(0.98f, 0.80f, 0.36f, 1f)), TruncateToWidth(priceText, textMaxW));
+
+        if (hovered)
+        {
+            ImGui.SetTooltip(Loc.T("chat.market_card_view"));
+        }
+        if (clicked)
+        {
+            _shell?.SendIntent("market", OsIntents.CreateMarketItem(itemId, Id));
+        }
+
+        EndCard(msg, tl, br, cursorPos, cardH, isGroupEnd, fading);
     }
 }

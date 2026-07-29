@@ -87,5 +87,20 @@ internal static class HubErrorsDe
         ["huberror.msgr_storage_full"] = "Dein Bildspeicher ist voll. Lösche einige Bilder oder warte, bis ältere ablaufen, und versuche es erneut.",
         ["huberror.msgr_image_too_large"] = "Dieses Bild ist zu groß.",
         ["huberror.msgr_image_invalid"] = "Dieses Bild konnte nicht gelesen werden.",
+        // levemetes (added after update 2.0.1)
+        ["huberror.levemetes_disabled"] = "Levemetes ist derzeit deaktiviert.",
+        ["huberror.leve_not_found"] = "Diese Anzeige existiert nicht mehr.",
+        ["huberror.leve_invalid"] = "Die Anzeige konnte nicht gespeichert werden. Bitte prüfe deine Eingaben.",
+        ["huberror.leve_limit_reached"] = "Du hast bereits {0} Anzeigen. Lösche eine oder lass eine auslaufen.",
+        ["huberror.leve_too_long"] = "Der Text ist zu lang (max. {0} Zeichen).",
+        ["huberror.leve_image_rejected"] = "Dieses Bild kann nicht hochgeladen werden. Wähle ein anderes oder kontaktiere den Support, wenn du das für einen Fehler hältst.",
+        ["huberror.leve_review_own"] = "Du kannst deine eigene Anzeige nicht bewerten.",
+        ["huberror.leve_review_too_long"] = "Deine Bewertung ist zu lang (max. {0} Zeichen).",
+        ["huberror.leve_review_rating_invalid"] = "Wähle eine Bewertung zwischen 1 und 5 Sternen.",
+        ["huberror.leve_reviews_disabled"] = "Bewertungen sind auf dieser Anzeige deaktiviert.",
+        ["huberror.leve_renew_too_soon"] = "Diese Anzeige wurde erst kürzlich verlängert. Versuch es später erneut.",
+        // holiday mode (added after update 2.0.1)
+        ["huberror.holiday_message_too_long"] = "Deine Urlaubsnachricht ist zu lang (max. {0} Zeichen).",
+        ["huberror.holiday_message_invalid"] = "Diese Urlaubsnachricht kann nicht verwendet werden. Bitte formuliere sie um.",
     };
 }

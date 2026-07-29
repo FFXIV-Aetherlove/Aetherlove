@@ -23,7 +23,7 @@ internal static class ProfileEn
         ["profile.favourite_song"] = "Favourite song",
         ["music.fetching"] = "Fetching song name…",
         ["music.saved"] = "Saved link (name pending)",
-        ["music.invalid"] = "Couldn't read that link — paste a Spotify, SoundCloud, Apple Music, or YouTube Music song link.",
+        ["music.invalid"] = "Couldn't read that link. Paste a Spotify, SoundCloud, Apple Music, or YouTube Music song link.",
         ["music.open_tooltip"] = "Click to open",
         ["profile.favourite_movie"] = "Favourite movie",
         ["profile.favourite_anime"] = "Favourite anime",
@@ -50,7 +50,7 @@ internal static class ProfileEn
         ["profile.cancel"] = "Cancel",
         ["profile.submit_report"] = "Submit report",
         ["profile.report_submitted"] = "Report submitted",
-        ["profile.report_thanks"] = "Thanks — our moderators will take a look. You won't see this profile again until you pull a fresh one from the deck.",
+        ["profile.report_thanks"] = "Thanks, our moderators will take a look. This profile will not appear in your deck again.",
         ["profile.closing"] = "Closing…",
         ["profile.closing_in"] = "Closing in {0} seconds",
         ["profile.close"] = "Close",
@@ -58,7 +58,7 @@ internal static class ProfileEn
         // ProfileScreen - copy profile text (viewing others only)
         ["profile.copy_text"] = "Copy profile text",
         ["profile.copy_warning_title"] = "Warning",
-        ["profile.copy_warning_body"] = "You've copied someone's text. Be careful about clicking or following any links it contains — you do so at your own risk.",
+        ["profile.copy_warning_body"] = "You've copied someone's text. Be careful about clicking or following any links it contains; you do so at your own risk.",
         ["profile.copy_warning_agree"] = "I understand, and agree",
 
         // MyProfileScreen hub: stats + menu
@@ -198,8 +198,8 @@ internal static class ProfileEn
         ["profile.menu_sup_stats"] = "Extra statistics",
         ["profile.sup_intro"] = "Thank you for supporting AetherLove! Pick a style for your name and choose whether to show the supporter badge. Everyone can see these.",
         ["profile.sup_name_style"] = "Name style",
-        ["profile.sup_show_badge"] = "Show supporter badge",
-        ["profile.sup_badge_hint"] = "Shows the supporter tag on your profile. The star next to your name always shows.",
+        ["profile.sup_show_badge"] = "Show my supporter status",
+        ["profile.sup_badge_hint"] = "When off, nobody sees your supporter star or badge anywhere: not on your profiles, not in chats, not on hangouts, and your own profile preview hides them too. Your supporter perks keep working. Applies to your whole account.",
         ["profile.sup_stats_intro"] = "Supporter-only insight into how your profile is doing across the realm.",
         ["profile.sup_stat_likes_received"] = "Likes received",
         ["profile.sup_stat_superlikes"] = "Superlikes received",
@@ -220,5 +220,23 @@ internal static class ProfileEn
         ["profile.style_rainbow"] = "Rainbow (animated)",
         ["profile.style_shimmer"] = "Gold shimmer (animated)",
         ["profile.style_pulse"] = "Rose pulse (animated)",
+
+        // added after update 2.0.1
+        ["profile.more_options"] = "More options",
+        ["profile.menu_hide"] = "Hide this profile",
+        ["profile.menu_report"] = "Report this profile",
+        ["profile.hide_title"] = "Hide this profile?",
+        ["profile.hide_body"] = "You will never see this profile in your deck again. This cannot be undone.",
+        ["profile.hide_confirm"] = "Hide permanently",
+        // holiday mode (added after update 2.0.1)
+        ["profile.menu_holiday"] = "Holiday mode",
+        ["profile.holiday_toggle"] = "Holiday mode on",
+        ["profile.holiday_msg_label"] = "Holiday message",
+        ["profile.holiday_msg_hint"] = "While holiday mode is on, everyone who views your profile sees an away banner with your message, and your matches see an away marker on your picture.",
+        ["profile.holiday_save"] = "Save",
+        ["profile.holiday_saved"] = "Saved!",
+        ["profile.holiday_active_banner"] = "HOLIDAY MODE ACTIVE",
+        ["profile.holiday_banner"] = "This player has holiday mode activated: {0}",
+        ["profile.holiday_banner_short"] = "This player has holiday mode activated.",
     };
 }

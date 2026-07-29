@@ -42,6 +42,8 @@ public sealed class AetherLoveBootstrap : IHostedService
     private readonly SessionBootstrapper _bootstrap;
     private readonly AetherSignalService _signal;
     private readonly PulseService _pulse;
+    private readonly MarketAlertService _marketAlerts;
+    private readonly Os.MarketContextMenuService _marketContextMenu;
     private readonly Os.ClockAlarmService _clockAlarms;
     private readonly TomestoneEmoteService _tomestoneEmote;
     private readonly ScreenCaptureService _capture;
@@ -80,6 +82,8 @@ public sealed class AetherLoveBootstrap : IHostedService
         SessionBootstrapper bootstrap,
         AetherSignalService signal,
         PulseService pulse,
+        MarketAlertService marketAlerts,
+        Os.MarketContextMenuService marketContextMenu,
         Os.ClockAlarmService clockAlarms,
         TomestoneEmoteService tomestoneEmote,
         ScreenCaptureService capture,
@@ -106,6 +110,8 @@ public sealed class AetherLoveBootstrap : IHostedService
         _bootstrap = bootstrap;
         _signal = signal;
         _pulse = pulse;
+        _marketAlerts = marketAlerts;
+        _marketContextMenu = marketContextMenu;
         _clockAlarms = clockAlarms;
         _tomestoneEmote = tomestoneEmote;
         _capture = capture;
@@ -167,6 +173,7 @@ public sealed class AetherLoveBootstrap : IHostedService
         _clientState.Logout += OnLogout;
         Plugin.Framework.Update += OnCombatUpdate;
         _pulse.Start();
+        _marketAlerts.Start();
         _clockAlarms.Start();
         _tomestoneEmote.Start(() => _mainWindow.IsOpen && _mainWindow.IsPhoneFocused);
         _capture.Initialize();
@@ -337,6 +344,9 @@ public sealed class AetherLoveBootstrap : IHostedService
         // Logging back in within the grace keeps the hangout alive.
         _hangoutLogoutAtUtc = null;
 
+        // A fresh play session starts on a full charge.
+        Os.BatteryService.Reset();
+
         // Before the auto-open early-outs: the changelog shows regardless of that preference.
         MaybeShowChangelog();
 
@@ -388,6 +398,10 @@ public sealed class AetherLoveBootstrap : IHostedService
 
     private void OnCombatUpdate(IFramework framework)
     {
+        // Ticked unconditionally so a recharge still applies while logged out; only the drain itself is gated on
+        // being in game, which is the whole point of the joke.
+        Os.BatteryService.Tick(framework.UpdateDelta.Ticks / (float)TimeSpan.TicksPerSecond, _clientState.IsLoggedIn);
+
         if (_hangoutLogoutAtUtc is { } loggedOutAt && !_clientState.IsLoggedIn
             && DateTimeOffset.UtcNow - loggedOutAt > HangoutLogoutGrace)
         {

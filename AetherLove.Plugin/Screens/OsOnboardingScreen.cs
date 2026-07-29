@@ -743,7 +743,7 @@ public sealed partial class OsOnboardingScreen
                     Plugin.Log.Warning(ex, "[OsOnboarding] SetAccountPassphrase failed; sibling provisioning will fall back.");
                 }
                 _keyStorage.Store(pubKey, privKey);
-                _keyStorage.StoreKek(kek);
+                _keyStorage.StoreKek(kek, salt, MemoryKb, Iterations, Parallelism);
                 _passphraseUploaded = true;
                 _advanceFromPassphrasePending = true;
             }

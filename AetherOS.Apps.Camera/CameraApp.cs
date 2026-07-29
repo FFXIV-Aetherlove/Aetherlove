@@ -212,9 +212,24 @@ public sealed class CameraApp : IAetherApp
         {
             review.Editing = !review.Editing;
         }
+        // With the roll import off a plain shot has nowhere to go, so say so rather than letting Save look like
+        // it worked. A capture taken for another app is unaffected: it is handed back either way.
+        var canSave = this.pending != null || this.library.AutoImportShutter;
+        if (!canSave)
+        {
+            var notice = ctx.Localize("os.camera_save_off");
+            var noticeSz = ImGui.CalcTextSize(notice, false, width);
+            ImGui.GetWindowDrawList().AddText(ImGui.GetFont(), ImGui.GetFontSize(),
+                new Vector2(winPos.X + pad, btnY - noticeSz.Y - ctx.Px(8f)), U32(MutedText), notice,
+                wrapWidth: width);
+        }
         var saveLabel = this.pending != null ? ctx.Localize("os.camera_use") : ctx.Localize("os.camera_save");
-        if (AccentButton(ctx, $"{saveLabel}###cameraReviewSave",
-                new Vector2(winPos.X + pad + (btnW + btnGap) * 2f, btnY), new Vector2(btnW, btnH)))
+        var savePos = new Vector2(winPos.X + pad + (btnW + btnGap) * 2f, btnY);
+        if (!canSave)
+        {
+            GhostButton(ctx, saveLabel, "##cameraReviewSaveOff", savePos, new Vector2(btnW, btnH), dimmed: true);
+        }
+        else if (AccentButton(ctx, $"{saveLabel}###cameraReviewSave", savePos, new Vector2(btnW, btnH)))
         {
             this.SaveReview(review);
         }
@@ -409,20 +424,31 @@ public sealed class CameraApp : IAetherApp
             return;
         }
         var source = review.Shown.Length > 0 ? review.Shown : review.Path;
-        var saved = this.library.AddCapture(source, review.Crop);
+        var keepCopy = this.pending == null ? this.library.AutoImportShutter : this.library.AutoImportAppCaptures;
+        var saved = keepCopy ? this.library.AddCapture(source, review.Crop) : null;
         this.review = null;
         if (this.pending is not { } request)
         {
             return;
         }
         this.pending = null;
-        if (saved != null)
+        // The crop is baked into whatever file the requester receives, so a full-image rect means "no further
+        // crop". Not every requester can apply a rect itself, so the framing must travel in the pixels: with no
+        // stored copy the crop is baked into a temp file instead, and only a failure hands back the raw shot.
+        if (saved != null && ReadImageSize(saved.Path) is { X: > 0f, Y: > 0f } size)
         {
-            // The crop is baked into the stored copy, so a full-image rect signals "no further crop".
-            this.shell?.SendIntent(request.ReturnApp, ReadImageSize(saved.Path) is { X: > 0f, Y: > 0f } size
-                ? OsIntents.CreateCameraShot(saved.Path, new Vector4(0f, 0f, size.X, size.Y))
-                : OsIntents.CreateCameraShot(source, review.Crop));
+            this.shell?.SendIntent(request.ReturnApp,
+                OsIntents.CreateCameraShot(saved.Path, new Vector4(0f, 0f, size.X, size.Y)));
+            return;
         }
+        if (this.library.BakeCrop(source, review.Crop) is { Length: > 0 } baked
+            && ReadImageSize(baked) is { X: > 0f, Y: > 0f } bakedSize)
+        {
+            this.shell?.SendIntent(request.ReturnApp,
+                OsIntents.CreateCameraShot(baked, new Vector4(0f, 0f, bakedSize.X, bakedSize.Y)));
+            return;
+        }
+        this.shell?.SendIntent(request.ReturnApp, OsIntents.CreateCameraShot(source, review.Crop));
     }
 
     private void DrawMain(OsAppContext ctx)
@@ -902,20 +928,31 @@ public sealed class CameraApp : IAetherApp
 
     /// <summary>A subtle dark pill button for secondary actions; <paramref name="accentOutline"/> marks an
     /// active toggle (the Edit button while the edit panel is open).</summary>
-    private static bool GhostButton(OsAppContext ctx, string label, string id, Vector2 tl, Vector2 size, bool accentOutline = false)
+    private static bool GhostButton(OsAppContext ctx, string label, string id, Vector2 tl, Vector2 size,
+        bool accentOutline = false, bool dimmed = false)
     {
-        ImGui.SetCursorScreenPos(tl);
-        var clicked = ImGui.InvisibleButton(id, size);
-        var hovered = ImGui.IsItemHovered();
         var dl = ImGui.GetWindowDrawList();
+        var clicked = false;
+        var hovered = false;
+        if (!dimmed)
+        {
+            ImGui.SetCursorScreenPos(tl);
+            clicked = ImGui.InvisibleButton(id, size);
+            hovered = ImGui.IsItemHovered();
+            if (hovered)
+            {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            }
+        }
         dl.AddRectFilled(tl, tl + size, U32(new Vector4(1f, 1f, 1f, hovered ? 0.16f : 0.10f)), size.Y * 0.5f);
         if (accentOutline)
         {
             dl.AddRect(tl, tl + size, U32(ctx.Theme.Accent), size.Y * 0.5f, ImDrawFlags.RoundCornersAll, ctx.Px(1.4f));
         }
         var sz = ImGui.CalcTextSize(label);
+        var color = dimmed ? MutedText : (accentOutline ? ctx.Theme.AccentLight : WhiteText);
         dl.PushClipRect(tl, tl + size, true);
-        dl.AddText(tl + (size - sz) * 0.5f, U32(accentOutline ? ctx.Theme.AccentLight : WhiteText), label);
+        dl.AddText(tl + (size - sz) * 0.5f, U32(color), label);
         dl.PopClipRect();
         return clicked;
     }

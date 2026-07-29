@@ -59,7 +59,7 @@ internal static class SettingsPt
         ["settings.popup_messages"] = "Mostrar um popup para novas mensagens",
         ["settings.popup_matches"] = "Mostrar um popup para novos matches",
         ["settings.hide_notifications_in_combat"] = "Ocultar notificações em combate",
-        ["settings.hide_notifications_in_combat_tooltip"] = "Quando ativado, você não recebe nenhuma notificação — avisos no chat do jogo, popups ou sons — enquanto estiver em combate.",
+        ["settings.hide_notifications_in_combat_tooltip"] = "Quando ativado, você não recebe nenhuma notificação (avisos no chat do jogo, popups ou sons) enquanto estiver em combate.",
         ["settings.auto_open_minimized"] = "Abrir minimizado automaticamente ao fazer login",
         ["settings.pulse_optout"] = "Mensagens ocasionais no jogo",
         ["settings.pulse_optout_tooltip"] = "Ocasionalmente, o AetherLove pode deixar uma mensagem divertida no chat do jogo. Desative para parar.",
@@ -228,5 +228,19 @@ internal static class SettingsPt
         ["settings.section_time_format"] = "Formato da hora",
         ["settings.time_24h"] = "24 horas",
         ["settings.time_12h"] = "12 horas",
+
+        // added after update 2.0.1
+        ["settings.audio_sounds_off"] = "Os sons de notificaÃ§Ã£o estÃ£o desativados.",
+        ["settings.audio_sounds_enable"] = "Ativar sons de notificaÃ§Ã£o",
+        ["settings.audio_volume"] = "Volume das notificaÃ§Ãµes",
+        ["settings.audio_device"] = "Dispositivo de saÃ­da",
+        ["settings.audio_device_default"] = "PadrÃ£o do sistema",
+        ["settings.audio_test"] = "Tocar som de teste",
+        ["settings.audio_test_ok"] = "A tocar! Se nÃ£o ouvir nada, experimente outro dispositivo de saÃ­da acima.",
+        ["settings.font_header"] = "Fonte",
+        ["settings.font_caption"] = "Aplica-se a todo o texto do telemóvel. Caracteres em falta numa fonte usam a fonte padrão.",
+        ["settings.font_default"] = "Padrão",
+        ["settings.phone_size_header"] = "Tamanho do telemóvel",
+        ["settings.mini_phone_size_header"] = "Tamanho em miniatura",
     };
 }

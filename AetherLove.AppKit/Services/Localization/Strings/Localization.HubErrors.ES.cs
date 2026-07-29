@@ -87,5 +87,20 @@ internal static class HubErrorsEs
         ["huberror.msgr_storage_full"] = "Tu almacenamiento de imágenes está lleno. Borra algunas o espera a que caduquen las más antiguas e inténtalo de nuevo.",
         ["huberror.msgr_image_too_large"] = "Esa imagen es demasiado grande.",
         ["huberror.msgr_image_invalid"] = "No se pudo leer esa imagen.",
+        // levemetes (added after update 2.0.1)
+        ["huberror.levemetes_disabled"] = "Levemetes está desactivado por ahora.",
+        ["huberror.leve_not_found"] = "Este anuncio ya no existe.",
+        ["huberror.leve_invalid"] = "No se pudo guardar el anuncio. Revisa los datos.",
+        ["huberror.leve_limit_reached"] = "Ya tienes {0} anuncios. Elimina uno o deja que uno caduque.",
+        ["huberror.leve_too_long"] = "El texto es demasiado largo (máx. {0} caracteres).",
+        ["huberror.leve_image_rejected"] = "Esta imagen no se puede subir. Elige otra o contacta con soporte si crees que es un error.",
+        ["huberror.leve_review_own"] = "No puedes reseñar tu propio anuncio.",
+        ["huberror.leve_review_too_long"] = "Tu reseña es demasiado larga (máx. {0} caracteres).",
+        ["huberror.leve_review_rating_invalid"] = "Elige una valoración de 1 a 5 estrellas.",
+        ["huberror.leve_reviews_disabled"] = "El autor ha desactivado las reseñas en este anuncio.",
+        ["huberror.leve_renew_too_soon"] = "Este anuncio se renovó hace poco. Inténtalo más tarde.",
+        // holiday mode (added after update 2.0.1)
+        ["huberror.holiday_message_too_long"] = "Tu mensaje de vacaciones es demasiado largo (máx. {0} caracteres).",
+        ["huberror.holiday_message_invalid"] = "Este mensaje de vacaciones no se puede usar. Reformúlalo, por favor.",
     };
 }

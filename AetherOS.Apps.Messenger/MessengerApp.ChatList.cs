@@ -1291,6 +1291,8 @@ public sealed partial class MessengerApp
             _ when NewsShare.TryParse(preview, out _) => Loc.T("chat.preview_news"),
             _ when CalendarEventShare.TryParse(preview, out _) => Loc.T("chat.preview_calevent"),
             _ when LocationShare.TryParse(preview, out _) => Loc.T("chat.preview_location"),
+            _ when LevemeteShare.TryParse(preview, out _) => Loc.T("chat.preview_levemete"),
+            _ when MarketShare.TryParse(preview, out _) => Loc.T("chat.preview_market"),
             _ => AetherLove.Emoji.ParsedMessage.Parse(preview).PlainText.Replace('\n', ' '),
         };
         return row.LastFromMe ? Loc.T("os.msgr_you_prefix") + body : body;

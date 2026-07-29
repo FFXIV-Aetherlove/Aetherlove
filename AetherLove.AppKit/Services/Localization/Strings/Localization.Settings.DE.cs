@@ -61,7 +61,7 @@ internal static class SettingsDe
         ["settings.popup_messages"] = "Popup für neue Nachrichten anzeigen",
         ["settings.popup_matches"] = "Popup für neue Matches anzeigen",
         ["settings.hide_notifications_in_combat"] = "Benachrichtigungen im Kampf ausblenden",
-        ["settings.hide_notifications_in_combat_tooltip"] = "Wenn aktiviert, erhältst du im Kampf keine Benachrichtigungen — weder Chat-Ankündigungen noch Popups oder Sounds.",
+        ["settings.hide_notifications_in_combat_tooltip"] = "Wenn aktiviert, erhältst du im Kampf keine Benachrichtigungen, weder Chat-Ankündigungen noch Popups oder Sounds.",
         ["settings.auto_open_minimized"] = "Beim Anmelden automatisch minimiert öffnen",
         ["settings.pulse_optout"] = "Erhalte fantastische Nachrichten vom Aethernet-Team, die dich ans Swipen erinnern",
         ["settings.pulse_optout_tooltip"] = "Ab und zu lässt AetherLove eine spielerische Zeile in deinem Spielchat fallen. Deaktiviere dies, um sie zu stoppen.",
@@ -229,5 +229,19 @@ internal static class SettingsDe
         ["settings.section_time_format"] = "Zeitformat",
         ["settings.time_24h"] = "24-Stunden",
         ["settings.time_12h"] = "12-Stunden",
+
+        // added after update 2.0.1
+        ["settings.audio_sounds_off"] = "BenachrichtigungstÃ¶ne sind derzeit deaktiviert.",
+        ["settings.audio_sounds_enable"] = "BenachrichtigungstÃ¶ne aktivieren",
+        ["settings.audio_volume"] = "BenachrichtigungslautstÃ¤rke",
+        ["settings.audio_device"] = "AusgabegerÃ¤t",
+        ["settings.audio_device_default"] = "Systemstandard",
+        ["settings.audio_test"] = "Testton abspielen",
+        ["settings.audio_test_ok"] = "LÃ¤uft! Wenn du nichts hÃ¶rst, probiere oben ein anderes AusgabegerÃ¤t.",
+        ["settings.font_header"] = "Schriftart",
+        ["settings.font_caption"] = "Gilt für den gesamten Text auf dem Handy. Zeichen, die einer Schrift fehlen, nutzen die Standardschrift.",
+        ["settings.font_default"] = "Standard",
+        ["settings.phone_size_header"] = "Handy-Größe",
+        ["settings.mini_phone_size_header"] = "Miniatur-Größe",
     };
 }

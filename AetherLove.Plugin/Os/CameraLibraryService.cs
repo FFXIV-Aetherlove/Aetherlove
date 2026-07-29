@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Numerics;
 using AetherOS.Apps.Camera;
+using AetherOS.Apps.Photos;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 
@@ -45,6 +46,10 @@ public sealed class CameraLibraryService : ICameraLibrary
         }
     }
 
+    public bool AutoImportShutter => Enabled(PhotoSettings.AutoImportCameraRoll);
+
+    public bool AutoImportAppCaptures => Enabled(PhotoSettings.AutoImportAppCaptures);
+
     public CameraPhoto? AddCapture(string sourcePath, Vector4 crop)
     {
         EnsureMigrated();
@@ -54,33 +59,63 @@ public sealed class CameraLibraryService : ICameraLibrary
 
     public void Delete(string photoId) => _library.DeletePhoto(photoId);
 
+    /// <summary>Photos-app toggles are absent-means-enabled, so a plain <c>Get&lt;bool&gt;</c> would read a
+    /// fresh install as disabled.</summary>
+    private bool Enabled(string key) => _storage.For(PhotoSettings.ScopeId).Get<bool?>(key) ?? true;
+
+    public string? BakeCrop(string sourcePath, Vector4 crop) => CropToTemp(sourcePath, crop);
+
     private AetherOS.Apps.Photos.PhotoItem? Import(string sourcePath, Vector4 crop, DateTime takenAtUtc, string? location)
     {
+        var temp = CropToTemp(sourcePath, crop);
+        if (temp == null)
+        {
+            return null;
+        }
         try
         {
-            var temp = Path.Combine(Path.GetTempPath(), $"aethercam_{Guid.NewGuid():N}.png");
-            using (var image = SixLabors.ImageSharp.Image.Load(sourcePath))
-            {
-                if (crop.Z >= 1f && crop.W >= 1f)
-                {
-                    var x = (int)Math.Clamp(crop.X, 0f, image.Width - 1f);
-                    var y = (int)Math.Clamp(crop.Y, 0f, image.Height - 1f);
-                    var w = (int)Math.Clamp(crop.Z, 1f, image.Width - x);
-                    var h = (int)Math.Clamp(crop.W, 1f, image.Height - y);
-                    if (w < image.Width || h < image.Height)
-                    {
-                        image.Mutate(c => c.Crop(new Rectangle(x, y, w, h)));
-                    }
-                }
-                image.SaveAsPng(temp);
-            }
-            var item = _library.ImportCapture(temp, takenAtUtc, location);
-            File.Delete(temp);
-            return item;
+            return _library.ImportCapture(temp, takenAtUtc, location);
         }
         catch (Exception ex)
         {
             Plugin.Log.Warning(ex, "[CameraLibrary] Failed to store a capture.");
+            return null;
+        }
+        finally
+        {
+            try
+            {
+                File.Delete(temp);
+            }
+            catch (IOException)
+            {
+            }
+        }
+    }
+
+    private static string? CropToTemp(string sourcePath, Vector4 crop)
+    {
+        try
+        {
+            var temp = Path.Combine(Path.GetTempPath(), $"aethercam_{Guid.NewGuid():N}.png");
+            using var image = SixLabors.ImageSharp.Image.Load(sourcePath);
+            if (crop.Z >= 1f && crop.W >= 1f)
+            {
+                var x = (int)Math.Clamp(crop.X, 0f, image.Width - 1f);
+                var y = (int)Math.Clamp(crop.Y, 0f, image.Height - 1f);
+                var w = (int)Math.Clamp(crop.Z, 1f, image.Width - x);
+                var h = (int)Math.Clamp(crop.W, 1f, image.Height - y);
+                if (w < image.Width || h < image.Height)
+                {
+                    image.Mutate(c => c.Crop(new Rectangle(x, y, w, h)));
+                }
+            }
+            image.SaveAsPng(temp);
+            return temp;
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Warning(ex, "[CameraLibrary] Failed to bake a capture crop.");
             return null;
         }
     }

@@ -21,6 +21,13 @@ public sealed class OsShell : IOsShell
 
     private const int MaxNotifications = 40;
 
+    /// <summary>Apps whose home tile carries the red "new" badge until first opened. Edit per release when a
+    /// new app ships; stale ids in users' <see cref="OsConfig.SeenNewApps"/> drop out harmlessly.</summary>
+    internal static readonly string[] NewAppIds = ["levemetes", "market", "realtor"];
+
+    public bool IsNewApp(string appId) =>
+        Array.IndexOf(NewAppIds, appId) >= 0 && !UiHost.Configuration.Os.SeenNewApps.Contains(appId);
+
     // Apps resolve lazily: hosts they depend on may themselves need this shell.
     public OsShell(IServiceProvider services, ScreenRouter router)
     {
@@ -114,7 +121,7 @@ public sealed class OsShell : IOsShell
         }
         var internalName = appId[ExternalApp.IdPrefix.Length..];
         UiHost.Configuration.Os.ExternalApps.Remove(internalName);
-        UiHost.Configuration.Os.IconOrder.Remove(appId);
+        HomeLayout.RemoveFromConfig(UiHost.Configuration.Os, appId);
         UiHost.Configuration.Os.DockIds.Remove(appId);
         UiHost.Configuration.Save();
         RefreshExternalApps();
@@ -153,6 +160,11 @@ public sealed class OsShell : IOsShell
         }
 
         ClearBadge(appId);
+        if (Array.IndexOf(NewAppIds, appId) >= 0 && !UiHost.Configuration.Os.SeenNewApps.Contains(appId))
+        {
+            UiHost.Configuration.Os.SeenNewApps.Add(appId);
+            UiHost.Configuration.Save();
+        }
 
         if (app.HasSurface)
         {

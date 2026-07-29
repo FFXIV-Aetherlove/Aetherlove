@@ -33,7 +33,7 @@ public sealed class SettingsScreen
         _caps = caps;
     }
 
-    private enum View { Hub, General, Language, Notifications, Appearance, Wallpaper, Profile, Supporter, Tos, Contributors, Developer }
+    private enum View { Hub, General, Language, Notifications, Audio, Appearance, Wallpaper, Profile, Supporter, Tos, Contributors, Developer }
 
     private View _view = View.Hub;
 
@@ -118,6 +118,9 @@ public sealed class SettingsScreen
             case View.Language:
                 DrawLanguagePage();
                 break;
+            case View.Audio:
+                DrawAudioPage();
+                break;
             case View.Notifications:
                 DrawNotificationsPage();
                 break;
@@ -180,6 +183,7 @@ public sealed class SettingsScreen
                 new(FontAwesomeIcon.Cog, t.Accent, Loc.T("os.menu_general"), 0, false, () => _view = View.General),
                 new(FontAwesomeIcon.Language, t.Accent, Loc.T("settings.menu_language"), 0, false, () => _view = View.Language),
                 new(FontAwesomeIcon.Bell, t.Accent, Loc.T("settings.section_notifications"), 0, false, () => _view = View.Notifications),
+                new(FontAwesomeIcon.VolumeUp, t.Accent, Loc.T("os.menu_audio"), 0, false, () => _view = View.Audio),
             });
 
             GroupLabel(Loc.T("os.cat_appearance"));
@@ -499,6 +503,14 @@ public sealed class SettingsScreen
             () => !os.SkipCloseConfirmation, v => os.SkipCloseConfirmation = !v);
         SettingCheckbox(PadX, Loc.T("settings.auto_open_minimized"),
             () => os.AutoOpenMinimizedOnLogin, v => os.AutoOpenMinimizedOnLogin = v);
+        // Only offered once the user has actually run the battery flat; there is no point advertising the way out
+        // of a joke nobody has seen.
+        if (UiHost.Configuration.Os.BatteryEmptySeen)
+        {
+            SettingCheckbox(PadX, Loc.T("os.settings_hide_battery_grass"),
+                () => UiHost.Configuration.Os.HideBatteryGrassPrompt,
+                v => UiHost.Configuration.Os.HideBatteryGrassPrompt = v);
+        }
 
         ImGui.Spacing();
         ImGui.SetCursorPosX(Px(PadX));
@@ -622,9 +634,6 @@ public sealed class SettingsScreen
         HelpMarker(Loc.T("settings.enable_notification_sounds_tooltip"));
         ImGui.Spacing();
 
-        DrawNotificationSoundCombo(winW);
-        ImGui.Spacing();
-
         SettingCheckbox(PadX, Loc.T("settings.hide_notifications_in_combat"),
             () => os.HideNotificationsDuringCombat, v => os.HideNotificationsDuringCombat = v);
         ImGui.SameLine();
@@ -639,15 +648,120 @@ public sealed class SettingsScreen
         ImGui.Spacing();
     }
 
+    private string? _audioTestResult;
+
+    private void DrawAudioPage()
+    {
+        DrawSubpageBack();
+        DrawSubpageHeading(Loc.T("os.menu_audio"), PadX);
+
+        var scrollH = ImGui.GetContentRegionAvail().Y;
+        PushScrollbarStyle();
+        using var scroll = ImRaii.Child("##osSettAudio", new Vector2(0f, scrollH), false);
+        PopScrollbarStyle();
+        if (!scroll)
+        {
+            return;
+        }
+
+        var winW = ImGui.GetWindowSize().X;
+        var os = UiHost.Configuration.OsSettings;
+        ImGui.Spacing();
+
+        ImGui.SetCursorPosX(Px(PadX));
+        ImGui.TextColored(new Vector4(0.70f, 0.70f, 0.70f, 1f), Loc.T("settings.audio_volume"));
+        ImGui.SetCursorPosX(Px(PadX));
+        ImGui.SetNextItemWidth(winW - Px(PadX) * 2f);
+        var volumePct = (int)MathF.Round(os.NotificationVolume * 100f);
+        if (ImGui.SliderInt("##audioVolume", ref volumePct, 0, 100, "%d%%"))
+        {
+            os.NotificationVolume = volumePct / 100f;
+        }
+        if (ImGui.IsItemDeactivatedAfterEdit())
+        {
+            UiHost.Configuration.Save();
+            NotificationSoundPlayer.Play(os.NotificationSoundChoice);
+        }
+        ImGui.Spacing();
+
+        ImGui.SetCursorPosX(Px(PadX));
+        ImGui.TextColored(new Vector4(0.70f, 0.70f, 0.70f, 1f), Loc.T("settings.audio_device"));
+        ImGui.SetCursorPosX(Px(PadX));
+        ImGui.SetNextItemWidth(winW - Px(PadX) * 2f);
+        var configured = os.AudioOutputDevice;
+        var deviceLabel = configured.Length == 0 ? Loc.T("settings.audio_device_default") : configured;
+        if (ImGui.BeginCombo("##audioDevice", deviceLabel))
+        {
+            if (ImGui.Selectable(Loc.T("settings.audio_device_default"), configured.Length == 0))
+            {
+                os.AudioOutputDevice = string.Empty;
+                UiHost.Configuration.Save();
+            }
+            SharedUiHelpers.HandOnHover();
+            foreach (var name in NotificationSoundPlayer.ListDevices())
+            {
+                if (ImGui.Selectable(name, name == configured))
+                {
+                    os.AudioOutputDevice = name;
+                    UiHost.Configuration.Save();
+                }
+                SharedUiHelpers.HandOnHover();
+            }
+            ImGui.EndCombo();
+        }
+        ImGui.Spacing();
+
+        if (!os.EnableNotifications || !os.EnableNotificationSounds)
+        {
+            ImGui.SetCursorPosX(Px(PadX));
+            ImGui.PushTextWrapPos(winW - Px(PadX));
+            ImGui.TextColored(UiColors.ReviewOrange, Loc.T("settings.audio_sounds_off"));
+            ImGui.PopTextWrapPos();
+            ImGui.SetCursorPosX(Px(PadX));
+            PushThemeButton(ThemeService.Current);
+            ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
+            if (SharedUiHelpers.Button($"{Loc.T("settings.audio_sounds_enable")}##audioEnable", new Vector2(winW - Px(PadX) * 2f, Px(28f))))
+            {
+                os.EnableNotifications = true;
+                os.EnableNotificationSounds = true;
+                UiHost.Configuration.Save();
+            }
+            ImGui.PopStyleVar();
+            PopThemeButton();
+            ImGui.Spacing();
+        }
+
+        DrawNotificationSoundCombo(winW);
+        ImGui.Spacing();
+
+        ImGui.SetCursorPosX(Px(PadX));
+        PushThemeButton(ThemeService.Current);
+        ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
+        if (SharedUiHelpers.Button($"{Loc.T("settings.audio_test")}##audioTest", new Vector2(winW - Px(PadX) * 2f, Px(32f))))
+        {
+            _audioTestResult = NotificationSoundPlayer.TryPlay(os.NotificationSoundChoice)
+                ?? Loc.T("settings.audio_test_ok");
+        }
+        ImGui.PopStyleVar();
+        PopThemeButton();
+
+        if (_audioTestResult is { } result)
+        {
+            ImGui.Spacing();
+            ImGui.SetCursorPosX(Px(PadX));
+            ImGui.PushTextWrapPos(winW - Px(PadX));
+            ImGui.TextColored(UiColors.Body, result);
+            ImGui.PopTextWrapPos();
+        }
+        ImGui.Spacing();
+    }
+
     private static void DrawNotificationSoundCombo(float winW)
     {
         var os = UiHost.Configuration.OsSettings;
-        var soundsOn = os.EnableNotificationSounds;
 
         ImGui.SetCursorPosX(Px(PadX));
         ImGui.TextColored(new Vector4(0.70f, 0.70f, 0.70f, 1f), Loc.T("settings.notification_sound"));
-
-        ImGui.BeginDisabled(!soundsOn);
 
         var playBtnW = Px(34f);
         var gap = Px(6f);
@@ -686,8 +800,6 @@ public sealed class SettingsScreen
         {
             NotificationSoundPlayer.Play(os.NotificationSoundChoice);
         }
-
-        ImGui.EndDisabled();
     }
 
     private void DrawAppearancePage()
@@ -709,8 +821,16 @@ public sealed class SettingsScreen
         ImGui.Spacing();
         AppearancePicker.DrawThemeCards(winW, PadX);
         ImGui.Spacing();
+        ImGui.Spacing();
+        DrawSubpageHeading(Loc.T("settings.font_header"), PadX);
+        AppearancePicker.DrawFontCards(winW, PadX, t);
+        ImGui.Spacing();
+        ImGui.Spacing();
+        DrawSubpageHeading(Loc.T("settings.phone_size_header"), PadX);
         AppearancePicker.DrawPhoneSizeButtons(winW, PadX, t);
         ImGui.Spacing();
+        ImGui.Spacing();
+        DrawSubpageHeading(Loc.T("settings.mini_phone_size_header"), PadX);
         AppearancePicker.DrawMiniSizeButtons(winW, PadX, t);
         ImGui.Spacing();
         AppearancePicker.DrawMiniSizePreview(winW, PadX);
@@ -1416,8 +1536,12 @@ public sealed class SettingsScreen
             ImGui.SameLine(0f, gap);
             if (ModalUi.Button($"{Loc.T("os.home_reset")}##resetHomeConfirm", half))
             {
-                UiHost.Configuration.Os.IconOrder.Clear();
-                UiHost.Configuration.Os.DockIds.Clear();
+                var os = UiHost.Configuration.Os;
+                os.Pages.Clear();
+                os.IconOrder.Clear();
+                os.DockIds.Clear();
+                os.LayoutColumns = 0;
+                os.LayoutRows = 0;
                 UiHost.Configuration.Save();
                 _resetHomeOpen = false;
             }

@@ -32,7 +32,7 @@ internal static class DeckEn
         ["deck.match_fx_constellation"] = "Written in the stars",
         ["deck.match_fx_slot"] = "Three of a kind",
         ["deck.match_fx_slot_title"] = "JACKPOT!",
-        ["deck.match_fx_tarot"] = "The cards align — two destinies entwined",
+        ["deck.match_fx_tarot"] = "The cards align: two destinies entwined",
         ["deck.match_fx_tarot_title"] = "THE LOVERS",
         ["deck.match_fx_lavalamp"] = "Two flames, one glow",
         ["deck.match_fx_lanterns"] = "Two lights, one sky",

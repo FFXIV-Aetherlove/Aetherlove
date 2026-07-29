@@ -26,7 +26,13 @@
   <Project Path="AetherOS.Apps.Hangouts/AetherOS.Apps.Hangouts.csproj">
     <Platform Project="x64" />
   </Project>
+  <Project Path="AetherOS.Apps.Levemetes/AetherOS.Apps.Levemetes.csproj">
+    <Platform Project="x64" />
+  </Project>
   <Project Path="AetherOS.Apps.Love/AetherOS.Apps.Love.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="AetherOS.Apps.Market/AetherOS.Apps.Market.csproj">
     <Platform Project="x64" />
   </Project>
   <Project Path="AetherOS.Apps.Messenger/AetherOS.Apps.Messenger.csproj">
@@ -39,6 +45,9 @@
     <Platform Project="x64" />
   </Project>
   <Project Path="AetherOS.Apps.Places/AetherOS.Apps.Places.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="AetherOS.Apps.Realtor/AetherOS.Apps.Realtor.csproj">
     <Platform Project="x64" />
   </Project>
   <Project Path="AetherOS.Apps.Settings/AetherOS.Apps.Settings.csproj">

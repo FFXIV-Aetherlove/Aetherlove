@@ -53,7 +53,7 @@ internal static class SettingsEs
         ["settings.popup_messages"] = "Mostrar un pop-up para mensajes nuevos",
         ["settings.popup_matches"] = "Mostrar un pop-up para coincidencias nuevas",
         ["settings.hide_notifications_in_combat"] = "Ocultar notificaciones en combate",
-        ["settings.hide_notifications_in_combat_tooltip"] = "Cuando está activado, no recibirás ninguna notificación —ni avisos en el chat del juego, ni pop-ups, ni sonidos— mientras estés en combate.",
+        ["settings.hide_notifications_in_combat_tooltip"] = "Cuando está activado, no recibirás ninguna notificación (ni avisos en el chat del juego, ni pop-ups, ni sonidos) mientras estés en combate.",
         ["settings.auto_open_minimized"] = "Abrir minimizado automáticamente al iniciar sesión",
         ["settings.pulse_optout"] = "Recibe mensajes increíbles del equipo de Aethernet para recordarte que deslices",
         ["settings.pulse_optout_tooltip"] = "De vez en cuando, AetherLove puede dejar un mensaje divertido en tu chat del juego. Desactívalo para detenerlos.",
@@ -217,5 +217,19 @@ internal static class SettingsEs
         ["settings.section_time_format"] = "Formato de hora",
         ["settings.time_24h"] = "24 horas",
         ["settings.time_12h"] = "12 horas",
+
+        // added after update 2.0.1
+        ["settings.audio_sounds_off"] = "Los sonidos de notificaciÃ³n estÃ¡n desactivados.",
+        ["settings.audio_sounds_enable"] = "Activar sonidos de notificaciÃ³n",
+        ["settings.audio_volume"] = "Volumen de notificaciones",
+        ["settings.audio_device"] = "Dispositivo de salida",
+        ["settings.audio_device_default"] = "Predeterminado del sistema",
+        ["settings.audio_test"] = "Reproducir sonido de prueba",
+        ["settings.audio_test_ok"] = "Â¡Sonando! Si no oyes nada, prueba con otro dispositivo de salida arriba.",
+        ["settings.font_header"] = "Fuente",
+        ["settings.font_caption"] = "Se aplica a todo el texto del móvil. Los caracteres que falten en una fuente usan la fuente predeterminada.",
+        ["settings.font_default"] = "Predeterminada",
+        ["settings.phone_size_header"] = "Tamaño del móvil",
+        ["settings.mini_phone_size_header"] = "Tamaño en miniatura",
     };
 }

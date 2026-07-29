@@ -3,7 +3,7 @@ namespace AetherLove.Shared;
 /// <summary>Protocol version; server rejects clients whose version differs.</summary>
 public static class ApiVersion
 {
-    public const int Current = 8;
+    public const int Current = 9;
 
     /// <summary>Error code prefix for version mismatches: <c>API_VERSION_MISMATCH|serverVersion</c>.</summary>
     public const string MismatchError = "API_VERSION_MISMATCH";

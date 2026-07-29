@@ -111,6 +111,17 @@ public sealed class CryptoService
         => HKDF.DeriveKey(HashAlgorithmName.SHA256, profilePrivateKey, AesGcmKeyLength,
             SHA256.HashData(accountPublicKey), AccountWrapInfo);
 
+    private static readonly byte[] SiblingWrapInfo =
+        Encoding.UTF8.GetBytes("AetherLove-sibling-profile-key-wrap-v1");
+
+    /// <summary>Wrap key for a NEW profile's private key, derived from an existing sibling profile's private
+    /// key. Lets an account whose device never captured the passphrase KEK (every account migrated from 1.x)
+    /// provision a second profile, while recovery stays passphrase-backed through the sibling. A separate info
+    /// string from <see cref="DeriveAccountWrapKey"/> keeps the two derivations domain-separated.</summary>
+    public byte[] DeriveSiblingWrapKey(byte[] siblingPrivateKey, byte[] newProfilePublicKey)
+        => HKDF.DeriveKey(HashAlgorithmName.SHA256, siblingPrivateKey, AesGcmKeyLength,
+            SHA256.HashData(newProfilePublicKey), SiblingWrapInfo);
+
     public (byte[] Ciphertext, byte[] Nonce) Encrypt(byte[] messageKey, byte[] plaintext)
     {
         var nonce = new byte[AesGcmNonceLength];

@@ -35,6 +35,12 @@ public partial class DeckScreen : IDisposable
 
     private readonly List<DeckCardDto> _cards = new();
     private readonly HashSet<Guid> _processedThisPeriod = new();
+    /// <summary>Peers hidden or reported from the profile screen; dropped at a safe point, never mid-gesture.</summary>
+    private readonly HashSet<Guid> _pendingRemovals = new();
+
+    /// <summary>Profiles hidden while this session ran. Kept past the removal itself so a deck fetch that was
+    /// already in flight, and therefore predates the hide, cannot deal the card again.</summary>
+    private readonly HashSet<Guid> _hiddenThisSession = new();
     private readonly Dictionary<Guid, ISharedImmediateTexture?> _portraitTextures = new();
 
     private DateTimeOffset? _nextPullAtUtc;
@@ -156,6 +162,10 @@ public partial class DeckScreen : IDisposable
     /// <summary>Called when the user leaves the deck for anything other than its own view-profile page.</summary>
     public void MarkDeckLeft() => _discardCurrentOnRefresh = true;
 
+    /// <summary>Drops a peer the user hid or reported. The server also stops serving them, but a refresh pins the
+    /// card in hand, so the local copy has to go too.</summary>
+    public void RemoveCard(Guid profileId) => _pendingRemovals.Add(profileId);
+
     /// <summary>Runs each frame while the deck is not the active screen; pre-fetches the next deck once the
     /// slot elapses (or a refresh push arrives) so it is already in hand on return.</summary>
     public void MaybeBackgroundRefresh()
@@ -224,6 +234,7 @@ public partial class DeckScreen : IDisposable
         }
 
         ApplyPendingDeckIfReady();
+        ApplyPendingRemovals();
 
         if (_pendingMatchNav)
         {
@@ -482,6 +493,7 @@ public partial class DeckScreen : IDisposable
         {
             _cards.AddRange(pending.Cards);
         }
+        StripHidden();
         // A fresh deck re-injects un-actioned superlikers on top server-side, so parked copies would duplicate.
         _deferredSuperlikes.Clear();
         _nextPullAtUtc = pending.NextPullAtUtc;
@@ -489,6 +501,40 @@ public partial class DeckScreen : IDisposable
         _reswipesRemaining = pending.ReswipesRemaining;
         _superlikesRemaining = pending.SuperlikesRemaining;
         _superlikesPerDay = pending.SuperlikesPerDay;
+    }
+
+    /// <summary>Applies queued hides on the UI thread; the reswipe history is purged too, or an undo re-deals a
+    /// card the user just hid.</summary>
+    private void ApplyPendingRemovals()
+    {
+        if (_pendingRemovals.Count == 0)
+        {
+            return;
+        }
+        if (_isDragging || _isThrowingCard || _isSnappingBack || _isUndoing || _isDeferring || _dragX != 0f || _dragY != 0f)
+        {
+            return;
+        }
+        foreach (var profileId in _pendingRemovals)
+        {
+            _cards.RemoveAll(c => c.ProfileId == profileId);
+            _processedThisPeriod.Add(profileId);
+            _undoStack.RemoveAll(e => e.Card.ProfileId == profileId);
+            _deferredSuperlikes.RemoveAll(c => c.ProfileId == profileId);
+            _hiddenThisSession.Add(profileId);
+        }
+        _pendingRemovals.Clear();
+    }
+
+    /// <summary>Drops anything hidden this session out of a freshly arrived deck. A fetch already in flight when
+    /// the hide committed carries a server response that predates the hide row, so without this the card comes
+    /// straight back.</summary>
+    private void StripHidden()
+    {
+        if (_hiddenThisSession.Count > 0)
+        {
+            _cards.RemoveAll(c => _hiddenThisSession.Contains(c.ProfileId));
+        }
     }
 
     private void CachePortraits(IEnumerable<DeckCardDto> cards)

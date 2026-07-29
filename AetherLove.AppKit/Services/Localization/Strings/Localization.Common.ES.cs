@@ -23,7 +23,7 @@ internal static class CommonEs
         ["common.outdated_body"] = "Estás usando una versión desactualizada de AetherLove. El servidor ya no admite esta versión, por lo que el complemento no puede conectarse.",
         ["common.outdated_hint"] = "Actualiza el complemento en el instalador de complementos de Dalamud y vuelve a abrir AetherLove.",
 
-        ["common.offline_title"] = "AetherLove está fuera de línea",
+        ["common.offline_title"] = "Los servicios de AetherOS están fuera de línea",
         ["common.offline_body"] = "El servidor seguramente está fuera de línea por actualizaciones o mantenimiento. ¡Esto no debería tardar más de 2 minutos!",
         ["common.offline_reconnecting"] = "Reconectando…",
         ["common.offline_taking_long"] = "Esto está tardando más de lo normal. Únete a nuestro Discord para ver el estado más reciente.",
@@ -75,7 +75,7 @@ internal static class CommonEs
         ["common.undeclared_photo_title"] = "Se requiere declaración",
         ["common.undeclared_photo_body"] = "Debes seleccionar si tu otra foto es SFW o NSFW en el cuadro de selección antes de subir otra.",
 
-        ["common.changelog_window_title"] = "AetherLove — Novedades",
+        ["common.changelog_window_title"] = "AetherLove: Novedades",
         ["common.whats_new"] = "Novedades",
         ["common.changelog_empty"] = "No hay entradas en el registro de cambios.",
         ["common.changelog_latest"] = "Lo último",
@@ -168,5 +168,8 @@ internal static class CommonEs
         ["common.moderation_message_for"] = "Mensaje para {0}",
         ["common.account_disabled_title"] = "Cuenta bloqueada",
         ["common.account_disabled_body"] = "Esta función no está disponible mientras tu cuenta esté bloqueada.",
+
+        // added after update 2.0.1
+        ["common.passphrase_correct_unrecoverable"] = "Tu frase de contraseña es correcta, pero no se pudo abrir ninguna de tus claves guardadas con ella. Contacta con soporte antes de plantearte un restablecimiento; con él tus mensajes antiguos quedarían ilegibles para siempre.",
     };
 }

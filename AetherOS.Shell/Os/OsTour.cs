@@ -286,7 +286,7 @@ public sealed class OsTour
             }
         }
         os.Folders.Add(folder);
-        os.IconOrder.Insert(0, folder.Id);
+        HomeLayout.PlaceInConfig(os, folder.Id);
         _demoFolderId = folder.Id;
     }
 
@@ -298,7 +298,7 @@ public sealed class OsTour
         }
         var os = UiHost.Configuration.Os;
         os.Folders.RemoveAll(f => f.Id == _demoFolderId);
-        os.IconOrder.Remove(_demoFolderId);
+        HomeLayout.RemoveFromConfig(os, _demoFolderId);
         _demoFolderId = null;
     }
 

@@ -20,6 +20,9 @@ public enum PhotoKind
 
     /// <summary>25:9, output 500x180. Venue banner image.</summary>
     VenueBanner,
+
+    /// <summary>4:3, output 560x420. Classified-ad photo.</summary>
+    LevemetePhoto,
 }
 
 /// <summary>Crop rectangle in original-image pixel coordinates.</summary>
@@ -41,7 +44,7 @@ public static class PhotoTransform
     public const int MinCropSide = 32;
 
     /// <summary>A tiny lossy WebP (the same encoder the server serves photos with) the client decodes at
-    /// startup to test whether its local image decoder can actually handle WebP — so machines whose decoder
+    /// startup to test whether its local image decoder can actually handle WebP, so machines whose decoder
     /// can't (Wine, or Windows without the WebP codec) get served JPEG instead of gray blocks.</summary>
     public static byte[] CreateProbeWebp()
     {
@@ -56,16 +59,17 @@ public static class PhotoTransform
         PhotoKind.Avatar => (PhotoSpec.AvatarSize, PhotoSpec.AvatarSize),
         PhotoKind.Portrait => (PhotoSpec.PortraitWidth, PhotoSpec.PortraitHeight),
         PhotoKind.VenueBanner => (PhotoSpec.VenueBannerWidth, PhotoSpec.VenueBannerHeight),
+        PhotoKind.LevemetePhoto => (PhotoSpec.LevemeteWidth, PhotoSpec.LevemeteHeight),
         _ => throw new ArgumentOutOfRangeException(nameof(kind)),
     };
 
-    /// <summary>True when the crop rect covers the whole image — the signal a client used to mark an
+    /// <summary>True when the crop rect covers the whole image, the signal a client used to mark an
     /// already-cropped, target-sized upload (vs. an original that still needs server cropping).</summary>
     public static bool IsFullImage(CropRect crop, int width, int height) =>
         crop.X <= 0 && crop.Y <= 0 && crop.Width >= width && crop.Height >= height;
 
     /// <summary>Full client pipeline: decode, crop, resize to the kind's target, strip metadata, encode PNG
-    /// (lossless — the server does the single lossy WebP re-encode).</summary>
+    /// (lossless: the server does the single lossy WebP re-encode).</summary>
     public static byte[] ProcessToPng(byte[] originalBytes, CropRect crop, PhotoKind kind)
     {
         using var image = DecodeGuarded(originalBytes);
@@ -77,7 +81,7 @@ public static class PhotoTransform
     }
 
     /// <summary>Decodes any supported image to full-size PNG bytes (no crop/resize). Used to preview a
-    /// source the client's own texture loader can't decode — notably WebP, which WIC lacks on Wine.</summary>
+    /// source the client's own texture loader can't decode, notably WebP, which WIC lacks on Wine.</summary>
     public static byte[] DecodeToPng(byte[] originalBytes)
     {
         using var image = DecodeGuarded(originalBytes);

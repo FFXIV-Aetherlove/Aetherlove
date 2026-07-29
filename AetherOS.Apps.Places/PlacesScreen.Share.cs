@@ -1,7 +1,9 @@
 using System;
 using System.Numerics;
+using System.Text.Json;
 using AetherLove.Services;
 using AetherLove.Services.Localization;
+using AetherLove.Shared.Places;
 using AetherLove.UI;
 using AetherOS.Sdk;
 using Dalamud.Bindings.ImGui;
@@ -78,4 +80,46 @@ public partial class PlacesScreen
         }
     }
 
+    /// <summary>Icon button on a schedule row that shares that single opening as a calendar event; the sheet
+    /// offers the chats (as a [calevent=] card) and the Calendar app (as a local event at that time).
+    /// Returns the drawn width.</summary>
+    private float DrawOccurrenceShareButton(VenueDetailDto detail, VenueOccurrenceDto occ, Vector2 topRight)
+    {
+        var t = ThemeService.Current;
+        var dl = ImGui.GetWindowDrawList();
+        var size = Px(30f);
+        var tl = new Vector2(topRight.X - size, topRight.Y);
+
+        ImGui.SetCursorScreenPos(tl);
+        var clicked = ImGui.InvisibleButton($"##occShare{occ.StartUtc.UtcTicks}", new Vector2(size, size));
+        var hovered = ImGui.IsItemHovered();
+        if (hovered)
+        {
+            SharedUiHelpers.HandOnHover();
+            ImGui.SetTooltip(Loc.T("places.schedule_share"));
+        }
+
+        dl.AddRectFilled(tl, tl + new Vector2(size, size),
+            ImGui.GetColorU32(t.Accent with { W = hovered ? 0.40f : 0.18f }), size * 0.5f);
+        dl.AddRect(tl, tl + new Vector2(size, size),
+            ImGui.GetColorU32(t.Accent with { W = hovered ? 0.90f : 0.50f }), size * 0.5f, ImDrawFlags.None, Px(1f));
+        IconDraw.AddCentered(dl, FontAwesomeIcon.CalendarPlus, size * 0.5f,
+            tl + new Vector2(size, size) * 0.5f, ImGui.GetColorU32(t.AccentLight));
+
+        if (clicked)
+        {
+            var venue = detail.Summary;
+            var address = VenueFields.LocationLine(venue.World, venue.District, venue.Ward, venue.Plot, venue.Room);
+            _share?.Offer(new ShareItem
+            {
+                Type = ShareTypes.CalendarEvent,
+                RefId = venue.Id.ToString("D"),
+                Title = venue.Name,
+                Subtitle = $"{venue.DataCenter}, {address}",
+                Extras = JsonSerializer.Serialize(new { kind = "venue", start = occ.StartUtc.ToUnixTimeSeconds() }),
+                SourceAppId = "places",
+            }, title: venue.Name);
+        }
+        return size;
+    }
 }

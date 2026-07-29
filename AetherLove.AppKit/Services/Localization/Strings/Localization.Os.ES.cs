@@ -217,5 +217,18 @@ internal static class OsEs
         ["os.home_menu_wallpaper"] = "Cambiar fondo",
         // news app tile rename (added after update 2.0.0)
         ["os.app_news_tile"] = "Noticias",
+
+        // battery easter egg (added after update 2.0.1)
+        ["os.battery_grass_body"] = "Nos importa tu salud: no olvides salir, hidratarte y tocar un poco de hierba ;-)",
+        ["os.battery_grass_hint"] = "Toca la hierba de abajo para continuar",
+        ["os.settings_hide_battery_grass"] = "Ocultar el aviso de tocar hierba cuando se agote la batería",
+        // levemetes (added after update 2.0.1)
+        ["os.app_levemetes"] = "Levemetes",
+        ["os.battery_grass_settings_hint"] = "(Puedes desactivar esta broma en General, dentro de la app de Ajustes)",
+
+        // added after update 2.0.1
+        ["os.menu_audio"] = "Ajustes de audio",
+        ["os.app_market"] = "Mercado",
+        ["os.app_realtor"] = "Inmobiliaria",
     };
 }

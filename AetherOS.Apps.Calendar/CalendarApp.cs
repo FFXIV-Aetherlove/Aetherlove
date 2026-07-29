@@ -82,6 +82,8 @@ public sealed class CalendarApp : IAetherApp
 
     public bool HasSurface => true;
 
+    public IReadOnlyList<string> AcceptedShareTypes { get; } = [ShareTypes.CalendarEvent];
+
     public IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> Strings => AppStrings.Packs;
 
     public void Open()
@@ -135,12 +137,40 @@ public sealed class CalendarApp : IAetherApp
 
     public void OnIntent(OsIntent intent)
     {
+        if (intent.Type == ShareIntent.Type && ShareIntent.TryUnwrap(intent, out var shared))
+        {
+            QueueSharedAdd(shared);
+            return;
+        }
         if (intent.Type != OsIntents.CalendarAdd
             || !OsIntents.TryGetCalendarAdd(intent, out var title, out var note, out var startUnix))
         {
             return;
         }
-        var startUtc = DateTimeOffset.FromUnixTimeSeconds(startUnix).UtcDateTime;
+        QueueAdd(title, note, DateTimeOffset.FromUnixTimeSeconds(startUnix).UtcDateTime);
+    }
+
+    /// <summary>A calendar-event share landing on this app becomes a local event at that date and time;
+    /// the Extras JSON carries kind + start, the same shape the chat targets consume.</summary>
+    private void QueueSharedAdd(ShareItem item)
+    {
+        if (item.Type != ShareTypes.CalendarEvent || item.Title.Length == 0)
+        {
+            return;
+        }
+        try
+        {
+            using var doc = JsonDocument.Parse(item.Extras);
+            var startUtc = DateTimeOffset.FromUnixTimeSeconds(doc.RootElement.GetProperty("start").GetInt64()).UtcDateTime;
+            QueueAdd(item.Title, item.Subtitle, startUtc);
+        }
+        catch (Exception)
+        {
+        }
+    }
+
+    private void QueueAdd(string title, string note, DateTime startUtc)
+    {
         this.pendingAdds.Add(new OwnEvent
         {
             Id = Guid.NewGuid().ToString("N"),

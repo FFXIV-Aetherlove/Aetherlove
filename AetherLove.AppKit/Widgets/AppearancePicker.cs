@@ -104,6 +104,57 @@ public static class AppearancePicker
         dl.PopClipRect();
     }
 
+    /// <summary>Two-column family pills, each labelled in its own font via the lazy preview handles.</summary>
+    public static void DrawFontCards(float winW, float padX, ThemeDefinition t)
+    {
+        var gap = Px(6f);
+        var avail = winW - Px(padX) * 2f;
+        var w = (avail - gap) / 2f;
+        var active = UiHost.Configuration.Os.FontFamily;
+
+        for (var i = 0; i < UiFonts.Families.Length; i++)
+        {
+            if (i % 2 == 0)
+            {
+                ImGui.SetCursorPosX(Px(padX));
+            }
+            else
+            {
+                ImGui.SameLine(0f, gap);
+            }
+            var family = UiFonts.Families[i];
+            var selected = family.Id == active;
+            if (selected)
+            {
+                ImGui.PushStyleColor(ImGuiCol.Button, t.ButtonNormal);
+                ImGui.PushStyleColor(ImGuiCol.ButtonHovered, t.ButtonHovered);
+                ImGui.PushStyleColor(ImGuiCol.ButtonActive, t.ButtonActive);
+            }
+            else
+            {
+                ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.18f, 0.18f, 0.18f, 1f));
+                ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.26f, 0.26f, 0.26f, 1f));
+                ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.14f, 0.14f, 0.14f, 1f));
+            }
+            ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
+            var label = family.Label ?? Loc.T("settings.font_default");
+            bool clicked;
+            using (UiFonts.Preview(family)?.Push())
+            {
+                clicked = SharedUiHelpers.Button($"{label}##font{family.Id}", new Vector2(w, Px(34f)));
+            }
+            ImGui.PopStyleVar();
+            ImGui.PopStyleColor(3);
+            if (clicked && !selected)
+            {
+                UiHost.Configuration.Os.FontFamily = family.Id;
+                UiHost.Configuration.Save();
+                UiFonts.Rebuild();
+            }
+        }
+        DrawSizeCaption(winW, padX, Loc.T("settings.font_caption"));
+    }
+
     public static void DrawPhoneSizeButtons(float winW, float padX, ThemeDefinition t)
     {
         DrawSizePills(winW, padX, t, "phsize", UiHost.Configuration.PhoneSize, preset =>

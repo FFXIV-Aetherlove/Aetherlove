@@ -472,6 +472,9 @@ public partial class MyProfileScreen
             case Section.SupporterStats:
                 DrawSupporterStatsView();
                 break;
+            case Section.Holiday:
+                DrawHolidayView();
+                break;
         }
     }
 

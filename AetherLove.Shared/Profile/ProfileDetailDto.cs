@@ -60,4 +60,7 @@ public sealed record ProfileDetailDto(
     NameStyle NameStyle = NameStyle.None,
     bool IsSupporter = false,
     // Retired: hangouts are account-level and never surface on dating profiles. Always null.
-    HangoutSummaryDto? ActiveHangout = null);
+    HangoutSummaryDto? ActiveHangout = null,
+    // Holiday mode: the away banner between the photos and the about section.
+    bool HolidayMode = false,
+    string HolidayMessage = "");

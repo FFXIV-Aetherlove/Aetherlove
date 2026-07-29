@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using AetherLove.Config;
 using AetherLove.Navigation;
+using AetherLove.Services.Crypto;
 using AetherLove.Services.Hub;
 using AetherLove.Services.Signal;
 using AetherLove.Shared.News;
@@ -488,7 +490,6 @@ public sealed class SessionBootstrapper : IDisposable
 
             _lastConnection = status;
             _notifications.NewMatches = status.NewMatchCount;
-            _log.Debug("[PSW] RunCore: server resolved acting profile {Profile:N} ({Name}, status {Status}); ActiveProfileId={Active:N}, cache owner {Owner:N}.", status.ProfileId, status.DisplayName, status.Status, _config.Auth.ActiveProfileId ?? Guid.Empty, _chatCache.Owner);
             AdoptActiveProfile(status.ProfileId);
             _chatCache.EnsureOwner(status.ProfileId);
             await FetchAccountInfoAsync(ct).ConfigureAwait(false);
@@ -568,10 +569,7 @@ public sealed class SessionBootstrapper : IDisposable
     /// arriving over the account group throughout.</summary>
     public async Task<SessionBootstrapResult> SwitchProfileAsync(Guid profileId, CancellationToken ct = default)
     {
-        var from = _config.Auth.ActiveProfileId ?? Guid.Empty;
-        _log.Debug("[PSW] SwitchProfileAsync: requested {From:N} -> {To:N}.", from, profileId);
         var token = await _hub.SelectProfileAsync(profileId, ct).ConfigureAwait(false);
-        _log.Debug("[PSW] SwitchProfileAsync: SelectProfile ok, minted access token for {To:N}.", profileId);
         // Adopt the target BEFORE ApplyAccessToken stamps ActiveProfileId: ApplyAccessToken sets
         // ActiveProfileId = target, which would otherwise front-run AdoptActiveProfile's "already active" guard so
         // the per-profile local-state swap + nav-avatar refresh never run. Doing it here (while ActiveProfileId is
@@ -585,10 +583,14 @@ public sealed class SessionBootstrapper : IDisposable
         // merged both profiles' chats. Non-blocking; RunCoreAsync's later EnsureOwner is then a no-op.
         _chatCache.EnsureOwner(profileId);
         var result = await RunAsync(ct).ConfigureAwait(false);
-        _log.Debug("[PSW] SwitchProfileAsync: ladder result {Result} for {To:N}; cache owner now {Owner:N}.", result, profileId, _chatCache.Owner);
         _notifications.NotifyProfileSwitched();
         _notifications.NotifyProfileCachesInvalidated();
         _notifications.NotifyDeckRefreshRequested();
+        if (NeedsPassphraseUnlock)
+        {
+            _log.Warning("[SessionBootstrapper] Switched profile has no usable keys on this device; routing to the unlock gate.");
+            _router.Navigate(Screen.PassphraseUnlock);
+        }
         return result;
     }
 
@@ -598,7 +600,6 @@ public sealed class SessionBootstrapper : IDisposable
     {
         if (profileId == Guid.Empty || _config.Auth.ActiveProfileId == profileId)
         {
-            _log.Debug("[PSW] AdoptActiveProfile: SKIP (already active {Active:N}, requested {Requested:N}).", _config.Auth.ActiveProfileId ?? Guid.Empty, profileId);
             return;
         }
         var from = _config.Auth.ActiveProfileId;
@@ -609,15 +610,18 @@ public sealed class SessionBootstrapper : IDisposable
         // probes the new profile's disk key) and pull the fresh one.
         _ownAvatar.OnProfileSwitched();
         _ownAvatar.Refresh();
-        _log.Debug("[PSW] AdoptActiveProfile: SWAP {From:N} -> {To:N} (local state stashed, nav avatar refreshed).", from ?? Guid.Empty, profileId);
     }
 
-    /// <summary>Unwraps the active profile's key bundle with the stored account KEK, so a profile switch (or a
-    /// sibling created elsewhere) never re-prompts for the passphrase. A missing/stale KEK simply leaves the
-    /// passphrase-unlock gate to prompt.</summary>
+    /// <summary>Unwraps the active profile's key bundle, so a profile switch (or a sibling created elsewhere)
+    /// never re-prompts for the passphrase. Tries the stored account KEK first, then the sibling wrap (a bundle
+    /// provisioned on a device that never captured the KEK). Failing both leaves the unlock gate to prompt.</summary>
     private async Task TryAutoUnlockAsync(CancellationToken ct)
     {
-        if (_lastConnection is not { HasKeyBundle: true } || _keys.HasLocalKey || _keys.Kek is not { } kek)
+        if (_lastConnection is not { HasKeyBundle: true } || _keys.HasLocalKey)
+        {
+            return;
+        }
+        if (_keys.Kek is null && _keys.FindSiblingKey() is null)
         {
             return;
         }
@@ -628,14 +632,38 @@ public sealed class SessionBootstrapper : IDisposable
             {
                 return;
             }
-            var priv = _crypto.UnwrapPrivateKey(bundle.EncryptedPrivateKey, bundle.WrapNonce, kek);
-            if (priv is null)
+            if (_keys.Kek is { } kek
+                && _crypto.UnwrapPrivateKey(bundle.EncryptedPrivateKey, bundle.WrapNonce, kek) is { } viaKek)
             {
-                _log.Warning("[SessionBootstrapper] Stored KEK failed to unwrap the profile bundle; the unlock screen will prompt.");
+                _keys.Store(bundle.PublicKey, viaKek);
+                await TryBackfillAccountVerifierAsync(bundle, kek, ct).ConfigureAwait(false);
+                _log.Debug("[SessionBootstrapper] Profile key unwrapped with the stored account KEK.");
                 return;
             }
-            _keys.Store(bundle.PublicKey, priv);
-            _log.Information("[SessionBootstrapper] Profile key unwrapped with the stored account KEK.");
+            if (UnwrapViaSibling(bundle) is { } viaSibling)
+            {
+                _keys.Store(bundle.PublicKey, viaSibling);
+                _log.Debug("[SessionBootstrapper] Profile key unwrapped with the sibling profile wrap.");
+                return;
+            }
+            foreach (var (stashId, _, stashPriv) in _keys.EnumerateStashedKeys())
+            {
+                var anchorKey = _crypto.DeriveSiblingWrapKey(stashPriv, bundle.PublicKey);
+                var priv = bundle is { ProfileWrappedPrivateKey.Length: > 0, ProfileWrapNonce.Length: > 0 }
+                    ? _crypto.UnwrapPrivateKey(bundle.ProfileWrappedPrivateKey, bundle.ProfileWrapNonce, anchorKey)
+                    : null;
+                priv ??= _crypto.UnwrapPrivateKey(bundle.EncryptedPrivateKey, bundle.WrapNonce, anchorKey);
+                if (priv is not null)
+                {
+                    _keys.Store(bundle.PublicKey, priv);
+                    _log.Debug("[SessionBootstrapper] Profile key unwrapped via stashed sibling {Sibling}'s key.",
+                        stashId.ToString("N"));
+                    return;
+                }
+            }
+            // Automatic key rotation is banned: a bundle nothing on this device opens is the unlock gate's
+            // problem, never a license to discard the user's key.
+            _log.Warning("[SessionBootstrapper] Nothing on this device opens the profile bundle; the unlock gate will prompt.");
         }
         catch (Exception ex)
         {
@@ -643,38 +671,184 @@ public sealed class SessionBootstrapper : IDisposable
         }
     }
 
+    /// <summary>Opens a sibling-wrapped bundle using the wrapping profile's key as stashed on this device.</summary>
+    private byte[]? UnwrapViaSibling(Shared.Messaging.KeyBundleDto bundle)
+    {
+        if (bundle is not { WrapProfileId: { } wrapper, ProfileWrappedPrivateKey.Length: > 0, ProfileWrapNonce.Length: > 0 })
+        {
+            return null;
+        }
+        if (_keys.GetStashedPrivateKey(wrapper) is not { } siblingPriv)
+        {
+            return null;
+        }
+        var wrapKey = _crypto.DeriveSiblingWrapKey(siblingPriv, bundle.PublicKey);
+        return _crypto.UnwrapPrivateKey(bundle.ProfileWrappedPrivateKey, bundle.ProfileWrapNonce, wrapKey);
+    }
+
+    /// <summary>Argon2id inputs describing a KEK. Only meaningful with a real memory cost; a bundle that could
+    /// not be given real ones (provisioned under a sibling wrap, where no passphrase is involved) carries the
+    /// unusable placeholder instead, and every consumer checks <see cref="IsUsable"/> before deriving.</summary>
+    private sealed record KdfParams(byte[] Salt, int MemoryKb, int Iterations, int Parallelism)
+    {
+        public bool IsUsable => MemoryKb > 0 && Iterations > 0 && Parallelism > 0
+            && Salt.Length >= CryptoService.KdfSaltLength;
+
+        public static KdfParams Unusable()
+        {
+            var salt = new byte[CryptoService.KdfSaltLength];
+            RandomNumberGenerator.Fill(salt);
+            return new KdfParams(salt, 0, 0, 0);
+        }
+    }
+
+    /// <summary>A live sibling profile whose private key is unlocked here: the wrap anchor for a new profile,
+    /// and the source of the KDF parameters a migrated account's stored KEK was derived from. Driven off the
+    /// SERVER's bundle list so a stashed key for a profile deleted elsewhere is never chosen.</summary>
+    private async Task<(Guid ProfileId, byte[] PrivateKey, KdfParams Kdf)?> ResolveWrapSiblingAsync(CancellationToken ct)
+    {
+        try
+        {
+            foreach (var sib in await _hub.GetSiblingKeyBundlesAsync(ct).ConfigureAwait(false))
+            {
+                if (_keys.GetStashedPrivateKey(sib.ProfileId) is { } priv)
+                {
+                    return (sib.ProfileId, priv, new KdfParams(sib.Bundle.KdfSalt, sib.Bundle.KdfMemoryKb,
+                        sib.Bundle.KdfIterations, sib.Bundle.KdfParallelism));
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.Warning(ex, "[SessionBootstrapper] Sibling bundle lookup failed.");
+        }
+        return null;
+    }
+
+    /// <summary>Publishes the account passphrase verifier when it is still missing. Accounts migrated from 1.x
+    /// got their KDF parameters backfilled but no verifier (the server cannot derive one), which makes
+    /// <c>GetAccountPassphraseAsync</c> return null and silently disables KEK-based provisioning. A KEK that
+    /// just opened a bundle is proof of the passphrase, so it can mint the missing verifier. Write-once server
+    /// side, so a racing sibling simply loses harmlessly.</summary>
+    private async Task TryBackfillAccountVerifierAsync(
+        Shared.Messaging.KeyBundleDto bundle, byte[] kek, CancellationToken ct)
+    {
+        if (_lastAccount?.HasPassphrase == true)
+        {
+            return;
+        }
+        // Publishing this bundle's inputs is only correct if they are the ones that derive the KEK.
+        if (!new KdfParams(bundle.KdfSalt, bundle.KdfMemoryKb, bundle.KdfIterations, bundle.KdfParallelism).IsUsable)
+        {
+            return;
+        }
+        try
+        {
+            if (await _hub.GetAccountPassphraseAsync(ct).ConfigureAwait(false) is not null)
+            {
+                return;
+            }
+            var (verifier, verifierNonce) = _crypto.CreatePassphraseVerifier(kek);
+            await _hub.SetAccountPassphraseAsync(new Shared.Profile.AccountPassphraseDto(
+                    bundle.KdfSalt, bundle.KdfMemoryKb, bundle.KdfIterations, bundle.KdfParallelism,
+                    verifier, verifierNonce), ct)
+                .ConfigureAwait(false);
+            _log.Information("[SessionBootstrapper] Backfilled the account passphrase verifier from the stored KEK.");
+        }
+        catch (Exception ex)
+        {
+            _log.Warning(ex, "[SessionBootstrapper] Account verifier backfill failed; provisioning falls back to the sibling wrap.");
+        }
+    }
+
     /// <summary>Re-pulls the account snapshot on demand, e.g. after a Patreon link/unlink flips supporter
     /// status, which gates the second profile slot in the picker.</summary>
     public Task RefreshAccountInfoAsync(CancellationToken ct = default) => FetchAccountInfoAsync(ct);
 
-    /// <summary>Creates and publishes the active profile's key bundle under the STORED account KEK when the
-    /// server has none (a profile created before the KEK was captured, or whose upload was lost). Local keys
-    /// without a server bundle are orphans (peers can never fetch their public half), so a fresh keypair is
-    /// always generated. Silent; without a stored KEK the recovery gate prompts for the account passphrase.</summary>
+    /// <summary>Public entry for the profile-creation flow, which must provision the brand-new profile's keys
+    /// before its first chat rather than waiting for the recovery gate.</summary>
+    public Task EnsureActiveProfileKeysAsync(CancellationToken ct = default) => TryAutoProvisionAsync(ct);
+
+    /// <summary>Creates and publishes the active profile's key bundle when the server has none (a freshly
+    /// created sibling, or a profile whose upload was lost). Local keys without a server bundle are orphans
+    /// (peers can never fetch their public half), so a fresh keypair is always generated.
+    ///
+    /// Wrapped under the stored account KEK when there is one. Every account migrated from 1.x has NO stored
+    /// KEK (it shipped with multi-profile) and no account verifier (the migration could not derive one), so
+    /// those fall back to wrapping under a sibling profile's unlocked key: recovery stays passphrase-backed
+    /// through that sibling. Silent; with neither the recovery gate prompts.</summary>
     private async Task TryAutoProvisionAsync(CancellationToken ct)
     {
         if (_lastConnection is not { HasKeyBundle: false } conn
-            || conn.Status is ProfileLifecycle.Deleted or ProfileLifecycle.Banned
-            || _keys.Kek is not { } kek)
+            || conn.Status is ProfileLifecycle.Deleted or ProfileLifecycle.Banned)
+        {
+            return;
+        }
+        var kek = _keys.Kek;
+        if (kek is null && _keys.FindSiblingKey() is null)
         {
             return;
         }
         try
         {
             var pass = await _hub.GetAccountPassphraseAsync(ct).ConfigureAwait(false);
-            if (pass is null || !_crypto.CheckPassphraseVerifier(pass.Verifier, pass.VerifierNonce, kek))
+            // A stale KEK must not mint a bundle no other device can reopen. A missing verifier is the
+            // migrated-account case, where the KEK came from a successful unlock and is trusted.
+            if (kek is not null && pass is not null
+                && !_crypto.CheckPassphraseVerifier(pass.Verifier, pass.VerifierNonce, kek))
             {
-                // No published parameters, or a stale KEK: the recovery gate handles it interactively.
+                kek = null;
+            }
+
+            // The server's list is what makes a sibling safe to wrap under: a locally stashed key can belong to
+            // a profile deleted on another device, whose bundle is gone, which would strand this one.
+            var sibling = kek is null || pass is null
+                ? await ResolveWrapSiblingAsync(ct).ConfigureAwait(false)
+                : null;
+
+            // A KEK-wrapped bundle MUST carry the KDF parameters that reproduce that KEK, or no other device
+            // can ever reopen it. With no account parameters published the stored KEK came from unlocking a
+            // sibling bundle, so borrow that bundle's; failing that, do not KEK-wrap at all.
+            var kdf = _keys.KekParams is { } recorded
+                ? new KdfParams(recorded.Salt, recorded.MemoryKb, recorded.Iterations, recorded.Parallelism)
+                : pass is not null
+                    ? new KdfParams(pass.KdfSalt, pass.KdfMemoryKb, pass.KdfIterations, pass.KdfParallelism)
+                    : sibling?.Kdf;
+            if (kek is not null && kdf?.IsUsable != true)
+            {
+                kek = null;
+            }
+            if (kek is null && sibling is null)
+            {
                 return;
             }
+
             var (pubKey, privKey) = _crypto.GenerateIdentityKeyPair();
-            var (wrapped, wrapNonce) = _crypto.WrapPrivateKey(privKey, kek);
+            byte[]? siblingWrapped = null;
+            byte[]? siblingNonce = null;
+            if (sibling is { } sib)
+            {
+                (siblingWrapped, siblingNonce) =
+                    _crypto.Encrypt(_crypto.DeriveSiblingWrapKey(sib.PrivateKey, pubKey), privKey);
+            }
+            // Without a KEK the canonical wrap fields carry the sibling wrap, so a later passphrase unlock
+            // fails the KEK attempt and falls through to the sibling chain.
+            var (wrapped, wrapNonce) = kek is not null
+                ? _crypto.WrapPrivateKey(privKey, kek)
+                : (siblingWrapped!, siblingNonce!);
+            var stamped = kek is not null ? kdf! : KdfParams.Unusable();
+
             await _hub.UploadKeyBundleAsync(new Shared.Messaging.KeyBundleDto(
-                    pubKey, wrapped, pass.KdfSalt, pass.KdfMemoryKb, pass.KdfIterations, pass.KdfParallelism, wrapNonce), ct)
+                    pubKey, wrapped, stamped.Salt, stamped.MemoryKb, stamped.Iterations, stamped.Parallelism,
+                    wrapNonce,
+                    WrapProfileId: siblingWrapped is null ? null : sibling!.Value.ProfileId,
+                    ProfileWrappedPrivateKey: siblingWrapped,
+                    ProfileWrapNonce: siblingNonce), ct)
                 .ConfigureAwait(false);
             _keys.Store(pubKey, privKey);
             _lastConnection = conn with { HasKeyBundle = true };
-            _log.Information("[SessionBootstrapper] Profile key bundle provisioned under the stored account KEK.");
+            _log.Information("[SessionBootstrapper] Profile key bundle provisioned ({Mode}).",
+                kek is not null ? "account KEK" : "sibling profile wrap");
         }
         catch (Exception ex)
         {

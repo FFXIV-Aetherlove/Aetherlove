@@ -569,12 +569,31 @@ internal static class SharedUiHelpers
     {
         ImGui.SetCursorPosX(Px(padX));
         var value = get();
-        if (ImGui.Checkbox(label, ref value))
+        var boxW = ImGui.GetFrameHeight() + ImGui.GetStyle().ItemInnerSpacing.X;
+        var availW = ImGui.GetContentRegionAvail().X - Px(padX);
+        if (ImGui.CalcTextSize(label).X + boxW <= availW)
+        {
+            if (ImGui.Checkbox(label, ref value))
+            {
+                set(value);
+                UiHost.Configuration.Save();
+            }
+            HandOnHover();
+            return;
+        }
+
+        // Long labels wrap beside the box instead of clipping at the phone edge.
+        if (ImGui.Checkbox($"##chk_{label}", ref value))
         {
             set(value);
             UiHost.Configuration.Save();
         }
         HandOnHover();
+        ImGui.SameLine();
+        ImGui.AlignTextToFramePadding();
+        ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + availW - boxW);
+        ImGui.TextUnformatted(label);
+        ImGui.PopTextWrapPos();
     }
 
     /// <summary>A muted (?) glyph that shows a wrapped tooltip on hover. Place after <see cref="ImGui.SameLine()"/>.</summary>

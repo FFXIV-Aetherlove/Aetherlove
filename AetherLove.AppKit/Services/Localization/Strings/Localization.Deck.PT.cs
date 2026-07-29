@@ -32,7 +32,7 @@ internal static class DeckPt
         ["deck.match_fx_constellation"] = "Escrito nas estrelas",
         ["deck.match_fx_slot"] = "Three of a kind",
         ["deck.match_fx_slot_title"] = "JACKPOT!",
-        ["deck.match_fx_tarot"] = "As cartas se alinharam — dois destinos entrelaçados",
+        ["deck.match_fx_tarot"] = "As cartas se alinharam: dois destinos entrelaçados",
         ["deck.match_fx_tarot_title"] = "OS NAMORADOS",
         ["deck.match_fx_lavalamp"] = "Duas chamas, um só fogo",
         ["deck.match_fx_lanterns"] = "Duas luzes, o mesmo céu",

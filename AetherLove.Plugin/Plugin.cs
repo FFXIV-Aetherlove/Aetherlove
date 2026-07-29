@@ -39,6 +39,9 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IFramework Framework { get; private set; } = null!;
     [PluginService] internal static IDtrBar DtrBar { get; private set; } = null!;
     [PluginService] internal static IGameGui GameGui { get; private set; } = null!;
+    [PluginService] internal static IAddonLifecycle AddonLifecycle { get; private set; } = null!;
+    [PluginService] internal static IMarketBoard MarketBoard { get; private set; } = null!;
+    [PluginService] internal static IContextMenu ContextMenu { get; private set; } = null!;
 
     internal static string ServerBaseUrl => AetherLove.Shared.AetherConstants.ServerBaseUrl;
 
@@ -143,11 +146,14 @@ public sealed class Plugin : IDalamudPlugin
         services.AddSingleton<AetherHubContext>();
         services.AddSingleton<Services.Patreon.PatreonLinkFlow>();
         services.AddSingleton<SessionBootstrapper>();
+        services.AddSingleton<Services.Auth.AccountUnlockService>();
         services.AddSingleton<PendingMatchContext>();
         services.AddSingleton<VenueShareContext>();
         services.AddSingleton<HangoutShareContext>();
         services.AddSingleton<NewsShareContext>();
         services.AddSingleton<CalendarShareContext>();
+        services.AddSingleton<LevemeteShareContext>();
+        services.AddSingleton<MarketShareContext>();
         services.AddSingleton<OwnAvatarCache>();
         services.AddSingleton<OsAvatarCache>();
         services.AddSingleton<FlairCatalog>();
@@ -189,9 +195,13 @@ public sealed class Plugin : IDalamudPlugin
             sp.GetRequiredService<HangoutShareContext>(),
             sp.GetRequiredService<NewsShareContext>(),
             sp.GetRequiredService<CalendarShareContext>(),
+            sp.GetRequiredService<LevemeteShareContext>(),
+            sp.GetRequiredService<MarketShareContext>(),
             sp.GetRequiredService<Services.Patreon.PatreonLinkFlow>(),
             sp.GetRequiredService<SiblingBadgeStore>(),
-            sp.GetRequiredService<Services.Messenger.MessengerStore>()));
+            sp.GetRequiredService<Services.Messenger.MessengerStore>(),
+            sp.GetRequiredService<Services.Market.MarketDataService>(),
+            sp.GetRequiredService<Services.Market.MarketItemIndex>()));
         services.AddSingleton<Os.SettingsHostService>();
         services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Settings.SettingsApp(
             () => Services.Localization.Loc.T("common.nav_settings"),
@@ -214,7 +224,10 @@ public sealed class Plugin : IDalamudPlugin
             sp.GetRequiredService<AetherHubContext>(),
             sp.GetRequiredService<Services.Hangouts.HangoutStateService>(),
             sp.GetRequiredService<VenueShareContext>(),
-            sp.GetRequiredService<HangoutShareContext>()));
+            sp.GetRequiredService<HangoutShareContext>(),
+            sp.GetRequiredService<LevemeteShareContext>(),
+            sp.GetRequiredService<Services.Market.MarketDataService>(),
+            sp.GetRequiredService<Services.Market.MarketItemIndex>()));
         services.AddSingleton<Os.PlacesHostService>();
         services.AddSingleton<Os.HangoutsHostService>();
         services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Places.PlacesApp(
@@ -229,10 +242,43 @@ public sealed class Plugin : IDalamudPlugin
             sp.GetRequiredService<Os.HangoutsHostService>(),
             sp.GetRequiredService<Os.ISocialBridge>(),
             sp.GetRequiredService<Services.Hangouts.HangoutStateService>()));
+        services.AddSingleton<Os.LevemetesHostService>();
+        services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Levemetes.LevemetesApp(
+            () => Services.Localization.Loc.T("os.app_levemetes"),
+            () => sp.GetRequiredService<SessionBootstrapper>().LastConnection?.LevemetesEnabled != false,
+            sp.GetRequiredService<Os.LevemetesHostService>(),
+            sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>()));
         services.AddSingleton<Os.NewsHostService>();
         services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.News.NewsApp(
             () => Services.Localization.Loc.T("os.app_news_tile"),
             sp.GetRequiredService<Os.NewsHostService>()));
+        services.AddSingleton<Services.Market.UniversalisClient>();
+        services.AddSingleton<Services.Market.MarketDataService>();
+        services.AddSingleton(sp => new Services.Market.MarketItemIndex(
+            sp.GetRequiredService<Services.Market.UniversalisClient>(),
+            sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>().Storage("market")));
+        services.AddSingleton(sp => new Services.Market.MarketUserStore(
+            sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>().Storage("market")));
+        services.AddSingleton(sp => new Services.Market.MarketAlertStore(
+            sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>().Storage("market")));
+        services.AddSingleton<Os.MarketDeskService>();
+        services.AddSingleton<AetherOS.Apps.Market.IMarketDesk>(sp => sp.GetRequiredService<Os.MarketDeskService>());
+        services.AddSingleton<Os.MarketContextMenuService>();
+        services.AddSingleton<Services.MarketAlertService>();
+        services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Market.MarketApp(
+            () => Services.Localization.Loc.T("os.app_market"),
+            sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>(),
+            sp.GetRequiredService<Services.Market.MarketDataService>(),
+            sp.GetRequiredService<Services.Market.MarketItemIndex>(),
+            sp.GetRequiredService<Services.Market.MarketUserStore>(),
+            sp.GetRequiredService<Services.Market.MarketAlertStore>(),
+            sp.GetRequiredService<AetherOS.Apps.Market.IMarketDesk>()));
+        services.AddSingleton<Services.Realtor.PaissaClient>();
+        services.AddSingleton<Services.Realtor.RealtorDataService>();
+        services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Realtor.RealtorApp(
+            () => Services.Localization.Loc.T("os.app_realtor"),
+            sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>(),
+            sp.GetRequiredService<Services.Realtor.RealtorDataService>()));
         services.AddSingleton<Os.FeedbackHostService>();
         services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Feedback.FeedbackApp(
             () => Services.Localization.Loc.T("os.app_feedback"),
@@ -367,6 +413,7 @@ public sealed class Plugin : IDalamudPlugin
         finally
         {
             _host.Dispose();
+            Services.NotificationSoundPlayer.Stop();
             ImageCacheCleaner.PurgeAll();
         }
     }

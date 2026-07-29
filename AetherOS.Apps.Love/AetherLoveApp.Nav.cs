@@ -190,7 +190,7 @@ public sealed partial class AetherLoveApp
             }
         }
 
-        if (_bootstrap.LastConnection is { IsSupporter: true })
+        if (_bootstrap.LastConnection is { IsSupporter: true, ShowSupporterBadge: true })
         {
             var badgeCenter = center + new Vector2(radius * 0.74f, -radius * 0.74f);
             var badgeR = Px(9f);

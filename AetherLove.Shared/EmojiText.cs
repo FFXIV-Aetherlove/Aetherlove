@@ -10,13 +10,16 @@ public static class EmojiText
     /// <summary>Max user-visible bio length (each emoji shortcode counts as one).</summary>
     public const int MaxBioLength = 500;
 
+    /// <summary>Raw length of the holiday-mode away message.</summary>
+    public const int MaxHolidayMessageLength = 200;
+
     /// <summary>Hard cap on raw bio to bound tampered-client abuse; shortcodes make raw far longer than visible.</summary>
     public const int MaxBioRawLength = 4096;
 
     private static readonly Regex EmojiPattern =
         new(@":[a-z0-9_-]+:", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-    /// <summary>Length where each <c>:shortcode:</c> counts as exactly one character — the count the user
+    /// <summary>Length where each <c>:shortcode:</c> counts as exactly one character, the count the user
     /// sees rendered. Leading/trailing whitespace is trimmed (mirrors the plugin's parser).</summary>
     public static int EffectiveLength(string? text)
     {

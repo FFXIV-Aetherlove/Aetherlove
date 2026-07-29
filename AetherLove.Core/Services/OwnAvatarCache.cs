@@ -45,7 +45,6 @@ public sealed class OwnAvatarCache : IDisposable
     public void OnProfileSwitched()
     {
         Invalidate();
-        UiHost.Log.Debug("[PSW] OwnAvatar.OnProfileSwitched: dropped in-memory texture; next read uses key {Key}.", SelfKey);
     }
 
     /// <summary>The last known avatar, or null before the first successful fetch on a fresh install.</summary>
@@ -78,16 +77,12 @@ public sealed class OwnAvatarCache : IDisposable
         {
             try
             {
-                var key = SelfKey;
-                UiHost.Log.Debug("[PSW] OwnAvatar.Refresh: fetching profile detail for key {Key}.", key);
                 var dto = await _hub.GetMyProfileDetailAsync(ct).ConfigureAwait(false);
                 var avatar = dto.Photos.FirstOrDefault(p => p.Order == 0)?.WebpBytes;
                 if (ct.IsCancellationRequested || avatar is not { Length: > 0 })
                 {
-                    UiHost.Log.Debug("[PSW] OwnAvatar.Refresh: no Order-0 photo for key {Key} (cancelled={Cancelled}).", key, ct.IsCancellationRequested);
                     return;
                 }
-                UiHost.Log.Debug("[PSW] OwnAvatar.Refresh: got {Bytes}-byte avatar for key {Key}, storing.", avatar.Length, key);
                 Store(avatar, ct);
             }
             catch (OperationCanceledException) { }
@@ -117,11 +112,6 @@ public sealed class OwnAvatarCache : IDisposable
             if (newest is not null)
             {
                 _texture = UiHost.TextureProvider.GetFromFile(newest);
-                UiHost.Log.Debug("[PSW] OwnAvatar.ProbeDisk: key {Key} hit {File}.", SelfKey, Path.GetFileName(newest));
-            }
-            else
-            {
-                UiHost.Log.Debug("[PSW] OwnAvatar.ProbeDisk: key {Key} miss (no cached file).", SelfKey);
             }
         }
         catch (Exception ex)

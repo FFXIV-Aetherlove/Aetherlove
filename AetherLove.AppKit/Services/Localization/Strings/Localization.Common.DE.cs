@@ -27,7 +27,7 @@ internal static class CommonDe
         ["common.outdated_body"] = "Du verwendest eine veraltete Version von AetherLove. Der Server unterstützt diese Version nicht mehr, daher kann sich das Plugin nicht verbinden.",
         ["common.outdated_hint"] = "Bitte aktualisiere das Plugin im Plugin-Installer von Dalamud und öffne AetherLove dann erneut.",
 
-        ["common.offline_title"] = "AetherLove ist offline",
+        ["common.offline_title"] = "Die AetherOS-Dienste sind derzeit offline",
         ["common.offline_body"] = "Der Server ist höchstwahrscheinlich wegen Updates oder Wartungsarbeiten offline. Das sollte nicht länger als 2 Minuten dauern!",
         ["common.offline_reconnecting"] = "Verbindung wird wiederhergestellt…",
         ["common.offline_taking_long"] = "Das dauert länger als üblich. Tritt unserem Discord bei, um den aktuellen Status zu erfahren.",
@@ -83,7 +83,7 @@ internal static class CommonDe
         ["common.undeclared_photo_body"] = "Du musst im Auswahlfeld angeben, ob dein anderes Bild SFW oder NSFW ist, bevor du ein weiteres hochlädst.",
 
         // Changelog window
-        ["common.changelog_window_title"] = "AetherLove — Neuigkeiten",
+        ["common.changelog_window_title"] = "AetherLove: Neuigkeiten",
         ["common.whats_new"] = "Neuigkeiten",
         ["common.changelog_empty"] = "Keine Einträge im Änderungsprotokoll verfügbar.",
         ["common.changelog_latest"] = "Neueste",
@@ -178,5 +178,8 @@ internal static class CommonDe
         ["common.moderation_message_for"] = "Nachricht für {0}",
         ["common.account_disabled_title"] = "Konto gesperrt",
         ["common.account_disabled_body"] = "Diese Funktion ist nicht verfügbar, solange dein Konto gesperrt ist.",
+
+        // added after update 2.0.1
+        ["common.passphrase_correct_unrecoverable"] = "Deine Passphrase ist korrekt, aber keiner deiner gespeicherten Schlüssel ließ sich damit öffnen. Bitte kontaktiere den Support, bevor du ein Zurücksetzen in Betracht ziehst; dabei bleiben deine alten Nachrichten dauerhaft unlesbar.",
     };
 }

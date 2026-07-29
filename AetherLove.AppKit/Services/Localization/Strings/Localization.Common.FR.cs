@@ -24,7 +24,7 @@ internal static class CommonFr
         ["common.outdated_body"] = "Vous utilisez une version obsolète d'AetherLove. Le serveur ne prend plus en charge cette version, le plugin ne peut donc pas se connecter.",
         ["common.outdated_hint"] = "Veuillez mettre à jour le plugin dans l'installateur de plugins de Dalamud, puis rouvrir AetherLove.",
 
-        ["common.offline_title"] = "AetherLove est hors ligne",
+        ["common.offline_title"] = "Les services AetherOS sont actuellement hors ligne",
         ["common.offline_body"] = "Les serveurs sont très probablement hors ligne pour cause de mises à jour ou de maintenance. Cela ne devrait pas prendre plus de 2 minutes !",
         ["common.offline_reconnecting"] = "Reconnexion…",
         ["common.offline_taking_long"] = "Cela prend plus de temps que d'habitude. Rejoignez notre Discord pour connaître les dernières informations.",
@@ -76,7 +76,7 @@ internal static class CommonFr
         ["common.undeclared_photo_title"] = "Déclaration requise",
         ["common.undeclared_photo_body"] = "Vous devez indiquer si votre autre photo est SFW ou NSFW dans la zone de sélection avant d'en envoyer une autre.",
 
-        ["common.changelog_window_title"] = "AetherLove — Nouveautés",
+        ["common.changelog_window_title"] = "AetherLove : Nouveautés",
         ["common.whats_new"] = "Nouveautés",
         ["common.changelog_empty"] = "Aucune entrée de journal des modifications disponible.",
         ["common.changelog_latest"] = "Dernière",
@@ -169,5 +169,8 @@ internal static class CommonFr
         ["common.moderation_message_for"] = "Message pour {0}",
         ["common.account_disabled_title"] = "Compte banni",
         ["common.account_disabled_body"] = "Cette fonctionnalité est indisponible tant que votre compte est banni.",
+
+        // added after update 2.0.1
+        ["common.passphrase_correct_unrecoverable"] = "Votre phrase secrète est correcte, mais aucune de vos clés enregistrées n'a pu être ouverte avec. Contactez le support avant d'envisager une réinitialisation ; celle-ci rendrait vos anciens messages définitivement illisibles.",
     };
 }

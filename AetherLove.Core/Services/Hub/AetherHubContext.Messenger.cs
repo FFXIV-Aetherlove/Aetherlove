@@ -109,6 +109,9 @@ public sealed partial class AetherHubContext
     public async Task SetMessengerMessagePinAsync(Guid messageId, bool pinned, CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync("SetMessengerMessagePinAsync", messageId, pinned, ct).ConfigureAwait(false);
 
+    public async Task DeleteMessengerMessageAsync(Guid messageId, CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync("DeleteMessengerMessageAsync", messageId, ct).ConfigureAwait(false);
+
     public async Task SetMessengerChatPinAsync(Guid chatId, MessengerChatKind kind, bool pinned, CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync("SetMessengerChatPinAsync", chatId, kind, pinned, ct).ConfigureAwait(false);
 

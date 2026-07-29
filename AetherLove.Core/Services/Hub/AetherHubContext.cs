@@ -133,6 +133,15 @@ public sealed partial class AetherHubContext
         catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl) { throw rl; }
     }
 
+    public async Task SetHolidayModeAsync(bool enabled, string message, CancellationToken ct = default)
+    {
+        try
+        {
+            await (await ConnAsync(ct)).InvokeAsync("SetHolidayModeAsync", enabled, message, ct).ConfigureAwait(false);
+        }
+        catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl) { throw rl; }
+    }
+
     public async Task<AetherConnectionDto> GetConnectionInfoAsync(CancellationToken ct = default)
     {
         try
@@ -285,8 +294,24 @@ public sealed partial class AetherHubContext
     public async Task UploadKeyBundleAsync(KeyBundleDto dto, CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync("UploadKeyBundleAsync", dto, ct).ConfigureAwait(false);
 
+    public async Task ReplaceKeyBundleAsync(KeyBundleDto dto, CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync("ReplaceKeyBundleAsync", dto, ct).ConfigureAwait(false);
+
+    public async Task<KeyBundleDto[]> GetMyRetiredKeyBundlesAsync(CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<KeyBundleDto[]>("GetMyRetiredKeyBundlesAsync", ct).ConfigureAwait(false);
+
+    public async Task RewrapKeyBundleAsync(Guid profileId, KeyBundleDto dto, CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync("RewrapKeyBundleAsync", profileId, dto, ct).ConfigureAwait(false);
+
+    public async Task RewrapAccountKeyBundleAsync(KeyBundleDto dto, CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync("RewrapAccountKeyBundleAsync", dto, ct).ConfigureAwait(false);
+
     public async Task<KeyBundleDto?> GetMyKeyBundleAsync(CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync<KeyBundleDto?>("GetMyKeyBundleAsync", ct).ConfigureAwait(false);
+
+    public async Task<SiblingKeyBundleDto[]> GetSiblingKeyBundlesAsync(CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<SiblingKeyBundleDto[]>("GetSiblingKeyBundlesAsync", ct)
+            .ConfigureAwait(false);
 
     public async Task<byte[]?> GetPeerPublicKeyAsync(Guid peerId, CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync<byte[]?>("GetPeerPublicKeyAsync", peerId, ct).ConfigureAwait(false);
@@ -331,6 +356,10 @@ public sealed partial class AetherHubContext
         await (await ConnAsync(ct)).InvokeAsync<MessagePinChangedPushDto>("SetMessagePinnedAsync", req, ct)
             .ConfigureAwait(false);
 
+    public async Task DeleteMessageAsync(Guid peerProfileId, Guid messageId, CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync("DeleteMessageAsync", peerProfileId, messageId, ct)
+            .ConfigureAwait(false);
+
     public async Task<ProfileDetailDto> GetProfileDetailAsync(Guid peerId, CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync<ProfileDetailDto>("GetProfileDetailAsync", peerId, ct).ConfigureAwait(false);
 
@@ -348,6 +377,16 @@ public sealed partial class AetherHubContext
 
     public async Task<Guid> ReportUserAsync(ReportUserRequest req, CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync<Guid>("ReportUserAsync", req, ct).ConfigureAwait(false);
+
+    /// <summary>Permanently stops the peer from appearing in the caller's deck. One-way and not reversible.</summary>
+    public async Task HideProfileAsync(Guid peerId, CancellationToken ct = default)
+    {
+        try
+        {
+            await (await ConnAsync(ct)).InvokeAsync("HideProfileAsync", peerId, ct).ConfigureAwait(false);
+        }
+        catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl) { throw rl; }
+    }
 
     public async Task<PulseDto?> GetPulseAsync(Language language, CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync<PulseDto?>("GetPulseAsync", language, ct).ConfigureAwait(false);

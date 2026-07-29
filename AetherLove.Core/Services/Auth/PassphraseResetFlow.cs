@@ -38,7 +38,6 @@ public sealed class PassphraseResetFlow
     public async Task RunAsync(string newPassphrase, CancellationToken ct = default)
     {
         var profiles = await _hub.ListProfilesAsync(ct).ConfigureAwait(false);
-        UiHost.Log.Debug("[RESET] PassphraseResetFlow: starting reset for {Count} profile(s) plus the messenger account key.", profiles.Profiles.Length);
 
         var salt = new byte[CryptoService.KdfSaltLength];
         RandomNumberGenerator.Fill(salt);
@@ -55,19 +54,18 @@ public sealed class PassphraseResetFlow
             plain[profile.ProfileId] = (pub, priv);
             uploads.Add(new ProfileBundleUpload(profile.ProfileId,
                 new KeyBundleDto(pub, wrapped, salt, MemoryKb, Iterations, Parallelism, nonce)));
-            UiHost.Log.Debug("[RESET] PassphraseResetFlow: generated a fresh keypair for profile {Profile:N}.", profile.ProfileId);
         }
 
         var (accountPub, accountPriv) = _crypto.GenerateIdentityKeyPair();
         var (accountWrapped, accountNonce) = _crypto.WrapPrivateKey(accountPriv, kek);
         var accountBundle = new KeyBundleDto(accountPub, accountWrapped, salt, MemoryKb, Iterations, Parallelism, accountNonce);
 
-        UiHost.Log.Debug("[RESET] PassphraseResetFlow: publishing new passphrase + {Count} profile bundles + messenger account bundle to the server.", uploads.Count);
         await _hub.ResetAccountPassphraseAsync(new ResetPassphraseRequest(passphraseDto, uploads.ToArray(), accountBundle), ct)
             .ConfigureAwait(false);
-        UiHost.Log.Debug("[RESET] PassphraseResetFlow: server accepted the reset; swapping local key state to the new keys.");
+        UiHost.Log.Information("[PassphraseReset] Passphrase reset: {Count} profile keypair(s) plus the messenger key rotated; pre-reset history is unreadable from now on.",
+            uploads.Count);
 
-        _keys.StoreKek(kek);
+        _keys.StoreKek(kek, salt, MemoryKb, Iterations, Parallelism);
         _keys.StoreAccountKeys(accountPub, accountPriv);
         var activeId = _config.Auth.ActiveProfileId
             ?? (profiles.Profiles.Length == 1 ? profiles.Profiles[0].ProfileId : (Guid?)null);

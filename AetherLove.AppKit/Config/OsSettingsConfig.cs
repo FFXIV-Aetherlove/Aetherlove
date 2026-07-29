@@ -27,6 +27,13 @@ public sealed class OsSettingsConfig
     /// <summary>Which bundled sound to play for notifications.</summary>
     public NotificationSound NotificationSoundChoice { get; set; } = NotificationSound.Msn;
 
+    /// <summary>App sound volume, 0..1, applied per playback.</summary>
+    public float NotificationVolume { get; set; } = 0.8f;
+
+    /// <summary>waveOut device product name; empty = the system default. Stored by name so a shifting device
+    /// index can never silently reroute.</summary>
+    public string AudioOutputDevice { get; set; } = string.Empty;
+
     /// <summary>Suppress every notification (chat, popup, sound) while the player is in combat.</summary>
     public bool HideNotificationsDuringCombat { get; set; } = true;
 

@@ -80,6 +80,27 @@ public class PlacesState
     public bool SeenTour { get; set; }
 }
 
+/// <summary>Levemetes browse filters. Account-level like the ads themselves, so it stays out of the
+/// per-profile state swap. 18+ listings are opt-in every install; nothing seeds this from the profile.</summary>
+[Serializable]
+public class LevemetesState
+{
+    /// <summary>Selected categories, bit index = wire category value; 0 = every category.</summary>
+    public int CategoryMask { get; set; }
+
+    /// <summary>Selected <c>Region</c> bits; 0 = every region.</summary>
+    public short RegionMask { get; set; }
+
+    /// <summary>Looking-for/offering restriction; 0 = both.</summary>
+    public short Kind { get; set; }
+
+    /// <summary>Include 18+ listings in the browse feed; always off until toggled by hand.</summary>
+    public bool IncludeNsfw { get; set; }
+
+    /// <summary>Set once the Levemetes tour has been opened, on the first visit; it stays reachable from the menu.</summary>
+    public bool SeenTour { get; set; }
+}
+
 /// <summary>Client-side hangout preferences, first-run flags, and dismissals.</summary>
 [Serializable]
 public class HangoutClientState
@@ -167,6 +188,14 @@ public class Configuration : IPluginConfiguration
     /// passphrase. Stored with the same posture as the unwrapped private key above. Empty = not captured yet
     /// (the next passphrase entry stores it).</summary>
     public byte[] AccountKek { get; set; } = [];
+
+    /// <summary>The Argon2id inputs the stored <see cref="AccountKek"/> was derived from, so provisioning can
+    /// stamp new bundles with parameters that actually reproduce it. Empty salt = unknown (KEK stored before
+    /// this was recorded).</summary>
+    public byte[] AccountKekSalt { get; set; } = [];
+    public int AccountKekMemoryKb { get; set; }
+    public int AccountKekIterations { get; set; }
+    public int AccountKekParallelism { get; set; }
 
     /// <summary>The account-level X25519 messenger keypair, unwrapped. Account-scoped like the KEK (never
     /// swapped on profile switch); its wrapped form lives server-side as the account key bundle.</summary>
@@ -264,6 +293,9 @@ public class Configuration : IPluginConfiguration
     /// highlight. Client-side only.</summary>
     public HashSet<Guid> OpenedChats { get; set; } = [];
 
+    /// <summary>Private per-match notes (peer profile id to text). Local-only, never sent anywhere.</summary>
+    public Dictionary<Guid, string> MatchNotes { get; set; } = [];
+
     /// <summary>Legacy archived-matches set, kept only for migration into the "Archive" chat category;
     /// emptied by that migration.</summary>
     public List<Guid> ArchivedMatches { get; set; } = [];
@@ -286,6 +318,9 @@ public class Configuration : IPluginConfiguration
 
     /// <summary>Hangout preferences, first-run flags, and dismissals.</summary>
     public HangoutClientState Hangouts { get; set; } = new();
+
+    /// <summary>Levemetes browse preferences (account-level, not swapped per profile).</summary>
+    public LevemetesState Levemetes { get; set; } = new();
 
     /// <summary>Per-install tally of emoji reaction usage; powers the "most-used" quick-react bar.</summary>
     public Dictionary<string, int> ReactionUsage { get; set; } = new();
@@ -318,6 +353,7 @@ public class Configuration : IPluginConfiguration
         {
             Crypto = Crypto,
             OpenedChats = OpenedChats,
+            MatchNotes = MatchNotes,
             ReactionUsage = ReactionUsage,
             FavoriteEmojis = FavoriteEmojis,
             ChatCategories = ChatCategories,
@@ -327,6 +363,7 @@ public class Configuration : IPluginConfiguration
         ProfileLocal.Remove(newId);
         Crypto = next.Crypto;
         OpenedChats = next.OpenedChats;
+        MatchNotes = next.MatchNotes;
         ReactionUsage = next.ReactionUsage;
         FavoriteEmojis = next.FavoriteEmojis;
         ChatCategories = next.ChatCategories;
@@ -347,6 +384,7 @@ public class ProfileLocalState
 {
     public CryptoKeys Crypto { get; set; } = new();
     public HashSet<Guid> OpenedChats { get; set; } = [];
+    public Dictionary<Guid, string> MatchNotes { get; set; } = [];
     public Dictionary<string, int> ReactionUsage { get; set; } = new();
     public List<string> FavoriteEmojis { get; set; } = new();
     public List<ChatCategoryConfig> ChatCategories { get; set; } = [];

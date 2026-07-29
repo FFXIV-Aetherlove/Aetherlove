@@ -18,7 +18,7 @@ namespace AetherLove.Screens;
 public partial class MyProfileScreen
 {
     /// <summary>Which slice of the "My" area is showing.</summary>
-    private enum Section { Hub, Detail, RpCharacters, Warnings, ModMessages, SupporterVanity, SupporterStats }
+    private enum Section { Hub, Detail, RpCharacters, Warnings, ModMessages, SupporterVanity, SupporterStats, Holiday }
 
     private Section _section = Section.Hub;
 
@@ -73,6 +73,10 @@ public partial class MyProfileScreen
         _entrance.BeginFrame();
 
         ImGui.Spacing();
+        if (_bootstrap.LastConnection is { HolidayMode: true })
+        {
+            DrawHolidayActiveBanner(winW);
+        }
         DrawStatsRow(winW);
         ImGui.Spacing();
         ImGui.Spacing();
@@ -84,6 +88,7 @@ public partial class MyProfileScreen
             new(FontAwesomeIcon.Edit, t.Accent, Loc.T("profile.menu_edit"), 0, false, () => OpenDetail(Tab.Edit)),
             new(FontAwesomeIcon.Images, t.Accent, Loc.T("profile.menu_images"), 0, false, () => OpenDetail(Tab.Images)),
             new(FontAwesomeIcon.TheaterMasks, t.Accent, Loc.T("profile.menu_rp"), 0, false, OpenRpCharacters),
+            new(FontAwesomeIcon.UmbrellaBeach, t.Accent, Loc.T("profile.menu_holiday"), 0, false, OpenHoliday),
         };
         DrawMenuCard("myprof", winW, HubPadX, profileRows);
 

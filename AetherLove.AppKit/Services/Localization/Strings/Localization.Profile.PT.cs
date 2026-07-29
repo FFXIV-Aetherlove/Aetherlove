@@ -23,7 +23,7 @@ internal static class ProfilePt
         ["profile.favourite_song"] = "Música favorita",
         ["music.fetching"] = "Obtendo o nome da música…",
         ["music.saved"] = "Link salvo (nome pendente)",
-        ["music.invalid"] = "Não foi possível ler o link — cole um link de música do Spotify, SoundCloud, Apple Music ou YouTube Music.",
+        ["music.invalid"] = "Não foi possível ler o link: cole um link de música do Spotify, SoundCloud, Apple Music ou YouTube Music.",
         ["music.open_tooltip"] = "Clique para abrir",
         ["profile.favourite_movie"] = "Filme favorito",
         ["profile.favourite_anime"] = "Anime favorito",
@@ -50,7 +50,7 @@ internal static class ProfilePt
         ["profile.cancel"] = "Cancelar",
         ["profile.submit_report"] = "Enviar denúncia",
         ["profile.report_submitted"] = "Denúncia enviada",
-        ["profile.report_thanks"] = "Obrigado — os nossos moderadores vão verificar. Não vais ver este perfil de novo até puxar um novo do deck.",
+        ["profile.report_thanks"] = "Obrigado, os nossos moderadores vão verificar. Este perfil não vai voltar a aparecer no teu deck.",
         ["profile.closing"] = "Fechando…",
         ["profile.closing_in"] = "Fechando em {0} segundos",
         ["profile.close"] = "Fechar",
@@ -58,7 +58,7 @@ internal static class ProfilePt
         // ProfileScreen - copy profile text (viewing others only)
         ["profile.copy_text"] = "Copiar texto do perfil",
         ["profile.copy_warning_title"] = "Aviso",
-        ["profile.copy_warning_body"] = "Você copiou o texto de outra pessoa. Tenha cuidado ao clicar ou acessar qualquer link que ele contenha — você faz isso por sua conta e risco.",
+        ["profile.copy_warning_body"] = "Você copiou o texto de outra pessoa. Tenha cuidado ao clicar ou acessar qualquer link que ele contenha; você faz isso por sua conta e risco.",
         ["profile.copy_warning_agree"] = "Entendi e concordo",
 
         // MyProfileScreen hub: stats + menu
@@ -198,8 +198,8 @@ internal static class ProfilePt
         ["profile.menu_sup_stats"] = "Estatísticas extras",
         ["profile.sup_intro"] = "Obrigado por apoiar o AetherLove! Escolha um estilo para o seu nome e se quer mostrar o emblema de apoiador. Todos podem vê-los.",
         ["profile.sup_name_style"] = "Estilo do nome",
-        ["profile.sup_show_badge"] = "Mostrar emblema de apoiador",
-        ["profile.sup_badge_hint"] = "Mostra a etiqueta de apoiador no seu perfil. A estrela ao lado do seu nome sempre aparece.",
+        ["profile.sup_show_badge"] = "Mostrar o meu estado de apoiador",
+        ["profile.sup_badge_hint"] = "Quando desligado, ninguém vê a tua estrela nem o teu emblema de apoiador: nem nos teus perfis, nem nos chats, nem nos hangouts, e a tua própria pré-visualização do perfil também os esconde. As tuas vantagens de apoiador continuam a funcionar. Aplica-se à conta inteira.",
         ["profile.sup_stats_intro"] = "Informações exclusivas para apoiadores sobre como o seu perfil está indo pelo reino.",
         ["profile.sup_stat_likes_received"] = "Curtidas recebidas",
         ["profile.sup_stat_superlikes"] = "Superlikes recebidos",
@@ -220,5 +220,23 @@ internal static class ProfilePt
         ["profile.style_rainbow"] = "Arco-íris (animado)",
         ["profile.style_shimmer"] = "Brilho dourado (animado)",
         ["profile.style_pulse"] = "Pulso rosa (animado)",
+
+        // added after update 2.0.1
+        ["profile.more_options"] = "Mais opções",
+        ["profile.menu_hide"] = "Ocultar este perfil",
+        ["profile.menu_report"] = "Denunciar este perfil",
+        ["profile.hide_title"] = "Ocultar este perfil?",
+        ["profile.hide_body"] = "Nunca mais vais ver este perfil no teu deck. Esta ação não pode ser desfeita.",
+        ["profile.hide_confirm"] = "Ocultar para sempre",
+        // holiday mode (added after update 2.0.1)
+        ["profile.menu_holiday"] = "Modo férias",
+        ["profile.holiday_toggle"] = "Modo férias ativado",
+        ["profile.holiday_msg_label"] = "Mensagem de férias",
+        ["profile.holiday_msg_hint"] = "Enquanto o modo férias estiver ativo, quem vir o teu perfil vê um aviso de ausência com a tua mensagem, e os teus matches veem um marcador de ausência na tua foto.",
+        ["profile.holiday_save"] = "Guardar",
+        ["profile.holiday_saved"] = "Guardado!",
+        ["profile.holiday_active_banner"] = "MODO FÉRIAS ATIVO",
+        ["profile.holiday_banner"] = "Este jogador tem o modo férias ativado: {0}",
+        ["profile.holiday_banner_short"] = "Este jogador tem o modo férias ativado.",
     };
 }

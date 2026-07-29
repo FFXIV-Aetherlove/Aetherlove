@@ -21,7 +21,6 @@ public sealed class SiblingBadgeStore
         {
             _counts[profileId] = (newMatches < 0 ? 0 : newMatches, unreadChats < 0 ? 0 : unreadChats);
         }
-        UiHost.Log.Debug("[SIB] SiblingBadgeStore.Apply: profile {Profile:N} -> matches={Matches} unread={Unread}.", profileId, newMatches, unreadChats);
         Changed?.Invoke();
     }
 
@@ -36,7 +35,6 @@ public sealed class SiblingBadgeStore
             u = Math.Max(0, u + deltaUnread);
             _counts[profileId] = (m, u);
         }
-        UiHost.Log.Debug("[SIB] SiblingBadgeStore.Bump: profile {Profile:N} by ({DM},{DU}).", profileId, deltaMatches, deltaUnread);
         Changed?.Invoke();
     }
 
@@ -52,7 +50,6 @@ public sealed class SiblingBadgeStore
     /// <summary>Full re-seed from a ListProfiles fetch (bootstrap or picker refresh): counts and display names.</summary>
     public void ReplaceAll(IEnumerable<(Guid ProfileId, string Name, int NewMatches, int UnreadChats)> profiles)
     {
-        var seeded = new List<string>();
         lock (_lock)
         {
             _counts.Clear();
@@ -61,10 +58,8 @@ public sealed class SiblingBadgeStore
             {
                 _counts[id] = (m, u);
                 _names[id] = name;
-                seeded.Add($"{id:N}:{m}/{u}");
             }
         }
-        UiHost.Log.Debug("[SIB] SiblingBadgeStore.ReplaceAll: seeded {Count} profiles [{Seeded}].", seeded.Count, string.Join(", ", seeded));
         Changed?.Invoke();
     }
 

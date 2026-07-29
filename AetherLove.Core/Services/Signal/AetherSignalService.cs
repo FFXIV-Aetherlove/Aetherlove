@@ -295,7 +295,6 @@ public sealed class AetherSignalService : IAsyncDisposable
         hub.On<MatchCreatedPushDto>("MatchCreated", payload =>
         {
             var forActive = IsForActive(payload.ForProfileId);
-            _log.Debug("[SIB] MatchCreated for {For:N} (active {Active:N}, forActive={ForActive}): other={Other}.", payload.ForProfileId, UiHost.Configuration.Auth.ActiveProfileId ?? Guid.Empty, forActive, payload.OtherDisplayName);
             if (forActive)
             {
                 _notifications.NewMatches++;
@@ -431,9 +430,19 @@ public sealed class AetherSignalService : IAsyncDisposable
             _chatEvents.RaisePinChanged(payload);
         });
 
+        hub.On<MessageDeletedPushDto>("MessageDeleted", payload =>
+        {
+            if (!IsForActive(payload.ForProfileId))
+            {
+                return;
+            }
+            _services.GetRequiredService<Chat.ChatSyncService>().Cache
+                .ApplyMessageDeleted(payload.PeerProfileId, payload.MessageId);
+            _chatEvents.RaiseMessageDeleted(payload);
+        });
+
         hub.On<PeerKeysResetPushDto>("PeerKeysReset", payload =>
         {
-            _log.Debug("[RESET] PeerKeysReset received: peer {Peer:N} reset keys (forProfile {For:N}, active={Active}).", payload.PeerProfileId, payload.ForProfileId, IsForActive(payload.ForProfileId));
             if (!IsForActive(payload.ForProfileId))
             {
                 return;
@@ -586,7 +595,6 @@ public sealed class AetherSignalService : IAsyncDisposable
 
         hub.On<Shared.Messenger.MessengerContactChangedPushDto>("MessengerContactChanged", payload =>
         {
-            _log.Debug("[RESET] MessengerContactChanged: contact {Contact:N}, peer public key {KeyLen} bytes (a peer's passphrase reset updates this to the new key).", payload.Contact.ContactId, payload.Contact.PeerPublicKey?.Length ?? 0);
             _messenger.ApplyContactChanged(payload.Contact);
         });
 
@@ -655,6 +663,16 @@ public sealed class AetherSignalService : IAsyncDisposable
             _messenger.ApplyPin(payload.ChatId, payload.MessageId, payload.PinnedAtUtc);
         });
 
+        hub.On<Shared.Messenger.MessengerMessageDeletedPushDto>("MessengerMessageDeleted", payload =>
+        {
+            // Without the cached conversation the chat-list preview can't be recomputed locally; a sync
+            // pulls the server's recomputed denormal instead.
+            if (_messenger.ApplyMessageDeleted(payload.ChatId, payload.MessageId))
+            {
+                _ = _services.GetRequiredService<Messenger.MessengerSyncService>().SyncAsync();
+            }
+        });
+
         hub.On<Shared.Messenger.MessengerGroupChangedPushDto>("MessengerGroupChanged", payload =>
         {
             var known = _messenger.Group(payload.Group.GroupId) is not null;
@@ -686,7 +704,6 @@ public sealed class AetherSignalService : IAsyncDisposable
 
         hub.On<Shared.Messenger.MessengerMemberKeysResetPushDto>("MessengerMemberKeysReset", payload =>
         {
-            _log.Debug("[RESET] MessengerMemberKeysReset: member {Name} reset keys in group {Group:N}; the owner client re-wraps the current epoch key and history is barriered off for them.", payload.Name, payload.GroupId);
             _log.Information($"[AetherSignalService] MessengerMemberKeysReset push in group {payload.GroupId}.");
             PostMessengerNotification(
                 payload.GroupName,

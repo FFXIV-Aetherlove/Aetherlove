@@ -13,7 +13,7 @@ using Dalamud.Interface;
 namespace AetherOS.Apps.Photos;
 
 /// <summary>iPhone-style Photos app: album cards, a square photo grid, a full-screen viewer, and a cross-app picker mode.</summary>
-public sealed class PhotosApp : IAetherApp
+public sealed class PhotosApp : IAetherApp, IAppSettings
 {
     private const float CardAspect = 1.15f;
     private const double FadeSeconds = 0.15;
@@ -42,6 +42,7 @@ public sealed class PhotosApp : IAetherApp
         Album,
         Viewer,
         Edit,
+        Settings,
     }
 
     private static readonly (ImageFilter Filter, string Key)[] Filters =
@@ -103,6 +104,10 @@ public sealed class PhotosApp : IAetherApp
     private bool resetAlbumScroll;
     private DateTime fadeStartUtc = DateTime.MinValue;
     private EditState? edit;
+    private bool settingsLoaded;
+    private bool autoImportCameraRoll = true;
+    private bool autoImportAppCaptures = true;
+    private bool autoImportScreenshots = true;
 
     public PhotosApp(Func<string> name, IPhotoLibrary library, IAppCapabilities caps)
     {
@@ -111,7 +116,7 @@ public sealed class PhotosApp : IAetherApp
         this.caps = caps;
     }
 
-    public string Id => "photos";
+    public string Id => PhotoSettings.ScopeId;
 
     public string Name => this.name();
 
@@ -147,6 +152,9 @@ public sealed class PhotosApp : IAetherApp
             case View.Edit:
                 this.DrawEdit(ctx);
                 break;
+            case View.Settings:
+                this.DrawSettings(ctx, () => this.view = View.Albums);
+                break;
         }
     }
 
@@ -178,6 +186,10 @@ public sealed class PhotosApp : IAetherApp
             this.view = View.Album;
             this.edit = null;
         }
+        else if (this.view == View.Settings)
+        {
+            this.view = View.Albums;
+        }
     }
 
     private void DrawAlbums(OsAppContext ctx)
@@ -199,10 +211,25 @@ public sealed class PhotosApp : IAetherApp
         }
 
         ImGui.Dummy(new Vector2(0f, ctx.Px(6f)));
+        var titleTop = ImGui.GetCursorScreenPos().Y;
         ImGui.SetCursorPosX(pad);
+        float titleH;
         using (ctx.TitleFont?.Push())
         {
+            titleH = ImGui.GetTextLineHeight();
             ImGui.TextUnformatted(ctx.Localize("os.photos_title"));
+        }
+        if (!this.pickerArmed)
+        {
+            var afterTitle = ImGui.GetCursorScreenPos();
+            var gearR = ctx.Px(15f);
+            if (RoundIconButton("##photosSettingsOpen", FontAwesomeIcon.Cog,
+                    new Vector2(winPos.X + winW - pad - gearR, titleTop + titleH * 0.5f), gearR, ctx.Px(14f),
+                    NoFill, HoverFill, MutedText, ctx.Localize("os.photos_settings")))
+            {
+                this.view = View.Settings;
+            }
+            ImGui.SetCursorScreenPos(afterTitle);
         }
         ImGui.Dummy(new Vector2(0f, ctx.Px(8f)));
 
@@ -244,6 +271,10 @@ public sealed class PhotosApp : IAetherApp
         ImGui.SetCursorScreenPos(tl);
         var clicked = ImGui.InvisibleButton($"##album{album.Id}", size);
         var hovered = ImGui.IsItemHovered();
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
         var dl = ImGui.GetWindowDrawList();
         var br = tl + size;
         var rounding = ctx.Px(16f);
@@ -290,6 +321,10 @@ public sealed class PhotosApp : IAetherApp
         ImGui.SetCursorScreenPos(tl);
         var clicked = ImGui.InvisibleButton("##photosNewAlbum", size);
         var hovered = ImGui.IsItemHovered();
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
         var dl = ImGui.GetWindowDrawList();
         var br = tl + size;
         var rounding = ctx.Px(16f);
@@ -364,6 +399,153 @@ public sealed class PhotosApp : IAetherApp
         {
             this.newAlbumPrompt = false;
         }
+    }
+
+    /// <summary>The settings page, reached from the gear on the albums title row and from the OS Settings app.
+    /// <paramref name="onBack"/> is the caller's way out; when hosted it returns to the OS settings list.</summary>
+    public void DrawSettings(OsAppContext ctx, Action? onBack)
+    {
+        // The hosted caller swallows exceptions, so an unbalanced child would corrupt the window stack for the
+        // rest of the frame; the try/finally keeps Begin and End paired whatever the body does.
+        ImGui.BeginChild("##photosSettings", ImGui.GetContentRegionAvail(), false, ImGuiWindowFlags.None);
+        try
+        {
+            this.LoadSettings(ctx);
+
+            var winPos = ImGui.GetWindowPos();
+            var winW = ImGui.GetWindowSize().X;
+            var pad = ctx.Px(14f);
+            var barTL = ImGui.GetCursorScreenPos();
+            var barH = ctx.Px(46f);
+            var cy = barTL.Y + barH * 0.5f;
+            var r = ctx.Px(16f);
+            var titleX = winPos.X + pad;
+
+            if (onBack != null)
+            {
+                if (RoundIconButton("##photosSettingsBack", FontAwesomeIcon.ChevronLeft,
+                        new Vector2(winPos.X + pad + r * 0.5f, cy), r, ctx.Px(14f), NoFill, HoverFill, WhiteText))
+                {
+                    onBack();
+                }
+                titleX = winPos.X + pad + r * 1.7f + ctx.Px(8f);
+            }
+
+            var title = ctx.Localize("os.photos_settings");
+            using (ctx.HeadingFont?.Push())
+            {
+                var ts = ImGui.CalcTextSize(title);
+                var dl = ImGui.GetWindowDrawList();
+                dl.PushClipRect(new Vector2(titleX, barTL.Y), new Vector2(winPos.X + winW - pad, barTL.Y + barH), true);
+                dl.AddText(new Vector2(titleX, cy - ts.Y * 0.5f), U32(WhiteText), title);
+                dl.PopClipRect();
+            }
+            ImGui.SetCursorScreenPos(barTL);
+            ImGui.Dummy(new Vector2(winW, barH));
+
+            this.DrawSettingsBody(ctx, winPos.X + pad, winW - pad * 2f);
+        }
+        finally
+        {
+            ImGui.EndChild();
+        }
+    }
+
+    private void DrawSettingsBody(OsAppContext ctx, float x, float width)
+    {
+        var store = ctx.Capabilities.Storage(this.Id);
+        SectionLabel(ctx, x, ctx.Localize("os.photos_settings_import"));
+
+        if (SettingToggle(ctx, "photosAutoCamera", ctx.Localize("os.photos_auto_camera"),
+                ctx.Localize("os.photos_auto_camera_hint"), x, width, ref this.autoImportCameraRoll))
+        {
+            store.Set(PhotoSettings.AutoImportCameraRoll, this.autoImportCameraRoll);
+        }
+        if (SettingToggle(ctx, "photosAutoCaptures", ctx.Localize("os.photos_auto_captures"),
+                ctx.Localize("os.photos_auto_captures_hint"), x, width, ref this.autoImportAppCaptures))
+        {
+            store.Set(PhotoSettings.AutoImportAppCaptures, this.autoImportAppCaptures);
+        }
+        if (SettingToggle(ctx, "photosAutoPrintscreens", ctx.Localize("os.photos_auto_printscreens"),
+                ctx.Localize("os.photos_auto_printscreens_hint"), x, width, ref this.autoImportScreenshots))
+        {
+            store.Set(PhotoSettings.AutoImportScreenshots, this.autoImportScreenshots);
+        }
+        ImGui.Dummy(new Vector2(width, ctx.Px(14f)));
+    }
+
+    /// <summary>Reads the stored toggles once per app lifetime; every key is absent-means-enabled, and the
+    /// store deserializes under a lock, so it must not be hit from the draw loop.</summary>
+    private void LoadSettings(OsAppContext ctx)
+    {
+        if (this.settingsLoaded)
+        {
+            return;
+        }
+        this.settingsLoaded = true;
+        var store = ctx.Capabilities.Storage(this.Id);
+        this.autoImportCameraRoll = store.Get<bool?>(PhotoSettings.AutoImportCameraRoll) ?? true;
+        this.autoImportAppCaptures = store.Get<bool?>(PhotoSettings.AutoImportAppCaptures) ?? true;
+        this.autoImportScreenshots = store.Get<bool?>(PhotoSettings.AutoImportScreenshots) ?? true;
+    }
+
+    private static void SectionLabel(OsAppContext ctx, float x, string text)
+    {
+        ImGui.SetCursorScreenPos(new Vector2(x, ImGui.GetCursorScreenPos().Y + ctx.Px(4f)));
+        ImGui.PushStyleColor(ImGuiCol.Text, ctx.Theme.AccentLight);
+        ImGui.TextUnformatted(text);
+        ImGui.PopStyleColor();
+        ImGui.Dummy(new Vector2(0f, ctx.Px(4f)));
+    }
+
+    /// <summary>A card with a wrapped label plus hint on the left and a checkbox on the right; the whole card
+    /// toggles. Returns true on the frame the value changed.</summary>
+    private static bool SettingToggle(OsAppContext ctx, string id, string label, string hint, float x, float width, ref bool value)
+    {
+        var dl = ImGui.GetWindowDrawList();
+        var padIn = ctx.Px(12f);
+        var boxSide = ImGui.GetFrameHeight();
+        var textW = width - padIn * 2f - boxSide - ctx.Px(12f);
+        var labelH = ImGui.CalcTextSize(label, false, textW).Y;
+        var hintH = ImGui.CalcTextSize(hint, false, textW).Y;
+        var tl = new Vector2(x, ImGui.GetCursorScreenPos().Y);
+        var size = new Vector2(width, padIn + labelH + ctx.Px(4f) + hintH + padIn);
+        var br = tl + size;
+
+        dl.AddRectFilled(tl, br, U32(GhostFill), ctx.Px(12f));
+        dl.AddRect(tl, br, U32(CardBorder), ctx.Px(12f), ImDrawFlags.RoundCornersAll, 1f);
+
+        ImGui.SetCursorScreenPos(new Vector2(br.X - padIn - boxSide, tl.Y + (size.Y - boxSide) * 0.5f));
+        var changed = ImGui.Checkbox($"##{id}", ref value);
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        // Submitted after the checkbox, so the box keeps its own clicks and this only catches the rest of the card.
+        ImGui.SetCursorScreenPos(tl);
+        if (ImGui.InvisibleButton($"##{id}Row", size))
+        {
+            value = !value;
+            changed = true;
+        }
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        ImGui.SetCursorScreenPos(tl + new Vector2(padIn, padIn));
+        ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + textW);
+        ImGui.TextUnformatted(label);
+        ImGui.SetCursorScreenPos(new Vector2(tl.X + padIn, tl.Y + padIn + labelH + ctx.Px(4f)));
+        ImGui.PushStyleColor(ImGuiCol.Text, MutedText);
+        ImGui.TextUnformatted(hint);
+        ImGui.PopStyleColor();
+        ImGui.PopTextWrapPos();
+
+        ImGui.SetCursorScreenPos(new Vector2(tl.X, br.Y));
+        ImGui.Dummy(new Vector2(width, ctx.Px(10f)));
+        return changed;
     }
 
     private string photoSearch = "";
@@ -593,6 +775,10 @@ public sealed class PhotosApp : IAetherApp
         ImGui.SetCursorScreenPos(tl);
         var clicked = ImGui.InvisibleButton($"##ph{photo.Id}", new Vector2(side, side));
         var hovered = ImGui.IsItemHovered();
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
         var dl = ImGui.GetWindowDrawList();
         var br = tl + new Vector2(side, side);
         var rounding = ctx.Px(10f);
@@ -772,6 +958,7 @@ public sealed class PhotosApp : IAetherApp
             var hovered = ImGui.IsItemHovered();
             if (hovered)
             {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
                 listDl.AddRectFilled(tl, tl + new Vector2(innerW, rowH), U32(HoverFill), ctx.Px(9f));
             }
             listDl.PushClipRect(tl, tl + new Vector2(innerW - ctx.Px(34f), rowH), true);
@@ -896,6 +1083,10 @@ public sealed class PhotosApp : IAetherApp
                 edit.Tab = t;
             }
             var tabHovered = ImGui.IsItemHovered();
+            if (tabHovered)
+            {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            }
             if (tabSelected)
             {
                 dl.AddRectFilled(tabTL + new Vector2(ctx.Px(2f), ctx.Px(2f)),
@@ -933,6 +1124,10 @@ public sealed class PhotosApp : IAetherApp
                     this.RequestRender(edit);
                 }
                 var hovered = ImGui.IsItemHovered();
+                if (hovered)
+                {
+                    ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+                }
                 var fill = selected ? ctx.Theme.Accent : hovered ? new Vector4(1f, 1f, 1f, 0.14f) : new Vector4(1f, 1f, 1f, 0.08f);
                 dl.AddRectFilled(chipTL, chipTL + new Vector2(chipW, chipH), U32(fill), chipH * 0.5f);
                 if (!selected)
@@ -1105,6 +1300,10 @@ public sealed class PhotosApp : IAetherApp
             ImGui.SetCursorScreenPos(nameTL - ctx.Px(6f, 4f));
             var clicked = ImGui.InvisibleButton("##photoName", new Vector2(nameW + ctx.Px(12f), ts.Y + ctx.Px(8f)));
             var hovered = ImGui.IsItemHovered();
+            if (hovered)
+            {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            }
             dl.PushClipRect(nameTL, nameTL + new Vector2(nameW, ts.Y), true);
             dl.AddText(nameTL, U32(WhiteText), photo.Name);
             dl.PopClipRect();
@@ -1441,9 +1640,13 @@ public sealed class PhotosApp : IAetherApp
         ImGui.SetCursorScreenPos(center - new Vector2(radius, radius));
         var clicked = ImGui.InvisibleButton(id, new Vector2(radius * 2f, radius * 2f));
         var hovered = ImGui.IsItemHovered();
-        if (hovered && tooltip != null)
+        if (hovered)
         {
-            ImGui.SetTooltip(tooltip);
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            if (tooltip != null)
+            {
+                ImGui.SetTooltip(tooltip);
+            }
         }
         var dl = ImGui.GetWindowDrawList();
         var col = hovered ? hoverFill : fill;
@@ -1460,6 +1663,10 @@ public sealed class PhotosApp : IAetherApp
         ImGui.SetCursorScreenPos(tl);
         var clicked = ImGui.InvisibleButton(id, size);
         var hovered = ImGui.IsItemHovered();
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
         var active = ImGui.IsItemActive();
         var dl = ImGui.GetWindowDrawList();
         var br = tl + size;
@@ -1495,6 +1702,10 @@ public sealed class PhotosApp : IAetherApp
         ImGui.SetCursorScreenPos(tl);
         var clicked = ImGui.InvisibleButton(id, size);
         var hovered = ImGui.IsItemHovered();
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
         var dl = ImGui.GetWindowDrawList();
         var col = hovered ? Lighten(fill, 0.12f) : fill;
         dl.AddRectFilled(tl, tl + size, U32(col), ctx.Px(10f));

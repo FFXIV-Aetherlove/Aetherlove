@@ -67,6 +67,7 @@ public sealed partial class MessengerApp : IAetherApp, IAppSettings
     private readonly AetherHubContext _hub;
     private readonly AetherLove.Services.Hangouts.HangoutStateService _hangoutState;
     private readonly AetherLove.Services.VenueShareContext _venueShare;
+    private readonly AetherLove.Services.LevemeteShareContext _levemeteShare;
     private readonly AetherLove.Services.HangoutShareContext _hangoutShare;
 
     private IOsShell? _shell;
@@ -93,7 +94,10 @@ public sealed partial class MessengerApp : IAetherApp, IAppSettings
         AetherHubContext hub,
         AetherLove.Services.Hangouts.HangoutStateService hangoutState,
         AetherLove.Services.VenueShareContext venueShare,
-        AetherLove.Services.HangoutShareContext hangoutShare)
+        AetherLove.Services.HangoutShareContext hangoutShare,
+        AetherLove.Services.LevemeteShareContext levemeteShare,
+        AetherLove.Services.Market.MarketDataService marketData,
+        AetherLove.Services.Market.MarketItemIndex marketIndex)
     {
         _name = name;
         _caps = caps;
@@ -104,8 +108,14 @@ public sealed partial class MessengerApp : IAetherApp, IAppSettings
         _hangoutState = hangoutState;
         _venueShare = venueShare;
         _hangoutShare = hangoutShare;
+        _levemeteShare = levemeteShare;
+        _marketData = marketData;
+        _marketIndex = marketIndex;
         _store.ImageRemoved += PurgeRemovedImage;
     }
+
+    private readonly AetherLove.Services.Market.MarketDataService _marketData;
+    private readonly AetherLove.Services.Market.MarketItemIndex _marketIndex;
 
     public string Id => "messenger";
 
@@ -306,13 +316,11 @@ public sealed partial class MessengerApp : IAetherApp, IAppSettings
             return cached;
         }
         string? text;
-        var usedHistoryEra = false;
         if (m.Kind == MessengerChatKind.Direct)
         {
             var contact = _store.Contact(m.ChatId);
             if (contact?.PeerPublicKey is not { Length: > 0 } pub || !_crypto.HasAccountKeys)
             {
-                AetherLove.UiHost.Log.Debug("[RESET] Messenger decrypt SKIPPED: msg {Id} (no peer key / no account keys yet).", m.Id);
                 return null;
             }
             text = _crypto.DecryptDirect(pub, m.Ciphertext, m.Nonce);
@@ -328,7 +336,6 @@ public sealed partial class MessengerApp : IAetherApp, IAppSettings
                     text = _crypto.DecryptDirect(era.PublicKey, m.Ciphertext, m.Nonce);
                     if (text is not null)
                     {
-                        usedHistoryEra = true;
                         break;
                     }
                 }
@@ -340,12 +347,10 @@ public sealed partial class MessengerApp : IAetherApp, IAppSettings
             if (key is null)
             {
                 _ = _sync.EnsureGroupKeysAsync(m.ChatId);
-                AetherLove.UiHost.Log.Debug("[RESET] Messenger decrypt SKIPPED: group msg {Id} epoch {Epoch} (key not held yet, refetching).", m.Id, m.KeyEpoch);
                 return null;
             }
             text = _crypto.DecryptGroup(key, m.Ciphertext, m.Nonce);
         }
-        AetherLove.UiHost.Log.Debug("[RESET] Messenger decrypt {Result}: msg {Id} kind={Kind} historyEra={Era}.", text is null ? "FAILED->undecryptable" : "OK", m.Id, m.Kind, usedHistoryEra);
         _plain[m.Id] = text;
         return text;
     }

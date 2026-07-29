@@ -35,11 +35,9 @@ public sealed class ChatSyncService
         try
         {
             var (mu, mc, ku) = _cache.Cursors;
-            UiHost.Log.Debug("[PSW] ChatSync.SyncAsync: cache owner {Owner:N}, cursors msg={Mu:o} match={Ku:o}.", _cache.Owner, mu, ku);
             while (true)
             {
                 var delta = await _hub.GetChatDeltaAsync(new ChatDeltaRequest(mu, mc, ku), ct).ConfigureAwait(false);
-                UiHost.Log.Debug("[PSW] ChatSync.SyncAsync: server delta ForProfileId={For:N} ({Matches} changed matches, hasMore={More}); cache owner {Owner:N}.", delta.ForProfileId, delta.ChangedMatches.Length, delta.HasMore, _cache.Owner);
                 _cache.ApplyDelta(delta);
                 mu = delta.NextMsgCursorUtc;
                 mc = delta.NextMsgCursorCreatedUtc;

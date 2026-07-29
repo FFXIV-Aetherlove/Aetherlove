@@ -40,6 +40,21 @@ internal static class OsDraw
             ImGui.ColorConvertFloat4ToU32(new Vector4(1f, 1f, 1f, alpha)));
     }
 
+    /// <summary>Red "new" pill overhanging a tile's top-left corner, deliberately English-only.</summary>
+    public static void NewBadge(ImDrawListPtr dl, Vector2 corner)
+    {
+        const string label = "new";
+        var fsz = ImGui.GetFontSize() * 0.72f;
+        var tsz = ImGui.CalcTextSize(label) * (fsz / ImGui.GetFontSize());
+        var padX = Px(5f);
+        var h = tsz.Y + Px(4f);
+        var tl = new Vector2(corner.X - padX, corner.Y - h * 0.5f);
+        var br = tl + new Vector2(tsz.X + padX * 2f, h);
+        dl.AddRectFilled(tl, br, ImGui.ColorConvertFloat4ToU32(new Vector4(0.86f, 0.13f, 0.16f, 1f)), h * 0.5f);
+        dl.AddRect(tl, br, White(0.55f), h * 0.5f, ImDrawFlags.None, 1f);
+        dl.AddText(ImGui.GetFont(), fsz, new Vector2(tl.X + padX, tl.Y + (h - tsz.Y) * 0.5f), 0xFFFFFFFFu, label);
+    }
+
     public static void Badge(ImDrawListPtr dl, Vector2 center, int count, float scale = 1f)
     {
         var label = count > 99 ? "99+" : count.ToString();

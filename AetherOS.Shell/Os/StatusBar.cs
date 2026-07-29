@@ -79,27 +79,42 @@ public sealed class StatusBar
 
     private static float DrawBattery(ImDrawListPtr dl, float rightX, float centerY, Vector4 tint)
     {
-        // Playful fake: drains over the real day and recharges at midnight.
-        var dayFrac = (float)DateTime.Now.TimeOfDay.TotalSeconds / 86400f;
-        var level = 0.95f - 0.55f * dayFrac;
+        var level = BatteryService.Fraction;
+        var critical = BatteryService.IsCritical;
+        // The last stretch pulses, which is the only cue that the phone is about to die on you.
+        var pulse = critical && !AccessibilityService.ReduceMotion
+            ? 0.55f + 0.45f * MathF.Sin((float)ImGui.GetTime() * 4.5f)
+            : 1f;
 
         var bodyW = Px(19f);
         var bodyH = Px(9f);
         var tl = new Vector2(rightX - bodyW, centerY - bodyH * 0.5f);
         var br = new Vector2(rightX, centerY + bodyH * 0.5f);
-        dl.AddRect(tl, br, Tint(tint, 0.75f), Px(2.5f), ImDrawFlags.RoundCornersAll, Px(1f));
+        // The whole icon takes the state colour, not just the fill: at 20% a thin sliver inside a white outline
+        // does not read as amber at status-bar size.
+        var shellCol = BatteryService.IsLow
+            ? ImGui.ColorConvertFloat4ToU32(BatteryService.Tint with { W = 0.85f * pulse })
+            : Tint(tint, 0.75f);
+        dl.AddRect(tl, br, shellCol, Px(2.5f), ImDrawFlags.RoundCornersAll, Px(1f));
         dl.AddRectFilled(new Vector2(br.X + Px(1f), centerY - Px(2f)), new Vector2(br.X + Px(2.5f), centerY + Px(2f)),
-            Tint(tint, 0.75f), Px(1f));
-        var fillCol = level < 0.25f
-            ? ImGui.ColorConvertFloat4ToU32(new Vector4(0.95f, 0.35f, 0.30f, 0.95f))
-            : Tint(tint, 0.9f);
-        dl.AddRectFilled(tl + Px(1.6f, 1.6f),
-            new Vector2(tl.X + Px(1.6f) + (bodyW - Px(3.2f)) * level, br.Y - Px(1.6f)), fillCol, Px(1.4f));
+            shellCol, Px(1f));
 
-        var pct = $"{(int)(level * 100)}";
+        if (level > 0f)
+        {
+            var fill = BatteryService.IsLow ? BatteryService.Tint : tint;
+            var alpha = critical ? 0.95f * pulse : 0.9f;
+            dl.AddRectFilled(tl + Px(1.6f, 1.6f),
+                new Vector2(tl.X + Px(1.6f) + (bodyW - Px(3.2f)) * level, br.Y - Px(1.6f)),
+                ImGui.ColorConvertFloat4ToU32(fill with { W = alpha }), Px(1.4f));
+        }
+
+        var pct = $"{BatteryService.Percent}";
         var pctSz = ImGui.CalcTextSize(pct) * 0.68f;
+        var pctCol = BatteryService.IsLow
+            ? ImGui.ColorConvertFloat4ToU32(BatteryService.Tint with { W = critical ? 0.95f * pulse : 0.9f })
+            : Tint(tint, 0.75f);
         dl.AddText(ImGui.GetFont(), ImGui.GetFontSize() * 0.68f,
-            new Vector2(tl.X - pctSz.X - Px(4f), centerY - pctSz.Y * 0.5f), Tint(tint, 0.75f), pct);
+            new Vector2(tl.X - pctSz.X - Px(4f), centerY - pctSz.Y * 0.5f), pctCol, pct);
         return tl.X - pctSz.X - Px(6f);
     }
 

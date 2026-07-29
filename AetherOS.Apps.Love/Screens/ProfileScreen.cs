@@ -77,6 +77,24 @@ public class ProfileScreen
 
     private const float ReportAutoCloseSeconds = 5f;
 
+    private const string ProfileMenuId = "##profileOverflowMenu";
+    private Vector2 _profileMenuAnchor;
+    /// <summary>The button sits inside the scroll child, whose id is regenerated per open, so the popup is opened
+    /// at window scope instead of at the click site.</summary>
+    private bool _profileMenuPendingOpen;
+    private bool _profileMenuOpen;
+
+    private bool _hideConfirmOpen;
+    private float _hideConfirmPanelH;
+    private volatile bool _hideSubmitting;
+    private volatile string? _hideError;
+    private Guid _deckRemovalId;
+    private volatile bool _deckRemovalPending;
+    private volatile bool _hideReturnPending;
+
+    /// <summary>Set by the host so a hidden or reported peer also leaves the swipe deck.</summary>
+    public Action<Guid>? OnProfileHidden { get; set; }
+
     private const float AutoInterval = 4.5f;
     private const float FadeSpeed = 2.5f;
 
@@ -228,6 +246,14 @@ public class ProfileScreen
         _reportError = null;
         _reportSubmittedTimer = 0f;
         _reportedThisProfile = false;
+        _profileMenuPendingOpen = false;
+        _profileMenuOpen = false;
+        _hideConfirmOpen = false;
+        _hideConfirmPanelH = 0f;
+        _hideSubmitting = false;
+        _hideError = null;
+        // A queued deck removal deliberately survives, so a hide whose reply landed late still drops the card.
+        _hideReturnPending = false;
         _loadError = null;
     }
 
@@ -333,6 +359,19 @@ public class ProfileScreen
 
     public void Draw()
     {
+        if (_deckRemovalPending)
+        {
+            _deckRemovalPending = false;
+            OnProfileHidden?.Invoke(_deckRemovalId);
+        }
+        if (_hideReturnPending)
+        {
+            _hideReturnPending = false;
+            _hideConfirmOpen = false;
+            _router.Navigate(LoveView.Deck);
+            return;
+        }
+
         if (_profile is null)
         {
             if (_loadError is null && _loading)
@@ -390,6 +429,7 @@ public class ProfileScreen
                 ImGui.Spacing();
                 ImGui.Spacing();
 
+                DrawHolidayBanner(winSize.X, dl);
                 DrawFlairs(winSize.X, dl);
                 DrawAbout(winSize.X, dl);
                 DrawCharacters(winSize.X, dl);
@@ -431,6 +471,13 @@ public class ProfileScreen
 
         if (_source != ProfileSource.Self)
         {
+            if (_profileMenuPendingOpen)
+            {
+                _profileMenuPendingOpen = false;
+                ImGui.OpenPopup(ProfileMenuId);
+            }
+            DrawOverflowMenu();
+
             if (_reportSubmittedTimer > 0f)
             {
                 _reportSubmittedTimer -= ImGui.GetIO().DeltaTime;
@@ -440,6 +487,8 @@ public class ProfileScreen
                 _reportPendingOpen = false;
                 Widgets.ModalHost.Instance?.Open(380f, DrawReportBody);
             }
+
+            DrawHideConfirm(ImGui.GetWindowPos(), winSize);
         }
     }
 
@@ -574,10 +623,10 @@ public class ProfileScreen
             }
         }
 
-        var reportHovered = false;
-        if (_source != ProfileSource.Self && !_reportedThisProfile && !HasNpcFlair())
+        var menuHovered = false;
+        if (ShowOverflowMenu)
         {
-            reportHovered = DrawReportTriangleButton(photoTL, photoSz, dl);
+            menuHovered = DrawOverflowMenuButton(photoTL, photoSz, dl);
         }
 
         ImGui.Dummy(photoSz);
@@ -611,13 +660,15 @@ public class ProfileScreen
 
         if (currentBlurred && _fadeAlpha >= 0.95f)
         {
+            var menuOpen = _profileMenuOpen;
             ImGui.SetCursorScreenPos(photoTL);
             ImGui.InvisibleButton("##nsfwReveal", photoSz);
-            if (ImGui.IsItemClicked() && !overArrow && !reportHovered)
+            if (ImGui.IsItemClicked() && !overArrow && !menuHovered && !menuOpen)
             {
                 _revealedNsfw.Add((_profile.ProfileId, currentOrder));
             }
-            DrawNsfwRevealPill(dl, photoTL, photoSz, ImGui.IsItemHovered() && !overArrow && !reportHovered);
+            DrawNsfwRevealPill(dl, photoTL, photoSz,
+                ImGui.IsItemHovered() && !overArrow && !menuHovered && !menuOpen);
         }
 
         ImGui.SetCursorPosY(photoLocalY + PhotoHeight);
@@ -1447,6 +1498,42 @@ public class ProfileScreen
         SpaceDivide(dl, winW);
     }
 
+    /// <summary>The purple holiday-mode banner between the photos and the about section.</summary>
+    private void DrawHolidayBanner(float winW, ImDrawListPtr dl)
+    {
+        if (_profile is not { HolidayMode: true } p)
+        {
+            return;
+        }
+        var text = p.HolidayMessage.Length > 0
+            ? Loc.T("profile.holiday_banner", p.HolidayMessage)
+            : Loc.T("profile.holiday_banner_short");
+        var innerW = winW - PadX * 2f - Px(24f) - Px(30f);
+        var textSz = ImGui.CalcTextSize(text, false, innerW);
+        var bannerH = textSz.Y + Px(20f);
+
+        ImGui.SetCursorPosX(PadX);
+        var tl = ImGui.GetCursorScreenPos();
+        var br = tl + new Vector2(winW - PadX * 2f, bannerH);
+        dl.AddRectFilled(tl, br, ImGui.GetColorU32(UiColors.HolidayPurple with { W = 0.28f }), Px(10f));
+        dl.AddRect(tl, br, ImGui.GetColorU32(UiColors.HolidayPurple with { W = 0.85f }), Px(10f), ImDrawFlags.None, Px(1.2f));
+
+        var iconPx = Px(16f);
+        var iconSz = IconDraw.Measure(FontAwesomeIcon.UmbrellaBeach, iconPx);
+        IconDraw.Add(dl, FontAwesomeIcon.UmbrellaBeach, iconPx,
+            new Vector2(tl.X + Px(12f), tl.Y + (bannerH - iconSz.Y) * 0.5f),
+            ImGui.GetColorU32(UiColors.HolidayPurple));
+
+        ImGui.SetCursorScreenPos(new Vector2(tl.X + Px(12f) + iconSz.X + Px(12f), tl.Y + Px(10f)));
+        ImGui.PushTextWrapPos(tl.X + Px(12f) + iconSz.X + Px(12f) + innerW);
+        ImGui.TextUnformatted(text);
+        ImGui.PopTextWrapPos();
+
+        ImGui.SetCursorScreenPos(new Vector2(tl.X - PadX, br.Y));
+        ImGui.Dummy(new Vector2(1f, Px(10f)));
+        SpaceDivide(dl, winW);
+    }
+
     private void DrawAvailabilityGraph(string label, int hoursMask, float winW, ImDrawListPtr dl)
     {
         if (hoursMask == 0)
@@ -1585,11 +1672,22 @@ public class ProfileScreen
     }
 
 
+    private bool CanHideProfile => _source == ProfileSource.Deck;
+
+    private bool CanReportProfile => !_reportedThisProfile;
+
+    /// <summary>NPC cards deliberately get no button at all.</summary>
+    private bool ShowOverflowMenu => _source != ProfileSource.Self
+                                  && !HasNpcFlair()
+                                  && (CanHideProfile || CanReportProfile);
+
     /// <summary>Returns whether the button is hovered so the NSFW reveal underneath can ignore that click.</summary>
-    private bool DrawReportTriangleButton(Vector2 photoTL, Vector2 photoSz, ImDrawListPtr dl)
+    private bool DrawOverflowMenuButton(Vector2 photoTL, Vector2 photoSz, ImDrawListPtr dl)
     {
         var BtnSize = Px(36f);
         var Margin = Px(14f);
+        const uint IconIdle = 0xFFE0E0E0u;
+        const uint IconActive = 0xFFFFFFFFu;
 
         var saveCursor = ImGui.GetCursorScreenPos();
 
@@ -1598,19 +1696,24 @@ public class ProfileScreen
             photoTL.Y + Margin);
 
         ImGui.SetCursorScreenPos(btnTL);
-        ImGui.InvisibleButton("##reportTriangle", new Vector2(BtnSize, BtnSize));
+        ImGui.InvisibleButton("##profileOverflow", new Vector2(BtnSize, BtnSize));
+        HandOnHover();
+
+        const uint ScrimIdle = 0x66000000u;
+        const uint ScrimActive = 0x99000000u;
 
         var hovered = ImGui.IsItemHovered();
         var clicked = ImGui.IsItemClicked();
+        var active = hovered || _profileMenuOpen;
 
         dl.AddCircleFilled(
             new Vector2(btnTL.X + BtnSize * 0.5f, btnTL.Y + BtnSize * 0.5f),
             BtnSize * 0.5f,
-            hovered ? 0x99000000u : 0x66000000u);
+            active ? ScrimActive : ScrimIdle);
 
-        var iconColor = hovered ? 0xFF36C8FCu : 0xFF14A8E2u;
+        var iconColor = active ? IconActive : IconIdle;
         ImGui.PushFont(UiHost.PluginInterface.UiBuilder.FontIcon);
-        var icon = FontAwesomeIcon.ExclamationTriangle.ToIconString();
+        var icon = FontAwesomeIcon.EllipsisH.ToIconString();
         var iconSz = ImGui.CalcTextSize(icon);
         dl.AddText(ImGui.GetFont(), ImGui.GetFontSize(),
             new Vector2(
@@ -1621,17 +1724,165 @@ public class ProfileScreen
 
         if (hovered)
         {
-            ImGui.SetTooltip(Loc.T("profile.report_profile"));
+            ImGui.SetTooltip(Loc.T("profile.more_options"));
         }
         if (clicked)
         {
-            _reportPendingOpen = true;
-            _reportError = null;
-            _reportSubmittedTimer = 0f;
+            _profileMenuAnchor = btnTL;
+            _profileMenuPendingOpen = true;
         }
 
         ImGui.SetCursorScreenPos(saveCursor);
         return hovered;
+    }
+
+    /// <summary>The overflow dropdown; call at window scope, never inside the scroll child. The open state is
+    /// cached because the button and the NSFW reveal are submitted inside the scroll child, whose ID stack
+    /// <c>ImGui.IsPopupOpen</c> would hash against, so querying it there can never match.</summary>
+    private void DrawOverflowMenu()
+    {
+        var open = AppHeader.BeginMenuPopup(_profileMenuAnchor + Px(6f, 6f), ProfileMenuId);
+        _profileMenuOpen = open;
+        if (open)
+        {
+            var hideLabel = Loc.T("profile.menu_hide");
+            var reportLabel = Loc.T("profile.menu_report");
+            var labels = new List<string>(2);
+            if (CanHideProfile)
+            {
+                labels.Add(hideLabel);
+            }
+            if (CanReportProfile)
+            {
+                labels.Add(reportLabel);
+            }
+            var w = AppHeader.MenuWidth(labels.ToArray());
+            var rowH = AppHeader.MenuRowHeight();
+
+            if (CanHideProfile && AppHeader.MenuRow(FontAwesomeIcon.EyeSlash, hideLabel, w, rowH))
+            {
+                ImGui.CloseCurrentPopup();
+                _hideError = null;
+                _hideConfirmPanelH = 0f;
+                _hideConfirmOpen = true;
+            }
+            if (CanReportProfile && AppHeader.MenuRow(FontAwesomeIcon.ExclamationTriangle, reportLabel, w, rowH,
+                    UiColors.MenuReport))
+            {
+                ImGui.CloseCurrentPopup();
+                _reportPendingOpen = true;
+                _reportError = null;
+                _reportSubmittedTimer = 0f;
+            }
+        }
+        AppHeader.EndMenuPopup(open);
+    }
+
+    /// <summary>In-page confirm for the permanent hide; dims only the phone content.</summary>
+    private void DrawHideConfirm(Vector2 winPos, Vector2 winSize)
+    {
+        if (!_hideConfirmOpen)
+        {
+            return;
+        }
+        if (ImGui.IsKeyPressed(ImGuiKey.Escape) && !_hideSubmitting)
+        {
+            _hideConfirmOpen = false;
+            return;
+        }
+
+        var confirmed = false;
+        var dismissed = DrawPageOverlayPanel("profileHide", winPos, winSize, ref _hideConfirmPanelH, Px(215f),
+            innerW =>
+            {
+                Widgets.ModalUi.Header(innerW, FontAwesomeIcon.EyeSlash, Loc.T("profile.hide_title"), UiColors.Danger);
+
+                ImGui.PushTextWrapPos(innerW);
+                ImGui.TextColored(UiColors.Body, Loc.T("profile.hide_body"));
+                ImGui.PopTextWrapPos();
+                ImGui.Spacing();
+
+                if (_hideError is { } err)
+                {
+                    ImGui.PushTextWrapPos(innerW);
+                    ImGui.TextColored(UiColors.Danger, err);
+                    ImGui.PopTextWrapPos();
+                }
+                if (_hideSubmitting)
+                {
+                    ImGui.TextColored(UiColors.Muted, Loc.T("profile.submitting"));
+                }
+                ImGui.Spacing();
+
+                var btnW = (innerW - Px(10f)) * 0.5f;
+                PushDangerButton();
+                ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
+                if (SharedUiHelpers.Button($"{Loc.T("profile.hide_confirm")}##profHideOk",
+                        new Vector2(btnW, Px(32f))) && !_hideSubmitting)
+                {
+                    confirmed = true;
+                }
+                ImGui.PopStyleVar();
+                ImGui.PopStyleColor(3);
+                ImGui.SameLine(0f, Px(10f));
+                if (Widgets.ModalUi.Button($"{Loc.T("common.cancel")}##profHideCancel", btnW) && !_hideSubmitting)
+                {
+                    _hideConfirmOpen = false;
+                }
+            });
+
+        if (confirmed)
+        {
+            FireHide();
+        }
+        else if (dismissed && !_hideSubmitting)
+        {
+            _hideConfirmOpen = false;
+        }
+    }
+
+    private void FireHide()
+    {
+        if (_profile is null)
+        {
+            return;
+        }
+        var peerId = _profile.ProfileId;
+
+        _hideSubmitting = true;
+        _hideError = null;
+        var ct = _cts.Token;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _hub.HideProfileAsync(peerId, ct).ConfigureAwait(false);
+                if (ct.IsCancellationRequested)
+                {
+                    return;
+                }
+                _hideSubmitting = false;
+                _deckRemovalId = peerId;
+                _deckRemovalPending = true;
+                _hideReturnPending = true;
+            }
+            catch (OperationCanceledException)
+            {
+                _hideSubmitting = false;
+            }
+            catch (Exception ex)
+            {
+                if (ct.IsCancellationRequested)
+                {
+                    _hideSubmitting = false;
+                    return;
+                }
+                _hideError = HubErrorText.Localize(ex);
+                _hideSubmitting = false;
+                UiHost.Log.Warning(ex, "[ProfileScreen] HideProfileAsync failed.");
+            }
+        }, ct);
     }
 
     private void DrawReportBody(float availW)
@@ -1838,6 +2089,9 @@ public class ProfileScreen
                 _reportSubmittedTimer = ReportAutoCloseSeconds;
                 _reportReason = string.Empty;
                 _reportAgree = false;
+                // The server hides a reported profile too, so drop it from the deck in hand.
+                _deckRemovalId = peerId;
+                _deckRemovalPending = true;
             }
             catch (OperationCanceledException) { _reportSubmitting = false; }
             catch (Exception ex)

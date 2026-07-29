@@ -121,6 +121,78 @@ public sealed class AppCapabilities : IAppCapabilities
             }
         }
 
+        private Dictionary<string, ushort>? _emoteCommands;
+
+        public bool TryExecuteEmote(string chatCommand)
+        {
+            var token = chatCommand.Trim();
+            var space = token.IndexOf(' ');
+            if (space > 0)
+            {
+                token = token[..space];
+            }
+            if (token.Length < 2 || token[0] != '/' || !EmoteCommands().TryGetValue(token, out var emoteId))
+            {
+                return false;
+            }
+            _ = Plugin.Framework.RunOnFrameworkThread(() => ExecuteEmoteCore(emoteId));
+            return true;
+        }
+
+        private static unsafe void ExecuteEmoteCore(ushort emoteId)
+        {
+            try
+            {
+                var agent = FFXIVClientStructs.FFXIV.Client.UI.Agent.AgentEmote.Instance();
+                if (agent != null && agent->CanUseEmote(emoteId))
+                {
+                    agent->ExecuteEmote(emoteId, null, true, true);
+                }
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.Warning(ex, "[AppCapabilities] Emote execution failed.");
+            }
+        }
+
+        private Dictionary<string, ushort> EmoteCommands()
+        {
+            if (_emoteCommands is not null)
+            {
+                return _emoteCommands;
+            }
+            var map = new Dictionary<string, ushort>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                foreach (var emote in Plugin.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Emote>())
+                {
+                    if (emote.TextCommand.ValueNullable is not { } tc)
+                    {
+                        continue;
+                    }
+                    Add(map, tc.Command, emote.RowId);
+                    Add(map, tc.ShortCommand, emote.RowId);
+                    Add(map, tc.Alias, emote.RowId);
+                    Add(map, tc.ShortAlias, emote.RowId);
+                }
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.Warning(ex, "[AppCapabilities] Failed to build the emote command table.");
+            }
+            _emoteCommands = map;
+            return map;
+
+            static void Add(Dictionary<string, ushort> map, Lumina.Text.ReadOnly.ReadOnlySeString s, uint emoteId)
+            {
+                var text = s.ExtractText();
+                if (text.Length > 1 && text[0] == '/')
+                {
+                    map.TryAdd(text, (ushort)emoteId);
+                }
+            }
+        }
+
         public void OpenFolder(string path)
         {
             try

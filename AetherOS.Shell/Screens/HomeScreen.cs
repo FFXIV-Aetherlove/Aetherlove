@@ -74,9 +74,9 @@ public sealed class HomeScreen
     private bool _folderEditMode;
     private string? _hoverFolderId;
 
-    // Last frame's rendered grid/dock, used for slot position resolution.
-    private List<string> _lastGridRendered = new();
-    private List<string> _lastDockRendered = new();
+    /// <summary>A trailing page conjured by dragging to the right edge. Drawn and counted, but only written to
+    /// config once an icon actually lands on it.</summary>
+    private bool _ghostPage;
 
     private string? _folderEjectId;
     private readonly Dictionary<string, float> _folderEjecting = new();
@@ -117,6 +117,8 @@ public sealed class HomeScreen
         {
             _dragId = null;
             _pressId = null;
+            _ghostPage = false;
+            _edgeHoldT = 0f;
         }
     }
 
@@ -170,8 +172,9 @@ public sealed class HomeScreen
             return;
         }
 
-        var (grid, dock) = CurrentLayout();
-        var pageCount = Math.Max(1, (int)MathF.Ceiling((grid.Count + 1) / (float)PageCapacity(avail)));
+        var layout = CurrentLayout(avail);
+        NormalizePages(layout);
+        var pageCount = PageCount(layout);
         _targetPage = Math.Clamp(_targetPage, -1, pageCount - 1);
         if (!_draggingPages)
         {
@@ -185,9 +188,9 @@ public sealed class HomeScreen
         dl.PushClipRect(origin, origin + avail, true);
 
         DrawWidgetsPage(dl, origin, avail, XOffset(-1, avail.X));
-        DrawGridPages(dl, origin, avail, grid, dock, pageCount, time, dt);
+        DrawGridPages(dl, origin, avail, layout, pageCount, time, dt);
         DrawPageDots(dl, origin, avail, pageCount);
-        DrawDock(dl, origin, avail, dock, grid, time, dt);
+        DrawDock(dl, origin, avail, layout.Dock, time, dt);
         if (_editMode)
         {
             DrawDonePill(dl, origin, avail);
@@ -198,24 +201,155 @@ public sealed class HomeScreen
         dl.PopClipRect();
 
         HandlePageSwipe(origin, avail);
-        UpdateDragState(origin, avail, grid, dock);
+        UpdateDragState(origin, avail, layout);
     }
 
     private float XOffset(int pageIndex, float width) => (pageIndex - _page) * width;
 
-    private int PageCapacity(Vector2 avail)
+    /// <summary>Pages to render: the real ones, the edge-drag ghost, and one trailing page when the last real
+    /// page has no room for the add tile.</summary>
+    private int PageCount(HomeLayout layout)
+    {
+        var count = Math.Max(1, layout.Pages.Count);
+        if (_ghostPage)
+        {
+            count++;
+        }
+        else if (layout.Pages.Count > 0 && Array.IndexOf(layout.Pages[^1], null) < 0)
+        {
+            count++;
+        }
+        return Math.Min(count, HomeLayout.MaxPages);
+    }
+
+    /// <summary>Drops pages that no longer hold anything and keeps the page the user is standing on pointing at
+    /// the same content. Never runs mid-drag: the source page transiently empties the moment the cursor crosses
+    /// to another page, and deleting it there would renumber everything and yank the drop target sideways.</summary>
+    private void NormalizePages(HomeLayout layout)
+    {
+        if (_dragId != null)
+        {
+            return;
+        }
+        var removed = layout.DropEmptyPages();
+        if (removed.Count == 0)
+        {
+            return;
+        }
+        foreach (var index in removed)
+        {
+            if (index < _targetPage)
+            {
+                _targetPage--;
+                _page -= 1f;
+            }
+        }
+        _targetPage = Math.Clamp(_targetPage, -1, Math.Max(0, layout.Pages.Count - 1));
+        _animCenters.Clear();
+        layout.SaveTo(UiHost.Configuration.Os);
+        UiHost.Configuration.Save();
+    }
+
+    private int PageRows(Vector2 avail)
     {
         var gridTop = Px(128f);
         var gridBottom = avail.Y - Px(DockH) - Px(44f);
-        var rows = Math.Max(1, (int)((gridBottom - gridTop) / Px(SlotH)));
-        return rows * GridColumns;
+        return Math.Max(1, (int)((gridBottom - gridTop) / Px(SlotH)));
     }
 
-    private (List<string> Grid, List<string> Dock) CurrentLayout()
+    /// <summary>Two id sets: everything that may KEEP a cell, and the subset that is actually drawn. An app the
+    /// server has switched off is registered but not shown, and it must hold on to its cell rather than be
+    /// dropped from the saved layout and reappear somewhere else when the switch flips back. Only an id that is
+    /// gone entirely (an uninstalled plugin, a deleted folder, an app moved into a folder) loses its cell.</summary>
+    private (HashSet<string> Keep, HashSet<string> Shown) LayoutIds()
     {
         var os = UiHost.Configuration.Os;
-        var appIds = _shell.Apps.Where(a => a.Available).Select(a => a.Id).ToList();
+        var foldered = new HashSet<string>(os.Folders.SelectMany(f => f.AppIds), StringComparer.Ordinal);
+        var keep = new HashSet<string>(StringComparer.Ordinal);
+        var shown = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var app in _shell.Apps)
+        {
+            if (foldered.Contains(app.Id))
+            {
+                continue;
+            }
+            keep.Add(app.Id);
+            if (app.Available)
+            {
+                shown.Add(app.Id);
+            }
+        }
+        foreach (var folder in os.Folders)
+        {
+            keep.Add(folder.Id);
+            shown.Add(folder.Id);
+        }
+        return (keep, shown);
+    }
 
+    /// <summary>Resolves the persisted layout for this frame, converting a pre-2.1 flat order and repacking when
+    /// the grid geometry changed. An id whose app is momentarily unavailable keeps its cell in config; it is only
+    /// skipped for rendering.</summary>
+    private HomeLayout CurrentLayout(Vector2 avail)
+    {
+        var os = UiHost.Configuration.Os;
+        var rows = PageRows(avail);
+        var cols = GridColumns;
+
+        if (os.Pages.Count == 0)
+        {
+            SeedOrConvert(os, rows, cols);
+        }
+        else if (os.LayoutColumns != cols || os.LayoutRows != rows)
+        {
+            Repack(os, rows, cols);
+        }
+
+        var (keep, shown) = LayoutIds();
+        _shownIds = shown;
+        var layout = HomeLayout.FromConfig(os, rows, cols, keep.Contains);
+
+        foreach (var id in os.DockIds)
+        {
+            if (keep.Contains(id) && !layout.Dock.Contains(id) && layout.Dock.Count < MaxDock)
+            {
+                layout.Dock.Add(id);
+            }
+        }
+
+        var placed = new HashSet<string>(layout.Dock, StringComparer.Ordinal);
+        foreach (var cells in layout.Pages)
+        {
+            foreach (var cell in cells)
+            {
+                if (cell != null)
+                {
+                    placed.Add(cell);
+                }
+            }
+        }
+        var appended = false;
+        foreach (var id in shown)
+        {
+            if (!placed.Contains(id) && layout.PlaceInFirstFree(id))
+            {
+                appended = true;
+            }
+        }
+        if (appended)
+        {
+            layout.SaveTo(os);
+            UiHost.Configuration.Save();
+        }
+
+        ApplyDragPreview(layout);
+        return layout;
+    }
+
+    private HashSet<string> _shownIds = new(StringComparer.Ordinal);
+
+    private void SeedOrConvert(OsConfig os, int rows, int cols)
+    {
         if (os.IconOrder.Count == 0 && os.DockIds.Count == 0)
         {
             os.DockIds = ["clock", "camera", "settings"];
@@ -226,83 +360,127 @@ public sealed class HomeScreen
                 "feedback",
             ];
         }
-
-        // Apps sitting inside a folder leave the grid flow; the folder id itself is a grid citizen.
-        var foldered = new HashSet<string>(os.Folders.SelectMany(f => f.AppIds));
-        var known = appIds.Where(id => !foldered.Contains(id)).Concat(os.Folders.Select(f => f.Id)).ToList();
-
-        var dock = os.DockIds.Where(known.Contains).Take(MaxDock).ToList();
-        var grid = os.IconOrder.Where(id => known.Contains(id) && !dock.Contains(id)).ToList();
-        foreach (var id in known)
-        {
-            if (!grid.Contains(id) && !dock.Contains(id))
-            {
-                grid.Add(id);
-            }
-        }
-
-        _hoverFolderId = null;
-        if (_dragId != null)
-        {
-            grid.Remove(_dragId);
-            dock.Remove(_dragId);
-            var (list, index) = DropTarget(grid, dock);
-            // A folder sitting in the hovered slot swallows the drop instead of the grid reflowing around it,
-            // which would slide the folder out from under the cursor before the drop could land.
-            _hoverFolderId = FolderInSlot(ReferenceEquals(list, grid), index);
-            if (_hoverFolderId == null)
-            {
-                list.Insert(Math.Clamp(index, 0, list.Count), _dragId);
-            }
-        }
-        _lastGridRendered = grid;
-        _lastDockRendered = dock;
-        return (grid, dock);
+        var docked = new HashSet<string>(os.DockIds.Take(MaxDock), StringComparer.Ordinal);
+        var converted = HomeLayout.FromLegacyOrder(os.IconOrder.Where(id => !docked.Contains(id)), rows, cols);
+        converted.Dock.AddRange(os.DockIds.Take(MaxDock));
+        converted.SaveTo(os);
+        os.IconOrder.Clear();
+        UiHost.Configuration.Save();
     }
 
-    /// <summary>The folder occupying a hovered slot, or null. Resolved against the slot the cursor is in rather
-    /// than the tile's drawn rect: the rect is inset well inside its slot and is still easing towards its
-    /// resting place, so the two disagree for the frames that matter and the drop never registers.</summary>
-    private string? FolderInSlot(bool inGrid, int index)
+    /// <summary>Re-places every icon into the first free cell of the new geometry, in reading order, after a grid
+    /// preset or phone-size change. Holes are not preserved across a repack; the icons all have to fit.</summary>
+    private static void Repack(OsConfig os, int rows, int cols)
     {
-        if (_dragId == null || IsFolderId(_dragId) || index < 0)
-        {
-            return null;
-        }
-        var rendered = inGrid ? _lastGridRendered : _lastDockRendered;
-        if (index >= rendered.Count)
-        {
-            return null;
-        }
-        var occupant = rendered[index];
-        return occupant != _dragId && IsFolderId(occupant) ? occupant : null;
+        var order = os.Pages.SelectMany(p => p.Items.OrderBy(i => i.Row).ThenBy(i => i.Col)).Select(i => i.Id);
+        var packed = HomeLayout.FromLegacyOrder(order, rows, cols);
+        packed.Dock.AddRange(os.DockIds.Take(MaxDock));
+        packed.SaveTo(os);
+        UiHost.Configuration.Save();
     }
 
-    private (List<string> List, int Index) DropTarget(List<string> grid, List<string> dock)
+    /// <summary>Lifts the dragged tile out of its cell and previews where it would land, so the shift is visible
+    /// while the finger is still down. Nothing is written until the drop commits, and a target the tile cannot
+    /// occupy puts it straight back, because the commit serialises this layout and a tile left lifted out would
+    /// be persisted as gone.</summary>
+    private void ApplyDragPreview(HomeLayout layout)
+    {
+        _hoverFolderId = null;
+        if (_dragId == null)
+        {
+            return;
+        }
+        var fromDock = layout.Dock.IndexOf(_dragId);
+        var fromCell = layout.TryFind(_dragId, out var page, out var slot) ? (page, slot) : ((int, int)?)null;
+        layout.Remove(_dragId);
+        layout.Dock.Remove(_dragId);
+
+        var target = DropTarget(layout);
+        // A folder in the hovered cell swallows the drop instead of the grid shifting around it, which would
+        // slide the folder out from under the cursor before the drop could land.
+        _hoverFolderId = FolderInSlot(layout, target);
+        if (_hoverFolderId != null)
+        {
+            return;
+        }
+        if (target.InDock)
+        {
+            layout.Dock.Insert(Math.Clamp(target.Slot, 0, layout.Dock.Count), _dragId);
+            return;
+        }
+        if (target.IsValid)
+        {
+            layout.EnsurePage(target.Page);
+            if (layout.DropAt(target.Page, target.Slot, _dragId))
+            {
+                return;
+            }
+        }
+        RestoreDrag(layout, _dragId, fromDock, fromCell);
+    }
+
+    private static void RestoreDrag(HomeLayout layout, string id, int fromDock, (int Page, int Slot)? fromCell)
+    {
+        if (fromCell is { } cell && layout.At(cell.Page, cell.Slot) == null)
+        {
+            layout.Pages[cell.Page][cell.Slot] = id;
+            return;
+        }
+        if (fromDock >= 0)
+        {
+            layout.Dock.Insert(Math.Clamp(fromDock, 0, layout.Dock.Count), id);
+            return;
+        }
+        layout.PlaceInFirstFree(id);
+    }
+
+    private readonly record struct DropSpot(bool InDock, int Page, int Slot)
+    {
+        public static readonly DropSpot None = new(false, -1, -1);
+
+        public bool IsValid => InDock || (Page >= 0 && Slot >= 0);
+    }
+
+    /// <summary>The folder occupying a hovered cell, or null. Resolved against the cell the cursor is in rather
+    /// than the tile's drawn rect: the rect is inset well inside its cell and is still easing towards its
+    /// resting place, so the two disagree for the frames that matter and the drop never registers.</summary>
+    private string? FolderInSlot(HomeLayout layout, DropSpot target)
+    {
+        if (_dragId == null || IsFolderId(_dragId) || !target.IsValid)
+        {
+            return null;
+        }
+        var occupant = target.InDock
+            ? (target.Slot >= 0 && target.Slot < layout.Dock.Count ? layout.Dock[target.Slot] : null)
+            : layout.At(target.Page, target.Slot);
+        return occupant != null && occupant != _dragId && IsFolderId(occupant) ? occupant : null;
+    }
+
+    private DropSpot DropTarget(HomeLayout layout)
     {
         var mouse = ImGui.GetMousePos();
-        if (_lastDockRect.HasValue && mouse.Y >= _lastDockRect.Value.TL.Y - Px(8f) && dock.Count < MaxDock + 1)
+        if (_lastDockRect.HasValue && mouse.Y >= _lastDockRect.Value.TL.Y - Px(8f) && layout.Dock.Count < MaxDock)
         {
-            var slotW = (_lastDockRect.Value.BR.X - _lastDockRect.Value.TL.X) / Math.Max(1, dock.Count + 1);
+            var slotW = (_lastDockRect.Value.BR.X - _lastDockRect.Value.TL.X) / Math.Max(1, layout.Dock.Count + 1);
             var idx = (int)((mouse.X - _lastDockRect.Value.TL.X) / slotW);
-            if (dock.Count < MaxDock)
-            {
-                return (dock, idx);
-            }
+            return new DropSpot(true, -1, Math.Clamp(idx, 0, layout.Dock.Count));
         }
-        if (_lastGridOrigin.HasValue)
+        if (!_lastGridOrigin.HasValue)
         {
-            var col = Math.Clamp((int)((mouse.X - _lastGridOrigin.Value.X) / _lastSlotW), 0, GridColumns - 1);
-            var row = Math.Max(0, (int)((mouse.Y - _lastGridOrigin.Value.Y) / Px(SlotH)));
-            var idx = _lastPageStart + row * GridColumns + col;
-            return (grid, idx);
+            return DropSpot.None;
         }
-        return (grid, grid.Count);
+        var col = (int)((mouse.X - _lastGridOrigin.Value.X) / _lastSlotW);
+        var row = (int)((mouse.Y - _lastGridOrigin.Value.Y) / Px(SlotH));
+        if (col < 0 || col >= layout.Columns || row < 0 || row >= layout.Rows)
+        {
+            return DropSpot.None;
+        }
+        return new DropSpot(false, _lastPageIndex, row * layout.Columns + col);
     }
 
     private Vector2? _lastGridOrigin;
     private float _lastSlotW;
-    private int _lastPageStart;
+    private int _lastPageIndex;
     private (Vector2 TL, Vector2 BR)? _lastDockRect;
 
     private void DrawWallpaper(ImDrawListPtr dl, Vector2 origin, Vector2 avail, float time)
@@ -356,16 +534,34 @@ public sealed class HomeScreen
         }
     }
 
-    private void DrawGridPages(ImDrawListPtr dl, Vector2 origin, Vector2 avail, List<string> grid, List<string> dock,
-        int pageCount, float time, float dt)
+    private void DrawGridPages(ImDrawListPtr dl, Vector2 origin, Vector2 avail, HomeLayout layout, int pageCount,
+        float time, float dt)
     {
-        var capacity = PageCapacity(avail);
         var padX = Px(16f);
-        var slotW = (avail.X - padX * 2f) / GridColumns;
+        var slotW = (avail.X - padX * 2f) / layout.Columns;
         var gridTop = Px(128f);
 
         _lastSlotW = slotW;
         _tileRects.Clear();
+
+        // The add tile sits in the last page's first free cell. It is hidden mid-drag so it never competes with
+        // the cell the user is aiming at, least of all on a freshly conjured page where it would sit on slot 0.
+        var addPage = pageCount - 1;
+        var addSlot = -1;
+        if (_dragId == null)
+        {
+            addSlot = addPage < layout.Pages.Count ? Array.IndexOf(layout.Pages[addPage], null) : 0;
+        }
+
+        // The drop origin is stamped for the page the user is on even while it is scrolled off screen, so a
+        // multi-page traverse mid-drag never leaves a stale target behind.
+        var current = Math.Clamp(_targetPage, 0, pageCount - 1);
+        _lastGridOrigin = new Vector2(origin.X + padX + XOffset(current, avail.X), origin.Y + gridTop);
+        _lastPageIndex = current;
+
+        Vector2 SlotCenter(float xOff, int slot) => new(
+            origin.X + xOff + padX + slotW * (slot % layout.Columns) + slotW * 0.5f,
+            origin.Y + gridTop + Px(SlotH) * (slot / layout.Columns) + Px(TileSize) * 0.5f);
 
         for (int page = 0; page < pageCount; page++)
         {
@@ -374,36 +570,30 @@ public sealed class HomeScreen
             {
                 continue;
             }
-            if (page == Math.Clamp(_targetPage, 0, pageCount - 1))
-            {
-                _lastGridOrigin = new Vector2(origin.X + padX + xOff, origin.Y + gridTop);
-                _lastPageStart = page * capacity;
-            }
 
             DrawClock(dl, origin + new Vector2(xOff, 0f), avail);
 
-            for (int i = page * capacity; i < Math.Min(grid.Count, (page + 1) * capacity); i++)
+            if (page < layout.Pages.Count)
             {
-                var slot = i - page * capacity;
-                var slotCenter = new Vector2(
-                    origin.X + xOff + padX + slotW * (slot % GridColumns) + slotW * 0.5f,
-                    origin.Y + gridTop + Px(SlotH) * (slot / GridColumns) + Px(TileSize) * 0.5f);
-                DrawAppSlot(dl, grid[i], slotCenter, slotW, time, dt, showLabel: true);
+                var cells = layout.Pages[page];
+                for (int slot = 0; slot < cells.Length; slot++)
+                {
+                    // A cell held by a switched-off app stays reserved but draws nothing.
+                    if (cells[slot] is { } id && _shownIds.Contains(id))
+                    {
+                        DrawAppSlot(dl, id, SlotCenter(xOff, slot), slotW, time, dt, showLabel: true);
+                    }
+                }
             }
 
-            if (grid.Count >= page * capacity && grid.Count < (page + 1) * capacity)
+            if (page == addPage && addSlot >= 0)
             {
-                var slot = grid.Count - page * capacity;
-                var slotCenter = new Vector2(
-                    origin.X + xOff + padX + slotW * (slot % GridColumns) + slotW * 0.5f,
-                    origin.Y + gridTop + Px(SlotH) * (slot / GridColumns) + Px(TileSize) * 0.5f);
-                DrawAddTile(dl, slotCenter, slotW, dt);
+                DrawAddTile(dl, SlotCenter(xOff, addSlot), slotW, dt);
             }
         }
     }
 
-    private void DrawDock(ImDrawListPtr dl, Vector2 origin, Vector2 avail, List<string> dock, List<string> grid,
-        float time, float dt)
+    private void DrawDock(ImDrawListPtr dl, Vector2 origin, Vector2 avail, List<string> dock, float time, float dt)
     {
         var barMargin = Px(14f);
         var barTL = new Vector2(origin.X + barMargin, origin.Y + avail.Y - Px(DockH) - Px(12f));
@@ -413,15 +603,17 @@ public sealed class HomeScreen
         dl.AddRectFilled(barTL, barBR, OsDraw.White(0.10f), Px(24f));
         dl.AddRect(barTL, barBR, OsDraw.White(0.12f), Px(24f), ImDrawFlags.RoundCornersAll, Px(1f));
 
-        if (dock.Count == 0)
+        // The dock stays dense: a switched-off app keeps its saved slot but the survivors close ranks.
+        var visible = dock.Where(_shownIds.Contains).ToList();
+        if (visible.Count == 0)
         {
             return;
         }
-        var slotW = (barBR.X - barTL.X) / dock.Count;
-        for (int i = 0; i < dock.Count; i++)
+        var slotW = (barBR.X - barTL.X) / visible.Count;
+        for (int i = 0; i < visible.Count; i++)
         {
             var center = new Vector2(barTL.X + slotW * i + slotW * 0.5f, (barTL.Y + barBR.Y) * 0.5f);
-            DrawAppSlot(dl, dock[i], center, slotW, time, dt, showLabel: false);
+            DrawAppSlot(dl, visible[i], center, slotW, time, dt, showLabel: false);
         }
     }
 
@@ -603,6 +795,10 @@ public sealed class HomeScreen
         {
             OsDraw.Badge(dl, new Vector2(sbr.X - Px(6f), stl.Y + Px(6f)), badge, 1.1f);
         }
+        if (folder == null && removingT < 0f && _shell.IsNewApp(appId))
+        {
+            OsDraw.NewBadge(dl, new Vector2(stl.X, stl.Y + Px(6f)));
+        }
         if (offlineApp && removingT < 0f)
         {
             DrawOfflineMarker(dl, new Vector2(sbr.X - Px(7f), sbr.Y - Px(7f)));
@@ -679,11 +875,22 @@ public sealed class HomeScreen
         {
             return;
         }
-        // Spill the contents back where the folder sat.
-        var at = os.IconOrder.IndexOf(folderId);
-        os.IconOrder.Remove(folderId);
-        os.DockIds.Remove(folderId);
-        os.IconOrder.InsertRange(Math.Clamp(at < 0 ? os.IconOrder.Count : at, 0, os.IconOrder.Count), folder.AppIds);
+        // The contents spill back into the folder's own cell first, then into whatever is free after it.
+        HomeLayout.Edit(os, layout =>
+        {
+            var cell = layout.TryFind(folderId, out var page, out var slot) ? (page, slot) : ((int, int)?)null;
+            layout.Remove(folderId);
+            layout.Dock.Remove(folderId);
+            foreach (var appId in folder.AppIds)
+            {
+                if (cell is { } spot && layout.At(spot.Item1, spot.Item2) == null)
+                {
+                    layout.Pages[spot.Item1][spot.Item2] = appId;
+                    continue;
+                }
+                layout.PlaceInFirstFree(appId);
+            }
+        });
         os.Folders.Remove(folder);
         UiHost.Configuration.Save();
         if (_openFolderId == folderId)
@@ -850,7 +1057,9 @@ public sealed class HomeScreen
         }
     }
 
-    private void UpdateDragState(Vector2 origin, Vector2 avail, List<string> grid, List<string> dock)
+    /// <summary>Commits a drag. The layout passed in already carries this frame's preview, so the drop is written
+    /// by serialising that, never by rebuilding config from what happened to be rendered.</summary>
+    private void UpdateDragState(Vector2 origin, Vector2 avail, HomeLayout layout)
     {
         if (_dragId == null)
         {
@@ -859,13 +1068,17 @@ public sealed class HomeScreen
         if (ImGui.IsMouseDown(ImGuiMouseButton.Left))
         {
             var mouse = ImGui.GetMousePos();
-            if (mouse.X > origin.X + avail.X - Px(14f) && _targetPage < 8)
+            if (mouse.X > origin.X + avail.X - Px(14f))
             {
-                NudgePage(1, grid, avail);
+                NudgePage(1, layout);
             }
             else if (mouse.X < origin.X + Px(14f))
             {
-                NudgePage(-1, grid, avail);
+                NudgePage(-1, layout);
+            }
+            else
+            {
+                _edgeHoldT = 0f;
             }
             return;
         }
@@ -874,23 +1087,24 @@ public sealed class HomeScreen
         if (FindFolder(_hoverFolderId) is { } target && !IsFolderId(_dragId))
         {
             target.AppIds.Add(_dragId);
-            os.IconOrder = grid.Where(id => id != _dragId).ToList();
-            os.DockIds = dock.Where(id => id != _dragId).ToList();
+            layout.Remove(_dragId);
+            layout.Dock.Remove(_dragId);
         }
-        else
-        {
-            os.IconOrder = grid.ToList();
-            os.DockIds = dock.ToList();
-        }
+        layout.SaveTo(os);
         UiHost.Configuration.Save();
+
         _dragId = null;
         _pressId = null;
         _hoverFolderId = null;
+        _ghostPage = false;
+        _edgeHoldT = 0f;
     }
 
     private float _edgeHoldT;
 
-    private void NudgePage(int dir, List<string> grid, Vector2 avail)
+    /// <summary>Holding a dragged icon against a screen edge flips pages. Past the last real page it conjures a
+    /// ghost page, which only becomes real if the icon is dropped there.</summary>
+    private void NudgePage(int dir, HomeLayout layout)
     {
         _edgeHoldT += ImGui.GetIO().DeltaTime;
         if (_edgeHoldT < 0.5f)
@@ -898,8 +1112,14 @@ public sealed class HomeScreen
             return;
         }
         _edgeHoldT = 0f;
-        var pageCount = Math.Max(1, (int)MathF.Ceiling(grid.Count / (float)PageCapacity(avail)));
-        _targetPage = Math.Clamp(_targetPage + dir, 0, pageCount - 1);
+        var last = Math.Max(0, layout.Pages.Count - 1);
+        if (dir > 0 && _targetPage >= last && layout.Pages.Count < HomeLayout.MaxPages)
+        {
+            _ghostPage = true;
+            _targetPage = last + 1;
+            return;
+        }
+        _targetPage = Math.Clamp(_targetPage + dir, 0, PageCount(layout) - 1);
     }
 
     private void DrawDraggedTile(ImDrawListPtr dl)
@@ -976,6 +1196,7 @@ public sealed class HomeScreen
             {
                 _targetPage = pageIndex;
             }
+            SharedUiHelpers.HandOnHover();
         }
     }
 
@@ -1250,6 +1471,7 @@ public sealed class HomeScreen
             _addAppsSearch = "";
         }
         var hovered = ImGui.IsItemHovered();
+        SharedUiHelpers.HandOnHover();
         var rounding = half * 0.56f;
         dl.AddRectFilled(tl, br, OsDraw.White(hovered ? 0.16f : 0.10f), rounding);
         dl.AddRect(tl, br, OsDraw.White(hovered ? 0.55f : 0.30f), rounding, ImDrawFlags.RoundCornersAll, Px(1.2f));
@@ -1354,7 +1576,7 @@ public sealed class HomeScreen
         }
         var folder = new OsFolder { Id = FolderIdPrefix + Guid.NewGuid().ToString("N"), Name = name };
         os.Folders.Add(folder);
-        os.IconOrder.Add(folder.Id);
+        HomeLayout.PlaceInConfig(os, folder.Id);
         UiHost.Configuration.Save();
         _newFolderName = "";
         _addAppsOpen = false;
@@ -1540,7 +1762,7 @@ public sealed class HomeScreen
     private static void EjectFromFolder(OsFolder folder, string appId)
     {
         folder.AppIds.Remove(appId);
-        UiHost.Configuration.Os.IconOrder.Add(appId);
+        HomeLayout.PlaceInConfig(UiHost.Configuration.Os, appId);
         UiHost.Configuration.Save();
     }
 
@@ -1601,6 +1823,10 @@ public sealed class HomeScreen
             if (badge > 0 && ejectT < 0f)
             {
                 OsDraw.Badge(cdl, new Vector2(br.X - Px(6f), tl.Y + Px(6f)), badge, 1.1f);
+            }
+            if (ejectT < 0f && _shell.IsNewApp(app.Id))
+            {
+                OsDraw.NewBadge(cdl, new Vector2(tl.X, tl.Y + Px(6f)));
             }
             if (offlineApp && ejectT < 0f)
             {

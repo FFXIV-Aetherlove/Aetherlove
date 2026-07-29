@@ -93,7 +93,7 @@ internal static class OsDe
         // OS account avatar (added after update 1.5.1)
         ["os_onboarding.header_avatar"] = "Avatar",
         ["os_onboarding.avatar_title"] = "Foto hinzufügen",
-        ["os_onboarding.avatar_body"] = "Wähle ein Bild für dein AetherOS-Profil. Es ist optional und nur du siehst es — du kannst es jederzeit ändern.",
+        ["os_onboarding.avatar_body"] = "Wähle ein Bild für dein AetherOS-Profil. Es ist optional und nur du siehst es. Du kannst es jederzeit ändern.",
         ["os_onboarding.avatar_choose"] = "Foto wählen",
         ["os_onboarding.avatar_change"] = "Foto ändern",
         // two-onboarding split (added after update 1.5.1)
@@ -217,5 +217,18 @@ internal static class OsDe
         ["os.home_menu_wallpaper"] = "Hintergrund ändern",
         // news app tile rename (added after update 2.0.0)
         ["os.app_news_tile"] = "Nachrichten",
+
+        // battery easter egg (added after update 2.0.1)
+        ["os.battery_grass_body"] = "Uns liegt deine Gesundheit am Herzen: Vergiss nicht rauszugehen, zu trinken und mal echtes Gras anzufassen ;-)",
+        ["os.battery_grass_hint"] = "Bitte fasse unten das Gras an, um fortzufahren",
+        ["os.settings_hide_battery_grass"] = "Gras-Hinweis bei leerem Akku ausblenden",
+        // levemetes (added after update 2.0.1)
+        ["os.app_levemetes"] = "Levemetes",
+        ["os.battery_grass_settings_hint"] = "(Du kannst diesen Scherz in der Einstellungen-App unter Allgemein deaktivieren)",
+
+        // added after update 2.0.1
+        ["os.menu_audio"] = "Audio-Einstellungen",
+        ["os.app_market"] = "Markt",
+        ["os.app_realtor"] = "Makler",
     };
 }

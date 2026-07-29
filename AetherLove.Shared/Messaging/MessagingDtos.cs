@@ -20,6 +20,11 @@ public sealed record KeyBundleDto(
     byte[]? ProfileWrappedPrivateKey = null,
     byte[]? ProfileWrapNonce = null);
 
+/// <summary>One sibling profile's bundle, for the fresh-device unlock chain: the passphrase opens a
+/// KEK-wrapped sibling, whose private key then opens a sibling-wrapped bundle.</summary>
+[MessagePackObject(keyAsPropertyName: true)]
+public sealed record SiblingKeyBundleDto(Guid ProfileId, KeyBundleDto Bundle);
+
 /// <summary>One ciphertext message as the server stores and serves it. The reaction/reply/pin fields are
 /// additive (default null) so an older client that lacks them simply ignores the extra keys.
 /// <see cref="MyReactions"/>/<see cref="TheirReactions"/> are caller-relative: the server maps its two
@@ -37,7 +42,8 @@ public sealed record EncryptedMessageDto(
     string[]? MyReactions = null,
     string[]? TheirReactions = null,
     DateTimeOffset? PinnedAtUtc = null,
-    DateTimeOffset UpdatedAtUtc = default);
+    DateTimeOffset UpdatedAtUtc = default,
+    DateTimeOffset? DeletedAtUtc = null);
 
 /// <summary>One era of a user's public-key timeline. Messages sent inside [FromUtc, UntilUtc) were encrypted
 /// against this public key; UntilUtc null = the active key. Produced by a passphrase reset, which retires the
@@ -112,7 +118,7 @@ public sealed record BlockedUserDto(
     DateTimeOffset BlockedAtUtc);
 
 /// <summary>One row in the chat / match list. The last-message fields carry the E2E ciphertext so
-/// the client can decrypt a short preview locally — the server never sees plaintext.</summary>
+/// the client can decrypt a short preview locally: the server never sees plaintext.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record MatchSummaryDto(
     Guid PeerProfileId,
@@ -130,7 +136,9 @@ public sealed record MatchSummaryDto(
     Profile.Enums.NameStyle PeerNameStyle = Profile.Enums.NameStyle.None,
     bool PeerIsSupporter = false,
     // The peer's key timeline; more than one entry means they reset their E2E keys at some point.
-    KeyHistoryEntryDto[]? PeerKeyHistory = null);
+    KeyHistoryEntryDto[]? PeerKeyHistory = null,
+    // Away marker on the match list avatar while the peer's holiday mode is on.
+    bool PeerHolidayMode = false);
 
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record MatchListDto(MatchSummaryDto[] Matches);
@@ -209,4 +217,12 @@ public sealed record MessagePinChangedPushDto(
     Guid PeerProfileId,
     Guid MessageId,
     DateTimeOffset? PinnedAtUtc,
+    Guid ForProfileId = default);
+
+/// <summary>Pushed to the peer when the author deletes a message: the client blanks its copy and renders the
+/// tombstone.</summary>
+[MessagePackObject(keyAsPropertyName: true)]
+public sealed record MessageDeletedPushDto(
+    Guid PeerProfileId,
+    Guid MessageId,
     Guid ForProfileId = default);

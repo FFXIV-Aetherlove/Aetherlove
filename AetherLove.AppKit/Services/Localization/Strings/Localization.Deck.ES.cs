@@ -32,7 +32,7 @@ internal static class DeckEs
         ["deck.match_fx_constellation"] = "Escrito en las estrellas",
         ["deck.match_fx_slot"] = "Tres iguales",
         ["deck.match_fx_slot_title"] = "¡PREMIO GORDO!",
-        ["deck.match_fx_tarot"] = "Las cartas se alinean — dos destinos entrelazados",
+        ["deck.match_fx_tarot"] = "Las cartas se alinean: dos destinos entrelazados",
         ["deck.match_fx_tarot_title"] = "LOS ENAMORADOS",
         ["deck.match_fx_lavalamp"] = "Dos llamas, un mismo fulgor",
         ["deck.match_fx_lanterns"] = "Dos luces, un mismo cielo",

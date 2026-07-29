@@ -44,7 +44,8 @@ public partial class ChatScreen
         string Text,
         bool IsOwn,
         DateTimeOffset SentAt,
-        DateTimeOffset? ReadByOtherAtUtc);
+        DateTimeOffset? ReadByOtherAtUtc,
+        bool IsDeleted = false);
 
     private readonly List<DisplayedMessage> _messages = new();
     /// <summary>Guards <see cref="_messages"/>: rendered on the UI thread, mutated from worker threads.</summary>
@@ -164,8 +165,13 @@ public partial class ChatScreen
         HangoutShareContext hangoutShareCtx,
         NewsShareContext newsShareCtx,
         CalendarShareContext calendarShareCtx,
+        LevemeteShareContext levemeteShareCtx,
+        MarketShareContext marketShareCtx,
         HangoutOpener hangoutOpener,
-        Services.Messenger.MessengerStore messengerStore)
+        Services.Messenger.MessengerStore messengerStore,
+        Services.Market.MarketDataService marketData,
+        Services.Market.MarketItemIndex marketIndex,
+        AetherOS.Sdk.IAppCapabilities caps)
     {
         _shell = shell;
         _router = router;
@@ -183,8 +189,13 @@ public partial class ChatScreen
         _hangoutShareCtx = hangoutShareCtx;
         _newsShareCtx = newsShareCtx;
         _calendarShareCtx = calendarShareCtx;
+        _levemeteShareCtx = levemeteShareCtx;
+        _marketShareCtx = marketShareCtx;
         _hangoutOpener = hangoutOpener;
         _messengerStore = messengerStore;
+        _marketData = marketData;
+        _marketIndex = marketIndex;
+        _caps = caps;
     }
 
     private readonly Services.Messenger.MessengerStore _messengerStore;
@@ -194,7 +205,12 @@ public partial class ChatScreen
     private readonly HangoutShareContext _hangoutShareCtx;
     private readonly NewsShareContext _newsShareCtx;
     private readonly CalendarShareContext _calendarShareCtx;
+    private readonly LevemeteShareContext _levemeteShareCtx;
+    private readonly MarketShareContext _marketShareCtx;
     private readonly HangoutOpener _hangoutOpener;
+    private readonly Services.Market.MarketDataService _marketData;
+    private readonly Services.Market.MarketItemIndex _marketIndex;
+    private readonly AetherOS.Sdk.IAppCapabilities _caps;
 
     // Queued share body, auto-sent once the message key is ready; the app to return to when the chat was opened
     // from a cross-app share (Places/Hangouts), else null for the normal in-app back.
@@ -214,6 +230,7 @@ public partial class ChatScreen
         _events.BlockedByPeer += OnBlockedByPeer;
         _events.ReactionsChanged += OnReactionsChanged;
         _events.PinChanged += OnPinChanged;
+        _events.MessageDeleted += OnMessageDeleted;
         _events.PeerKeysReset += OnPeerKeysReset;
 
         _cts.Cancel();
@@ -243,11 +260,23 @@ public partial class ChatScreen
             _pendingShareSend = NewsShare.Compose(shareNewsId);
             _backOverrideApp = "news";
         }
+        else if (_marketShareCtx.PendingShareItemId is { } shareMarketItemId)
+        {
+            _marketShareCtx.PendingShareItemId = null;
+            _pendingShareSend = MarketShare.Compose(shareMarketItemId);
+            _backOverrideApp = "market";
+        }
         else if (_calendarShareCtx.PendingShareToken is { } shareCalToken)
         {
             _calendarShareCtx.PendingShareToken = null;
             _pendingShareSend = shareCalToken;
             _backOverrideApp = "calendar";
+        }
+        else if (_levemeteShareCtx.PendingShareLevemeteId is { } shareLevemeteId)
+        {
+            _levemeteShareCtx.PendingShareLevemeteId = null;
+            _pendingShareSend = LevemeteShare.Compose(shareLevemeteId);
+            _backOverrideApp = "levemetes";
         }
         else
         {
@@ -257,6 +286,7 @@ public partial class ChatScreen
         ResetFailedVenueCards();
         ResetFailedHangoutCards();
         ResetFailedNewsCards();
+        ResetFailedLevemeteCards();
         lock (_messagesLock)
         {
             _messages.Clear();
@@ -297,6 +327,7 @@ public partial class ChatScreen
         _events.BlockedByPeer -= OnBlockedByPeer;
         _events.ReactionsChanged -= OnReactionsChanged;
         _events.PinChanged -= OnPinChanged;
+        _events.MessageDeleted -= OnMessageDeleted;
         _events.PeerKeysReset -= OnPeerKeysReset;
         if (_notifications.ActiveChatPeerId == _peerId)
         {
@@ -547,6 +578,11 @@ public partial class ChatScreen
 
     private DisplayedMessage? TryDecrypt(EncryptedMessageDto m)
     {
+        if (m.DeletedAtUtc is not null)
+        {
+            return new DisplayedMessage(m.Id, Loc.T("chat.deleted_by_author"),
+                m.SenderProfileId != _peerId, m.CreatedAtUtc, m.ReadByOtherAtUtc, IsDeleted: true);
+        }
         if (_messageKey is null)
         {
             return null;
@@ -557,7 +593,6 @@ public partial class ChatScreen
         {
             var bytes = _crypto.Decrypt(key, m.Nonce, m.Ciphertext);
             var text = Encoding.UTF8.GetString(bytes);
-            UiHost.Log.Debug("[RESET] ChatScreen decrypt OK: msg {Id} sent {At:o} (era-key={Era}).", m.Id, m.CreatedAtUtc, era is not null);
             return new DisplayedMessage(
                 m.Id, text, m.SenderProfileId != _peerId, m.CreatedAtUtc, m.ReadByOtherAtUtc);
         }
@@ -565,7 +600,6 @@ public partial class ChatScreen
         {
             // A message from before an OWN key reset can never decrypt again; anything else is a real fault.
             var ownReset = _myKeysCreatedAt is { } at && m.CreatedAtUtc < at;
-            UiHost.Log.Debug("[RESET] ChatScreen decrypt FAILED: msg {Id} sent {At:o} (ownReset={Own}) -> unreadable.", m.Id, m.CreatedAtUtc, ownReset);
             if (!ownReset)
             {
                 UiHost.Log.Warning(ex, $"[ChatScreen] Decrypt failed for {m.Id}.");
@@ -717,6 +751,7 @@ public partial class ChatScreen
         DrawInput();
         DrawPinnedOverlay();
         DrawCalendarEventPrompt();
+        DrawUserNoteOverlay();
 
         DrawOpenFade(contentTL, contentSize);
 
@@ -735,6 +770,8 @@ public partial class ChatScreen
                     FireBlock();
                 }
             });
+
+        DrawDeleteMessageConfirm(ImGui.GetWindowPos(), ImGui.GetWindowSize());
 
         SupporterInfoPopup.Draw(ImGui.GetWindowPos(), ImGui.GetWindowSize(), OpenSupporterSettings);
 
@@ -766,6 +803,50 @@ public partial class ChatScreen
         var bg = ImGui.GetColorU32(ImGuiCol.WindowBg) & 0x00FFFFFFu;
         var col = bg | (a << 24);
         ImGui.GetWindowDrawList().AddRectFilled(contentTL, contentTL + contentSize, col);
+    }
+
+    private bool _noteOpen;
+    private float _notePanelH;
+    private string _noteText = string.Empty;
+
+    /// <summary>Local-only note about this match; saving an empty text removes it.</summary>
+    private void DrawUserNoteOverlay()
+    {
+        if (!_noteOpen)
+        {
+            return;
+        }
+        var dismissed = DrawPageOverlayPanel("chatUserNote", ImGui.GetWindowPos(), ImGui.GetWindowSize(),
+            ref _notePanelH, Px(300f), w =>
+        {
+            Widgets.ModalUi.Header(w, FontAwesomeIcon.StickyNote, Loc.T("chat.menu_user_note"),
+                ThemeService.Current.AccentLight);
+            ImGui.PushTextWrapPos(w);
+            ImGui.TextColored(UiColors.Hint, Loc.T("chat.note_hint"));
+            ImGui.PopTextWrapPos();
+            ImGui.Spacing();
+            ImGui.SetNextItemWidth(w);
+            InputTextMultilineWithPaste("##chatNoteText", ref _noteText, 1000, new Vector2(w, Px(90f)));
+            ImGui.Spacing();
+            if (Widgets.ModalUi.Button($"{Loc.T("chat.note_save")}##chatNoteSave", w))
+            {
+                var trimmed = _noteText.Trim();
+                if (trimmed.Length == 0)
+                {
+                    UiHost.Configuration.MatchNotes.Remove(_peerId);
+                }
+                else
+                {
+                    UiHost.Configuration.MatchNotes[_peerId] = trimmed;
+                }
+                UiHost.Configuration.Save();
+                _noteOpen = false;
+            }
+        });
+        if (dismissed)
+        {
+            _noteOpen = false;
+        }
     }
 
     private void DrawReportSubmittedToast()
@@ -893,7 +974,16 @@ public partial class ChatScreen
         if (ImGui.IsItemHovered())
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            ImGui.SetTooltip(Loc.T("chat.view_profile"));
+            var overAvatar = ImGui.GetMousePos().X <= groupLeft + avatarD;
+            if (overAvatar && UiHost.Configuration.MatchNotes.TryGetValue(_peerId, out var note)
+                && note.Length > 0)
+            {
+                ImGui.SetTooltip($"{Loc.T("chat.note_tooltip")}\n{note}");
+            }
+            else
+            {
+                ImGui.SetTooltip(Loc.T("chat.view_profile"));
+            }
         }
         if (ImGui.IsItemClicked())
         {
@@ -953,6 +1043,13 @@ public partial class ChatScreen
                 _chatListScreen.SetPinned(_peerId, !pinned);
             }
             _chatListScreen.DrawChatOverflowCategoryItems(_peerId);
+            if (DrawIconMenuItem(FontAwesomeIcon.StickyNote, Loc.T("chat.menu_user_note")))
+            {
+                ImGui.CloseCurrentPopup();
+                _noteText = UiHost.Configuration.MatchNotes.GetValueOrDefault(_peerId, string.Empty);
+                _notePanelH = 0f;
+                _noteOpen = true;
+            }
             if (DrawIconMenuItem(FontAwesomeIcon.CommentDots, Loc.T("chat.menu_invite_messenger"),
                     enabled: _messengerStore.Sync?.MyCode is { Length: > 0 }))
             {
@@ -1407,9 +1504,19 @@ public partial class ChatScreen
             DrawNewsCardMessage(msg, sharedNewsId, windowWidth, isGroupEnd);
             return;
         }
+        if (MarketShare.TryParse(msg.Text, out var sharedMarketItemId))
+        {
+            DrawMarketCardMessage(msg, sharedMarketItemId, windowWidth, isGroupEnd);
+            return;
+        }
         if (MessengerShare.TryParse(msg.Text, out var inviteCode))
         {
             DrawMessengerInviteCard(msg, inviteCode, windowWidth, isGroupEnd);
+            return;
+        }
+        if (LevemeteShare.TryParse(msg.Text, out var sharedLevemeteId))
+        {
+            DrawLevemeteCardMessage(msg, sharedLevemeteId, windowWidth, isGroupEnd);
             return;
         }
         if (CalendarEventShare.TryParse(msg.Text, out var sharedCalEvent))
@@ -1509,7 +1616,7 @@ public partial class ChatScreen
             _chatFavName = emojiClicked;
             ImGui.OpenPopup("##chatEmojiFavMenu");
         }
-        else if (ImGui.BeginPopupContextItem($"##msgCtx{msg.Id}", ImGuiPopupFlags.MouseButtonRight))
+        else if (!msg.IsDeleted && ImGui.BeginPopupContextItem($"##msgCtx{msg.Id}", ImGuiPopupFlags.MouseButtonRight))
         {
             DrawMessageContextMenu(msg);
             ImGui.EndPopup();
@@ -1587,6 +1694,15 @@ public partial class ChatScreen
             }
             return cardRow;
         }
+        if (MarketShare.TryParse(msg.Text, out _))
+        {
+            var cardRow = Px(MarketCardH) + (isGroupEnd ? lineH + Px(8f) : Px(2f));
+            if (needsDivider)
+            {
+                cardRow += lineH + Px(16f);
+            }
+            return cardRow;
+        }
         if (NewsShare.TryParse(msg.Text, out _))
         {
             var cardRow = Px(NewsCardH) + (isGroupEnd ? lineH + Px(8f) : Px(2f));
@@ -1599,6 +1715,15 @@ public partial class ChatScreen
         if (MessengerShare.TryParse(msg.Text, out _))
         {
             var cardRow = Px(MessengerCardH) + (isGroupEnd ? lineH + Px(8f) : Px(2f));
+            if (needsDivider)
+            {
+                cardRow += lineH + Px(16f);
+            }
+            return cardRow;
+        }
+        if (LevemeteShare.TryParse(msg.Text, out _))
+        {
+            var cardRow = Px(LevemeteCardH) + (isGroupEnd ? lineH + Px(8f) : Px(2f));
             if (needsDivider)
             {
                 cardRow += lineH + Px(16f);
@@ -1981,6 +2106,16 @@ public partial class ChatScreen
     {
         if (string.IsNullOrWhiteSpace(_inputText))
         {
+            return;
+        }
+        // Slash input mimics the game chat box: a known emote command runs on the character, anything
+        // else is dropped; either way nothing is sent to the peer.
+        var slashInput = _inputText.Trim();
+        if (slashInput.StartsWith('/'))
+        {
+            _caps.System.TryExecuteEmote(slashInput);
+            _inputText = string.Empty;
+            _drafts.Remove(_peerId);
             return;
         }
         if (!ParsedMessage.Parse(_inputText).HasVisibleContent)

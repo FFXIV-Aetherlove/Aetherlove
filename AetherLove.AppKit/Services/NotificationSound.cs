@@ -1,6 +1,9 @@
 using System;
 using System.IO;
-using System.Media;
+using NAudio.Wave;
+// The reader is fed from memory on purpose: streaming from the bundled file kept it locked inside the
+// game process, which broke plugin rebuilds and updates.
+using NAudio.Wave.SampleProviders;
 
 namespace AetherLove.Services;
 
@@ -49,13 +52,17 @@ public static class NotificationSoundExtensions
     };
 }
 
-/// <summary>Plays a bundled notification .wav. One shared player: a new sound interrupts the previous one
-/// instead of stacking, so spamming the preview collapses to a single chime rather than queuing a backlog,
-/// and <see cref="Stop"/> silences it when the sound-settings screen is left.</summary>
+/// <summary>Plays a bundled notification .wav through NAudio's waveOut backend, honouring the app's own
+/// volume and output-device settings; the game's audio device and mute switches are deliberately not
+/// involved. One shared output: a new sound interrupts the previous one instead of stacking, so spamming the
+/// preview collapses to a single chime, and <see cref="Stop"/> silences it when a settings screen is left.
+/// The output device is stored by NAME so a shifting waveOut index (devices plugged/unplugged) can never
+/// silently reroute; a missing name falls back to the system default.</summary>
 public static class NotificationSoundPlayer
 {
     private static readonly object Gate = new();
-    private static SoundPlayer? _player;
+    private static WaveOutEvent? _output;
+    private static WaveFileReader? _reader;
 
     /// <summary>The bundled-sound folder (Media/notifications, next to the plugin assembly).</summary>
     public static string SoundDirectory =>
@@ -64,49 +71,74 @@ public static class NotificationSoundPlayer
     /// <summary>Full path to a sound's .wav on disk.</summary>
     public static string ResolvePath(NotificationSound sound) => Path.Combine(SoundDirectory, sound.FileName());
 
-    public static void Play(NotificationSound sound)
+    /// <summary>The waveOut device names available right now, in device order.</summary>
+    public static string[] ListDevices()
     {
-        // SoundPlayer bypasses the game mixer, so honour the game's mute switches manually.
-        if (!AccessibilityService.SoundEffectsEnabled)
+        try
         {
-            return;
-        }
-
-        var path = ResolvePath(sound);
-        if (!File.Exists(path))
-        {
-            UiHost.Log.Debug($"[NotificationSound] {path} not found; skipping playback.");
-            return;
-        }
-
-        lock (Gate)
-        {
-            try
+            var names = new string[WaveOut.DeviceCount];
+            for (var i = 0; i < names.Length; i++)
             {
-                _player?.Stop();
-                _player?.Dispose();
-                // Async play (not PlaySync): the OS keeps a single active sound, so a rapid burst never
-                // queues, and Stop() ends it immediately.
-                _player = new SoundPlayer(path);
-                _player.Play();
+                names[i] = WaveOut.GetCapabilities(i).ProductName;
             }
-            catch (Exception ex)
-            {
-                UiHost.Log.Warning(ex, "[NotificationSound] Playback failed.");
-            }
+            return names;
+        }
+        catch (Exception ex)
+        {
+            UiHost.Log.Warning(ex, "[NotificationSound] Device enumeration failed.");
+            return [];
         }
     }
 
-    /// <summary>Plays a sound for the diagnostics tool, returning a human-readable outcome rather than swallowing
-    /// failures. When <paramref name="bypassMuteGate"/> is set the in-game SE mute/volume check is skipped, so the
-    /// caller can tell a muted-game problem apart from broken playback.</summary>
-    public static string TestPlay(NotificationSound sound, bool bypassMuteGate)
+    /// <summary>Human-readable description of where sound goes right now, for settings and diagnostics.</summary>
+    public static string DescribeOutput()
     {
-        if (!bypassMuteGate && !AccessibilityService.SoundEffectsEnabled)
+        var configured = UiHost.Configuration.OsSettings.AudioOutputDevice;
+        if (configured.Length == 0)
         {
-            return "Blocked by the in-game Sound Effects mute/volume (see the values above). Use \"ignore game mute\" to test anyway.";
+            return "System default";
         }
+        return ResolveDeviceIndex() >= 0
+            ? configured
+            : $"{configured} (not found, using the system default)";
+    }
 
+    private static int ResolveDeviceIndex()
+    {
+        var configured = UiHost.Configuration.OsSettings.AudioOutputDevice;
+        if (configured.Length == 0)
+        {
+            return -1;
+        }
+        try
+        {
+            for (var i = 0; i < WaveOut.DeviceCount; i++)
+            {
+                if (WaveOut.GetCapabilities(i).ProductName == configured)
+                {
+                    return i;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            UiHost.Log.Warning(ex, "[NotificationSound] Device lookup failed; using the system default.");
+        }
+        return -1;
+    }
+
+    public static void Play(NotificationSound sound)
+    {
+        if (TryPlay(sound) is { } error)
+        {
+            UiHost.Log.Warning("[NotificationSound] Playback failed: {Error}", error);
+        }
+    }
+
+    /// <summary>Plays and reports the outcome instead of just logging it: null when playback started, else a
+    /// human-readable error for the settings test button and the diagnostics tool.</summary>
+    public static string? TryPlay(NotificationSound sound)
+    {
         var path = ResolvePath(sound);
         if (!File.Exists(path))
         {
@@ -117,15 +149,21 @@ public static class NotificationSoundPlayer
         {
             try
             {
-                _player?.Stop();
-                _player?.Dispose();
-                _player = new SoundPlayer(path);
-                _player.Play();
-                return "Playing. If you hear nothing, check Windows' Volume Mixer for the game (ffxiv_dx11.exe) and your output device.";
+                StopLocked();
+                _reader = new WaveFileReader(new MemoryStream(File.ReadAllBytes(path)));
+                var volume = new VolumeSampleProvider(_reader.ToSampleProvider())
+                {
+                    Volume = Math.Clamp(UiHost.Configuration.OsSettings.NotificationVolume, 0f, 1f),
+                };
+                _output = new WaveOutEvent { DeviceNumber = ResolveDeviceIndex() };
+                _output.Init(volume);
+                _output.Play();
+                return null;
             }
             catch (Exception ex)
             {
-                return $"Playback threw {ex.GetType().Name}: {ex.Message}";
+                UiHost.Log.Warning(ex, "[NotificationSound] Playback failed.");
+                return $"{ex.GetType().Name}: {ex.Message}";
             }
         }
     }
@@ -137,12 +175,21 @@ public static class NotificationSoundPlayer
         {
             try
             {
-                _player?.Stop();
+                StopLocked();
             }
             catch
             {
                 // Best effort; nothing to recover if the handle is already gone.
             }
         }
+    }
+
+    private static void StopLocked()
+    {
+        _output?.Stop();
+        _output?.Dispose();
+        _reader?.Dispose();
+        _output = null;
+        _reader = null;
     }
 }

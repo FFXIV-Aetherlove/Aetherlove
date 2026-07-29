@@ -548,6 +548,8 @@ public partial class PlacesScreen
             var btnW = DrawRsvpButton(detail, occ, new Vector2(rightEdge, tl.Y + (rowH - Px(30f)) * 0.5f));
             rightEdge -= btnW + Px(12f);
         }
+        var shareW = DrawOccurrenceShareButton(detail, occ, new Vector2(rightEdge, tl.Y + (rowH - Px(30f)) * 0.5f));
+        rightEdge -= shareW + Px(12f);
         DrawRsvpClump(dl, occ, new Vector2(rightEdge, tl.Y + rowH * 0.5f + Px(10f)));
 
         ImGui.SetCursorScreenPos(new Vector2(origin.X, br.Y + Px(6f)));

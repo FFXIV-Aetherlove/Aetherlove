@@ -23,7 +23,7 @@ internal static class HubErrorsRu
         ["huberror.lalafell_nsfw"] = "Функции NSFW недоступны для персонажей-лалафелей.",
         ["huberror.lalafell_nsfw_photo"] = "Фотографии NSFW недоступны для персонажей-лалафелей.",
         ["huberror.nsfw_disable_blocked"] = "Удалите фотографии NSFW и отключите ролевые игры 18+, прежде чем отключать NSFW.",
-        ["huberror.img_too_large"] = "Изображение слишком большое ({0} МБ). Максимум — {1} МБ.",
+        ["huberror.img_too_large"] = "Изображение слишком большое ({0} МБ). Максимум: {1} МБ.",
         ["huberror.img_dimensions_too_large"] = "Изображение слишком большое ({0}×{1}). Длинная сторона может быть не более {2}px.",
         ["huberror.img_crop_too_small"] = "Область обрезки слишком мала (минимум {0}px с каждой стороны).",
         ["huberror.img_decode_failed"] = "Не удалось прочитать изображение. Поддерживаемые форматы: PNG, JPEG, WebP, GIF.",
@@ -87,5 +87,20 @@ internal static class HubErrorsRu
         ["huberror.msgr_storage_full"] = "Хранилище изображений заполнено. Удали часть изображений или дождись, пока старые исчезнут, и попробуй снова.",
         ["huberror.msgr_image_too_large"] = "Это изображение слишком большое.",
         ["huberror.msgr_image_invalid"] = "Не удалось прочитать это изображение.",
+        // levemetes (added after update 2.0.1)
+        ["huberror.levemetes_disabled"] = "Levemetes сейчас отключён.",
+        ["huberror.leve_not_found"] = "Это объявление больше не существует.",
+        ["huberror.leve_invalid"] = "Не удалось сохранить объявление. Проверьте введённые данные.",
+        ["huberror.leve_limit_reached"] = "У вас уже {0} объявлений. Удалите одно или дождитесь, пока какое-то истечёт.",
+        ["huberror.leve_too_long"] = "Текст слишком длинный (не больше {0} символов).",
+        ["huberror.leve_image_rejected"] = "Это изображение нельзя загрузить. Выберите другое или напишите в поддержку, если считаете это ошибкой.",
+        ["huberror.leve_review_own"] = "Нельзя оставить отзыв на собственное объявление.",
+        ["huberror.leve_review_too_long"] = "Ваш отзыв слишком длинный (не больше {0} символов).",
+        ["huberror.leve_review_rating_invalid"] = "Выберите оценку от 1 до 5 звёзд.",
+        ["huberror.leve_reviews_disabled"] = "Автор отключил отзывы в этом объявлении.",
+        ["huberror.leve_renew_too_soon"] = "Это объявление недавно продлевали. Попробуйте позже.",
+        // holiday mode (added after update 2.0.1)
+        ["huberror.holiday_message_too_long"] = "Сообщение об отпуске слишком длинное (не больше {0} символов).",
+        ["huberror.holiday_message_invalid"] = "Это сообщение нельзя использовать. Пожалуйста, перефразируйте его.",
     };
 }

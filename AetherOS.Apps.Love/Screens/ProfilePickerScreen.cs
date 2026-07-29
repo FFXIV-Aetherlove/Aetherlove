@@ -29,7 +29,6 @@ public sealed class ProfilePickerScreen
     private readonly AetherHubContext _hub;
     private readonly SessionBootstrapper _bootstrap;
     private readonly KeyStorageService _keys;
-    private readonly CryptoService _crypto;
     private readonly SettingsScreen _settings;
 
     private readonly object _lock = new();
@@ -52,14 +51,12 @@ public sealed class ProfilePickerScreen
         AetherHubContext hub,
         SessionBootstrapper bootstrap,
         KeyStorageService keys,
-        CryptoService crypto,
         SettingsScreen settings)
     {
         _router = router;
         _hub = hub;
         _bootstrap = bootstrap;
         _keys = keys;
-        _crypto = crypto;
         _settings = settings;
     }
 
@@ -424,38 +421,16 @@ public sealed class ProfilePickerScreen
         });
     }
 
-    /// <summary>Wraps a fresh keypair for the just-created profile under the stored account KEK and uploads its
-    /// bundle, using the account's KDF parameters so a passphrase unlock on another device still works. Without
-    /// a stored KEK or account parameters (a pre-passphrase-era account) this is skipped; the encryption
-    /// recovery gate covers that profile once it goes Active.</summary>
+    /// <summary>Publishes the just-created profile's key bundle before its first chat, rather than leaving it to
+    /// the recovery gate. The bootstrapper owns the wrapping choice (account KEK, else a sibling profile's key),
+    /// so a migrated account that never captured a KEK still gets working encryption with no prompt.</summary>
     private async Task TryProvisionKeyBundleAsync()
     {
-        try
+        if (_keys.HasLocalKey || _bootstrap.LastConnection?.HasKeyBundle == true)
         {
-            if (_keys.HasLocalKey || _bootstrap.LastConnection?.HasKeyBundle == true || _keys.Kek is not { } kek)
-            {
-                return;
-            }
-            var pass = await _hub.GetAccountPassphraseAsync().ConfigureAwait(false);
-            if (pass is null)
-            {
-                return;
-            }
-            var (pubKey, privKey) = _crypto.GenerateIdentityKeyPair();
-            var (wrapped, nonce) = _crypto.WrapPrivateKey(privKey, kek);
-            await _hub.UploadKeyBundleAsync(new Shared.Messaging.KeyBundleDto(
-                pubKey, wrapped, pass.KdfSalt, pass.KdfMemoryKb, pass.KdfIterations, pass.KdfParallelism, nonce))
-                .ConfigureAwait(false);
-            _keys.Store(pubKey, privKey);
-            if (_bootstrap.LastConnection is { } snap)
-            {
-                _bootstrap.ReplaceConnectionSnapshot(snap with { HasKeyBundle = true });
-            }
+            return;
         }
-        catch (Exception ex)
-        {
-            UiHost.Log.Warning(ex, "[ProfilePicker] Key bundle provisioning failed; recovery will cover it.");
-        }
+        await _bootstrap.EnsureActiveProfileKeysAsync().ConfigureAwait(false);
     }
 
     /// <summary>The supporter perk mark used across the app (nav avatar, chat header): dark disc, gold ring,

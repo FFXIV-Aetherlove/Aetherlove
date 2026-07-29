@@ -14,7 +14,7 @@ public sealed record NewsSummaryDto(
     DateTimeOffset PublishedAtUtc,
     string Preview = "");
 
-/// <summary>One body line — flat union (the MessagePack contractless resolver doesn't do polymorphic [Union]).
+/// <summary>One body line, flat union (the MessagePack contractless resolver doesn't do polymorphic [Union]).
 /// Text lines carry <see cref="Text"/> (with <c>:emoji:</c> shortcodes); image lines carry client-ready
 /// <see cref="ImageBytes"/> plus their pixel dimensions.</summary>
 [MessagePackObject(keyAsPropertyName: true)]

@@ -582,6 +582,11 @@ public sealed partial class MessengerApp
 
     private string DisplayText(MessengerMessageDto m, out bool decrypted)
     {
+        if (m.DeletedAtUtc is not null)
+        {
+            decrypted = false;
+            return Loc.T("chat.deleted_by_author");
+        }
         var text = Decrypt(m);
         decrypted = text is not null;
         return text ?? Loc.T(
@@ -941,7 +946,8 @@ public sealed partial class MessengerApp
             _chatFavName = emojiClicked;
             ImGui.OpenPopup("##msgrEmojiFavMenu");
         }
-        else if (ImGui.BeginPopupContextItem($"##msgrCtx{msg.Id}", ImGuiPopupFlags.MouseButtonRight))
+        else if (msg.DeletedAtUtc is null
+            && ImGui.BeginPopupContextItem($"##msgrCtx{msg.Id}", ImGuiPopupFlags.MouseButtonRight))
         {
             DrawMessageContextMenu(msg, decrypted ? text : null);
             ImGui.EndPopup();
@@ -1713,6 +1719,21 @@ public sealed partial class MessengerApp
             ImGui.CloseCurrentPopup();
             _caps.System.CopyToClipboard(ParsedMessage.Parse(text).PlainText);
         }
+        if (msg.SenderAccountId == _store.MyAccountId
+            && DrawIconMenuItem(FontAwesomeIcon.TrashAlt, Loc.T("chat.delete_message"), UiColors.MenuDanger))
+        {
+            ImGui.CloseCurrentPopup();
+            var messageId = msg.Id;
+            var chatId = msg.ChatId;
+            OpenConfirm(
+                Loc.T("chat.delete_message"),
+                Loc.T("chat.delete_message_body"),
+                () => RunHub(async () =>
+                {
+                    await _hub.DeleteMessengerMessageAsync(messageId).ConfigureAwait(false);
+                    _store.ApplyMessageDeleted(chatId, messageId);
+                }));
+        }
     }
 
     private float InputBarHeight(OpenChatInfo open)
@@ -2102,6 +2123,16 @@ public sealed partial class MessengerApp
     {
         if (string.IsNullOrWhiteSpace(_inputText) || !ParsedMessage.Parse(_inputText).HasVisibleContent)
         {
+            return;
+        }
+        // Slash input mimics the game chat box: a known emote command runs on the character, anything
+        // else is dropped; either way nothing is sent to the peer.
+        var slashInput = _inputText.Trim();
+        if (slashInput.StartsWith('/'))
+        {
+            _caps.System.TryExecuteEmote(slashInput);
+            _inputText = string.Empty;
+            _drafts.Remove(open.ChatId);
             return;
         }
         var text = _inputText.Replace('\n', ' ').Trim();

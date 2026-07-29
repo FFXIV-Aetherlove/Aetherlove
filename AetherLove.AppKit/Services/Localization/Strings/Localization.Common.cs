@@ -26,7 +26,7 @@ internal static class CommonEn
         ["common.outdated_hint"] = "Please update the plugin in Dalamud's plugin installer, then reopen AetherLove.",
 
         // Offline screen
-        ["common.offline_title"] = "AetherLove is offline",
+        ["common.offline_title"] = "AetherOS services are currently offline",
         ["common.offline_body"] = "The server is most likely offline due to updates or maintenance. This shouldn't take more than 2 minutes!",
         ["common.offline_reconnecting"] = "Reconnecting…",
         ["common.offline_taking_long"] = "This is taking longer than usual. Join our Discord for the latest status.",
@@ -82,7 +82,7 @@ internal static class CommonEn
         ["common.undeclared_photo_body"] = "You must select whether your other picture is SFW or NSFW in the selection box before uploading another.",
 
         // Changelog window
-        ["common.changelog_window_title"] = "AetherLove — What's New",
+        ["common.changelog_window_title"] = "AetherLove: What's New",
         ["common.whats_new"] = "What's New",
         ["common.changelog_empty"] = "No changelog entries available.",
         ["common.changelog_latest"] = "Latest",
@@ -177,5 +177,8 @@ internal static class CommonEn
         ["common.moderation_message_for"] = "Message for {0}",
         ["common.account_disabled_title"] = "Account banned",
         ["common.account_disabled_body"] = "This feature is unavailable while your account is banned.",
+
+        // added after update 2.0.1
+        ["common.passphrase_correct_unrecoverable"] = "Your passphrase is correct, but none of your stored keys could be opened with it. Please contact support before considering a reset; a reset leaves your old messages permanently unreadable.",
     };
 }

@@ -6,14 +6,16 @@ internal static class NotificationsRu
     {
         ["notif.new_message"] = "Входящее сообщение.",
         ["notif.match_title"] = "Новая пара!",
-        ["notif.matched_with_popup"] = "Ваша пара — {0}.",
-        ["notif.matched_with_chat"] = "Ваша пара — {0}!",
+        ["notif.matched_with_popup"] = "У вас пара с {0}.",
+        ["notif.matched_with_chat"] = "У вас пара с {0}!",
         ["notif.someone_new"] = "кто-то новенький",
         ["notif.open_messages"] = "Открыть сообщения",
         ["notif.pulse_link"] = "Открыть AetherLove",
 
         // Messenger (added after update 1.5.1)
         ["notif.msgr_message"] = "Вам пришло сообщение в Messenger.",
+        ["notif.market_below"] = "{0} подешевел до {1}",
+        ["notif.market_above"] = "{0} подорожал до {1}",
         ["notif.msgr_request"] = "{0} хочет добавить вас в Messenger.",
         ["notif.msgr_open_link"] = "Открыть Messenger",
         ["notif.msgr_request_title"] = "Заявка в Messenger",

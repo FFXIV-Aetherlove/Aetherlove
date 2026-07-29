@@ -113,7 +113,10 @@ public sealed partial class OsOnboardingScreen
         _selfieOverlay.Start(1.0f, PhotoSpec.AvatarSize, (path, crop) =>
         {
             // Pre-boot: the camera app cannot run yet, so the host stores the shot in the photo library directly.
-            _cameraRoll.AddCapture(path, crop);
+            if (_cameraRoll.AutoImportAppCaptures)
+            {
+                _cameraRoll.AddCapture(path, crop);
+            }
             HandleAvatarPicked(path, crop);
         });
 

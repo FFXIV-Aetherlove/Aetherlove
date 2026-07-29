@@ -22,6 +22,8 @@ public sealed class NotificationDispatcher : IDisposable, Signal.INotifier
     private const uint HangoutsLinkCommandId = 5;
     private const uint HangoutOpenLinkCommandId = 6;
     private const uint MessengerLinkCommandId = 7;
+    // 8 belongs to ClockAlarmService; chat-link command ids are global per plugin.
+    private const uint MarketLinkCommandId = 10;
     private const ushort LinkColor = 539;
 
     private readonly IChatGui _chat;
@@ -36,9 +38,13 @@ public sealed class NotificationDispatcher : IDisposable, Signal.INotifier
     private readonly DalamudLinkPayload? _hangoutsLink;
     private readonly DalamudLinkPayload? _hangoutOpenLink;
     private readonly DalamudLinkPayload? _messengerLink;
+    private readonly DalamudLinkPayload? _marketLink;
 
     /// <summary>Link payloads can't carry data, so clicking any match-started line opens the most recently announced hangout.</summary>
     private Shared.Hangouts.HangoutSummaryDto? _lastFriendHangout;
+
+    /// <summary>Same limitation for market alerts: the link opens the most recently alerted item.</summary>
+    private uint _lastMarketAlertItemId;
 
     public NotificationDispatcher(IChatGui chat, Configuration config, IServiceProvider services)
     {
@@ -55,6 +61,7 @@ public sealed class NotificationDispatcher : IDisposable, Signal.INotifier
             _hangoutsLink = _chat.AddChatLinkHandler(HangoutsLinkCommandId, (_, _) => OpenHangouts());
             _hangoutOpenLink = _chat.AddChatLinkHandler(HangoutOpenLinkCommandId, (_, _) => OpenNotifiedHangout());
             _messengerLink = _chat.AddChatLinkHandler(MessengerLinkCommandId, (_, _) => OpenMessenger());
+            _marketLink = _chat.AddChatLinkHandler(MarketLinkCommandId, (_, _) => OpenMarketItem());
         }
         catch (Exception ex)
         {
@@ -370,6 +377,56 @@ public sealed class NotificationDispatcher : IDisposable, Signal.INotifier
         }
     }
 
+    public void NotifyMarketAlert(uint itemId, string text)
+    {
+        if (!_config.EnableNotifications || !LoggedIn || CombatSuppressed)
+        {
+            return;
+        }
+        _lastMarketAlertItemId = itemId;
+        try
+        {
+            var sb = new SeStringBuilder()
+                .AddText("[AetherOS] ")
+                .AddText(text);
+
+            if (_marketLink is not null)
+            {
+                sb.AddText(" ")
+                  .Add(_marketLink)
+                  .AddUiForeground(LinkColor)
+                  .AddText($"({Loc.T("notif.view_link")})")
+                  .AddUiForegroundOff()
+                  .Add(RawPayload.LinkTerminator);
+            }
+
+            _chat.Print(sb.BuiltString);
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Warning(ex, "[NotificationDispatcher] Market print failed.");
+        }
+        if (_config.EnableNotificationSounds)
+        {
+            NotificationSoundPlayer.Play(_config.NotificationSoundChoice);
+        }
+    }
+
+    private void OpenMarketItem()
+    {
+        try
+        {
+            if (_lastMarketAlertItemId > 0)
+            {
+                _services.GetService<MainPluginWindow>()?.OpenToMarketItem(_lastMarketAlertItemId);
+            }
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Warning(ex, "[NotificationDispatcher] OpenMarketItem failed.");
+        }
+    }
+
     public void PrintPulse(string text)
     {
         if (!LoggedIn || CombatSuppressed)
@@ -473,6 +530,7 @@ public sealed class NotificationDispatcher : IDisposable, Signal.INotifier
             _chat.RemoveChatLinkHandler(HangoutsLinkCommandId);
             _chat.RemoveChatLinkHandler(HangoutOpenLinkCommandId);
             _chat.RemoveChatLinkHandler(MessengerLinkCommandId);
+            _chat.RemoveChatLinkHandler(MarketLinkCommandId);
         }
         catch (Exception ex)
         {

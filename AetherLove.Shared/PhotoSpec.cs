@@ -11,4 +11,7 @@ public static class PhotoSpec
     /// <summary>25:9, matching the wide banner rect the venue detail page renders (361x130 design units).</summary>
     public const int VenueBannerWidth = 500;
     public const int VenueBannerHeight = 180;
+    /// <summary>4:3, uniform across all three classified-ad slots so the carousel never jumps.</summary>
+    public const int LevemeteWidth = 560;
+    public const int LevemeteHeight = 420;
 }

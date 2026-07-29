@@ -227,6 +227,16 @@ public class MainPluginWindow : Window, IDisposable
         _osShell.OpenApp("messenger");
     }
 
+    public void OpenToMarketItem(uint itemId)
+    {
+        if (_miniWindow != null)
+        {
+            _miniWindow.IsOpen = false;
+        }
+        IsOpen = true;
+        _osShell.SendIntent("market", AetherOS.Sdk.OsIntents.CreateMarketItem(itemId));
+    }
+
     public void OpenToMyHangout()
     {
         if (_miniWindow != null)
@@ -420,6 +430,15 @@ public class MainPluginWindow : Window, IDisposable
         ImGui.EndChild();
 
         DrawStartupFadeIn(ImGui.GetWindowPos(), ImGui.GetWindowSize());
+
+        // A flat battery takes the whole screen over whatever the user was doing, so nothing else is drawn: no
+        // status bar, no home pill, no tour. Recharging drops them straight back where they were.
+        if (Os.FlatBatteryOverlay.Active)
+        {
+            DrawFlatBatteryOverlay();
+            HandleBezelDoubleClickMinimize();
+            return;
+        }
 
         if (_router.Current is Screen.Home || ShowsHomeIndicator(_router.Current))
         {
@@ -697,6 +716,29 @@ public class MainPluginWindow : Window, IDisposable
             dl.PopClipRect();
             // Unclipped on purpose: the tour highlights bezel elements (home button, status strip).
             _osTour.Draw(winPos, winSize);
+        }
+        ImGui.EndChild();
+    }
+
+    /// <summary>The dead-phone takeover, in its own child submitted after the screen content. A child renders
+    /// above its parent's draw list and owns the hover, which the parent list cannot: drawn on the parent it
+    /// would sit UNDER the app and the grass could never be clicked.</summary>
+    private void DrawFlatBatteryOverlay()
+    {
+        var winPos = ImGui.GetWindowPos();
+        var winSize = ImGui.GetWindowSize();
+        var contentTL = winPos + Px(BezelLeft, BezelTop);
+        var contentBR = winPos + new Vector2(winSize.X - Px(BezelRight), winSize.Y - Px(BezelBottom));
+
+        ImGui.SetCursorScreenPos(winPos);
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Vector2.Zero);
+        var open = ImGui.BeginChild("##osFlatBattery", winSize, false,
+            ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoScrollbar
+            | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoNav);
+        ImGui.PopStyleVar();
+        if (open)
+        {
+            Os.FlatBatteryOverlay.Draw(contentTL, contentBR);
         }
         ImGui.EndChild();
     }

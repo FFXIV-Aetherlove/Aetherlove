@@ -10,6 +10,7 @@ using AetherLove.Services;
 using AetherLove.Services.Localization;
 using AetherLove.Shared.Messaging;
 using AetherLove.UI;
+using AetherLove.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
@@ -673,6 +674,120 @@ public partial class ChatScreen
             ImGui.CloseCurrentPopup();
             CopyTextWithLinkWarning(msg.Text);
         }
+        // An unsent optimistic message has no server row yet, so it can't be deleted until it lands.
+        if (msg.IsOwn && !_unsentTempIds.Contains(msg.Id)
+            && DrawIconMenuItem(FontAwesomeIcon.TrashAlt, Loc.T("chat.delete_message"), UiColors.MenuDanger))
+        {
+            ImGui.CloseCurrentPopup();
+            _deleteConfirmId = msg.Id;
+            _deleteConfirmPanelH = 0f;
+        }
+    }
+
+    private Guid _deleteConfirmId;
+    private float _deleteConfirmPanelH;
+
+    private void DrawDeleteMessageConfirm(Vector2 winPos, Vector2 winSize)
+    {
+        if (_deleteConfirmId == Guid.Empty)
+        {
+            return;
+        }
+        if (ImGui.IsKeyPressed(ImGuiKey.Escape))
+        {
+            _deleteConfirmId = Guid.Empty;
+            return;
+        }
+
+        var confirmed = false;
+        var dismissed = DrawPageOverlayPanel("chatMsgDelete", winPos, winSize, ref _deleteConfirmPanelH, Px(190f),
+            innerW =>
+            {
+                ModalUi.Header(innerW, FontAwesomeIcon.TrashAlt, Loc.T("chat.delete_message"), UiColors.Danger);
+
+                ImGui.PushTextWrapPos(innerW);
+                ImGui.TextColored(UiColors.Body, Loc.T("chat.delete_message_body"));
+                ImGui.PopTextWrapPos();
+                ImGui.Spacing();
+                ImGui.Spacing();
+
+                var btnW = (innerW - Px(10f)) * 0.5f;
+                PushDangerButton();
+                ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
+                if (ImGui.Button($"{Loc.T("chat.delete_message_confirm")}##msgDelOk", new Vector2(btnW, Px(32f))))
+                {
+                    confirmed = true;
+                }
+                ImGui.PopStyleVar();
+                ImGui.PopStyleColor(3);
+                ImGui.SameLine(0f, Px(10f));
+                if (ModalUi.Button($"{Loc.T("common.cancel")}##msgDelCancel", btnW))
+                {
+                    _deleteConfirmId = Guid.Empty;
+                }
+            });
+
+        if (confirmed)
+        {
+            var msgId = _deleteConfirmId;
+            _deleteConfirmId = Guid.Empty;
+            FireDeleteMessage(msgId);
+        }
+        else if (dismissed)
+        {
+            _deleteConfirmId = Guid.Empty;
+        }
+    }
+
+    private void FireDeleteMessage(Guid msgId)
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _hub.DeleteMessageAsync(_peerId, msgId, CancellationToken.None).ConfigureAwait(false);
+                _uiActions.Enqueue(() => ApplyMessageDeletedLocal(msgId));
+            }
+            catch (Exception ex)
+            {
+                UiHost.Log.Warning(ex, "[ChatScreen] DeleteMessageAsync failed.");
+            }
+        });
+    }
+
+    /// <summary>Flips the local copy to the tombstone: text swapped for the notice, pin and reactions gone,
+    /// cached ciphertext scrubbed, row heights invalidated for the shorter bubble.</summary>
+    private void ApplyMessageDeletedLocal(Guid msgId)
+    {
+        lock (_messagesLock)
+        {
+            for (var i = 0; i < _messages.Count; i++)
+            {
+                if (_messages[i].Id == msgId)
+                {
+                    _messages[i] = _messages[i] with
+                    {
+                        Text = Loc.T("chat.deleted_by_author"),
+                        IsDeleted = true,
+                    };
+                    break;
+                }
+            }
+        }
+        SetPinnedLocal(msgId, false, animate: false);
+        ApplyReactionState(msgId, [], [], animate: false);
+        _msgContentH.Remove(msgId);
+        _msgRowH.Remove(msgId);
+        _sync.Cache.ApplyMessageDeleted(_peerId, msgId);
+    }
+
+    private void OnMessageDeleted(MessageDeletedPushDto p)
+    {
+        if (p.PeerProfileId != _peerId)
+        {
+            return;
+        }
+        _uiActions.Enqueue(() => ApplyMessageDeletedLocal(p.MessageId));
     }
 
     /// <summary>The "replying to ..." strip drawn above the input bar while composing a reply.</summary>

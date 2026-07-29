@@ -2,7 +2,7 @@ using System;
 
 namespace AetherLove.Shared.Places;
 
-/// <summary>Multi-select venue categories. Wire + storage values — append-only, never renumber.</summary>
+/// <summary>Multi-select venue categories. Wire + storage values: append-only, never renumber.</summary>
 [Flags]
 public enum VenueTag : int
 {
@@ -33,7 +33,7 @@ public enum VenueTag : int
     MiniGames = 1 << 17,
 }
 
-/// <summary>Residential district a venue's plot is in. Wire + storage values — append-only.</summary>
+/// <summary>Residential district a venue's plot is in. Wire + storage values: append-only.</summary>
 public enum HousingDistrict : short
 {
     Unknown = 0,
@@ -44,7 +44,7 @@ public enum HousingDistrict : short
     Empyreum = 5,
 }
 
-/// <summary>Lifecycle/visibility state of a venue. Wire + storage values — append-only, never renumber.
+/// <summary>Lifecycle/visibility state of a venue. Wire + storage values: append-only, never renumber.
 /// Only <see cref="Active"/> venues are shown to browsers.</summary>
 public enum VenueStatus : short
 {

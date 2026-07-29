@@ -26,7 +26,7 @@ internal static class CommonPt
         ["common.outdated_body"] = "Está a usar uma versão desatualizada do AetherLove. O servidor não oferece mais suporte a esta versão, o plugin não consegue conectar-se.",
         ["common.outdated_hint"] = "Atualiza o plugin no instalador de plugins no Dalamud e reabre o AetherLove.",
 
-        ["common.offline_title"] = "O AetherLove está offline",
+        ["common.offline_title"] = "Os serviços AetherOS estão offline de momento",
         ["common.offline_body"] = "O servidor provavelmente está offline por causa de atualizações ou manutenção. Isso não deve demorar mais de 2 minutos!",
         ["common.offline_reconnecting"] = "Reconectando…",
         ["common.offline_taking_long"] = "Isso está demorando mais do que o normal. Entre no nosso Discord para saber o status mais recente.",
@@ -82,7 +82,7 @@ internal static class CommonPt
         ["common.undeclared_photo_body"] = "Você precisa selecionar se a tua outra foto é SFW ou NSFW na caixa de seleção antes de enviar outra.",
 
         // Changelog window
-        ["common.changelog_window_title"] = "AetherLove — Novidades",
+        ["common.changelog_window_title"] = "AetherLove: Novidades",
         ["common.whats_new"] = "Novidades",
         ["common.changelog_empty"] = "Nenhuma entrada de registro de alterações disponível.",
         ["common.changelog_latest"] = "Mais recente",
@@ -136,7 +136,7 @@ internal static class CommonPt
         ["common.use_this_crop"] = "Usar este recorte",
 
         // SFW gate (avatar / first photo)
-        ["common.sfw_gate_title"] = "Perfil + Avatar — APENAS SFW",
+        ["common.sfw_gate_title"] = "Perfil + Avatar: APENAS SFW",
         ["common.sfw_gate_subtitle"] = "O que NÃO é SFW:",
         ["common.sfw_gate_b1"] = "Nudez total de qualquer género.",
         ["common.sfw_gate_b2"] = "Mamilos visíveis de qualquer género.",
@@ -177,5 +177,8 @@ internal static class CommonPt
         ["common.moderation_message_for"] = "Mensagem para {0}",
         ["common.account_disabled_title"] = "Conta banida",
         ["common.account_disabled_body"] = "Este recurso não está disponível enquanto a sua conta estiver banida.",
+
+        // added after update 2.0.1
+        ["common.passphrase_correct_unrecoverable"] = "A sua frase-senha está correta, mas nenhuma das suas chaves guardadas pôde ser aberta com ela. Contacte o suporte antes de considerar uma redefinição; ela deixaria as suas mensagens antigas ilegíveis para sempre.",
     };
 }

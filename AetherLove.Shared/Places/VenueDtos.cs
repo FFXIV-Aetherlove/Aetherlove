@@ -8,7 +8,7 @@ namespace AetherLove.Shared.Places;
 /// <summary>
 /// One opening-time rule, expressed in the venue's own timezone. Recurring rules set
 /// <see cref="DaysMask"/> (bit 0 = Monday .. bit 6 = Sunday); a one-time rule sets it to 0 and carries
-/// the venue-local date as <see cref="OneTimeDateDayNumber"/> (<c>DateOnly.DayNumber</c> — DateOnly itself
+/// the venue-local date as <see cref="OneTimeDateDayNumber"/> (<c>DateOnly.DayNumber</c>: DateOnly itself
 /// is not wire-safe under the contractless resolver). A span may cross midnight:
 /// <c>StartMinute + DurationMinutes</c> past 1440 runs into the next calendar day.
 /// </summary>
@@ -75,7 +75,7 @@ public sealed record PlacesBrowseDto(
     VenueOccurrenceDto[] HappeningNow,
     VenueOccurrenceDto[] Upcoming);
 
-/// <summary>One published venue review. Reviews are avatar-only by design — no author name crosses the
+/// <summary>One published venue review. Reviews are avatar-only by design: no author name crosses the
 /// wire. <see cref="PendingModeration"/> is true only on the caller's own flagged review.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record VenueReviewDto(

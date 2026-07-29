@@ -1,0 +1,12 @@
+<Project Sdk="Dalamud.NET.Sdk/15.0.0">
+  <PropertyGroup>
+    <RootNamespace>AetherOS.Apps.Levemetes</RootNamespace>
+    <AssemblyName>AetherOS.Apps.Levemetes</AssemblyName>
+    <Use_DalamudPackager>false</Use_DalamudPackager>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\AetherOS.Sdk\AetherOS.Sdk.csproj" />
+    <ProjectReference Include="..\AetherLove.AppKit\AetherLove.AppKit.csproj" />
+    <ProjectReference Include="..\AetherLove.Shared\AetherLove.Shared.csproj" />
+  </ItemGroup>
+</Project>

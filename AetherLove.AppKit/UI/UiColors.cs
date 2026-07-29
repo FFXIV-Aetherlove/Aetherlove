@@ -5,6 +5,9 @@ namespace AetherLove.UI;
 /// <summary>Colours (packed 0xAABBGGRR uints and Vector4s) shared by more than one screen.</summary>
 internal static class UiColors
 {
+    /// <summary>Holiday-mode away marker and banner (Teams-style purple).</summary>
+    internal static readonly Vector4 HolidayPurple = new(0.61f, 0.35f, 0.71f, 1f);
+
     /// <summary>Caution accent (amber) for warning text and warning-style modals.</summary>
     internal static readonly Vector4 Amber = new(0.95f, 0.65f, 0.14f, 1f);
 

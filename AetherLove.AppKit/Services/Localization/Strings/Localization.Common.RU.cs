@@ -23,7 +23,7 @@ internal static class CommonRu
         ["common.outdated_body"] = "Вы используете устаревшую версию AetherLove. Сервер больше не поддерживает эту версию, поэтому плагин не может подключиться.",
         ["common.outdated_hint"] = "Обновите плагин в установщике плагинов Dalamud, затем снова откройте AetherLove.",
 
-        ["common.offline_title"] = "AetherLove - не в сети",
+        ["common.offline_title"] = "Сервисы AetherOS сейчас не в сети",
         ["common.offline_body"] = "Сервер, скорее всего, недоступен из-за обновления или технических работ. Восстановление соединения не займёт больше пары минут!",
         ["common.offline_reconnecting"] = "Повторное подключение…",
         ["common.offline_taking_long"] = "Это занимает больше времени, чем обычно. Посетите наш Discord-сервер, чтобы узнать актуальный статус.",
@@ -75,7 +75,7 @@ internal static class CommonRu
         ["common.undeclared_photo_title"] = "Требуется отметка",
         ["common.undeclared_photo_body"] = "Прежде чем загрузить ещё одно фото, вы должны выбрать в поле выбора, является ли ваше другое изображение SFW или NSFW.",
 
-        ["common.changelog_window_title"] = "AetherLove — Что нового",
+        ["common.changelog_window_title"] = "AetherLove: Что нового",
         ["common.whats_new"] = "Что нового",
         ["common.changelog_empty"] = "Записей в списке изменений нет.",
         ["common.changelog_latest"] = "Последнее",
@@ -120,8 +120,8 @@ internal static class CommonRu
         // Image requirements modal
         ["common.img_requirements_title"] = "Изображение нельзя использовать",
         ["common.img_invalid"] = "Этот файл не является корректным изображением или его формат не поддерживается.",
-        ["common.img_too_small"] = "Это изображение всего {0}×{1} пикс. — оно слишком маленькое.",
-        ["common.img_requirements_sizes"] = "Для аватаров нужно не менее {0}×{1} пикс., а для фото профиля — не менее {2}×{3} пикс. Выберите изображение покрупнее.",
+        ["common.img_too_small"] = "Это изображение всего {0}×{1} пикс. Оно слишком маленькое.",
+        ["common.img_requirements_sizes"] = "Для аватаров нужно не менее {0}×{1} пикс., а для фото профиля нужно не менее {2}×{3} пикс. Выберите изображение покрупнее.",
 
         // Image crop window
         ["common.loading_image"] = "Загрузка изображения...",
@@ -169,5 +169,8 @@ internal static class CommonRu
         ["common.moderation_message_for"] = "Сообщение для {0}",
         ["common.account_disabled_title"] = "Аккаунт заблокирован",
         ["common.account_disabled_body"] = "Эта функция недоступна, пока ваш аккаунт заблокирован.",
+
+        // added after update 2.0.1
+        ["common.passphrase_correct_unrecoverable"] = "Кодовая фраза верна, но открыть ею сохранённые ключи не получилось. Пожалуйста, свяжитесь с поддержкой, прежде чем сбрасывать фразу: после сброса старые сообщения останутся нечитаемыми навсегда.",
     };
 }

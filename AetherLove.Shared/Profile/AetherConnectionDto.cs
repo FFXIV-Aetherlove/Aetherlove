@@ -65,4 +65,7 @@ public sealed record AetherConnectionDto(
     Enums.NameStyle NameStyle = Enums.NameStyle.None,
     bool ShowSupporterBadge = true,
     Guid ProfileId = default,
-    bool HangoutsEnabled = true);
+    bool HangoutsEnabled = true,
+    bool LevemetesEnabled = true,
+    bool HolidayMode = false,
+    string HolidayMessage = "");

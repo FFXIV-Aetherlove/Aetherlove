@@ -488,6 +488,79 @@ public sealed class MessengerStore
         }
     }
 
+    /// <summary>Author delete: scrub the cached copy down to the tombstone right away (ciphertext leaves this
+    /// device's disk with the push, not at the next sync) and refresh the chat-list denormal from the cached
+    /// conversation. True when the conversation isn't cached here, so the preview may still hold the deleted
+    /// content and a sync should reconcile it.</summary>
+    public bool ApplyMessageDeleted(Guid chatId, Guid messageId)
+    {
+        lock (_lock)
+        {
+            Version++;
+            if (!_conversations.TryGetValue(chatId, out var list))
+            {
+                return true;
+            }
+            for (var i = 0; i < list.Count; i++)
+            {
+                if (list[i].Id == messageId)
+                {
+                    list[i] = list[i] with
+                    {
+                        Ciphertext = [],
+                        Nonce = [],
+                        DeletedAtUtc = DateTimeOffset.UtcNow,
+                        PinnedAtUtc = null,
+                        Reactions = null,
+                        Image = null,
+                    };
+                    break;
+                }
+            }
+            SaveConversationLocked(chatId);
+
+            var lastLive = list.LastOrDefault(m => m.DeletedAtUtc is null);
+            if (_sync is null)
+            {
+                return false;
+            }
+            if (_sync.Contacts.Any(c => c.ContactId == chatId))
+            {
+                _sync = _sync with
+                {
+                    Contacts = _sync.Contacts.Select(c => c.ContactId == chatId
+                        ? c with
+                        {
+                            LastMessageAtUtc = lastLive?.CreatedAtUtc,
+                            LastMessageCiphertext = lastLive?.Ciphertext,
+                            LastMessageNonce = lastLive?.Nonce,
+                            LastMessageFromMe = lastLive is not null && lastLive.SenderAccountId == MyAccountIdLocked(),
+                        }
+                        : c).ToArray(),
+                };
+            }
+            else
+            {
+                _sync = _sync with
+                {
+                    Groups = _sync.Groups.Select(g => g.GroupId == chatId
+                        ? g with
+                        {
+                            LastMessageAtUtc = lastLive?.CreatedAtUtc,
+                            LastMessageCiphertext = lastLive?.Ciphertext,
+                            LastMessageNonce = lastLive?.Nonce,
+                            LastMessageSenderId = lastLive?.SenderAccountId,
+                        }
+                        : g).ToArray(),
+                };
+            }
+            SaveSnapshotLocked();
+            return false;
+        }
+    }
+
+    private Guid MyAccountIdLocked() => _sync?.MyAccountId ?? _owner;
+
     public void ApplyPin(Guid chatId, Guid messageId, DateTimeOffset? pinnedAtUtc)
     {
         lock (_lock)

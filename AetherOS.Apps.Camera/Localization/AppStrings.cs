@@ -18,6 +18,9 @@ internal static class AppStrings
         ["os.camera_edit"] = "Edit",
         ["os.camera_save"] = "Save",
         ["os.camera_use"] = "Use photo",
+
+        // added after update 2.0.1.0 (photos settings)
+        ["os.camera_save_off"] = "Saving to Photos is turned off in Photos settings.",
     };
 
     public static readonly Dictionary<string, string> De = new()
@@ -34,6 +37,9 @@ internal static class AppStrings
         ["os.camera_edit"] = "Bearbeiten",
         ["os.camera_save"] = "Speichern",
         ["os.camera_use"] = "Foto verwenden",
+
+        // added after update 2.0.1.0 (photos settings)
+        ["os.camera_save_off"] = "Das Speichern in Fotos ist in den Fotos-Einstellungen deaktiviert.",
     };
 
     public static readonly Dictionary<string, string> Es = new()
@@ -50,6 +56,9 @@ internal static class AppStrings
         ["os.camera_edit"] = "Editar",
         ["os.camera_save"] = "Guardar",
         ["os.camera_use"] = "Usar foto",
+
+        // added after update 2.0.1.0 (photos settings)
+        ["os.camera_save_off"] = "Guardar en Fotos está desactivado en los ajustes de Fotos.",
     };
 
     public static readonly Dictionary<string, string> Fr = new()
@@ -66,6 +75,9 @@ internal static class AppStrings
         ["os.camera_edit"] = "Modifier",
         ["os.camera_save"] = "Enregistrer",
         ["os.camera_use"] = "Utiliser la photo",
+
+        // added after update 2.0.1.0 (photos settings)
+        ["os.camera_save_off"] = "L'enregistrement dans Photos est désactivé dans les réglages Photos.",
     };
 
     public static readonly Dictionary<string, string> Pt = new()
@@ -82,6 +94,9 @@ internal static class AppStrings
         ["os.camera_edit"] = "Editar",
         ["os.camera_save"] = "Salvar",
         ["os.camera_use"] = "Usar foto",
+
+        // added after update 2.0.1.0 (photos settings)
+        ["os.camera_save_off"] = "Salvar em Fotos está desativado nas configurações do app Fotos.",
     };
 
     public static readonly Dictionary<string, string> Ru = new()
@@ -98,6 +113,9 @@ internal static class AppStrings
         ["os.camera_edit"] = "Редактировать",
         ["os.camera_save"] = "Сохранить",
         ["os.camera_use"] = "Использовать",
+
+        // added after update 2.0.1.0 (photos settings)
+        ["os.camera_save_off"] = "Сохранение в Фото отключено в настройках приложения.",
     };
 
     public static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> Packs =

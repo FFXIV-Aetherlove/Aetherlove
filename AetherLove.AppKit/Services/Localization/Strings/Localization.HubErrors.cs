@@ -87,5 +87,20 @@ internal static class HubErrorsEn
         ["huberror.msgr_storage_full"] = "Your image storage is full. Delete some images or wait for older ones to expire, then try again.",
         ["huberror.msgr_image_too_large"] = "That image is too large.",
         ["huberror.msgr_image_invalid"] = "That image couldn't be read.",
+        // levemetes (added after update 2.0.1)
+        ["huberror.levemetes_disabled"] = "Levemetes is currently disabled.",
+        ["huberror.leve_not_found"] = "This listing no longer exists.",
+        ["huberror.leve_invalid"] = "The ad could not be saved. Please check your entries.",
+        ["huberror.leve_limit_reached"] = "You already have {0} ads. Delete one or let one expire first.",
+        ["huberror.leve_too_long"] = "That text is too long (max {0} characters).",
+        ["huberror.leve_image_rejected"] = "This picture can't be uploaded. Pick a different one, or contact support if you believe this is a mistake.",
+        ["huberror.leve_review_own"] = "You can't review your own ad.",
+        ["huberror.leve_review_too_long"] = "Your review is too long (max {0} characters).",
+        ["huberror.leve_review_rating_invalid"] = "Pick a star rating between 1 and 5.",
+        ["huberror.leve_reviews_disabled"] = "The poster has turned off reviews on this ad.",
+        ["huberror.leve_renew_too_soon"] = "This ad was renewed recently. Try again later.",
+        // holiday mode (added after update 2.0.1)
+        ["huberror.holiday_message_too_long"] = "Your holiday message is too long (max {0} characters).",
+        ["huberror.holiday_message_invalid"] = "This holiday message can't be used. Please reword it.",
     };
 }

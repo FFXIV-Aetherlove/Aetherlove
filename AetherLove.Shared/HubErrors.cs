@@ -94,6 +94,24 @@ public static class HubErrors
     /// <summary>Arg 0: max visible characters.</summary>
     public const string HangoutDescriptionTooLong = "hangout_description_too_long";
 
+    public const string LevemetesDisabled = "levemetes_disabled";
+    public const string LeveNotFound = "leve_not_found";
+    public const string LeveInvalid = "leve_invalid";
+    /// <summary>Arg 0: the live-ad cap.</summary>
+    public const string LeveLimitReached = "leve_limit_reached";
+    /// <summary>Arg 0: max visible characters.</summary>
+    public const string LeveTooLong = "leve_too_long";
+    public const string LeveImageRejected = "leve_image_rejected";
+    public const string LeveReviewOwn = "leve_review_own";
+    /// <summary>Arg 0: max visible characters.</summary>
+    public const string LeveReviewTooLong = "leve_review_too_long";
+    public const string LeveReviewRatingInvalid = "leve_review_rating_invalid";
+    public const string LeveReviewsDisabled = "leve_reviews_disabled";
+    public const string LeveRenewTooSoon = "leve_renew_too_soon";
+
+    public const string HolidayMessageTooLong = "holiday_message_too_long";
+    public const string HolidayMessageInvalid = "holiday_message_invalid";
+
     public const string MessengerDisabled = "messenger_disabled";
     public const string MsgrCodeNotFound = "msgr_code_not_found";
     public const string MsgrSelf = "msgr_self";

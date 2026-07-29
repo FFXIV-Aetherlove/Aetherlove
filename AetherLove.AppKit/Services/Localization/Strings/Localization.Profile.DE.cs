@@ -24,7 +24,7 @@ internal static class ProfileDe
         ["profile.favourite_song"] = "Lieblingslied",
         ["music.fetching"] = "Songname wird abgerufen…",
         ["music.saved"] = "Link gespeichert (Name ausstehend)",
-        ["music.invalid"] = "Dieser Link konnte nicht gelesen werden — füge einen Songlink von Spotify, SoundCloud, Apple Music oder YouTube Music ein.",
+        ["music.invalid"] = "Dieser Link konnte nicht gelesen werden. Füge einen Songlink von Spotify, SoundCloud, Apple Music oder YouTube Music ein.",
         ["music.open_tooltip"] = "Zum Öffnen klicken",
         ["profile.favourite_movie"] = "Lieblingsfilm",
         ["profile.favourite_anime"] = "Lieblings-Anime",
@@ -51,7 +51,7 @@ internal static class ProfileDe
         ["profile.cancel"] = "Abbrechen",
         ["profile.submit_report"] = "Meldung einreichen",
         ["profile.report_submitted"] = "Meldung eingereicht",
-        ["profile.report_thanks"] = "Danke — unsere Moderatoren werden sich das ansehen. Du siehst dieses Profil erst wieder, wenn du ein neues aus dem Deck ziehst.",
+        ["profile.report_thanks"] = "Danke, unsere Moderatoren sehen sich das an. Dieses Profil erscheint nicht mehr in deinem Deck.",
         ["profile.closing"] = "Wird geschlossen…",
         ["profile.closing_in"] = "Schließt in {0} Sekunden",
         ["profile.close"] = "Schließen",
@@ -59,7 +59,7 @@ internal static class ProfileDe
         // ProfileScreen - copy profile text (viewing others only)
         ["profile.copy_text"] = "Profiltext kopieren",
         ["profile.copy_warning_title"] = "Warnung",
-        ["profile.copy_warning_body"] = "Du hast den Text einer anderen Person kopiert. Sei vorsichtig, wenn du darin enthaltene Links anklickst oder ihnen folgst — das geschieht auf eigene Gefahr.",
+        ["profile.copy_warning_body"] = "Du hast den Text einer anderen Person kopiert. Sei vorsichtig, wenn du darin enthaltene Links anklickst oder ihnen folgst. Das geschieht auf eigene Gefahr.",
         ["profile.copy_warning_agree"] = "Ich habe verstanden und stimme zu",
 
         // MyProfileScreen hub: stats + menu
@@ -199,8 +199,8 @@ internal static class ProfileDe
         ["profile.menu_sup_stats"] = "Extra-Statistiken",
         ["profile.sup_intro"] = "Danke, dass du AetherLove unterstützt! Wähle einen Stil für deinen Namen und ob du das Supporter-Abzeichen zeigen willst. Beides ist für alle sichtbar.",
         ["profile.sup_name_style"] = "Namensstil",
-        ["profile.sup_show_badge"] = "Supporter-Abzeichen anzeigen",
-        ["profile.sup_badge_hint"] = "Zeigt den Supporter-Tag auf deinem Profil. Der Stern neben deinem Namen wird immer angezeigt.",
+        ["profile.sup_show_badge"] = "Meinen Supporter-Status anzeigen",
+        ["profile.sup_badge_hint"] = "Wenn aus, sieht niemand deinen Supporter-Stern oder dein Abzeichen: weder auf deinen Profilen noch in Chats oder Hangouts, und auch deine eigene Profilvorschau blendet sie aus. Deine Supporter-Vorteile funktionieren weiter. Gilt für dein ganzes Konto.",
         ["profile.sup_stats_intro"] = "Exklusive Supporter-Einblicke, wie dein Profil im ganzen Reich ankommt.",
         ["profile.sup_stat_likes_received"] = "Erhaltene Likes",
         ["profile.sup_stat_superlikes"] = "Erhaltene Superlikes",
@@ -221,5 +221,23 @@ internal static class ProfileDe
         ["profile.style_rainbow"] = "Regenbogen (animiert)",
         ["profile.style_shimmer"] = "Goldschimmer (animiert)",
         ["profile.style_pulse"] = "Rosé-Puls (animiert)",
+
+        // added after update 2.0.1
+        ["profile.more_options"] = "Weitere Optionen",
+        ["profile.menu_hide"] = "Dieses Profil ausblenden",
+        ["profile.menu_report"] = "Dieses Profil melden",
+        ["profile.hide_title"] = "Profil ausblenden?",
+        ["profile.hide_body"] = "Du siehst dieses Profil nie wieder in deinem Deck. Das lässt sich nicht rückgängig machen.",
+        ["profile.hide_confirm"] = "Dauerhaft ausblenden",
+        // holiday mode (added after update 2.0.1)
+        ["profile.menu_holiday"] = "Urlaubsmodus",
+        ["profile.holiday_toggle"] = "Urlaubsmodus aktiv",
+        ["profile.holiday_msg_label"] = "Urlaubsnachricht",
+        ["profile.holiday_msg_hint"] = "Solange der Urlaubsmodus aktiv ist, sehen alle Besucher deines Profils ein Abwesenheitsbanner mit deiner Nachricht, und deine Matches sehen eine Abwesenheitsmarkierung auf deinem Bild.",
+        ["profile.holiday_save"] = "Speichern",
+        ["profile.holiday_saved"] = "Gespeichert!",
+        ["profile.holiday_active_banner"] = "URLAUBSMODUS AKTIV",
+        ["profile.holiday_banner"] = "Diese Person hat den Urlaubsmodus aktiviert: {0}",
+        ["profile.holiday_banner_short"] = "Diese Person hat den Urlaubsmodus aktiviert.",
     };
 }

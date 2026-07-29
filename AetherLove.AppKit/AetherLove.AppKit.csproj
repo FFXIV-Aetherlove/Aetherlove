@@ -10,15 +10,18 @@
     <InternalsVisibleTo Include="AetherOS.Shell" />
     <InternalsVisibleTo Include="AetherOS.Apps.Hangouts" />
     <InternalsVisibleTo Include="AetherOS.Apps.Places" />
+    <InternalsVisibleTo Include="AetherOS.Apps.Levemetes" />
     <InternalsVisibleTo Include="AetherOS.Apps.Settings" />
     <InternalsVisibleTo Include="AetherOS.Apps.News" />
     <InternalsVisibleTo Include="AetherOS.Apps.Feedback" />
     <InternalsVisibleTo Include="AetherOS.Apps.Love" />
     <InternalsVisibleTo Include="AetherOS.Apps.Messenger" />
+    <InternalsVisibleTo Include="AetherOS.Apps.Market" />
+    <InternalsVisibleTo Include="AetherOS.Apps.Realtor" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="System.Windows.Extensions" Version="10.0.10" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.10" />
+    <PackageReference Include="NAudio" Version="2.2.1" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\AetherLove.Shared\AetherLove.Shared.csproj" />
