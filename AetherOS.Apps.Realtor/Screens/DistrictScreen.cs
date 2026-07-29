@@ -85,7 +85,7 @@ internal sealed class DistrictScreen
     }
 
     private static List<PaissaPlot> SortPlots(List<PaissaPlot> plots) =>
-        [.. plots.OrderByDescending(p => p.Size).ThenByDescending(p => p.Price).ThenBy(p => p.WardNumber).ThenBy(p => p.PlotNumber)];
+        [.. plots.OrderBy(p => p.WardNumber).ThenBy(p => p.PlotNumber)];
 
     public void Draw(OsAppContext ctx)
     {
@@ -133,7 +133,7 @@ internal sealed class DistrictScreen
     private void DrawPlotRow(PaissaPlot plot, float winW)
     {
         var cardW = winW - Px(PadX) * 2f;
-        var cardH = Px(60f);
+        var cardH = Px(72f);
         ImGui.SetCursorPosX(Px(PadX));
         var tl = ImGui.GetCursorScreenPos();
         var dl = ImGui.GetWindowDrawList();
@@ -153,9 +153,10 @@ internal sealed class DistrictScreen
             ImGui.GetColorU32(sizeColor), sizeLabel);
 
         var textX = tl.X + Px(10f) + chip + Px(10f);
-        var line1Y = tl.Y + Px(9f);
         var lineH = ImGui.GetTextLineHeight();
-        var line2Y = tl.Y + cardH - lineH - Px(9f);
+        var lineGap = Px(6f);
+        var line1Y = tl.Y + (cardH - (lineH * 2f + lineGap)) * 0.5f;
+        var line2Y = line1Y + lineH + lineGap;
 
         var price = $"{MarketFormat.GilFull(plot.Price)} gil";
         var priceSz = ImGui.CalcTextSize(price);
@@ -199,22 +200,19 @@ internal sealed class DistrictScreen
         ImGui.Dummy(new Vector2(0f, cardH + Px(6f)));
     }
 
+    /// <summary>The per-plot status. The phase countdown is deliberately absent: it is identical for every
+    /// plot on the world, so the home screen shows it once instead of truncating it on every row.</summary>
     private static (string Text, Vector4 Color) StatusLine(PaissaPlot plot)
     {
         if (!plot.IsLottery)
         {
             return (Loc.T("os.realtor_fcfs"), UiColors.Body);
         }
-        var untilText = plot.PhaseUntil is { } until && until > DateTimeOffset.UtcNow
-            ? RealtorUi.FormatSpan(until - DateTimeOffset.UtcNow)
-            : null;
         switch (plot.LottoPhase)
         {
             case PaissaLottoPhase.Accepting:
             {
-                var text = untilText is null
-                    ? Loc.T("os.realtor_lotto_accepting_open")
-                    : Loc.T("os.realtor_lotto_accepting", untilText);
+                var text = Loc.T("os.realtor_lotto_accepting_open");
                 if (plot.LottoEntries is { } entries)
                 {
                     text += " · " + Loc.T("os.realtor_entries", entries);
@@ -222,9 +220,7 @@ internal sealed class DistrictScreen
                 return (text, UiColors.LiveGreen);
             }
             case PaissaLottoPhase.Results:
-                return (untilText is null
-                    ? Loc.T("os.realtor_lotto_results_open")
-                    : Loc.T("os.realtor_lotto_results", untilText), new Vector4(0.95f, 0.78f, 0.35f, 1f));
+                return (Loc.T("os.realtor_lotto_results_open"), new Vector4(0.95f, 0.78f, 0.35f, 1f));
             default:
                 return (Loc.T("os.realtor_lotto_unavailable"), UiColors.Hint);
         }

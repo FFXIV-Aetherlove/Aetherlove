@@ -161,6 +161,7 @@ internal sealed class HomeScreen
             return;
         }
 
+        DrawPhaseCard(detail, winW);
         DrawHero(detail, winW);
         ImGui.Dummy(new Vector2(0f, Px(10f)));
         ImGui.SetCursorPosX(Px(PadX));
@@ -225,6 +226,42 @@ internal sealed class HomeScreen
         {
             _openWorldPick();
         }
+    }
+
+    /// <summary>The world's lottery phase and its live countdown, above the open-plot hero.</summary>
+    private static void DrawPhaseCard(PaissaWorldDetail detail, float winW)
+    {
+        if (RealtorUi.FindLotteryPhase(detail) is not { } lottery)
+        {
+            return;
+        }
+        var cardW = winW - Px(PadX) * 2f;
+        var lineH = ImGui.GetTextLineHeight();
+        var rowGap = Px(6f);
+        var cardH = lineH * 2f + rowGap + Px(22f);
+        ImGui.SetCursorPosX(Px(PadX));
+        var tl = ImGui.GetCursorScreenPos();
+        var dl = ImGui.GetWindowDrawList();
+        dl.AddRectFilled(tl, tl + new Vector2(cardW, cardH), ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.05f)), Px(14f));
+
+        var (phaseText, phaseColor) = RealtorUi.PhaseLabel(lottery.Phase);
+        var remaining = lottery.Until is { } until && until > DateTimeOffset.UtcNow
+            ? RealtorUi.FormatSpan(until - DateTimeOffset.UtcNow)
+            : "—";
+
+        DrawPhaseRow(dl, tl, cardW, tl.Y + Px(11f), Loc.T("os.realtor_phase_label"), phaseText, phaseColor);
+        DrawPhaseRow(dl, tl, cardW, tl.Y + Px(11f) + lineH + rowGap, Loc.T("os.realtor_time_label"), remaining,
+            UiColors.Body);
+
+        ImGui.Dummy(new Vector2(0f, cardH + Px(8f)));
+    }
+
+    private static void DrawPhaseRow(ImDrawListPtr dl, Vector2 tl, float cardW, float y, string label, string value,
+        Vector4 valueColor)
+    {
+        dl.AddText(new Vector2(tl.X + Px(14f), y), ImGui.GetColorU32(UiColors.Hint), label);
+        var valueSz = ImGui.CalcTextSize(value);
+        dl.AddText(new Vector2(tl.X + cardW - valueSz.X - Px(14f), y), ImGui.GetColorU32(valueColor), value);
     }
 
     private void DrawHero(PaissaWorldDetail detail, float winW)

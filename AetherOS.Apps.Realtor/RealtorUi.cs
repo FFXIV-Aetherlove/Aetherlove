@@ -2,6 +2,7 @@ using System;
 using System.Numerics;
 using AetherLove.Services;
 using AetherLove.Services.Localization;
+using AetherLove.Services.Realtor;
 using AetherLove.UI;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -86,6 +87,34 @@ internal static class RealtorUi
         }
         return $"{Math.Max((int)span.TotalMinutes, 1)}{Loc.T("os.realtor_unit_m")}";
     }
+
+    /// <summary>The world's lottery phase, read off any lottery plot: the cycle is world-wide, so every plot
+    /// carries the same phase and deadline. Null when no open lottery plot reported one.</summary>
+    public static (int Phase, DateTimeOffset? Until)? FindLotteryPhase(PaissaWorldDetail detail)
+    {
+        foreach (var district in detail.Districts)
+        {
+            if (district.OpenPlots is not { } plots)
+            {
+                continue;
+            }
+            foreach (var plot in plots)
+            {
+                if (plot.LottoPhase is { } phase)
+                {
+                    return (phase, plot.PhaseUntil);
+                }
+            }
+        }
+        return null;
+    }
+
+    public static (string Text, Vector4 Color) PhaseLabel(int phase) => phase switch
+    {
+        PaissaLottoPhase.Accepting => (Loc.T("os.realtor_lotto_accepting_open"), UiColors.LiveGreen),
+        PaissaLottoPhase.Results => (Loc.T("os.realtor_lotto_results_open"), new Vector4(0.95f, 0.78f, 0.35f, 1f)),
+        _ => (Loc.T("os.realtor_lotto_unavailable"), UiColors.Hint),
+    };
 
     /// <summary>The shared filter pill row (S/M/L plus FC/personal), drawn at the current cursor.
     /// Toggles write straight into <paramref name="filters"/>.</summary>
