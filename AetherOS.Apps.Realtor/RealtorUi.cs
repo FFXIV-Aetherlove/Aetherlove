@@ -88,10 +88,14 @@ internal static class RealtorUi
         return $"{Math.Max((int)span.TotalMinutes, 1)}{Loc.T("os.realtor_unit_m")}";
     }
 
-    /// <summary>The world's lottery phase, read off any lottery plot: the cycle is world-wide, so every plot
-    /// carries the same phase and deadline. Null when no open lottery plot reported one.</summary>
+    /// <summary>The world's lottery phase. The cycle itself is world-wide, but each plot only carries the
+    /// phase a scout saw when they last walked past it, so this takes the most recently updated plot rather
+    /// than the first one: an unvisited plot can still be reporting the previous cycle. Null when no open
+    /// lottery plot reported a phase.</summary>
     public static (int Phase, DateTimeOffset? Until)? FindLotteryPhase(PaissaWorldDetail detail)
     {
+        (int Phase, DateTimeOffset? Until)? best = null;
+        var bestObservedAt = DateTimeOffset.MinValue;
         foreach (var district in detail.Districts)
         {
             if (district.OpenPlots is not { } plots)
@@ -100,13 +104,18 @@ internal static class RealtorUi
             }
             foreach (var plot in plots)
             {
-                if (plot.LottoPhase is { } phase)
+                if (plot.LottoPhase is not { } phase)
                 {
-                    return (phase, plot.PhaseUntil);
+                    continue;
+                }
+                if (best is null || plot.LastUpdatedAt > bestObservedAt)
+                {
+                    best = (phase, plot.PhaseUntil);
+                    bestObservedAt = plot.LastUpdatedAt;
                 }
             }
         }
-        return null;
+        return best;
     }
 
     public static (string Text, Vector4 Color) PhaseLabel(int phase) => phase switch

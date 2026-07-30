@@ -227,7 +227,7 @@ internal static class OsFr
         ["os.battery_grass_settings_hint"] = "(Vous pouvez désactiver cette blague dans Général, dans l'app Réglages)",
 
         // added after update 2.0.1
-        ["os.menu_audio"] = "ParamÃ¨tres audio",
+        ["os.menu_audio"] = "Paramètres audio",
         ["os.app_market"] = "Marché",
         ["os.app_realtor"] = "Immobilier",
     };

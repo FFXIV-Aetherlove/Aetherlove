@@ -231,13 +231,13 @@ internal static class SettingsDe
         ["settings.time_12h"] = "12-Stunden",
 
         // added after update 2.0.1
-        ["settings.audio_sounds_off"] = "BenachrichtigungstÃ¶ne sind derzeit deaktiviert.",
-        ["settings.audio_sounds_enable"] = "BenachrichtigungstÃ¶ne aktivieren",
-        ["settings.audio_volume"] = "BenachrichtigungslautstÃ¤rke",
-        ["settings.audio_device"] = "AusgabegerÃ¤t",
+        ["settings.audio_sounds_off"] = "Benachrichtigungstöne sind derzeit deaktiviert.",
+        ["settings.audio_sounds_enable"] = "Benachrichtigungstöne aktivieren",
+        ["settings.audio_volume"] = "Benachrichtigungslautstärke",
+        ["settings.audio_device"] = "Ausgabegerät",
         ["settings.audio_device_default"] = "Systemstandard",
         ["settings.audio_test"] = "Testton abspielen",
-        ["settings.audio_test_ok"] = "LÃ¤uft! Wenn du nichts hÃ¶rst, probiere oben ein anderes AusgabegerÃ¤t.",
+        ["settings.audio_test_ok"] = "Läuft! Wenn du nichts hörst, probiere oben ein anderes Ausgabegerät.",
         ["settings.font_header"] = "Schriftart",
         ["settings.font_caption"] = "Gilt für den gesamten Text auf dem Handy. Zeichen, die einer Schrift fehlen, nutzen die Standardschrift.",
         ["settings.font_default"] = "Standard",

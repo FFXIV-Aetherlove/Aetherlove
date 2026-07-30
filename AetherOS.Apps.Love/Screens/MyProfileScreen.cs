@@ -686,13 +686,16 @@ public partial class MyProfileScreen
         ImGui.TextColored(muted, Loc.T("profile.content_hint"));
         ImGui.Spacing();
         var ContentCol = Px(185f);
+        var contentStartX = ImGui.GetCursorPosX();
+        var contentColW = MathF.Min(ContentCol - contentStartX,
+            ImGui.GetWindowSize().X - ContentCol - Px(12f)) - Px(6f);
         for (int i = 0; i < ContentLabels.Length; i++)
         {
             if (i % 2 == 1)
             {
                 ImGui.SameLine(ContentCol);
             }
-            ImGui.Checkbox($"{ContentLabels[i]}##edCi{i}", ref _contentInterests[i]);
+            CheckboxTruncated($"edCi{i}", ContentLabels[i], ref _contentInterests[i], contentColW);
         }
         ImGui.Spacing();
 

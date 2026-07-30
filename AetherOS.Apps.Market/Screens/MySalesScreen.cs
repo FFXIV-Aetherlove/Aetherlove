@@ -51,8 +51,8 @@ internal sealed class MySalesScreen
         }
         ImGui.Spacing();
 
-        var snapshots = _desk.Snapshots;
-        if (snapshots.Count == 0)
+        var characters = _desk.Characters;
+        if (characters.Count == 0)
         {
             DrawEmptyState(winW);
             return;
@@ -66,10 +66,20 @@ internal sealed class MySalesScreen
             {
                 var innerW = ImGui.GetWindowSize().X;
                 DrawLegend(innerW);
-                foreach (var snapshot in snapshots)
+                // One section per character: the log spans every character that has visited a bell, so a
+                // heading is only noise when there is a single one.
+                var showHeadings = characters.Count > 1;
+                foreach (var character in characters)
                 {
-                    DrawRetainerCard(snapshot, innerW, ctx.ReduceMotion);
-                    ImGui.Dummy(new Vector2(0f, Px(10f)));
+                    if (showHeadings)
+                    {
+                        DrawCharacterHeading(character, innerW);
+                    }
+                    foreach (var snapshot in character.Retainers)
+                    {
+                        DrawRetainerCard(snapshot, innerW, ctx.ReduceMotion);
+                        ImGui.Dummy(new Vector2(0f, Px(10f)));
+                    }
                 }
                 DrawSales(innerW);
                 ImGui.Dummy(new Vector2(0f, Px(14f)));
@@ -77,6 +87,21 @@ internal sealed class MySalesScreen
         }
         PopScrollbarStyle();
         _entrance.EndFrame();
+    }
+
+    private static void DrawCharacterHeading(MarketCharacterRetainers character, float winW)
+    {
+        var t = ThemeService.Current;
+        var name = character.Name.Length > 0 ? character.Name : Loc.T("os.market_character_unknown");
+        var label = character.World.Length > 0 ? $"{name} · {character.World}" : name;
+
+        ImGui.SetCursorPosX(Px(PadX));
+        using (UiFonts.H3?.Push())
+        {
+            ImGui.TextColored(character.IsCurrent ? t.AccentLight : UiColors.Body,
+                TruncateToWidth(label, winW - Px(PadX) * 2f));
+        }
+        ImGui.Dummy(new Vector2(0f, Px(4f)));
     }
 
     private static void DrawLegend(float winW)

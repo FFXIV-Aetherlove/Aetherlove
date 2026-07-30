@@ -221,13 +221,13 @@ internal static class SettingsFr
         ["settings.time_12h"] = "12 heures",
 
         // added after update 2.0.1
-        ["settings.audio_sounds_off"] = "Les sons de notification sont actuellement dÃ©sactivÃ©s.",
+        ["settings.audio_sounds_off"] = "Les sons de notification sont actuellement désactivés.",
         ["settings.audio_sounds_enable"] = "Activer les sons de notification",
         ["settings.audio_volume"] = "Volume des notifications",
-        ["settings.audio_device"] = "PÃ©riphÃ©rique de sortie",
-        ["settings.audio_device_default"] = "DÃ©faut du systÃ¨me",
+        ["settings.audio_device"] = "Périphérique de sortie",
+        ["settings.audio_device_default"] = "Défaut du système",
         ["settings.audio_test"] = "Jouer un son de test",
-        ["settings.audio_test_ok"] = "Lecture en cours ! Si vous n'entendez rien, essayez un autre pÃ©riphÃ©rique de sortie ci-dessus.",
+        ["settings.audio_test_ok"] = "Lecture en cours ! Si vous n'entendez rien, essayez un autre périphérique de sortie ci-dessus.",
         ["settings.font_header"] = "Police",
         ["settings.font_caption"] = "S'applique à tout le texte du téléphone. Les caractères absents d'une police utilisent la police par défaut.",
         ["settings.font_default"] = "Par défaut",

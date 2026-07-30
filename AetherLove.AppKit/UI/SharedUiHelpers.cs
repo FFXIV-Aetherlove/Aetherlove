@@ -100,6 +100,21 @@ internal static class SharedUiHelpers
         }
     }
 
+    /// <summary>A checkbox for a fixed-width column: the label is ellipsized to fit and the full text shows
+    /// on hover. Option labels run much longer in some languages (German especially) and would otherwise
+    /// spill under the next column. <paramref name="columnWidth"/> is the whole column, box included.</summary>
+    internal static bool CheckboxTruncated(string id, string label, ref bool value, float columnWidth)
+    {
+        var room = columnWidth - ImGui.GetFrameHeight() - ImGui.GetStyle().ItemInnerSpacing.X;
+        var fitted = TruncateToWidth(label, room);
+        var changed = ImGui.Checkbox($"{fitted}##{id}", ref value);
+        if (!string.Equals(fitted, label, StringComparison.Ordinal) && ImGui.IsItemHovered())
+        {
+            ImGui.SetTooltip(label);
+        }
+        return changed;
+    }
+
     internal static string TruncateToWidth(string text, float maxWidth)
     {
         if (string.IsNullOrEmpty(text))

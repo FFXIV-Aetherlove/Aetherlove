@@ -227,7 +227,7 @@ internal static class OsRu
         ["os.battery_grass_settings_hint"] = "(Эту шутку можно отключить в разделе «Общие» приложения «Настройки»)",
 
         // added after update 2.0.1
-        ["os.menu_audio"] = "ÐÐ°ÑÑÑÐ¾Ð¹ÐºÐ¸ Ð·Ð²ÑÐºÐ°",
+        ["os.menu_audio"] = "Настройки звука",
         ["os.app_market"] = "Маркет",
         ["os.app_realtor"] = "Риелтор",
     };

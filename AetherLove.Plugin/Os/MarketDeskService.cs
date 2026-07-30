@@ -16,17 +16,37 @@ namespace AetherLove.Os;
 
 /// <summary>Captures the player's own retainers for the Market app. The roster (names, gil, listing
 /// counts, expiry) is read from RetainerManager whenever the summoning bell list opens; a retainer's 20
-/// market slots and their prices are read while that retainer is summoned. Snapshots persist per character,
-/// sales are inferred by diffing snapshots against the retainer's gil delta, and undercuts are checked
-/// against cached Universalis minimums plus prices observed while the player browses any market board.
-/// Deliberately hook-free and strictly read-only; every game read is try/caught so a game patch degrades to
-/// "scan unavailable" instead of breaking the app.</summary>
+/// market slots and their prices are read while that retainer is summoned. Snapshots accumulate in one book
+/// keyed by character, so every character on the account keeps its own retainer log and logging in elsewhere
+/// never discards the others. Sales are inferred by diffing snapshots against the retainer's gil delta, and
+/// undercuts are checked across every character's listings against cached Universalis minimums plus prices
+/// observed while the player browses any market board. Deliberately hook-free and strictly read-only; every
+/// game read is try/caught so a game patch degrades to "scan unavailable" instead of breaking the app.</summary>
 public sealed class MarketDeskService : IMarketDesk, IDisposable
 {
     private const int MarketSlots = 20;
     private const int SalesCap = 50;
+    private const string BookKey = "characters";
 
-    private sealed class DeskFile
+    /// <summary>One in-game character's retainers and inferred sales.</summary>
+    private sealed class DeskCharacter
+    {
+        public ulong ContentId { get; set; }
+        public string Name { get; set; } = "";
+        public string World { get; set; } = "";
+        public DateTimeOffset? LastSeen { get; set; }
+        public List<MarketRetainerSnapshot> Retainers { get; set; } = [];
+        public List<MarketInferredSale> Sales { get; set; } = [];
+    }
+
+    private sealed class DeskBook
+    {
+        public List<DeskCharacter> Characters { get; set; } = [];
+    }
+
+    /// <summary>The pre-character-book layout, stored one blob per character under <c>retainers:{id}</c>.
+    /// Read once per character and folded into the book so nobody loses their scan history.</summary>
+    private sealed class LegacyDeskFile
     {
         public List<MarketRetainerSnapshot> Retainers { get; set; } = [];
         public List<MarketInferredSale> Sales { get; set; } = [];
@@ -37,8 +57,9 @@ public sealed class MarketDeskService : IMarketDesk, IDisposable
     private readonly MarketItemIndex _index;
     private readonly object _gate = new();
     private readonly ConcurrentDictionary<uint, (long Min, long SeenAt)> _observedMins = new();
-    private DeskFile _file = new();
-    private ulong _loadedContentId;
+    private readonly HashSet<ulong> _legacyProbed = [];
+    private DeskBook _book = new();
+    private bool _bookLoaded;
     private volatile bool _captureSeen;
     private Dictionary<uint, long> _undercuts = [];
     private int _refreshing;
@@ -91,14 +112,47 @@ public sealed class MarketDeskService : IMarketDesk, IDisposable
 
     public bool CaptureReady => _captureSeen || Snapshots.Count > 0;
 
+    /// <summary>Every character's retainers, current character first, then most recently seen.</summary>
+    public IReadOnlyList<MarketCharacterRetainers> Characters
+    {
+        get
+        {
+            var currentId = CurrentContentId();
+            lock (_gate)
+            {
+                EnsureBookLoadedLocked();
+                return
+                [
+                    .. _book.Characters
+                        .Where(c => c.Retainers.Count > 0)
+                        .OrderByDescending(c => c.ContentId == currentId && currentId != 0)
+                        .ThenByDescending(c => c.LastSeen ?? DateTimeOffset.MinValue)
+                        .Select(c => new MarketCharacterRetainers(
+                            c.ContentId,
+                            c.Name,
+                            c.World,
+                            c.ContentId == currentId && currentId != 0,
+                            c.LastSeen,
+                            [.. c.Retainers.OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase)])),
+                ];
+            }
+        }
+    }
+
+    /// <summary>Every retainer across every known character, for totals that span the whole account.</summary>
     public IReadOnlyList<MarketRetainerSnapshot> Snapshots
     {
         get
         {
             lock (_gate)
             {
-                EnsureLoadedLocked();
-                return [.. _file.Retainers.OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase)];
+                EnsureBookLoadedLocked();
+                return
+                [
+                    .. _book.Characters
+                        .OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
+                        .SelectMany(c => c.Retainers.OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase)),
+                ];
             }
         }
     }
@@ -109,8 +163,14 @@ public sealed class MarketDeskService : IMarketDesk, IDisposable
         {
             lock (_gate)
             {
-                EnsureLoadedLocked();
-                return [.. _file.Sales];
+                EnsureBookLoadedLocked();
+                return
+                [
+                    .. _book.Characters
+                        .SelectMany(c => c.Sales)
+                        .OrderByDescending(s => s.ObservedAt)
+                        .Take(SalesCap),
+                ];
             }
         }
     }
@@ -150,25 +210,106 @@ public sealed class MarketDeskService : IMarketDesk, IDisposable
         }
     }
 
-    private string StorageKey(ulong contentId) => $"retainers:{contentId:X}";
+    /// <summary>The logged-in character's name and home world. Only valid on the framework thread, which is
+    /// where every capture path runs.</summary>
+    private static (string Name, string World) CurrentIdentity()
+    {
+        try
+        {
+            var player = Plugin.ObjectTable.LocalPlayer;
+            if (player is null)
+            {
+                return ("", "");
+            }
+            var world = string.Empty;
+            try
+            {
+                world = player.HomeWorld.Value.Name.ExtractText();
+            }
+            catch
+            {
+                // A missing world row is cosmetic; the character still logs under its name.
+            }
+            return (player.Name.TextValue, world);
+        }
+        catch
+        {
+            return ("", "");
+        }
+    }
 
-    private void EnsureLoadedLocked()
+    private static string LegacyStorageKey(ulong contentId) => $"retainers:{contentId:X}";
+
+    private void EnsureBookLoadedLocked()
+    {
+        if (!_bookLoaded)
+        {
+            _book = _storage.Get<DeskBook>(BookKey) ?? new DeskBook();
+            _bookLoaded = true;
+        }
+        ImportLegacyForCurrentLocked();
+    }
+
+    /// <summary>Folds this character's pre-book blob into the log on first read, so an existing user sees
+    /// their retainers immediately instead of only after their next bell visit. Name and world stay blank
+    /// until a capture fills them, because those need the framework thread and reads can come off it.</summary>
+    private void ImportLegacyForCurrentLocked()
     {
         var contentId = CurrentContentId();
-        if (contentId == 0 || contentId == _loadedContentId)
+        if (contentId == 0 || _book.Characters.Any(c => c.ContentId == contentId)
+            || !_legacyProbed.Add(contentId))
         {
             return;
         }
-        _file = _storage.Get<DeskFile>(StorageKey(contentId)) ?? new DeskFile();
-        _loadedContentId = contentId;
-        _undercuts = [];
+        var legacy = _storage.Get<LegacyDeskFile>(LegacyStorageKey(contentId));
+        if (legacy is null || (legacy.Retainers.Count == 0 && legacy.Sales.Count == 0))
+        {
+            return;
+        }
+        _book.Characters.Add(new DeskCharacter
+        {
+            ContentId = contentId,
+            Retainers = legacy.Retainers,
+            Sales = legacy.Sales,
+            LastSeen = DateTimeOffset.UtcNow,
+        });
+        PersistLocked();
+    }
+
+    /// <summary>The current character's entry, created on first sight. A character that still has a
+    /// pre-book blob has it imported here, once.</summary>
+    private DeskCharacter? CurrentCharacterLocked(string name, string world)
+    {
+        var contentId = CurrentContentId();
+        if (contentId == 0)
+        {
+            return null;
+        }
+        EnsureBookLoadedLocked();
+
+        var character = _book.Characters.FirstOrDefault(c => c.ContentId == contentId);
+        if (character is null)
+        {
+            character = new DeskCharacter { ContentId = contentId };
+            _book.Characters.Add(character);
+        }
+        if (name.Length > 0)
+        {
+            character.Name = name;
+        }
+        if (world.Length > 0)
+        {
+            character.World = world;
+        }
+        character.LastSeen = DateTimeOffset.UtcNow;
+        return character;
     }
 
     private void PersistLocked()
     {
-        if (_loadedContentId != 0)
+        if (_bookLoaded)
         {
-            _storage.Set(StorageKey(_loadedContentId), _file);
+            _storage.Set(BookKey, _book);
         }
     }
 
@@ -196,11 +337,16 @@ public sealed class MarketDeskService : IMarketDesk, IDisposable
         {
             return;
         }
+        var (name, world) = CurrentIdentity();
 
         var changed = false;
         lock (_gate)
         {
-            EnsureLoadedLocked();
+            var character = CurrentCharacterLocked(name, world);
+            if (character is null)
+            {
+                return;
+            }
             for (var i = 0u; i < manager->GetRetainerCount(); i++)
             {
                 var retainer = manager->GetRetainerBySortedIndex(i);
@@ -208,18 +354,18 @@ public sealed class MarketDeskService : IMarketDesk, IDisposable
                 {
                     continue;
                 }
-                var name = retainer->NameString;
-                if (name.Length == 0)
+                var retainerName = retainer->NameString;
+                if (retainerName.Length == 0)
                 {
                     continue;
                 }
-                var snapshot = _file.Retainers.FirstOrDefault(r => r.RetainerId == retainer->RetainerId);
+                var snapshot = character.Retainers.FirstOrDefault(r => r.RetainerId == retainer->RetainerId);
                 if (snapshot is null)
                 {
                     snapshot = new MarketRetainerSnapshot { RetainerId = retainer->RetainerId };
-                    _file.Retainers.Add(snapshot);
+                    character.Retainers.Add(snapshot);
                 }
-                snapshot.Name = name;
+                snapshot.Name = retainerName;
                 snapshot.Gil = retainer->Gil;
                 snapshot.MarketItemCount = retainer->MarketItemCount;
                 snapshot.MarketExpireUnix = retainer->MarketExpire;
@@ -296,17 +442,22 @@ public sealed class MarketDeskService : IMarketDesk, IDisposable
                 }
             }
         }
+        var (name, world) = CurrentIdentity();
 
         lock (_gate)
         {
-            EnsureLoadedLocked();
-            var snapshot = _file.Retainers.FirstOrDefault(r => r.RetainerId == retainerId);
+            var character = CurrentCharacterLocked(name, world);
+            if (character is null)
+            {
+                return;
+            }
+            var snapshot = character.Retainers.FirstOrDefault(r => r.RetainerId == retainerId);
             if (snapshot is null)
             {
                 snapshot = new MarketRetainerSnapshot { RetainerId = retainerId };
-                _file.Retainers.Add(snapshot);
+                character.Retainers.Add(snapshot);
             }
-            InferSalesLocked(snapshot, listings, gil);
+            InferSalesLocked(character, snapshot, listings, gil);
             snapshot.Listings = listings;
             snapshot.MarketItemCount = listings.Count;
             if (gil > 0)
@@ -323,7 +474,8 @@ public sealed class MarketDeskService : IMarketDesk, IDisposable
 
     /// <summary>A slot that emptied since the last scan counts as sold only when the retainer's gil grew
     /// enough to cover it after tax; withdrawn items fail that check and are dropped silently.</summary>
-    private void InferSalesLocked(MarketRetainerSnapshot snapshot, List<MarketRetainerListing> fresh, long gilNow)
+    private void InferSalesLocked(DeskCharacter character, MarketRetainerSnapshot snapshot,
+        List<MarketRetainerListing> fresh, long gilNow)
     {
         if (snapshot.LastScanned is null || gilNow <= 0 || snapshot.Gil <= 0)
         {
@@ -351,12 +503,12 @@ public sealed class MarketDeskService : IMarketDesk, IDisposable
                 continue;
             }
             gilDelta -= expectedNet;
-            _file.Sales.Insert(0, new MarketInferredSale(old.ItemId, old.ItemName, old.Quantity, old.UnitPrice,
+            character.Sales.Insert(0, new MarketInferredSale(old.ItemId, old.ItemName, old.Quantity, old.UnitPrice,
                 DateTimeOffset.UtcNow));
         }
-        if (_file.Sales.Count > SalesCap)
+        if (character.Sales.Count > SalesCap)
         {
-            _file.Sales.RemoveRange(SalesCap, _file.Sales.Count - SalesCap);
+            character.Sales.RemoveRange(SalesCap, character.Sales.Count - SalesCap);
         }
     }
 
@@ -398,8 +550,8 @@ public sealed class MarketDeskService : IMarketDesk, IDisposable
             Dictionary<uint, long> previous;
             lock (_gate)
             {
-                EnsureLoadedLocked();
-                own = _file.Retainers.SelectMany(r => r.Listings).ToList();
+                EnsureBookLoadedLocked();
+                own = _book.Characters.SelectMany(c => c.Retainers).SelectMany(r => r.Listings).ToList();
                 previous = _undercuts;
             }
             if (own.Count == 0)

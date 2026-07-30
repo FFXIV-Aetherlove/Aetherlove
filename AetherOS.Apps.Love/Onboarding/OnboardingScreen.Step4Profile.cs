@@ -337,6 +337,7 @@ public partial class OnboardingScreen
 
         ImGui.Dummy(new Vector2(0f, Px(10f)));
         var col2 = Px(20f) + Px(190f);
+        var colW = MathF.Min(Px(190f), ImGui.GetWindowSize().X - col2 - Px(20f)) - Px(6f);
         for (int i = 0; i < ContentLabels.Length; i++)
         {
             if (i % 2 == 0)
@@ -347,7 +348,7 @@ public partial class OnboardingScreen
             {
                 ImGui.SameLine(col2);
             }
-            ImGui.Checkbox($"{ContentLabels[i]}##ci{i}", ref _contentInterests[i]);
+            CheckboxTruncated($"ci{i}", ContentLabels[i], ref _contentInterests[i], colW);
         }
     }
 

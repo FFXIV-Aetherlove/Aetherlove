@@ -227,7 +227,7 @@ internal static class OsPt
         ["os.battery_grass_settings_hint"] = "(Podes desativar esta piada em Geral, na app Definições)",
 
         // added after update 2.0.1
-        ["os.menu_audio"] = "DefiniÃ§Ãµes de Ã¡udio",
+        ["os.menu_audio"] = "Definições de áudio",
         ["os.app_market"] = "Mercado",
         ["os.app_realtor"] = "Imobiliária",
     };

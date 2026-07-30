@@ -219,13 +219,13 @@ internal static class SettingsEs
         ["settings.time_12h"] = "12 horas",
 
         // added after update 2.0.1
-        ["settings.audio_sounds_off"] = "Los sonidos de notificaciÃ³n estÃ¡n desactivados.",
-        ["settings.audio_sounds_enable"] = "Activar sonidos de notificaciÃ³n",
+        ["settings.audio_sounds_off"] = "Los sonidos de notificación están desactivados.",
+        ["settings.audio_sounds_enable"] = "Activar sonidos de notificación",
         ["settings.audio_volume"] = "Volumen de notificaciones",
         ["settings.audio_device"] = "Dispositivo de salida",
         ["settings.audio_device_default"] = "Predeterminado del sistema",
         ["settings.audio_test"] = "Reproducir sonido de prueba",
-        ["settings.audio_test_ok"] = "Â¡Sonando! Si no oyes nada, prueba con otro dispositivo de salida arriba.",
+        ["settings.audio_test_ok"] = "¡Sonando! Si no oyes nada, prueba con otro dispositivo de salida arriba.",
         ["settings.font_header"] = "Fuente",
         ["settings.font_caption"] = "Se aplica a todo el texto del móvil. Los caracteres que falten en una fuente usan la fuente predeterminada.",
         ["settings.font_default"] = "Predeterminada",
