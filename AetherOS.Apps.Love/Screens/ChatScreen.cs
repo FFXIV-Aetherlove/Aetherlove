@@ -65,6 +65,7 @@ public partial class ChatScreen
     private byte[] _peerAvatar = [];
     private bool _peerIsSupporter;
     private NameStyle _peerNameStyle;
+    private bool _peerHolidayMode;
     private byte[]? _peerPublicKey;
     private byte[]? _messageKey;
     private string _inputText = string.Empty;
@@ -242,6 +243,7 @@ public partial class ChatScreen
         _peerAvatar = _chatListScreen.SelectedPeerAvatar;
         _peerIsSupporter = _chatListScreen.SelectedPeerIsSupporter;
         _peerNameStyle = _chatListScreen.SelectedPeerNameStyle;
+        _peerHolidayMode = _chatListScreen.SelectedPeerHolidayMode;
         if (_shareCtx.PendingShareVenueId is { } shareVenueId)
         {
             _shareCtx.PendingShareVenueId = null;
@@ -961,6 +963,15 @@ public partial class ChatScreen
             dl.AddCircleFilled(avatarCenter, Px(AvatarR), UiColors.AvatarFallback);
         }
         dl.AddCircle(avatarCenter, Px(AvatarR), t.AccentWithAlpha(0.65f), 0, 1.5f);
+
+        if (_peerHolidayMode)
+        {
+            var awayR = Px(7f);
+            var awayCenter = avatarCenter + new Vector2(Px(AvatarR) - Px(5f), Px(AvatarR) - Px(5f));
+            dl.AddCircleFilled(awayCenter, awayR, ImGui.GetColorU32(UiColors.HolidayPurple));
+            dl.AddCircle(awayCenter, awayR, 0xFFFFFFFF, 0, Px(1.5f));
+            IconDraw.AddCentered(dl, FontAwesomeIcon.Clock, awayR * 1.15f, awayCenter, 0xFFFFFFFFu);
+        }
 
         using (UiFonts.H3?.Push())
         {

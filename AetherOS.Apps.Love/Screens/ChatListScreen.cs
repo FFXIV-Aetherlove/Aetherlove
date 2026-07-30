@@ -57,6 +57,7 @@ public partial class ChatListScreen
     private byte[] _selectedPeerAvatar = [];
     private bool _selectedPeerIsSupporter;
     private NameStyle _selectedPeerNameStyle;
+    private bool _selectedPeerHolidayMode;
     private Guid _selectedScrollMessageId;
 
     /// <summary>The category the category view is showing; kept across chat round-trips so back returns here.</summary>
@@ -110,6 +111,7 @@ public partial class ChatListScreen
     public byte[] SelectedPeerAvatar => _selectedPeerAvatar;
     public bool SelectedPeerIsSupporter => _selectedPeerIsSupporter;
     public NameStyle SelectedPeerNameStyle => _selectedPeerNameStyle;
+    public bool SelectedPeerHolidayMode => _selectedPeerHolidayMode;
 
     /// <summary>Message to scroll to when a search result is opened by content; Empty for a normal open.</summary>
     public Guid SelectedScrollMessageId => _selectedScrollMessageId;
@@ -386,6 +388,7 @@ public partial class ChatListScreen
         _selectedPeerAvatar = m.PeerAvatarWebp;
         _selectedPeerIsSupporter = m.PeerIsSupporter;
         _selectedPeerNameStyle = m.PeerNameStyle;
+        _selectedPeerHolidayMode = m.PeerHolidayMode;
         _selectedScrollMessageId = Guid.Empty;
         _openedChatFromCategory = false;
     }
@@ -1164,6 +1167,7 @@ public partial class ChatListScreen
                     _selectedPeerAvatar = m.PeerAvatarWebp;
                     _selectedPeerIsSupporter = m.PeerIsSupporter;
                     _selectedPeerNameStyle = m.PeerNameStyle;
+                    _selectedPeerHolidayMode = m.PeerHolidayMode;
                     _selectedScrollMessageId = hit?.ContentMessageId ?? Guid.Empty;
                     _openedChatFromCategory = ctx == RowContext.Category;
                     _router.Navigate(LoveView.Chat);

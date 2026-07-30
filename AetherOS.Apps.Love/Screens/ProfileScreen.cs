@@ -1508,24 +1508,27 @@ public class ProfileScreen
         var text = p.HolidayMessage.Length > 0
             ? Loc.T("profile.holiday_banner", p.HolidayMessage)
             : Loc.T("profile.holiday_banner_short");
-        var innerW = winW - PadX * 2f - Px(24f) - Px(30f);
+        var cardW = winW - PadX * 2f;
+        var iconPx = Px(16f);
+        var iconSz = IconDraw.Measure(FontAwesomeIcon.UmbrellaBeach, iconPx);
+        var textInset = Px(12f) + iconSz.X + Px(12f);
+        var innerW = cardW - textInset - Px(12f);
         var textSz = ImGui.CalcTextSize(text, false, innerW);
         var bannerH = textSz.Y + Px(20f);
 
         ImGui.SetCursorPosX(PadX);
         var tl = ImGui.GetCursorScreenPos();
-        var br = tl + new Vector2(winW - PadX * 2f, bannerH);
+        var br = tl + new Vector2(cardW, bannerH);
         dl.AddRectFilled(tl, br, ImGui.GetColorU32(UiColors.HolidayPurple with { W = 0.28f }), Px(10f));
         dl.AddRect(tl, br, ImGui.GetColorU32(UiColors.HolidayPurple with { W = 0.85f }), Px(10f), ImDrawFlags.None, Px(1.2f));
 
-        var iconPx = Px(16f);
-        var iconSz = IconDraw.Measure(FontAwesomeIcon.UmbrellaBeach, iconPx);
         IconDraw.Add(dl, FontAwesomeIcon.UmbrellaBeach, iconPx,
             new Vector2(tl.X + Px(12f), tl.Y + (bannerH - iconSz.Y) * 0.5f),
             ImGui.GetColorU32(UiColors.HolidayPurple));
 
-        ImGui.SetCursorScreenPos(new Vector2(tl.X + Px(12f) + iconSz.X + Px(12f), tl.Y + Px(10f)));
-        ImGui.PushTextWrapPos(tl.X + Px(12f) + iconSz.X + Px(12f) + innerW);
+        ImGui.SetCursorScreenPos(new Vector2(tl.X + textInset, tl.Y + Px(10f)));
+        // PushTextWrapPos wants a window-local X; a screen one lands outside the window and never wraps.
+        ImGui.PushTextWrapPos(PadX + textInset + innerW);
         ImGui.TextUnformatted(text);
         ImGui.PopTextWrapPos();
 
