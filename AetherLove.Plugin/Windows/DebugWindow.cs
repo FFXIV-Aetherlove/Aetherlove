@@ -112,6 +112,15 @@ public sealed class DebugWindow : Window
         {
             OpenDiscord();
         }
+        ImGui.SameLine();
+        if (ImGui.Button("Copy position for Wayfinder"))
+        {
+            if (BuildWayfinderPosition() is { } position)
+            {
+                ImGui.SetClipboardText(position);
+                _copiedAt = DateTime.UtcNow;
+            }
+        }
         if ((DateTime.UtcNow - _copiedAt).TotalSeconds < 3)
         {
             ImGui.SameLine();
@@ -583,6 +592,22 @@ public sealed class DebugWindow : Window
         {
             return $"unreadable: {ex.Message}";
         }
+    }
+
+    /// <summary>The Wayfinder admin-form paste string: "territoryId;x;y;z;zoneName", InvariantCulture on
+    /// both ends so a comma-decimal locale can never corrupt coordinates.</summary>
+    private static string? BuildWayfinderPosition()
+    {
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player is null)
+        {
+            return null;
+        }
+        var territoryId = Plugin.ClientState.TerritoryType;
+        var pos = player.Position;
+        var zone = AetherLove.Services.LocationShare.ZoneName(territoryId);
+        return string.Create(System.Globalization.CultureInfo.InvariantCulture,
+            $"{territoryId};{pos.X:F2};{pos.Y:F2};{pos.Z:F2};{zone}");
     }
 
     private string BuildSupportText()

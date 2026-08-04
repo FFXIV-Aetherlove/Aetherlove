@@ -49,6 +49,7 @@ public sealed class AetherLoveBootstrap : IHostedService
     private readonly ScreenCaptureService _capture;
     private readonly Services.Hangouts.HangoutStateService _hangoutState;
     private readonly Services.Hub.AetherHubContext _hubClient;
+    private readonly Services.Sparks.SparkActivityReporter _sparkActivity;
 
     /// <summary>When the character logged out to the title screen while owning a live hangout. The hub stays
     /// connected there, so the server-side presence grace never fires; this client-side twin ends the hangout
@@ -90,11 +91,13 @@ public sealed class AetherLoveBootstrap : IHostedService
         Widgets.SelfieCaptureOverlay selfieOverlay,
         Services.Hangouts.HangoutStateService hangoutState,
         Services.Hub.AetherHubContext hubClient,
+        Services.Sparks.SparkActivityReporter sparkActivity,
         Os.OsShell osShell,
         Services.DtrBarService dtrBar,
         Os.ScreenshotImportService screenshotImport,
         Services.Chat.ChatCacheStore chatCache,
-        Services.Messenger.MessengerStore messenger)
+        Services.Messenger.MessengerStore messenger,
+        Os.RealtorPhaseWatchService realtorPhase)
     {
         _log = log;
         _pluginInterface = pluginInterface;
@@ -118,11 +121,13 @@ public sealed class AetherLoveBootstrap : IHostedService
         _selfieOverlay = selfieOverlay;
         _hangoutState = hangoutState;
         _hubClient = hubClient;
+        _sparkActivity = sparkActivity;
         _osShell = osShell;
         _dtrBar = dtrBar;
         _screenshotImport = screenshotImport;
         _chatCache = chatCache;
         _messenger = messenger;
+        _realtorPhase = realtorPhase;
     }
 
     private readonly Os.OsShell _osShell;
@@ -130,6 +135,7 @@ public sealed class AetherLoveBootstrap : IHostedService
     private readonly Os.ScreenshotImportService _screenshotImport;
     private readonly Services.Chat.ChatCacheStore _chatCache;
     private readonly Services.Messenger.MessengerStore _messenger;
+    private readonly Os.RealtorPhaseWatchService _realtorPhase;
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
@@ -246,6 +252,7 @@ public sealed class AetherLoveBootstrap : IHostedService
         _clockAlarms.Stop();
         _tomestoneEmote.Stop();
         _capture.Dispose();
+        _realtorPhase.Dispose();
         _dtrBar.Shutdown();
         Widgets.SelfieCaptureOverlay.PurgeTempFiles();
 

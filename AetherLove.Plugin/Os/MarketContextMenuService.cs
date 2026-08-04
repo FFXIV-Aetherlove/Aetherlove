@@ -60,7 +60,8 @@ public sealed class MarketContextMenuService : IDisposable
     {
         try
         {
-            if (args.MenuType != ContextMenuType.Inventory
+            if (!Plugin.Configuration.MarketContextMenuEnabled
+                || args.MenuType != ContextMenuType.Inventory
                 || args.Target is not MenuTargetInventory { TargetItem: { } item })
             {
                 return;

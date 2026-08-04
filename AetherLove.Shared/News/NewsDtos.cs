@@ -15,15 +15,20 @@ public sealed record NewsSummaryDto(
     string Preview = "");
 
 /// <summary>One body line, flat union (the MessagePack contractless resolver doesn't do polymorphic [Union]).
-/// Text lines carry <see cref="Text"/> (with <c>:emoji:</c> shortcodes); image lines carry client-ready
-/// <see cref="ImageBytes"/> plus their pixel dimensions.</summary>
+/// Text/heading lines carry <see cref="Text"/> (with <c>:emoji:</c> shortcodes); image lines carry client-ready
+/// <see cref="ImageBytes"/> plus their pixel dimensions; cards add <see cref="Color"/> and an emoji
+/// <see cref="Icon"/>; buttons add <see cref="Color"/> and <see cref="Url"/>. Trailing defaults keep old
+/// servers/clients wire-compatible.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record NewsLineDto(
     NewsLineKind Kind,
     string? Text,
     byte[]? ImageBytes,
     int? Width,
-    int? Height);
+    int? Height,
+    string? Color = null,
+    string? Icon = null,
+    string? Url = null);
 
 /// <summary>Full news entry with its rendered body, fetched when the user opens an entry.</summary>
 [MessagePackObject(keyAsPropertyName: true)]

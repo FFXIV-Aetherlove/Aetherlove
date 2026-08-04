@@ -180,5 +180,11 @@ internal static class CommonPt
 
         // added after update 2.0.1
         ["common.passphrase_correct_unrecoverable"] = "A sua frase-senha está correta, mas nenhuma das suas chaves guardadas pôde ser aberta com ela. Contacte o suporte antes de considerar uma redefinição; ela deixaria as suas mensagens antigas ilegíveis para sempre.",
+
+        // added after update 2.1.3
+        ["common.staff_notice_heading_one"] = "Você tem um aviso da equipe",
+        ["common.staff_notice_heading_many"] = "Você tem {0} avisos da equipe",
+        ["common.staff_notice_body"] = "A equipe do AetherOS enviou o seguinte sobre a sua conta:",
+        ["common.staff_notice_ack"] = "Entendi",
     };
 }

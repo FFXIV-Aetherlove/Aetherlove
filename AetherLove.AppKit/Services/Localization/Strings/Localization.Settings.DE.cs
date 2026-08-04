@@ -243,5 +243,11 @@ internal static class SettingsDe
         ["settings.font_default"] = "Standard",
         ["settings.phone_size_header"] = "Handy-Größe",
         ["settings.mini_phone_size_header"] = "Miniatur-Größe",
+
+        // added after update 2.1.3
+        ["settings.staff_notices_title"] = "Nachrichten vom Team",
+        ["settings.staff_notices_empty"] = "Bisher nichts vom Team.",
+        ["settings.staff_warnings_section"] = "Verwarnungen",
+        ["settings.staff_messages_section"] = "Nachrichten",
     };
 }

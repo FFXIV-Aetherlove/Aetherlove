@@ -109,6 +109,19 @@ public static class HubErrors
     public const string LeveReviewsDisabled = "leve_reviews_disabled";
     public const string LeveRenewTooSoon = "leve_renew_too_soon";
 
+    public const string WayfinderDisabled = "wayfinder_disabled";
+    public const string WayfinderNoChallenges = "wayfinder_no_challenges";
+    public const string WayfinderNoReachable = "wayfinder_no_reachable";
+    /// <summary>Arg 0: the daily start cap.</summary>
+    public const string WayfinderDailyLimit = "wayfinder_daily_limit";
+    public const string WayfinderActiveExists = "wayfinder_active_exists";
+    public const string WayfinderNoActive = "wayfinder_no_active";
+    public const string WayfinderExpired = "wayfinder_expired";
+    public const string WayfinderNotScout = "wayfinder_not_scout";
+    /// <summary>Arg 0: the daily submission cap.</summary>
+    public const string WayfinderInvalid = "wayfinder_invalid";
+    public const string WayfinderImageRejected = "wayfinder_image_rejected";
+
     public const string HolidayMessageTooLong = "holiday_message_too_long";
     public const string HolidayMessageInvalid = "holiday_message_invalid";
 
@@ -137,6 +150,32 @@ public static class HubErrors
     public const string MsgrStorageFull = "msgr_storage_full";
     public const string MsgrImageTooLarge = "msgr_image_too_large";
     public const string MsgrImageInvalid = "msgr_image_invalid";
+
+    public const string YapperDisabled = "yapper_disabled";
+    public const string YapperNoProfile = "yapper_no_profile";
+    public const string YapperBannedFromPosting = "yapper_banned";
+    public const string YapperHandleTaken = "yapper_handle_taken";
+    public const string YapperHandleInvalid = "yapper_handle_invalid";
+    public const string YapperHandleRejected = "yapper_handle_rejected";
+    public const string YapperProfileRejected = "yapper_profile_rejected";
+    /// <summary>Arg 0: days until the next rename is allowed.</summary>
+    public const string YapperRenameTooSoon = "yapper_rename_too_soon";
+    public const string YapperBlocked = "yapper_blocked";
+    public const string YapNotFound = "yap_not_found";
+    /// <summary>Arg 0: max visible characters.</summary>
+    public const string YapTooLong = "yap_too_long";
+    /// <summary>Arg 0: the image-count cap.</summary>
+    public const string YapTooManyImages = "yap_too_many_images";
+    /// <summary>An uploaded image was rejected by automated moderation (CSAM).</summary>
+    public const string YapImageRejected = "yap_image_rejected";
+    public const string YapImageTooLarge = "yap_image_too_large";
+    public const string YapImageInvalid = "yap_image_invalid";
+    public const string YapEmbedInvalid = "yap_embed_invalid";
+    public const string YapEditWindowClosed = "yap_edit_window_closed";
+    public const string YapNsfwMismatch = "yap_nsfw_mismatch";
+    public const string YapInvalid = "yap_invalid";
+    public const string YapDmNotAllowed = "yap_dm_not_allowed";
+    public const string YapDmKeysMissing = "yap_dm_keys_missing";
 
     public const string PatreonDisabled = "patreon_disabled";
     public const string PatreonAlreadyLinked = "patreon_already_linked";

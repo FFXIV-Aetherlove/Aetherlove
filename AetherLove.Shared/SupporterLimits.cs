@@ -64,4 +64,11 @@ public static class SupporterLimits
 
     public static long ImageStorageBytes(bool isSupporter) =>
         isSupporter ? SupporterImageStorageBytes : RegularImageStorageBytes;
+
+    /// <summary>Images per yap. Yapper media is a public service and counts against no storage quota.</summary>
+    public const int RegularYapImages = 4;
+    public const int SupporterYapImages = 8;
+
+    public static int MaxYapImages(bool isSupporter) =>
+        isSupporter ? SupporterYapImages : RegularYapImages;
 }

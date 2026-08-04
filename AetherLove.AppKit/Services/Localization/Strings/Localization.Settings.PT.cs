@@ -242,5 +242,11 @@ internal static class SettingsPt
         ["settings.font_default"] = "Padrão",
         ["settings.phone_size_header"] = "Tamanho do telemóvel",
         ["settings.mini_phone_size_header"] = "Tamanho em miniatura",
+
+        // added after update 2.1.3
+        ["settings.staff_notices_title"] = "Mensagens da equipe",
+        ["settings.staff_notices_empty"] = "Ainda não há nada da equipe.",
+        ["settings.staff_warnings_section"] = "Advertências",
+        ["settings.staff_messages_section"] = "Mensagens",
     };
 }

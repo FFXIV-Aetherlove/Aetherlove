@@ -231,5 +231,11 @@ internal static class SettingsEs
         ["settings.font_default"] = "Predeterminada",
         ["settings.phone_size_header"] = "Tamaño del móvil",
         ["settings.mini_phone_size_header"] = "Tamaño en miniatura",
+
+        // added after update 2.1.3
+        ["settings.staff_notices_title"] = "Mensajes del equipo",
+        ["settings.staff_notices_empty"] = "Todavía no hay nada del equipo.",
+        ["settings.staff_warnings_section"] = "Advertencias",
+        ["settings.staff_messages_section"] = "Mensajes",
     };
 }

@@ -6,12 +6,31 @@ using AetherLove.Services.Realtor;
 using AetherLove.UI;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
+using Dalamud.Interface.Utility.Raii;
 
 namespace AetherOS.Apps.Realtor;
 
 /// <summary>Small shared bits for the Realtor screens: district icon/color mapping and duration text.</summary>
 internal static class RealtorUi
 {
+    /// <summary>Runs a screen's body inside the scrolling region that fills everything below the cursor.
+    /// Every Realtor screen lists an unbounded number of rows (worlds, districts, open plots), so without
+    /// this the overflow is simply unreachable. Measure width inside <paramref name="draw"/> rather than
+    /// outside, or rows will sit under the scrollbar once one appears.</summary>
+    public static void ScrollBody(string id, Action draw)
+    {
+        var height = MathF.Max(Px(40f), ImGui.GetWindowSize().Y - ImGui.GetCursorPosY() - Px(6f));
+        PushScrollbarStyle();
+        using (var body = ImRaii.Child(id, new Vector2(0f, height), false))
+        {
+            if (body.Success)
+            {
+                draw();
+            }
+        }
+        PopScrollbarStyle();
+    }
+
     private const int Mist = 339;
     private const int LavenderBeds = 340;
     private const int Goblet = 341;
@@ -86,36 +105,6 @@ internal static class RealtorUi
             return $"{(int)span.TotalHours}{Loc.T("os.realtor_unit_h")}";
         }
         return $"{Math.Max((int)span.TotalMinutes, 1)}{Loc.T("os.realtor_unit_m")}";
-    }
-
-    /// <summary>The world's lottery phase. The cycle itself is world-wide, but each plot only carries the
-    /// phase a scout saw when they last walked past it, so this takes the most recently updated plot rather
-    /// than the first one: an unvisited plot can still be reporting the previous cycle. Null when no open
-    /// lottery plot reported a phase.</summary>
-    public static (int Phase, DateTimeOffset? Until)? FindLotteryPhase(PaissaWorldDetail detail)
-    {
-        (int Phase, DateTimeOffset? Until)? best = null;
-        var bestObservedAt = DateTimeOffset.MinValue;
-        foreach (var district in detail.Districts)
-        {
-            if (district.OpenPlots is not { } plots)
-            {
-                continue;
-            }
-            foreach (var plot in plots)
-            {
-                if (plot.LottoPhase is not { } phase)
-                {
-                    continue;
-                }
-                if (best is null || plot.LastUpdatedAt > bestObservedAt)
-                {
-                    best = (phase, plot.PhaseUntil);
-                    bestObservedAt = plot.LastUpdatedAt;
-                }
-            }
-        }
-        return best;
     }
 
     public static (string Text, Vector4 Color) PhaseLabel(int phase) => phase switch

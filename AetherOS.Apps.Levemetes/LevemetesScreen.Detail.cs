@@ -374,7 +374,8 @@ public partial class LevemetesScreen
         {
             if (blurred)
             {
-                DrawBlurredCover(dl, wrap, tl, new Vector2(cardW, photoH));
+                var (uv0, uv1) = SharedUiHelpers.CoverFitUvs(wrap.Width, wrap.Height, cardW, photoH);
+                SharedUiHelpers.DrawBlurredCover(dl, wrap, tl, new Vector2(cardW, photoH), uv0, uv1, rounding: Px(12f));
             }
             else
             {
@@ -440,32 +441,6 @@ public partial class LevemetesScreen
         var icon = left ? FontAwesomeIcon.ChevronLeft : FontAwesomeIcon.ChevronRight;
         IconDraw.AddCentered(dl, icon, Px(16f), tl + size * 0.5f,
             ImGui.GetColorU32(new Vector4(1f, 1f, 1f, hovered ? 0.95f : 0.55f)));
-    }
-
-    /// <summary>Pseudo-blur via 13 offset cover-fit draws plus a frosted tint.</summary>
-    private static void DrawBlurredCover(ImDrawListPtr dl, Dalamud.Interface.Textures.TextureWraps.IDalamudTextureWrap wrap,
-        Vector2 tl, Vector2 sz)
-    {
-        var (uv0, uv1) = SharedUiHelpers.CoverFitUvs(wrap.Width, wrap.Height, sz.X, sz.Y);
-        Span<Vector2> offsets =
-        [
-            Px(0f, 0f),
-            Px(8f, 0f), Px(-8f, 0f),
-            Px(0f, 8f), Px(0f, -8f),
-            Px(6f, 6f), Px(-6f, 6f),
-            Px(6f, -6f), Px(-6f, -6f),
-            Px(16f, 0f), Px(-16f, 0f),
-            Px(0f, 16f), Px(0f, -16f),
-        ];
-        var sampleA = (uint)Math.Clamp((int)(255f / offsets.Length), 0, 255);
-        var sampleCol = (sampleA << 24) | 0x00FFFFFFu;
-        dl.PushClipRect(tl, tl + sz, true);
-        foreach (var off in offsets)
-        {
-            dl.AddImage(wrap.Handle, tl + off, tl + sz + off, uv0, uv1, sampleCol);
-        }
-        dl.PopClipRect();
-        dl.AddRectFilled(tl, tl + sz, 0x8C101010u, Px(12f));
     }
 
     private static void DrawNsfwRevealPill(ImDrawListPtr dl, Vector2 photoTL, Vector2 photoSz, bool hovered)

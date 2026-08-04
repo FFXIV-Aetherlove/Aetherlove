@@ -7,6 +7,12 @@ internal static class OsPt
         // added after update 1.5.1
         // App names
         ["os.app_clock"] = "Relógio",
+        ["os.app_snake"] = "Snake",
+        ["os.app_stacker"] = "Stacker",
+        ["os.app_breaker"] = "Breaker",
+        ["os.app_meteor"] = "Meteor Command",
+        ["os.app_invaders"] = "Void Invaders",
+        ["os.app_muncher"] = "Maze Muncher",
         ["os.app_camera"] = "Câmera",
 
         // Notification shade
@@ -45,7 +51,6 @@ internal static class OsPt
         ["os.wallpaper_dim"] = "Escurecer papel de parede",
         ["os.home_edit_hint"] = "Segure um ícone na tela inicial para reorganizá-lo. Arraste ícones para o dock ou entre páginas.",
         ["os.home_reset"] = "Redefinir layout",
-        ["os.about_demo"] = "Demo da interface do AetherOS",
 
         // Love settings hub after the appearance move
         ["settings.menu_language"] = "Idioma e hora",
@@ -140,6 +145,7 @@ internal static class OsPt
         ["os.new_folder"] = "Nova pasta",
         ["os.folder_name_hint"] = "Nome da pasta…",
         ["os.folder_default_name"] = "Pasta",
+        ["os.folder_arcade"] = "Arcade",
         ["os.folder_edit"] = "Editar",
         ["os.folder_empty"] = "Nenhum app ainda. Arraste um ícone para esta pasta para adicioná-lo.",
         // photo filters + screenshot import
@@ -230,5 +236,17 @@ internal static class OsPt
         ["os.menu_audio"] = "Definições de áudio",
         ["os.app_market"] = "Mercado",
         ["os.app_realtor"] = "Imobiliária",
+
+        // added after update 2.1.3
+        ["os.app_wayfinder"] = "Wayfinder",
+        ["os.app_yapper"] = "Yapper",
+        ["os.arcade_leaderboard"] = "Classificação",
+        ["os.arcade_tab_weekly"] = "Esta semana",
+        ["os.arcade_tab_alltime"] = "Desde sempre",
+        ["os.arcade_loading"] = "A carregar...",
+        ["os.arcade_empty"] = "Ainda não há pontuações. Sê o primeiro!",
+        ["os.arcade_error"] = "Não foi possível carregar a classificação.",
+        ["os.arcade_you"] = "Tu",
+        ["os.arcade_back"] = "Voltar",
     };
 }

@@ -3,9 +3,9 @@ using AetherLove.Os;
 
 namespace AetherLove.Screens;
 
-/// <summary>Where a live moderation gate (warning / moderator message) returns after acknowledgement: the
-/// screen or surface app the user was on when the push interrupted them. Shared by both gate screens so a
-/// chained second gate keeps the original location instead of capturing the first gate as its target.</summary>
+/// <summary>Where a live moderation gate (warning / moderator message / account staff notice) returns after
+/// acknowledgement: the screen or surface app the user was on when the push interrupted them. Shared by every
+/// gate screen so a chained second gate keeps the original location instead of capturing the first gate.</summary>
 internal static class LiveGateReturn
 {
     private static Screen? _screen;
@@ -14,7 +14,7 @@ internal static class LiveGateReturn
     public static void Capture(ScreenRouter router, OsShell shell)
     {
         var current = router.Current;
-        if (current is Screen.WarningsAcknowledge or Screen.ModeratorMessages)
+        if (current is Screen.WarningsAcknowledge or Screen.ModeratorMessages or Screen.StaffNotice)
         {
             return;
         }

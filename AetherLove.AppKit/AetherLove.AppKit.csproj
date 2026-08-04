@@ -18,6 +18,8 @@
     <InternalsVisibleTo Include="AetherOS.Apps.Messenger" />
     <InternalsVisibleTo Include="AetherOS.Apps.Market" />
     <InternalsVisibleTo Include="AetherOS.Apps.Realtor" />
+    <InternalsVisibleTo Include="AetherOS.Apps.Wayfinder" />
+    <InternalsVisibleTo Include="AetherOS.Apps.Yapper" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.10" />

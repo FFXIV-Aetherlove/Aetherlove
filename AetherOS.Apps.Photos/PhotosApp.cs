@@ -74,6 +74,7 @@ public sealed class PhotosApp : IAetherApp, IAppSettings
     private string photoId = "";
     private Action<string>? cameraReply;
     private bool pickerArmed;
+    private string pickerReturnApp = "messenger";
     private bool newAlbumPrompt;
     private string newAlbumName = "";
     private bool renamingAlbum;
@@ -175,6 +176,7 @@ public sealed class PhotosApp : IAetherApp, IAppSettings
             return;
         }
         this.pickerArmed = true;
+        this.pickerReturnApp = OsIntents.TryGetReturnApp(intent, out var returnApp) ? returnApp : "messenger";
         this.newAlbumPrompt = false;
         this.confirmDeleteAlbum = false;
         this.confirmDeletePhoto = false;
@@ -805,7 +807,7 @@ public sealed class PhotosApp : IAetherApp, IAppSettings
         {
             if (this.pickerArmed)
             {
-                ctx.Shell.SendIntent("messenger", OsIntents.CreatePath(OsIntents.PhotoPicked, photo.Path));
+                ctx.Shell.SendIntent(this.pickerReturnApp, OsIntents.CreatePath(OsIntents.PhotoPicked, photo.Path));
                 this.pickerArmed = false;
             }
             else
@@ -1407,7 +1409,9 @@ public sealed class PhotosApp : IAetherApp, IAppSettings
 
         if (RoundIconButton("##pickerCancel", FontAwesomeIcon.Times, new Vector2(br.X - ctx.Px(4f) - side * 0.5f, tl.Y + h * 0.5f), side * 0.5f, ctx.Px(11f), NoFill, HoverFill, WhiteText))
         {
+            // Cancelling the pick returns to the app that asked, restoring its exact prior context.
             this.pickerArmed = false;
+            ctx.Shell.OpenApp(this.pickerReturnApp);
         }
 
         ImGui.SetCursorScreenPos(new Vector2(winPos.X, startY));

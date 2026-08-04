@@ -9,6 +9,7 @@ using AetherLove.Services.Localization;
 using AetherLove.Shared;
 using AetherLove.Shared.Patreon;
 using AetherLove.Shared.Profile;
+using AetherLove.Shared.Sparks;
 using AetherLove.UI;
 using AetherLove.Widgets;
 using AetherOS.Sdk;
@@ -33,7 +34,7 @@ public sealed class SettingsScreen
         _caps = caps;
     }
 
-    private enum View { Hub, General, Language, Notifications, Audio, Appearance, Wallpaper, Profile, Supporter, Tos, Contributors, Developer }
+    private enum View { Hub, General, Language, Notifications, Audio, Appearance, Wallpaper, Profile, Supporter, StaffNotices, Tos, Contributors, Developer }
 
     private View _view = View.Hub;
 
@@ -93,7 +94,12 @@ public sealed class SettingsScreen
     public void Draw(OsAppContext ctx)
     {
         _shell = ctx.Shell;
-        if (_openApp is { } hosted && hosted is IAppSettings settings)
+        // An app switched off server-side mid-session loses its row, so drop the page it may have left open.
+        if (_openApp is { } hosted && !HasHostedSettings(hosted))
+        {
+            _openApp = null;
+        }
+        if (_openApp is { } open && open is IAppSettings settings)
         {
             try
             {
@@ -101,7 +107,7 @@ public sealed class SettingsScreen
             }
             catch (Exception ex)
             {
-                UiHost.Log.Error(ex, $"[AetherOS] Hosted settings for '{hosted.Id}' failed.");
+                UiHost.Log.Error(ex, $"[AetherOS] Hosted settings for '{open.Id}' failed.");
                 _openApp = null;
             }
             return;
@@ -135,6 +141,9 @@ public sealed class SettingsScreen
                 break;
             case View.Supporter:
                 DrawSupporterPage();
+                break;
+            case View.StaffNotices:
+                DrawStaffNoticesPage();
                 break;
             case View.Tos:
                 DrawTosPage();
@@ -201,6 +210,11 @@ public sealed class SettingsScreen
             GroupLabel(Loc.T("os.cat_other"));
             DrawMenuCard("osOther", winW, PadX, new List<MenuRow>
             {
+                new(FontAwesomeIcon.Envelope, t.Accent, Loc.T("settings.staff_notices_title"), _host.UnseenStaffNoticeCount, false, () =>
+                {
+                    _host.DismissStaffNoticeNotification();
+                    _view = View.StaffNotices;
+                }),
                 new(FontAwesomeIcon.HandHoldingHeart, UiColors.Patreon, Loc.T("settings.menu_supporter"), 0, false, () =>
                 {
                     _supporterConfirmUnlink = false;
@@ -223,7 +237,12 @@ public sealed class SettingsScreen
             {
                 DrawMenuCard("osDeveloper", winW, PadX, new List<MenuRow>
                 {
-                    new(FontAwesomeIcon.Code, t.Accent, "Developer settings", 0, false, () => _view = View.Developer),
+                    new(FontAwesomeIcon.Code, t.Accent, "Developer settings", 0, false, () =>
+                    {
+                        _devSparks = null;
+                        _devSparksError = null;
+                        _view = View.Developer;
+                    }),
                 });
             }
             ImGui.Dummy(Px(0f, 18f));
@@ -912,6 +931,56 @@ public sealed class SettingsScreen
         DrawSubpageHeading(Loc.T("os.settings_home_screen"), PadX);
         DrawHomeGridRow(winW, ThemeService.Current);
         ImGui.Spacing();
+    }
+
+    /// <summary>The history of account-level staff notices. Read-only: the fullscreen staff-notice gate owns
+    /// acknowledgement, so opening this page never marks anything seen.</summary>
+    private void DrawStaffNoticesPage()
+    {
+        DrawSubpageBack();
+        DrawSubpageHeading(Loc.T("settings.staff_notices_title"), PadX);
+
+        var warnings = _host.StaffWarnings;
+        var messages = _host.StaffMessages;
+        if (warnings.Count == 0 && messages.Count == 0)
+        {
+            ImGui.Spacing();
+            ImGui.Spacing();
+            CenteredHeading(Loc.T("settings.staff_notices_empty"), UiColors.Muted, ImGui.GetWindowSize().X);
+            return;
+        }
+
+        var scrollH = ImGui.GetContentRegionAvail().Y;
+        PushScrollbarStyle();
+        using var scroll = ImRaii.Child("##osSettStaffNotices", new Vector2(0f, scrollH), false);
+        PopScrollbarStyle();
+        if (!scroll)
+        {
+            return;
+        }
+
+        var listW = ImGui.GetContentRegionAvail().X;
+        ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(0f, Px(10f)));
+        if (warnings.Count > 0)
+        {
+            GroupLabel(Loc.T("settings.staff_warnings_section"));
+            foreach (var warning in warnings)
+            {
+                DrawNoticeCard(listW, FontAwesomeIcon.ExclamationTriangle, UiColors.WarningAccent,
+                    warning.CreatedAtUtc, warning.Reason, warning.Seen, PadX);
+            }
+        }
+        if (messages.Count > 0)
+        {
+            GroupLabel(Loc.T("settings.staff_messages_section"));
+            foreach (var message in messages)
+            {
+                DrawNoticeCard(listW, FontAwesomeIcon.Envelope, UiColors.MessageAccent,
+                    message.CreatedAtUtc, message.Body, message.Seen, PadX);
+            }
+        }
+        ImGui.PopStyleVar();
+        ImGui.Dummy(Px(0f, 18f));
     }
 
     private void DrawTosPage()
@@ -1755,6 +1824,11 @@ public sealed class SettingsScreen
         }
     }
 
+    /// <summary>An app owns a row here when it exposes a settings surface and is actually available: a
+    /// server-disabled app hides its tile, so it must not keep a settings entry either.</summary>
+    private static bool HasHostedSettings(IAetherApp app) =>
+        app.Id != "settings" && app is IAppSettings && app.Available;
+
     /// <summary>Rows for apps that expose their own settings surface (<see cref="IAppSettings"/>). The Settings
     /// app's own settings are the hub above, so it is excluded; the group hides entirely when nothing qualifies.</summary>
     private void DrawAppsGroup(OsAppContext ctx, float winW)
@@ -1762,7 +1836,7 @@ public sealed class SettingsScreen
         var hasAny = false;
         foreach (var app in ctx.Shell.Apps)
         {
-            if (app.Id != "settings" && app is IAppSettings)
+            if (HasHostedSettings(app))
             {
                 hasAny = true;
                 break;
@@ -1782,7 +1856,7 @@ public sealed class SettingsScreen
 
         foreach (var app in ctx.Shell.Apps)
         {
-            if (app.Id == "settings" || app is not IAppSettings)
+            if (!HasHostedSettings(app))
             {
                 continue;
             }
@@ -1820,6 +1894,14 @@ public sealed class SettingsScreen
         var size = br.X - tl.X;
         var rounding = size * 0.28f;
         var center = (tl + br) * 0.5f;
+        if ((app.TileImage ?? AppIcons.Tile(app.Id)) is { } iconImage)
+        {
+            dl.AddImageRounded(iconImage, tl, br, Vector2.Zero, Vector2.One, OsDrawShared.White(1f), rounding,
+                ImDrawFlags.RoundCornersAll);
+            dl.AddRect(tl + new Vector2(1f, 1f), br - new Vector2(1f, 1f),
+                OsDrawShared.White(0.20f), rounding, ImDrawFlags.RoundCornersAll, 1f);
+            return;
+        }
         OsDrawShared.RoundedGradient(dl, tl, br, rounding, app.TileTop, app.TileBottom);
         dl.AddRect(tl + new Vector2(1f, 1f), br - new Vector2(1f, 1f),
             OsDrawShared.White(0.20f), rounding, ImDrawFlags.RoundCornersAll, 1f);
@@ -1894,12 +1976,42 @@ public sealed class SettingsScreen
         }
     }
 
+    private SparkStatusDto? _devSparks;
+    private string? _devSparksError;
+    private bool _devSparksLoading;
+
+    private void LoadDevSparks()
+    {
+        _devSparksLoading = true;
+        _devSparksError = null;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                _devSparks = await _host.GetSparkStatusAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _devSparksError = ex.Message;
+            }
+            finally
+            {
+                _devSparksLoading = false;
+            }
+        });
+    }
+
     /// <summary>The hidden developer page, reached from the unlocked "Developer settings" row. English-only, by
-    /// design: it is a placeholder easter egg with no real settings yet.</summary>
+    /// design: an easter egg for the curious, currently showing the sparks wallet nothing else surfaces yet.</summary>
     private void DrawDeveloperPage()
     {
         DrawSubpageBack();
         DrawSubpageHeading("Developer settings", PadX);
+
+        if (_devSparks is null && _devSparksError is null && !_devSparksLoading)
+        {
+            LoadDevSparks();
+        }
 
         var scrollH = ImGui.GetContentRegionAvail().Y;
         PushScrollbarStyle();
@@ -1913,27 +2025,104 @@ public sealed class SettingsScreen
         var winW = ImGui.GetWindowSize().X;
         var t = ThemeService.Current;
 
-        ImGui.Dummy(new Vector2(0f, Px(24f)));
-        CenteredIcon(FontAwesomeIcon.Code, t.Accent, winW, Px(48f));
         ImGui.Dummy(new Vector2(0f, Px(18f)));
+        CenteredIcon(FontAwesomeIcon.Bolt, t.Accent, winW, Px(40f));
+        ImGui.Dummy(new Vector2(0f, Px(12f)));
 
         using (UiFonts.H1?.Push())
         {
-            CenteredHeading("A developer huh?", new Vector4(1f, 1f, 1f, 1f), winW);
+            CenteredHeading("Sparks", new Vector4(1f, 1f, 1f, 1f), winW);
         }
-        ImGui.Dummy(new Vector2(0f, Px(12f)));
-
+        ImGui.Dummy(new Vector2(0f, Px(4f)));
         ImGui.SetCursorPosX(Px(PadX));
         ImGui.PushTextWrapPos(winW - Px(PadX));
-        ImGui.TextColored(UiColors.Body, "Well, check back soon, there might be something here for you ;-)");
+        ImGui.TextColored(UiColors.Body, "A peek behind the curtain. Sparks are earned by using the phone; what they buy is still on the way.");
         ImGui.PopTextWrapPos();
-        ImGui.Dummy(new Vector2(0f, Px(16f)));
+        ImGui.Dummy(new Vector2(0f, Px(14f)));
+
+        if (_devSparksLoading && _devSparks is null)
+        {
+            ImGui.SetCursorPosX(Px(PadX));
+            ImGui.TextDisabled("Loading...");
+            return;
+        }
+        if (_devSparksError is not null && _devSparks is null)
+        {
+            ImGui.SetCursorPosX(Px(PadX));
+            ImGui.PushTextWrapPos(winW - Px(PadX));
+            ImGui.TextColored(UiColors.WarningAccent, $"Unavailable: {_devSparksError}");
+            ImGui.PopTextWrapPos();
+            return;
+        }
+        var status = _devSparks;
+        if (status is null)
+        {
+            return;
+        }
+
+        DevRow(winW, "Balance", status.Balance.ToString("N0"));
+        DevRow(winW, "Lifetime earned", status.LifetimeEarned.ToString("N0"));
+        var reset = status.WeekResetsAtUtc.ToLocalTime();
+        DevRow(winW, "Week resets", $"{reset.ToString("d MMM HH:mm", LanguageProvider.CurrentCulture)} ({DevUntil(status.WeekResetsAtUtc)})");
+        ImGui.Dummy(new Vector2(0f, Px(14f)));
 
         ImGui.SetCursorPosX(Px(PadX));
         using (UiFonts.H3?.Push())
         {
-            ImGui.TextColored(t.AccentLight, "-- Astraea");
+            ImGui.TextColored(t.AccentLight, "Last earnings");
+        }
+        ImGui.Dummy(new Vector2(0f, Px(6f)));
+
+        if (status.Lines.Length == 0)
+        {
+            ImGui.SetCursorPosX(Px(PadX));
+            ImGui.TextDisabled("Nothing earned yet.");
+        }
+
+        var dl = ImGui.GetWindowDrawList();
+        var rowH = ImGui.GetTextLineHeight() + Px(10f);
+        var right = winW - Px(PadX);
+        foreach (var line in status.Lines)
+        {
+            var pos = ImGui.GetCursorScreenPos();
+            dl.AddRectFilled(pos with { X = pos.X + Px(PadX) - Px(8f) }, pos + new Vector2(right - Px(PadX) + Px(8f), rowH),
+                ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.04f)), Px(6f));
+            var textY = pos.Y + Px(5f);
+            dl.AddText(new Vector2(pos.X + Px(PadX), textY), ImGui.GetColorU32(UiColors.Body),
+                line.AtUtc.ToLocalTime().ToString("d MMM HH:mm", LanguageProvider.CurrentCulture));
+            dl.AddText(new Vector2(pos.X + Px(PadX) + Px(96f), textY), ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.92f)),
+                DevActionLabel(line));
+            var amount = line.Amount.ToString("+#,0;-#,0;0");
+            var amountW = ImGui.CalcTextSize(amount).X;
+            dl.AddText(new Vector2(pos.X + right - amountW, textY),
+                ImGui.GetColorU32(line.Amount >= 0 ? t.AccentLight : UiColors.WarningAccent), amount);
+            ImGui.Dummy(new Vector2(winW, rowH + Px(3f)));
         }
         ImGui.Dummy(new Vector2(0f, Px(16f)));
+    }
+
+    private void DevRow(float winW, string label, string value)
+    {
+        ImGui.SetCursorPosX(Px(PadX));
+        ImGui.TextColored(UiColors.Body, label);
+        var valueW = ImGui.CalcTextSize(value).X;
+        ImGui.SameLine(winW - Px(PadX) - valueW);
+        ImGui.TextUnformatted(value);
+    }
+
+    private static string DevActionLabel(SparkLedgerLineDto line) => line.Action switch
+    {
+        SparkAction.AdminAdjust => $"Staff ({line.Kind})",
+        _ => line.Action.ToString(),
+    };
+
+    private static string DevUntil(DateTimeOffset at)
+    {
+        var span = at - DateTimeOffset.UtcNow;
+        if (span <= TimeSpan.Zero)
+        {
+            return "now";
+        }
+        return span.TotalDays >= 1 ? $"in {(int)span.TotalDays}d {span.Hours}h" : $"in {span.Hours}h {span.Minutes}m";
     }
 }

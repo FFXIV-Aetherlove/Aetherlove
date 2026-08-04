@@ -116,6 +116,10 @@ public static class AppStrings
         ["os.market_tour_reopen_hint"] = "You can reopen this tour any time from the menu.",
         ["os.market_add_search_hint"] = "Search to add items...",
         ["os.market_tour_universalis"] = "All this data is provided by Universalis - they are awesome!",
+
+        // added after update 2.2.1
+        ["os.market_menu_ctx_hide"] = "Hide right-click menu item",
+        ["os.market_menu_ctx_show"] = "Show right-click menu item",
     };
 
     private static readonly IReadOnlyDictionary<string, string> De = new Dictionary<string, string>
@@ -229,6 +233,10 @@ public static class AppStrings
         ["os.market_tour_reopen_hint"] = "Du kannst diese Tour jederzeit über das Menü erneut öffnen.",
         ["os.market_add_search_hint"] = "Suchen, um Items hinzuzufügen...",
         ["os.market_tour_universalis"] = "All diese Daten kommen von Universalis - die sind großartig!",
+
+        // added after update 2.2.1
+        ["os.market_menu_ctx_hide"] = "Rechtsklick-Menüeintrag ausblenden",
+        ["os.market_menu_ctx_show"] = "Rechtsklick-Menüeintrag anzeigen",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Es = new Dictionary<string, string>
@@ -342,6 +350,10 @@ public static class AppStrings
         ["os.market_tour_reopen_hint"] = "Puedes volver a abrir este tour cuando quieras desde el menú.",
         ["os.market_add_search_hint"] = "Busca para añadir objetos...",
         ["os.market_tour_universalis"] = "Todos estos datos los proporciona Universalis - ¡son geniales!",
+
+        // added after update 2.2.1
+        ["os.market_menu_ctx_hide"] = "Ocultar opción del clic derecho",
+        ["os.market_menu_ctx_show"] = "Mostrar opción del clic derecho",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Fr = new Dictionary<string, string>
@@ -455,6 +467,10 @@ public static class AppStrings
         ["os.market_tour_reopen_hint"] = "Vous pouvez rouvrir cette visite à tout moment depuis le menu.",
         ["os.market_add_search_hint"] = "Cherchez pour ajouter des objets...",
         ["os.market_tour_universalis"] = "Toutes ces données sont fournies par Universalis - ils sont géniaux !",
+
+        // added after update 2.2.1
+        ["os.market_menu_ctx_hide"] = "Masquer l'option du clic droit",
+        ["os.market_menu_ctx_show"] = "Afficher l'option du clic droit",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Pt = new Dictionary<string, string>
@@ -568,6 +584,10 @@ public static class AppStrings
         ["os.market_tour_reopen_hint"] = "Você pode reabrir este tour a qualquer momento pelo menu.",
         ["os.market_add_search_hint"] = "Pesquise para adicionar itens...",
         ["os.market_tour_universalis"] = "Todos esses dados são fornecidos pelo Universalis - eles são incríveis!",
+
+        // added after update 2.2.1
+        ["os.market_menu_ctx_hide"] = "Ocultar item do clique direito",
+        ["os.market_menu_ctx_show"] = "Mostrar item do clique direito",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Ru = new Dictionary<string, string>
@@ -681,6 +701,10 @@ public static class AppStrings
         ["os.market_tour_reopen_hint"] = "Эту экскурсию всегда можно открыть заново через меню.",
         ["os.market_add_search_hint"] = "Найдите предметы, чтобы добавить...",
         ["os.market_tour_universalis"] = "Все эти данные предоставляет Universalis - они классные!",
+
+        // added after update 2.2.1
+        ["os.market_menu_ctx_hide"] = "Скрыть пункт контекстного меню",
+        ["os.market_menu_ctx_show"] = "Показать пункт контекстного меню",
     };
 
     public static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> Packs =

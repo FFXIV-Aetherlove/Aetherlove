@@ -13,6 +13,7 @@ using AetherLove.Services.Signal;
 using AetherLove.UI;
 using AetherLove.Windows;
 using AetherOS.Shell;
+using Dalamud.Game.ClientState.Keys;
 using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
 using Dalamud.Plugin;
@@ -42,6 +43,7 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IAddonLifecycle AddonLifecycle { get; private set; } = null!;
     [PluginService] internal static IMarketBoard MarketBoard { get; private set; } = null!;
     [PluginService] internal static IContextMenu ContextMenu { get; private set; } = null!;
+    [PluginService] internal static IKeyState KeyState { get; private set; } = null!;
 
     internal static string ServerBaseUrl => AetherLove.Shared.AetherConstants.ServerBaseUrl;
 
@@ -94,6 +96,7 @@ public sealed class Plugin : IDalamudPlugin
         services.AddSingleton(TextureProvider);
         services.AddSingleton(ObjectTable);
         services.AddSingleton(ClientState);
+        services.AddSingleton(Framework);
         services.AddSingleton(DataManager);
         services.AddSingleton(CommandManager);
         services.AddSingleton(GameConfig);
@@ -142,8 +145,15 @@ public sealed class Plugin : IDalamudPlugin
             c.Timeout = TimeSpan.FromSeconds(15);
         });
 
+        services.AddSingleton<Services.Yapper.YapperNotificationRelay>();
+        services.AddSingleton<Services.Yapper.YapperDmCryptoService>();
         services.AddSingleton<AetherSignalService>();
         services.AddSingleton<AetherHubContext>();
+        services.AddSingleton<Services.Sparks.SparkActivityReporter>();
+        services.AddSingleton<Os.IArcadeRewards, Os.ArcadeRewardsService>();
+        services.AddSingleton<Os.IArcadeScores, Os.ArcadeScoresService>();
+        services.AddSingleton<Os.HousingLotteryWatchService>();
+        services.AddSingleton<Os.RealtorPhaseWatchService>();
         services.AddSingleton<Services.Patreon.PatreonLinkFlow>();
         services.AddSingleton<SessionBootstrapper>();
         services.AddSingleton<Services.Auth.AccountUnlockService>();
@@ -163,6 +173,7 @@ public sealed class Plugin : IDalamudPlugin
         services.AddSingleton<BannedScreen>();
         services.AddSingleton<WarningAcknowledgeScreen>();
         services.AddSingleton<ModeratorMessageScreen>();
+        services.AddSingleton<StaffNoticeScreen>();
         services.AddSingleton<PassphraseUnlockScreen>();
         services.AddSingleton<EncryptionRecoveryScreen>();
         services.AddSingleton<OfflineScreen>();
@@ -211,6 +222,36 @@ public sealed class Plugin : IDalamudPlugin
         services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Clock.ClockApp(
             () => Services.Localization.Loc.T("os.app_clock"),
             sp.GetRequiredService<Os.ClockAlarmService>()));
+        services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Snake.SnakeApp(
+            () => Services.Localization.Loc.T("os.app_snake"),
+            sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>(),
+            sp.GetRequiredService<Os.IArcadeRewards>(),
+            sp.GetRequiredService<Os.IArcadeScores>()));
+        services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Stacker.StackerApp(
+            () => Services.Localization.Loc.T("os.app_stacker"),
+            sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>(),
+            sp.GetRequiredService<Os.IArcadeRewards>(),
+            sp.GetRequiredService<Os.IArcadeScores>()));
+        services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Breaker.BreakerApp(
+            () => Services.Localization.Loc.T("os.app_breaker"),
+            sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>(),
+            sp.GetRequiredService<Os.IArcadeRewards>(),
+            sp.GetRequiredService<Os.IArcadeScores>()));
+        services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.MeteorCommand.MeteorCommandApp(
+            () => Services.Localization.Loc.T("os.app_meteor"),
+            sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>(),
+            sp.GetRequiredService<Os.IArcadeRewards>(),
+            sp.GetRequiredService<Os.IArcadeScores>()));
+        services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.VoidInvaders.VoidInvadersApp(
+            () => Services.Localization.Loc.T("os.app_invaders"),
+            sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>(),
+            sp.GetRequiredService<Os.IArcadeRewards>(),
+            sp.GetRequiredService<Os.IArcadeScores>()));
+        services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.MazeMuncher.MazeMuncherApp(
+            () => Services.Localization.Loc.T("os.app_muncher"),
+            sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>(),
+            sp.GetRequiredService<Os.IArcadeRewards>(),
+            sp.GetRequiredService<Os.IArcadeScores>()));
         services.AddSingleton<Os.WeatherStationService>();
         services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Weather.WeatherApp(
             () => Services.Localization.Loc.T("os.app_weather"),
@@ -278,7 +319,23 @@ public sealed class Plugin : IDalamudPlugin
         services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Realtor.RealtorApp(
             () => Services.Localization.Loc.T("os.app_realtor"),
             sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>(),
-            sp.GetRequiredService<Services.Realtor.RealtorDataService>()));
+            sp.GetRequiredService<Services.Realtor.RealtorDataService>(),
+            sp.GetRequiredService<Os.HousingLotteryWatchService>(),
+            sp.GetRequiredService<Os.RealtorPhaseWatchService>()));
+        services.AddSingleton<Os.WayfinderHostService>();
+        services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Wayfinder.WayfinderApp(
+            () => Services.Localization.Loc.T("os.app_wayfinder"),
+            () => sp.GetRequiredService<SessionBootstrapper>().LastConnection?.WayfinderEnabled != false,
+            sp.GetRequiredService<Os.WayfinderHostService>(),
+            sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>()));
+        services.AddSingleton<Os.YapperHostService>();
+        services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Yapper.YapperApp(
+            () => Services.Localization.Loc.T("os.app_yapper"),
+            () => sp.GetRequiredService<SessionBootstrapper>().LastConnection?.YapperEnabled != false,
+            sp.GetRequiredService<Os.YapperHostService>(),
+            sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>(),
+            sp.GetRequiredService<Services.VenueShareContext>(),
+            sp.GetRequiredService<Services.LevemeteShareContext>()));
         services.AddSingleton<Os.FeedbackHostService>();
         services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Feedback.FeedbackApp(
             () => Services.Localization.Loc.T("os.app_feedback"),

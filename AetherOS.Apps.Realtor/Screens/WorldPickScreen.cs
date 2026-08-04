@@ -82,47 +82,51 @@ internal sealed class WorldPickScreen
             return;
         }
 
+        // The search box stays put; only the world list underneath scrolls.
         ImGui.SetCursorPosX(Px(PadX));
         ImGui.SetNextItemWidth(winW - Px(PadX) * 2f);
         ImGui.InputTextWithHint("##realtorWorldSearch", Loc.T("os.realtor_search_world"), ref _query, 32);
         ImGui.Dummy(new Vector2(0f, Px(6f)));
 
-        var worlds = _worlds;
-        if (worlds is null)
+        RealtorUi.ScrollBody("##realtorWorldBody", () =>
         {
-            if (_loading)
+            var bodyW = ImGui.GetWindowSize().X;
+            var worlds = _worlds;
+            if (worlds is null)
             {
-                ImGui.Dummy(new Vector2(0f, Px(30f)));
-                var center = new Vector2(ImGui.GetWindowPos().X + winW * 0.5f, ImGui.GetCursorScreenPos().Y + Px(20f));
-                LoadingSpinner.Draw(center, Px(14f), Px(3f), ImGui.GetColorU32(t.Accent));
-                ImGui.Dummy(new Vector2(0f, Px(50f)));
+                if (_loading)
+                {
+                    ImGui.Dummy(new Vector2(0f, Px(30f)));
+                    var center = new Vector2(ImGui.GetWindowPos().X + bodyW * 0.5f, ImGui.GetCursorScreenPos().Y + Px(20f));
+                    LoadingSpinner.Draw(center, Px(14f), Px(3f), ImGui.GetColorU32(t.Accent));
+                    ImGui.Dummy(new Vector2(0f, Px(50f)));
+                }
+                else
+                {
+                    ImGui.SetCursorPosX(Px(PadX));
+                    ImGui.PushTextWrapPos(bodyW - Px(PadX));
+                    ImGui.TextColored(UiColors.Hint, Loc.T("os.realtor_offline"));
+                    ImGui.PopTextWrapPos();
+                }
+                return;
             }
-            else
+
+            var query = _query.Trim();
+            var filtered = query.Length == 0
+                ? worlds
+                : worlds.Where(w => w.Name.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
+            foreach (var group in filtered.GroupBy(w => w.DatacenterName).OrderBy(g => g.Key, StringComparer.Ordinal))
             {
                 ImGui.SetCursorPosX(Px(PadX));
-                ImGui.PushTextWrapPos(winW - Px(PadX));
-                ImGui.TextColored(UiColors.Hint, Loc.T("os.realtor_offline"));
-                ImGui.PopTextWrapPos();
+                ImGui.TextColored(UiColors.Hint, group.Key);
+                foreach (var world in group.OrderBy(w => w.Name, StringComparer.Ordinal))
+                {
+                    DrawWorldRow(world, bodyW);
+                }
+                ImGui.Dummy(new Vector2(0f, Px(8f)));
             }
-            _entrance.EndFrame();
-            return;
-        }
-
-        var query = _query.Trim();
-        var filtered = query.Length == 0
-            ? worlds
-            : worlds.Where(w => w.Name.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
-        foreach (var group in filtered.GroupBy(w => w.DatacenterName).OrderBy(g => g.Key, StringComparer.Ordinal))
-        {
-            ImGui.SetCursorPosX(Px(PadX));
-            ImGui.TextColored(UiColors.Hint, group.Key);
-            foreach (var world in group.OrderBy(w => w.Name, StringComparer.Ordinal))
-            {
-                DrawWorldRow(world, winW);
-            }
-            ImGui.Dummy(new Vector2(0f, Px(8f)));
-        }
-        ImGui.Dummy(new Vector2(0f, Px(10f)));
+            ImGui.Dummy(new Vector2(0f, Px(10f)));
+        });
         _entrance.EndFrame();
     }
 

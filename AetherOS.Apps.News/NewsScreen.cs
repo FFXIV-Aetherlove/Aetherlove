@@ -111,6 +111,7 @@ public sealed class NewsScreen
     {
         _shell = ctx.Shell;
         _share = ctx.Capabilities.Share;
+        _renderer.OpenUrl = ctx.Capabilities.System.OpenUrl;
 
         if (_pendingDismissTags.Count > 0)
         {

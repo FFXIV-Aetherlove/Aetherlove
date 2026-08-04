@@ -674,7 +674,6 @@ public class ProfileScreen
         ImGui.SetCursorPosY(photoLocalY + PhotoHeight);
     }
 
-    /// <summary>Pseudo-blur via 13 offset image draws plus a frosted-glass tint.</summary>
     private static void DrawBlurredPhoto(ImDrawListPtr dl, ISharedImmediateTexture? tex,
         Vector2 tl, Vector2 sz, uint fallbackColor, float alpha)
     {
@@ -690,6 +689,7 @@ public class ProfileScreen
             return;
         }
 
+        // Top-anchored fill on the tall axis, matching DrawPhoto, so reveal doesn't shift the crop.
         var imgAspect = (float)wrap.Width / wrap.Height;
         var tgtAspect = sz.X / sz.Y;
         Vector2 uv0, uv1;
@@ -706,29 +706,7 @@ public class ProfileScreen
             uv1 = new Vector2(1f, uvH);
         }
 
-        Span<Vector2> offsets = stackalloc Vector2[]
-        {
-            Px(0f, 0f),
-            Px(8f, 0f), Px(-8f, 0f),
-            Px(0f, 8f), Px(0f, -8f),
-            Px(6f, 6f), Px(-6f, 6f),
-            Px(6f, -6f), Px(-6f, -6f),
-            Px(16f, 0f), Px(-16f, 0f),
-            Px(0f, 16f), Px(0f, -16f),
-        };
-
-        var perSampleAlpha = alpha / offsets.Length;
-        var sampleA = (uint)Math.Clamp((int)(perSampleAlpha * 255f), 0, 255);
-        var sampleCol = (sampleA << 24) | 0x00FFFFFFu;
-
-        foreach (var off in offsets)
-        {
-            dl.AddImage(wrap.Handle, tl + off, tl + sz + off, uv0, uv1, sampleCol);
-        }
-
-        var tintA = (uint)Math.Clamp((int)(alpha * 0.55f * 255f), 0, 255);
-        var tintCol = (tintA << 24) | 0x00101010u;
-        dl.AddRectFilled(tl, tl + sz, tintCol);
+        SharedUiHelpers.DrawBlurredCover(dl, wrap, tl, sz, uv0, uv1, alpha);
     }
 
     private void DrawNsfwRevealPill(ImDrawListPtr dl, Vector2 photoTL, Vector2 photoSz, bool hovered)

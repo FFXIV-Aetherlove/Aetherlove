@@ -32,5 +32,11 @@ internal static class NotificationsDe
 
         // Chat notification link (added after update 2.0.0.0)
         ["notif.view_link"] = "Ansehen",
+
+        // added after update 2.1.3
+        ["notif.realtor_accepting"] = "Die Haus-Lotterie nimmt jetzt Bewerbungen an. Freie Grundstücke findest du in der Makler-App.",
+        ["notif.realtor_results"] = "Die Haus-Lotterie ist in der Ergebnisphase. Wie es für dich ausgegangen ist, siehst du in der Makler-App.",
+        ["notif.staff_notice_title"] = "Nachricht vom Team",
+        ["notif.staff_notice_body"] = "Öffne die Einstellungen, um sie zu lesen.",
     };
 }

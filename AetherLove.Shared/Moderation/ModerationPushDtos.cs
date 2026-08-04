@@ -18,6 +18,20 @@ public sealed record ModeratorMessageIssuedPushDto(
     ModeratorMessageDto Message,
     Guid ForProfileId = default);
 
+/// <summary>Push on the account channel when a moderator issues an account-level warning (no dating profile behind
+/// it). Handled by the OS shell staff-notice gate, never by the AetherLove app.</summary>
+[MessagePackObject(keyAsPropertyName: true)]
+public sealed record AccountWarningPushDto(
+    WarningDto Warning,
+    Guid AccountId = default);
+
+/// <summary>Push on the account channel when a moderator sends an account-level message. OS-track counterpart of
+/// <see cref="ModeratorMessageIssuedPushDto"/>.</summary>
+[MessagePackObject(keyAsPropertyName: true)]
+public sealed record AccountModeratorMessagePushDto(
+    ModeratorMessageDto Message,
+    Guid AccountId = default);
+
 /// <summary>Push to the affected user when a moderator bans one of the account's profiles.
 /// <see cref="ForProfileId"/> is the banned profile (a sibling ban must not tear down the whole session).</summary>
 [MessagePackObject(keyAsPropertyName: true)]

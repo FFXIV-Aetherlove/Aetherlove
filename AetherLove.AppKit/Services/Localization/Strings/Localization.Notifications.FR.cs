@@ -32,5 +32,11 @@ internal static class NotificationsFr
 
         // Chat notification link (added after update 2.0.0.0)
         ["notif.view_link"] = "Voir",
+
+        // added after update 2.1.3
+        ["notif.realtor_accepting"] = "La loterie immobilière accepte les candidatures. Les parcelles libres sont dans l'appli Immobilier.",
+        ["notif.realtor_results"] = "La loterie immobilière est passée à la période des résultats. Voyez où vous en êtes dans l'appli Immobilier.",
+        ["notif.staff_notice_title"] = "Message de l'équipe",
+        ["notif.staff_notice_body"] = "Ouvrez les Réglages pour le lire.",
     };
 }

@@ -312,9 +312,10 @@ internal sealed class HubScreen
         dl.AddText(new Vector2(tl.X + Px(12f), br.Y - Px(10f) - subBlockH), subCol, sub1);
         using (UiFonts.H3?.Push())
         {
-            var titleText = TruncateToWidth(title, innerW);
+            var titleX = chipC.X + chipR + Px(10f);
+            var titleText = TruncateToWidth(title, br.X - Px(12f) - titleX);
             var titleSz = ImGui.CalcTextSize(titleText);
-            dl.AddText(new Vector2(tl.X + Px(12f), br.Y - Px(12f) - subBlockH - titleSz.Y), titleCol, titleText);
+            dl.AddText(new Vector2(titleX, chipC.Y - titleSz.Y * 0.5f), titleCol, titleText);
         }
         return clicked;
     }
@@ -750,11 +751,13 @@ internal sealed class HubScreen
         ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(0f, Px(2f)));
         if (ImGui.BeginPopup(MenuPopupId))
         {
+            var cfg = UiHost.Configuration;
             var watchlist = Loc.T("os.market_menu_watchlist");
             var mySales = Loc.T("os.market_tile_mysales");
             var alerts = Loc.T("os.market_menu_alerts");
             var tour = Loc.T("os.market_menu_tour");
-            var w = AppHeader.MenuWidth(watchlist, mySales, alerts, tour);
+            var ctxToggle = Loc.T(cfg.MarketContextMenuEnabled ? "os.market_menu_ctx_hide" : "os.market_menu_ctx_show");
+            var w = AppHeader.MenuWidth(watchlist, mySales, alerts, tour, ctxToggle);
             var rowH = AppHeader.MenuRowHeight();
             if (AppHeader.MenuRow(FontAwesomeIcon.Star, watchlist, w, rowH))
             {
@@ -774,6 +777,13 @@ internal sealed class HubScreen
             if (AppHeader.MenuRow(FontAwesomeIcon.Compass, tour, w, rowH))
             {
                 _navigate(HubTarget.Tour);
+                ImGui.CloseCurrentPopup();
+            }
+            if (AppHeader.MenuRow(cfg.MarketContextMenuEnabled ? FontAwesomeIcon.EyeSlash : FontAwesomeIcon.Eye,
+                ctxToggle, w, rowH))
+            {
+                cfg.MarketContextMenuEnabled = !cfg.MarketContextMenuEnabled;
+                cfg.Save();
                 ImGui.CloseCurrentPopup();
             }
             ImGui.EndPopup();

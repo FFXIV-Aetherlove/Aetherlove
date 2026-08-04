@@ -11,6 +11,15 @@ public static class AppStrings
         ["os.realtor_pick_world"] = "Choose a world",
         ["os.realtor_search_world"] = "Search worlds...",
         ["os.realtor_hero_sub"] = "open plots on {0}",
+        ["os.realtor_stale_row"] = "(stale data)",
+        ["os.realtor_menu_contribute"] = "Contribute?",
+        ["os.realtor_contribute_title"] = "Where this data comes from",
+        ["os.realtor_contribute_body"] = "Every plot here was spotted by a player running the PaissaHouse plugin, which reports open plots as they walk past. Install and run it and your own wanderings keep this list fresh for everyone, including the worlds nobody is watching.",
+        ["os.realtor_contribute_open"] = "Open the plugin installer",
+        ["os.realtor_contribute_close"] = "Close",
+        ["os.realtor_stale_pill"] = "{0} stale",
+        ["os.realtor_bid_title"] = "You have a lottery entry",
+        ["os.realtor_bid_detail"] = "Plot {0}, Ward {1}, {2}  ·  Lottery number {3}",
         ["os.realtor_stale"] = "reports up to {0} old",
         ["os.realtor_district_open"] = "{0} open",
         ["os.realtor_district_none"] = "None open",
@@ -59,6 +68,16 @@ public static class AppStrings
         ["os.realtor_tour_credit"] = "All housing data is crowdsourced by players running PaissaHouse and shared through PaissaDB. They are awesome!",
         ["os.realtor_tour_credit_link"] = "Visit PaissaDB",
         ["os.realtor_tour_reopen_hint"] = "You can reopen this tour any time with the question mark up top.",
+
+        // added after update 2.1.3
+        ["os.realtor_menu_settings"] = "Settings",
+        ["os.realtor_settings"] = "Realtor settings",
+        ["os.realtor_settings_data"] = "Data",
+        ["os.realtor_settings_alerts"] = "Alerts",
+        ["os.realtor_set_stale"] = "Show stale entries",
+        ["os.realtor_set_stale_hint"] = "Every entry is crowdsourced through PaissaDB. Turning this on also shows houses that have not been checked in a while and might still be available. It adds the stale pill to the counts and lists stale plots in the district screens; with it off, both stay hidden.",
+        ["os.realtor_set_notify"] = "Notify me when the phase changes",
+        ["os.realtor_set_notify_hint"] = "Sends a phone notification when the housing lottery flips between accepting entries and publishing results. It shows up in chat when you log in and in your notifications; opening the Realtor app clears it.",
     };
 
     private static readonly IReadOnlyDictionary<string, string> De = new Dictionary<string, string>
@@ -67,6 +86,15 @@ public static class AppStrings
         ["os.realtor_pick_world"] = "Welt auswählen",
         ["os.realtor_search_world"] = "Welten durchsuchen...",
         ["os.realtor_hero_sub"] = "freie Grundstücke auf {0}",
+        ["os.realtor_stale_row"] = "(veraltete Daten)",
+        ["os.realtor_menu_contribute"] = "Mithelfen?",
+        ["os.realtor_contribute_title"] = "Woher diese Daten kommen",
+        ["os.realtor_contribute_body"] = "Jedes Grundstück hier wurde von Spielenden mit dem PaissaHouse-Plugin gesichtet, das freie Grundstücke im Vorbeigehen meldet. Installiere es, und deine eigenen Streifzüge halten diese Liste für alle frisch, auch auf Welten, die sonst niemand beobachtet.",
+        ["os.realtor_contribute_open"] = "Plugin-Installer öffnen",
+        ["os.realtor_contribute_close"] = "Schließen",
+        ["os.realtor_stale_pill"] = "{0} veraltet",
+        ["os.realtor_bid_title"] = "Du hast ein Los abgegeben",
+        ["os.realtor_bid_detail"] = "Grundstück {0}, Bezirk {1}, {2}  ·  Losnummer {3}",
         ["os.realtor_stale"] = "Meldungen bis zu {0} alt",
         ["os.realtor_district_open"] = "{0} frei",
         ["os.realtor_district_none"] = "Keine frei",
@@ -115,6 +143,16 @@ public static class AppStrings
         ["os.realtor_tour_credit"] = "Alle Wohnungsdaten werden von Spielern mit PaissaHouse gesammelt und über PaissaDB geteilt. Die sind großartig!",
         ["os.realtor_tour_credit_link"] = "PaissaDB besuchen",
         ["os.realtor_tour_reopen_hint"] = "Du kannst diese Tour jederzeit über das Fragezeichen oben neu starten.",
+
+        // added after update 2.1.3
+        ["os.realtor_menu_settings"] = "Einstellungen",
+        ["os.realtor_settings"] = "Makler-Einstellungen",
+        ["os.realtor_settings_data"] = "Daten",
+        ["os.realtor_settings_alerts"] = "Hinweise",
+        ["os.realtor_set_stale"] = "Veraltete Einträge zeigen",
+        ["os.realtor_set_stale_hint"] = "Alle Einträge stammen aus PaissaDB und werden von Spielern gemeldet. Mit dieser Option siehst du auch Häuser, die länger nicht geprüft wurden und vielleicht noch frei sind. Sie blendet die Plakette mit veralteten Angaben bei den Zählern ein und listet veraltete Grundstücke in den Bezirken; ausgeschaltet bleibt beides verborgen.",
+        ["os.realtor_set_notify"] = "Bei Phasenwechsel benachrichtigen",
+        ["os.realtor_set_notify_hint"] = "Schickt eine Benachrichtigung aufs Handy, wenn die Haus-Lotterie zwischen Bewerbungsphase und Ergebnisphase wechselt. Sie erscheint beim Einloggen im Chat und in deinen Benachrichtigungen; das Öffnen der Makler-App löscht sie.",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Es = new Dictionary<string, string>
@@ -123,6 +161,15 @@ public static class AppStrings
         ["os.realtor_pick_world"] = "Elige un mundo",
         ["os.realtor_search_world"] = "Buscar mundos...",
         ["os.realtor_hero_sub"] = "parcelas libres en {0}",
+        ["os.realtor_stale_row"] = "(datos obsoletos)",
+        ["os.realtor_menu_contribute"] = "¿Colaborar?",
+        ["os.realtor_contribute_title"] = "De dónde salen estos datos",
+        ["os.realtor_contribute_body"] = "Cada parcela la vio alguien con el plugin PaissaHouse, que informa de las parcelas libres al pasar por delante. Instálalo y tus propios paseos mantienen esta lista al día para todos, incluso en mundos que nadie vigila.",
+        ["os.realtor_contribute_open"] = "Abrir el instalador de plugins",
+        ["os.realtor_contribute_close"] = "Cerrar",
+        ["os.realtor_stale_pill"] = "{0} obsoletos",
+        ["os.realtor_bid_title"] = "Tienes una entrada en el sorteo",
+        ["os.realtor_bid_detail"] = "Parcela {0}, Barrio {1}, {2}  ·  Número {3}",
         ["os.realtor_stale"] = "informes de hasta hace {0}",
         ["os.realtor_district_open"] = "{0} libres",
         ["os.realtor_district_none"] = "Ninguna libre",
@@ -171,6 +218,16 @@ public static class AppStrings
         ["os.realtor_tour_credit"] = "Todos los datos de vivienda los recopilan jugadores con PaissaHouse y se comparten vía PaissaDB. ¡Son geniales!",
         ["os.realtor_tour_credit_link"] = "Visitar PaissaDB",
         ["os.realtor_tour_reopen_hint"] = "Puedes reabrir este tour cuando quieras con el interrogante de arriba.",
+
+        // added after update 2.1.3
+        ["os.realtor_menu_settings"] = "Ajustes",
+        ["os.realtor_settings"] = "Ajustes de Inmobiliaria",
+        ["os.realtor_settings_data"] = "Datos",
+        ["os.realtor_settings_alerts"] = "Avisos",
+        ["os.realtor_set_stale"] = "Mostrar entradas obsoletas",
+        ["os.realtor_set_stale_hint"] = "Todas las entradas provienen de PaissaDB y las aportan otros jugadores. Al activar esto también verás casas que llevan tiempo sin comprobarse y que quizá sigan libres. Añade la etiqueta de datos obsoletos a los recuentos y lista esas parcelas en los distritos; si lo desactivas, ambas cosas se ocultan.",
+        ["os.realtor_set_notify"] = "Avisarme al cambiar de fase",
+        ["os.realtor_set_notify_hint"] = "Envía una notificación al teléfono cuando la lotería de viviendas pasa de aceptar solicitudes a publicar resultados y viceversa. Aparece en el chat al iniciar sesión y en tus notificaciones; abrir la app de Inmobiliaria la borra.",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Fr = new Dictionary<string, string>
@@ -179,6 +236,15 @@ public static class AppStrings
         ["os.realtor_pick_world"] = "Choisissez un monde",
         ["os.realtor_search_world"] = "Rechercher un monde...",
         ["os.realtor_hero_sub"] = "terrains libres sur {0}",
+        ["os.realtor_stale_row"] = "(données obsolètes)",
+        ["os.realtor_menu_contribute"] = "Contribuer ?",
+        ["os.realtor_contribute_title"] = "D'où viennent ces données",
+        ["os.realtor_contribute_body"] = "Chaque terrain a été repéré par un joueur utilisant le plugin PaissaHouse, qui signale les terrains libres sur son passage. Installez-le et vos propres balades gardent cette liste à jour pour tout le monde, même sur les mondes que personne ne surveille.",
+        ["os.realtor_contribute_open"] = "Ouvrir l'installateur de plugins",
+        ["os.realtor_contribute_close"] = "Fermer",
+        ["os.realtor_stale_pill"] = "{0} obsolètes",
+        ["os.realtor_bid_title"] = "Vous avez une candidature en cours",
+        ["os.realtor_bid_detail"] = "Terrain {0}, quartier {1}, {2}  ·  Numéro {3}",
         ["os.realtor_stale"] = "relevés datant d'au plus {0}",
         ["os.realtor_district_open"] = "{0} libres",
         ["os.realtor_district_none"] = "Aucun libre",
@@ -227,6 +293,16 @@ public static class AppStrings
         ["os.realtor_tour_credit"] = "Toutes les données immobilières sont collectées par des joueurs utilisant PaissaHouse et partagées via PaissaDB. Ils sont formidables !",
         ["os.realtor_tour_credit_link"] = "Visiter PaissaDB",
         ["os.realtor_tour_reopen_hint"] = "Vous pouvez rouvrir cette visite à tout moment via le point d'interrogation en haut.",
+
+        // added after update 2.1.3
+        ["os.realtor_menu_settings"] = "Paramètres",
+        ["os.realtor_settings"] = "Paramètres de l'agence",
+        ["os.realtor_settings_data"] = "Données",
+        ["os.realtor_settings_alerts"] = "Alertes",
+        ["os.realtor_set_stale"] = "Afficher les entrées obsolètes",
+        ["os.realtor_set_stale_hint"] = "Toutes les entrées proviennent de PaissaDB et sont remontées par les joueurs. En activant ceci, vous verrez aussi des maisons qui n'ont pas été vérifiées depuis un moment et qui restent peut-être libres. Cela ajoute la pastille de données obsolètes aux compteurs et liste ces parcelles dans les quartiers ; désactivé, les deux disparaissent.",
+        ["os.realtor_set_notify"] = "Me prévenir au changement de phase",
+        ["os.realtor_set_notify_hint"] = "Envoie une notification sur le téléphone quand la loterie immobilière passe des candidatures aux résultats, et inversement. Elle s'affiche dans le chat à la connexion et dans vos notifications ; ouvrir l'appli l'efface.",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Pt = new Dictionary<string, string>
@@ -235,6 +311,15 @@ public static class AppStrings
         ["os.realtor_pick_world"] = "Escolha um mundo",
         ["os.realtor_search_world"] = "Buscar mundos...",
         ["os.realtor_hero_sub"] = "terrenos livres em {0}",
+        ["os.realtor_stale_row"] = "(dados desatualizados)",
+        ["os.realtor_menu_contribute"] = "Contribuir?",
+        ["os.realtor_contribute_title"] = "De onde vêm estes dados",
+        ["os.realtor_contribute_body"] = "Cada terreno aqui foi visto por alguém a usar o plugin PaissaHouse, que reporta terrenos livres ao passar. Instale-o e os seus próprios passeios mantêm esta lista fresca para todos, mesmo em mundos que ninguém observa.",
+        ["os.realtor_contribute_open"] = "Abrir o instalador de plugins",
+        ["os.realtor_contribute_close"] = "Fechar",
+        ["os.realtor_stale_pill"] = "{0} desatualizados",
+        ["os.realtor_bid_title"] = "Você tem uma inscrição no sorteio",
+        ["os.realtor_bid_detail"] = "Terreno {0}, Bairro {1}, {2}  ·  Número {3}",
         ["os.realtor_stale"] = "relatos de até {0} atrás",
         ["os.realtor_district_open"] = "{0} livres",
         ["os.realtor_district_none"] = "Nenhum livre",
@@ -283,6 +368,16 @@ public static class AppStrings
         ["os.realtor_tour_credit"] = "Todos os dados de moradia são coletados por jogadores com o PaissaHouse e compartilhados via PaissaDB. Eles são incríveis!",
         ["os.realtor_tour_credit_link"] = "Visitar o PaissaDB",
         ["os.realtor_tour_reopen_hint"] = "Você pode reabrir este tour a qualquer momento pelo ponto de interrogação lá em cima.",
+
+        // added after update 2.1.3
+        ["os.realtor_menu_settings"] = "Configurações",
+        ["os.realtor_settings"] = "Configurações da imobiliária",
+        ["os.realtor_settings_data"] = "Dados",
+        ["os.realtor_settings_alerts"] = "Alertas",
+        ["os.realtor_set_stale"] = "Mostrar entradas desatualizadas",
+        ["os.realtor_set_stale_hint"] = "Todas as entradas vêm do PaissaDB e são enviadas por jogadores. Ao ligar isto, você também vê casas que não são verificadas há um tempo e que talvez ainda estejam livres. Isso adiciona a etiqueta de dados desatualizados às contagens e lista esses lotes nos distritos; desligado, os dois ficam ocultos.",
+        ["os.realtor_set_notify"] = "Avisar quando a fase mudar",
+        ["os.realtor_set_notify_hint"] = "Envia uma notificação no telefone quando a loteria de casas alterna entre aceitar inscrições e divulgar resultados. Ela aparece no chat ao entrar no jogo e nas suas notificações; abrir o app limpa tudo.",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Ru = new Dictionary<string, string>
@@ -291,6 +386,15 @@ public static class AppStrings
         ["os.realtor_pick_world"] = "Выберите мир",
         ["os.realtor_search_world"] = "Поиск миров...",
         ["os.realtor_hero_sub"] = "свободных участков на {0}",
+        ["os.realtor_stale_row"] = "(данные устарели)",
+        ["os.realtor_menu_contribute"] = "Помочь?",
+        ["os.realtor_contribute_title"] = "Откуда эти данные",
+        ["os.realtor_contribute_body"] = "Каждый участок здесь заметил игрок с плагином PaissaHouse: он отмечает свободные участки, когда ты проходишь мимо. Поставь его, и твои прогулки будут держать список свежим для всех, даже на мирах, за которыми никто не следит.",
+        ["os.realtor_contribute_open"] = "Открыть установщик плагинов",
+        ["os.realtor_contribute_close"] = "Закрыть",
+        ["os.realtor_stale_pill"] = "{0} устарело",
+        ["os.realtor_bid_title"] = "У тебя есть заявка на участок",
+        ["os.realtor_bid_detail"] = "Участок {0}, район {1}, {2}  ·  Номер {3}",
         ["os.realtor_stale"] = "данные не старше {0}",
         ["os.realtor_district_open"] = "{0} свободно",
         ["os.realtor_district_none"] = "Нет свободных",
@@ -339,6 +443,16 @@ public static class AppStrings
         ["os.realtor_tour_credit"] = "Все данные о жилье собирают игроки с плагином PaissaHouse и делятся ими через PaissaDB. Они великолепны!",
         ["os.realtor_tour_credit_link"] = "Открыть PaissaDB",
         ["os.realtor_tour_reopen_hint"] = "Этот тур можно открыть заново в любой момент через знак вопроса сверху.",
+
+        // added after update 2.1.3
+        ["os.realtor_menu_settings"] = "Настройки",
+        ["os.realtor_settings"] = "Настройки Риелтора",
+        ["os.realtor_settings_data"] = "Данные",
+        ["os.realtor_settings_alerts"] = "Оповещения",
+        ["os.realtor_set_stale"] = "Показывать устаревшие записи",
+        ["os.realtor_set_stale_hint"] = "Все данные приходят из PaissaDB, их собирают сами игроки. С этой опцией вы увидите и те дома, которые давно никто не проверял, но которые всё ещё могут быть свободны. Она добавляет плашку с устаревшими записями к счётчикам и показывает такие участки в районах; если выключить, пропадёт и то, и другое.",
+        ["os.realtor_set_notify"] = "Сообщать о смене фазы",
+        ["os.realtor_set_notify_hint"] = "Пришлёт уведомление на телефон, когда жилищная лотерея переключится между приёмом заявок и объявлением результатов. Оно появится в чате при входе в игру и в списке уведомлений, а после открытия приложения исчезнет.",
     };
 
     public static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> Packs =

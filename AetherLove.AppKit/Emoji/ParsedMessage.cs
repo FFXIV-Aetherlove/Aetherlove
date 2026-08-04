@@ -143,7 +143,10 @@ public sealed class ParsedMessage
 
     /// <summary>Renders wrapped inside a padding-free child of the measured height, so the manual
     /// word/emoji layout and ImGui's wrap share the same right edge (avoids mid-word breaks).</summary>
-    public void DrawWrapped(string childId, float width)
+    /// <summary>Draws the message word-wrapped inside its own child. The child sits above the parent's
+    /// items, so a caller whose surrounding card is a click target must pass <paramref name="onClick"/> to
+    /// keep the text area clickable: it is submitted last inside the child, so links and emoji win first.</summary>
+    public void DrawWrapped(string childId, float width, Action? onClick = null)
     {
         var height = MeasureHeight(width);
         ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Vector2.Zero);
@@ -156,6 +159,15 @@ public sealed class ParsedMessage
                 ImGui.PushTextWrapPos(width);
                 Draw();
                 ImGui.PopTextWrapPos();
+                if (onClick is not null)
+                {
+                    ImGui.SetCursorPos(Vector2.Zero);
+                    if (ImGui.InvisibleButton($"{childId}##open", new Vector2(width, height)))
+                    {
+                        onClick();
+                    }
+                    UI.SharedUiHelpers.HandOnHover();
+                }
             }
         }
         ImGui.PopStyleVar();

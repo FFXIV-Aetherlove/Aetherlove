@@ -32,5 +32,11 @@ internal static class NotificationsEn
 
         // Chat notification link (added after update 2.0.0.0)
         ["notif.view_link"] = "View",
+
+        // added after update 2.1.3
+        ["notif.realtor_accepting"] = "The housing lottery is now accepting entries. Check the Realtor app for open plots.",
+        ["notif.realtor_results"] = "The housing lottery has moved to its results period. Check the Realtor app to see where you stand.",
+        ["notif.staff_notice_title"] = "Message from staff",
+        ["notif.staff_notice_body"] = "Open Settings to read it.",
     };
 }

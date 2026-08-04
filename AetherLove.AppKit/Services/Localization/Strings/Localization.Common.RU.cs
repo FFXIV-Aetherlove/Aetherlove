@@ -172,5 +172,11 @@ internal static class CommonRu
 
         // added after update 2.0.1
         ["common.passphrase_correct_unrecoverable"] = "Кодовая фраза верна, но открыть ею сохранённые ключи не получилось. Пожалуйста, свяжитесь с поддержкой, прежде чем сбрасывать фразу: после сброса старые сообщения останутся нечитаемыми навсегда.",
+
+        // added after update 2.1.3
+        ["common.staff_notice_heading_one"] = "У вас есть уведомление от команды",
+        ["common.staff_notice_heading_many"] = "У вас есть уведомления от команды: {0}",
+        ["common.staff_notice_body"] = "Команда AetherOS прислала вам вот что по вашему аккаунту:",
+        ["common.staff_notice_ack"] = "Понятно",
     };
 }

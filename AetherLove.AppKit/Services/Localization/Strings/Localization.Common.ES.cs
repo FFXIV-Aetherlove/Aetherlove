@@ -171,5 +171,11 @@ internal static class CommonEs
 
         // added after update 2.0.1
         ["common.passphrase_correct_unrecoverable"] = "Tu frase de contraseña es correcta, pero no se pudo abrir ninguna de tus claves guardadas con ella. Contacta con soporte antes de plantearte un restablecimiento; con él tus mensajes antiguos quedarían ilegibles para siempre.",
+
+        // added after update 2.1.3
+        ["common.staff_notice_heading_one"] = "Tienes un aviso del equipo",
+        ["common.staff_notice_heading_many"] = "Tienes {0} avisos del equipo",
+        ["common.staff_notice_body"] = "El equipo de AetherOS te ha enviado lo siguiente sobre tu cuenta:",
+        ["common.staff_notice_ack"] = "Entendido",
     };
 }

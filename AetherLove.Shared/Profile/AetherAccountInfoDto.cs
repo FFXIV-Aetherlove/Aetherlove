@@ -23,4 +23,8 @@ public sealed record AetherAccountInfoDto(
     // Account-wide ban: when set, the shell gates every server-backed app and shows the reason. Distinct from a
     // per-profile AetherLove ban, which surfaces via AetherConnectionDto.Status/BanReason.
     bool AccountDisabled = false,
-    string? AccountDisabledReason = null);
+    string? AccountDisabledReason = null,
+    // Account-level staff notices (the OS track), newest first. Disjoint from AetherConnectionDto.Warnings /
+    // .ModeratorMessages, which carry only the profile-sourced AetherLove track. Null means "none".
+    WarningDto[]? StaffWarnings = null,
+    ModeratorMessageDto[]? StaffMessages = null);

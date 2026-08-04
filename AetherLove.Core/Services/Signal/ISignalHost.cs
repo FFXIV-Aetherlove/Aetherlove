@@ -11,4 +11,13 @@ public interface ISignalHost
     void RequestWarningLiveAcknowledge();
 
     void RequestModeratorLiveAcknowledge();
+
+    /// <summary>Arms the OS staff-notice gate for a live mid-session account-level notice, so acknowledging it
+    /// returns the user to where they were instead of re-running the startup ladder.</summary>
+    void RequestStaffNoticeLiveAcknowledge();
+
+    /// <summary>Re-reads the account snapshot into the staff-notice gate while it is already showing. Navigating
+    /// to the screen it is already on never re-runs its OnShow, so a notice arriving mid-gate needs this to join
+    /// the displayed batch.</summary>
+    void RefreshStaffNoticeGate();
 }

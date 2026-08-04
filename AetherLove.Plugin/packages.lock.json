@@ -523,6 +523,14 @@
           "SixLabors.ImageSharp": "[3.1.12, )"
         }
       },
+      "aetheros.apps.breaker": {
+        "type": "Project",
+        "dependencies": {
+          "AetherLove.AppKit": "[1.0.0, )",
+          "AetherLove.Shared": "[1.0.0, )",
+          "AetherOS.Sdk": "[1.0.0, )"
+        }
+      },
       "aetheros.apps.calendar": {
         "type": "Project",
         "dependencies": {
@@ -584,11 +592,27 @@
           "AetherOS.Sdk": "[1.0.0, )"
         }
       },
+      "aetheros.apps.mazemuncher": {
+        "type": "Project",
+        "dependencies": {
+          "AetherLove.AppKit": "[1.0.0, )",
+          "AetherLove.Shared": "[1.0.0, )",
+          "AetherOS.Sdk": "[1.0.0, )"
+        }
+      },
       "aetheros.apps.messenger": {
         "type": "Project",
         "dependencies": {
           "AetherLove.AppKit": "[1.0.0, )",
           "AetherLove.Core": "[1.0.0, )",
+          "AetherLove.Shared": "[1.0.0, )",
+          "AetherOS.Sdk": "[1.0.0, )"
+        }
+      },
+      "aetheros.apps.meteorcommand": {
+        "type": "Project",
+        "dependencies": {
+          "AetherLove.AppKit": "[1.0.0, )",
           "AetherLove.Shared": "[1.0.0, )",
           "AetherOS.Sdk": "[1.0.0, )"
         }
@@ -632,9 +656,50 @@
           "AetherOS.Sdk": "[1.0.0, )"
         }
       },
+      "aetheros.apps.snake": {
+        "type": "Project",
+        "dependencies": {
+          "AetherLove.AppKit": "[1.0.0, )",
+          "AetherLove.Shared": "[1.0.0, )",
+          "AetherOS.Sdk": "[1.0.0, )"
+        }
+      },
+      "aetheros.apps.stacker": {
+        "type": "Project",
+        "dependencies": {
+          "AetherLove.AppKit": "[1.0.0, )",
+          "AetherLove.Shared": "[1.0.0, )",
+          "AetherOS.Sdk": "[1.0.0, )"
+        }
+      },
+      "aetheros.apps.voidinvaders": {
+        "type": "Project",
+        "dependencies": {
+          "AetherLove.AppKit": "[1.0.0, )",
+          "AetherLove.Shared": "[1.0.0, )",
+          "AetherOS.Sdk": "[1.0.0, )"
+        }
+      },
+      "aetheros.apps.wayfinder": {
+        "type": "Project",
+        "dependencies": {
+          "AetherLove.AppKit": "[1.0.0, )",
+          "AetherLove.Shared": "[1.0.0, )",
+          "AetherOS.Sdk": "[1.0.0, )"
+        }
+      },
       "aetheros.apps.weather": {
         "type": "Project",
         "dependencies": {
+          "AetherOS.Sdk": "[1.0.0, )"
+        }
+      },
+      "aetheros.apps.yapper": {
+        "type": "Project",
+        "dependencies": {
+          "AetherLove.AppKit": "[1.0.0, )",
+          "AetherLove.Core": "[1.0.0, )",
+          "AetherLove.Shared": "[1.0.0, )",
           "AetherOS.Sdk": "[1.0.0, )"
         }
       },

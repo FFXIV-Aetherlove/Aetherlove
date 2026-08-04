@@ -110,6 +110,31 @@ public sealed class HomeScreen
     // Guided-tour drivers: the tour animates the home screen through these instead of poking privates.
     public void ShowPage(int page) => _targetPage = page;
 
+    /// <summary>Closes the open folder overlay, if any; the home button uses this so pressing home
+    /// inside a folder leaves the folder instead of doing nothing.</summary>
+    public bool CloseOpenFolder()
+    {
+        if (_openFolderId == null)
+        {
+            return false;
+        }
+        _openFolderId = null;
+        _folderEditMode = false;
+        return true;
+    }
+
+    /// <summary>Opens the given folder's overlay; unknown ids are ignored. The Arcade folder always
+    /// exists (EnsureArcade re-creates it every home frame), so its id is accepted unconditionally.</summary>
+    public void OpenFolder(string folderId)
+    {
+        if (FindFolder(folderId) == null && folderId != OsFolders.ArcadeId)
+        {
+            return;
+        }
+        _openFolderId = folderId;
+        _folderEditMode = false;
+    }
+
     public void SetEditMode(bool on)
     {
         _editMode = on;
@@ -305,6 +330,11 @@ public sealed class HomeScreen
             Repack(os, rows, cols);
         }
 
+        if (Os.OsFolders.EnsureArcade(os))
+        {
+            UiHost.Configuration.Save();
+        }
+
         var (keep, shown) = LayoutIds();
         _shownIds = shown;
         var layout = HomeLayout.FromConfig(os, rows, cols, keep.Contains);
@@ -453,7 +483,9 @@ public sealed class HomeScreen
         var occupant = target.InDock
             ? (target.Slot >= 0 && target.Slot < layout.Dock.Count ? layout.Dock[target.Slot] : null)
             : layout.At(target.Page, target.Slot);
-        return occupant != null && occupant != _dragId && IsFolderId(occupant) ? occupant : null;
+        // The Games folder refuses drops: it has no edit mode, so anything dropped in could never come out.
+        return occupant != null && occupant != _dragId && IsFolderId(occupant)
+            && !Os.OsFolders.IsBuiltIn(occupant) ? occupant : null;
     }
 
     private DropSpot DropTarget(HomeLayout layout)
@@ -701,7 +733,7 @@ public sealed class HomeScreen
         var br = center + new Vector2(half, half);
         _tileRects[appId] = (tl, br);
 
-        var removable = removingT < 0f && _editMode && _dragId == null
+        var removable = removingT < 0f && _editMode && _dragId == null && !Os.OsFolders.IsBuiltIn(appId)
             && (folder != null || appId.StartsWith(Os.ExternalApp.IdPrefix, StringComparison.Ordinal));
         var removePressed = false;
         var removeC = tl + Px(2f, 2f);
@@ -795,7 +827,8 @@ public sealed class HomeScreen
         {
             OsDraw.Badge(dl, new Vector2(sbr.X - Px(6f), stl.Y + Px(6f)), badge, 1.1f);
         }
-        if (folder == null && removingT < 0f && _shell.IsNewApp(appId))
+        // A folder wears the "new" pill for whatever is new inside it, or a shipped app would hide silently.
+        if (removingT < 0f && (folder != null ? folder.AppIds.Any(_shell.IsNewApp) : _shell.IsNewApp(appId)))
         {
             OsDraw.NewBadge(dl, new Vector2(stl.X, stl.Y + Px(6f)));
         }
@@ -807,8 +840,13 @@ public sealed class HomeScreen
         if (showLabel)
         {
             // A very long external-plugin name would otherwise run into its neighbours; clamp to the slot.
-            OsDraw.CenteredText(dl, folder?.Name ?? app!.Name, center.X, br.Y + Px(7f),
+            var label = folder != null ? Os.OsFolders.DisplayName(folder) : app!.Name;
+            var clipped = OsDraw.CenteredText(dl, label, center.X, br.Y + Px(7f),
                 OsDraw.White(0.95f * tileAlpha), LabelScale, slotW - Px(6f));
+            if (clipped && hovered && !_editMode && _dragId == null)
+            {
+                ImGui.SetTooltip(label);
+            }
         }
 
         if (removable)
@@ -871,7 +909,8 @@ public sealed class HomeScreen
     private void RemoveFolder(string folderId)
     {
         var os = UiHost.Configuration.Os;
-        if (os.Folders.FirstOrDefault(f => f.Id == folderId) is not { } folder)
+        if (Os.OsFolders.IsBuiltIn(folderId)
+            || os.Folders.FirstOrDefault(f => f.Id == folderId) is not { } folder)
         {
             return;
         }
@@ -903,6 +942,16 @@ public sealed class HomeScreen
     {
         var size = br.X - tl.X;
         var rounding = size * 0.28f;
+
+        if (Os.OsFolders.TileIcon(folder) is { } art)
+        {
+            dl.AddImageRounded(art, tl, br, Vector2.Zero, Vector2.One, OsDraw.White(alpha), rounding,
+                ImDrawFlags.RoundCornersAll);
+            dl.AddRect(tl + new Vector2(1f, 1f), br - new Vector2(1f, 1f), OsDraw.White(0.20f * alpha), rounding,
+                ImDrawFlags.RoundCornersAll, 1f);
+            return;
+        }
+
         dl.AddRectFilled(tl, br, OsDraw.White(0.13f * alpha), rounding);
         dl.AddRect(tl + new Vector2(1f, 1f), br - new Vector2(1f, 1f), OsDraw.White(0.22f * alpha), rounding,
             ImDrawFlags.RoundCornersAll, 1f);
@@ -1599,6 +1648,12 @@ public sealed class HomeScreen
         dl.AddRectFilled(panelTL, panelBR, ImGui.ColorConvertFloat4ToU32(new Vector4(0.07f, 0.07f, 0.10f, 0.98f)), Px(18f));
         dl.AddRect(panelTL, panelBR, OsDraw.White(0.12f), Px(18f), ImDrawFlags.RoundCornersAll, Px(1f));
 
+        var builtIn = Os.OsFolders.IsBuiltIn(folder.Id);
+        if (builtIn)
+        {
+            _folderEditMode = false;
+        }
+
         if (_folderEditMode)
         {
             ImGui.SetCursorScreenPos(panelTL + Px(14f, 12f));
@@ -1618,7 +1673,7 @@ public sealed class HomeScreen
         {
             using (UiFonts.H3?.Push())
             {
-                dl.AddText(panelTL + Px(16f, 14f), OsDraw.White(0.95f), folder.Name);
+                dl.AddText(panelTL + Px(16f, 14f), OsDraw.White(0.95f), Os.OsFolders.DisplayName(folder));
             }
         }
 
@@ -1632,19 +1687,22 @@ public sealed class HomeScreen
         }
         IconDraw.AddCentered(dl, FontAwesomeIcon.Times, Px(12f), closeC, OsDraw.White(0.7f));
 
-        var editLabel = Loc.T(_folderEditMode ? "os.edit_done" : "os.folder_edit");
-        var editSz = ImGui.CalcTextSize(editLabel);
-        var editTL = new Vector2(closeC.X - Px(11f) - editSz.X - Px(24f), panelTL.Y + Px(11f));
-        var editBR = editTL + editSz + Px(16f, 9f);
-        ImGui.SetCursorScreenPos(editTL);
-        if (ImGui.InvisibleButton("##folderEdit", editBR - editTL))
+        if (!builtIn)
         {
-            _folderEditMode = !_folderEditMode;
+            var editLabel = Loc.T(_folderEditMode ? "os.edit_done" : "os.folder_edit");
+            var editSz = ImGui.CalcTextSize(editLabel);
+            var editTL = new Vector2(closeC.X - Px(11f) - editSz.X - Px(24f), panelTL.Y + Px(11f));
+            var editBR = editTL + editSz + Px(16f, 9f);
+            ImGui.SetCursorScreenPos(editTL);
+            if (ImGui.InvisibleButton("##folderEdit", editBR - editTL))
+            {
+                _folderEditMode = !_folderEditMode;
+            }
+            dl.AddRectFilled(editTL, editBR,
+                ImGui.IsItemHovered() || _folderEditMode ? ThemeService.Current.AccentU32 : OsDraw.White(0.14f),
+                (editBR.Y - editTL.Y) * 0.5f);
+            dl.AddText(editTL + Px(8f, 4f), OsDraw.White(0.96f), editLabel);
         }
-        dl.AddRectFilled(editTL, editBR,
-            ImGui.IsItemHovered() || _folderEditMode ? ThemeService.Current.AccentU32 : OsDraw.White(0.14f),
-            (editBR.Y - editTL.Y) * 0.5f);
-        dl.AddText(editTL + Px(8f, 4f), OsDraw.White(0.96f), editLabel);
 
         var top = panelTL.Y + Px(52f);
         var apps = new List<IAetherApp>();
@@ -1832,7 +1890,13 @@ public sealed class HomeScreen
             {
                 DrawOfflineMarker(cdl, new Vector2(br.X - Px(7f), br.Y - Px(7f)));
             }
-            OsDraw.CenteredText(cdl, app.Name, (tl.X + br.X) * 0.5f, br.Y + Px(6f), OsDraw.White(0.9f * alpha), 1f);
+            // Clamped to the slot, not the tile: an unclamped label runs straight into its neighbours.
+            var clipped = OsDraw.CenteredText(cdl, app.Name, (tl.X + br.X) * 0.5f, br.Y + Px(6f),
+                OsDraw.White(0.9f * alpha), 1f, slotW - Px(6f));
+            if (clipped && hovered)
+            {
+                ImGui.SetTooltip(app.Name);
+            }
             if (hovered && !_folderEditMode && !AccessibilityService.ReduceMotion)
             {
                 cdl.AddRect(tl - Px(2f, 2f), br + Px(2f, 2f), ThemeService.Current.AccentU32,

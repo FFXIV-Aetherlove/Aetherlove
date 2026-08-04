@@ -412,6 +412,28 @@ public sealed class NotificationDispatcher : IDisposable, Signal.INotifier
         }
     }
 
+    /// <summary>The housing lottery changed phase. No link payload: the line is informational and the phone
+    /// notification beside it is the thing that opens the app.</summary>
+    public void NotifyRealtorPhase(string text)
+    {
+        if (!_config.EnableNotifications || !LoggedIn || CombatSuppressed)
+        {
+            return;
+        }
+        try
+        {
+            _chat.Print(new SeStringBuilder().AddText("[AetherOS] ").AddText(text).BuiltString);
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Warning(ex, "[NotificationDispatcher] Realtor phase print failed.");
+        }
+        if (_config.EnableNotificationSounds)
+        {
+            NotificationSoundPlayer.Play(_config.NotificationSoundChoice);
+        }
+    }
+
     private void OpenMarketItem()
     {
         try

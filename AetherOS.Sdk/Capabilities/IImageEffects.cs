@@ -33,4 +33,10 @@ public interface IImageEffects
     /// adjustments returns the source path unchanged. The callback may fire on a worker thread; store the
     /// result, don't draw from it.</summary>
     void Apply(string sourcePath, ImageFilter filter, ImageAdjustments adjustments, Action<string?> onDone);
+
+    /// <summary>Downscales an image that exceeds the given dimensions to fit within them (lossless PNG),
+    /// written to a host-managed temporary file; an image that already fits comes back as the source path.
+    /// The callback also receives the applied scale factor (1 when unchanged) so recorded crop rects can be
+    /// adjusted, and may fire on a worker thread. A null path means the image could not be processed.</summary>
+    void PrepareUpload(string sourcePath, int maxWidth, int maxHeight, Action<string?, float> onDone);
 }

@@ -7,6 +7,12 @@ internal static class OsFr
         // added after update 1.5.1
         // App names
         ["os.app_clock"] = "Horloge",
+        ["os.app_snake"] = "Snake",
+        ["os.app_stacker"] = "Stacker",
+        ["os.app_breaker"] = "Breaker",
+        ["os.app_meteor"] = "Meteor Command",
+        ["os.app_invaders"] = "Void Invaders",
+        ["os.app_muncher"] = "Maze Muncher",
         ["os.app_camera"] = "Appareil photo",
 
         // Notification shade
@@ -45,7 +51,6 @@ internal static class OsFr
         ["os.wallpaper_dim"] = "Assombrir le fond d'écran",
         ["os.home_edit_hint"] = "Maintenez une icône de l'écran d'accueil pour la réorganiser. Faites glisser les icônes vers le dock ou entre les pages.",
         ["os.home_reset"] = "Réinitialiser la disposition",
-        ["os.about_demo"] = "Démo de l'interface AetherOS",
 
         // Love settings hub after the appearance move
         ["settings.menu_language"] = "Langue et heure",
@@ -140,6 +145,7 @@ internal static class OsFr
         ["os.new_folder"] = "Nouveau dossier",
         ["os.folder_name_hint"] = "Nom du dossier…",
         ["os.folder_default_name"] = "Dossier",
+        ["os.folder_arcade"] = "Arcade",
         ["os.folder_edit"] = "Modifier",
         ["os.folder_empty"] = "Pas encore d'applis. Faites glisser une icône sur ce dossier pour l'ajouter.",
         // photo filters + screenshot import
@@ -230,5 +236,17 @@ internal static class OsFr
         ["os.menu_audio"] = "Paramètres audio",
         ["os.app_market"] = "Marché",
         ["os.app_realtor"] = "Immobilier",
+
+        // added after update 2.1.3
+        ["os.app_wayfinder"] = "Wayfinder",
+        ["os.app_yapper"] = "Yapper",
+        ["os.arcade_leaderboard"] = "Classement",
+        ["os.arcade_tab_weekly"] = "Cette semaine",
+        ["os.arcade_tab_alltime"] = "Tous les temps",
+        ["os.arcade_loading"] = "Chargement...",
+        ["os.arcade_empty"] = "Pas encore de scores. Soyez le premier !",
+        ["os.arcade_error"] = "Impossible de charger le classement.",
+        ["os.arcade_you"] = "Vous",
+        ["os.arcade_back"] = "Retour",
     };
 }

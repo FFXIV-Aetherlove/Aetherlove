@@ -65,7 +65,8 @@ internal static class OsDraw
         dl.AddText(ImGui.GetFont(), fsz, center - tsz * 0.5f, 0xFFFFFFFFu, label);
     }
 
-    public static void CenteredText(ImDrawListPtr dl, string text, float centerX, float y, uint color,
+    /// <summary>True when the text was ellipsized to fit, so the caller can offer the full name in a tooltip.</summary>
+    public static bool CenteredText(ImDrawListPtr dl, string text, float centerX, float y, uint color,
         float sizeMul = 1f, float maxWidth = 0f) =>
         OsDrawShared.CenteredText(dl, text, centerX, y, color, sizeMul, maxWidth);
 

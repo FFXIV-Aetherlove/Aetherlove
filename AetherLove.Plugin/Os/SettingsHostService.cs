@@ -13,8 +13,8 @@ using Dalamud.Interface.Textures;
 namespace AetherLove.Os;
 
 /// <summary>The Settings app's bridge: wallpaper operations, the OS avatar, the account-card snapshot, the
-/// supporter/Patreon flow, and the plugin-only navigations it needs. Wallpaper file-picking comes from the
-/// shared app capabilities.</summary>
+/// supporter/Patreon flow, the account-level staff notices, and the plugin-only navigations it needs. Wallpaper
+/// file-picking comes from the shared app capabilities.</summary>
 public sealed class SettingsHostService : ISettingsHost
 {
     private readonly WallpaperService _wallpapers;
@@ -23,9 +23,10 @@ public sealed class SettingsHostService : ISettingsHost
     private readonly PatreonLinkFlow _patreon;
     private readonly ChangelogWindow _changelogWindow;
     private readonly AetherHubContext _hub;
+    private readonly AetherOS.Sdk.IOsShell _shell;
 
     public SettingsHostService(WallpaperService wallpapers, OsAvatarCache osAvatar, SessionBootstrapper bootstrap,
-        PatreonLinkFlow patreon, ChangelogWindow changelogWindow, AetherHubContext hub)
+        PatreonLinkFlow patreon, ChangelogWindow changelogWindow, AetherHubContext hub, AetherOS.Sdk.IOsShell shell)
     {
         _wallpapers = wallpapers;
         _osAvatar = osAvatar;
@@ -33,6 +34,7 @@ public sealed class SettingsHostService : ISettingsHost
         _patreon = patreon;
         _changelogWindow = changelogWindow;
         _hub = hub;
+        _shell = shell;
     }
 
     public IReadOnlyList<string> BuiltIns => _wallpapers.BuiltIns;
@@ -91,4 +93,37 @@ public sealed class SettingsHostService : ISettingsHost
     public void PatreonUnlink() => _ = _patreon.UnlinkAsync();
 
     public void OpenChangelog() => _changelogWindow.IsOpen = true;
+
+    public IReadOnlyList<WarningDto> StaffWarnings => _bootstrap.LastAccount?.StaffWarnings ?? [];
+
+    public IReadOnlyList<ModeratorMessageDto> StaffMessages => _bootstrap.LastAccount?.StaffMessages ?? [];
+
+    public int UnseenStaffNoticeCount
+    {
+        get
+        {
+            var account = _bootstrap.LastAccount;
+            var count = 0;
+            foreach (var warning in account?.StaffWarnings ?? [])
+            {
+                if (!warning.Seen)
+                {
+                    count++;
+                }
+            }
+            foreach (var message in account?.StaffMessages ?? [])
+            {
+                if (!message.Seen)
+                {
+                    count++;
+                }
+            }
+            return count;
+        }
+    }
+
+    public void DismissStaffNoticeNotification() =>
+        _shell.DismissByTag(Screens.StaffNoticeScreen.NotificationTag);
+
+    public Task<AetherLove.Shared.Sparks.SparkStatusDto> GetSparkStatusAsync() => _hub.GetSparkStatusAsync();
 }

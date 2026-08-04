@@ -7,6 +7,12 @@ internal static class OsEn
         // added after update 1.5.1
         // App names
         ["os.app_clock"] = "Clock",
+        ["os.app_snake"] = "Snake",
+        ["os.app_stacker"] = "Stacker",
+        ["os.app_breaker"] = "Breaker",
+        ["os.app_meteor"] = "Meteor Command",
+        ["os.app_invaders"] = "Void Invaders",
+        ["os.app_muncher"] = "Maze Muncher",
         ["os.app_camera"] = "Camera",
 
         // Notification shade
@@ -45,7 +51,6 @@ internal static class OsEn
         ["os.wallpaper_dim"] = "Darken wallpaper",
         ["os.home_edit_hint"] = "Hold an icon on the home screen to rearrange it. Drag icons into the dock or between pages.",
         ["os.home_reset"] = "Reset layout",
-        ["os.about_demo"] = "AetherOS UI demo",
 
         // Love settings hub after the appearance move
         ["settings.menu_language"] = "Language & Time",
@@ -140,6 +145,7 @@ internal static class OsEn
         ["os.new_folder"] = "New folder",
         ["os.folder_name_hint"] = "Folder name…",
         ["os.folder_default_name"] = "Folder",
+        ["os.folder_arcade"] = "Arcade",
         ["os.folder_edit"] = "Edit",
         ["os.folder_empty"] = "No apps yet. Drag an icon onto this folder to add it.",
         // photo filters + screenshot import
@@ -230,5 +236,17 @@ internal static class OsEn
         ["os.menu_audio"] = "Audio settings",
         ["os.app_market"] = "Market",
         ["os.app_realtor"] = "Realtor",
+
+        // added after update 2.1.3
+        ["os.app_wayfinder"] = "Wayfinder",
+        ["os.app_yapper"] = "Yapper",
+        ["os.arcade_leaderboard"] = "Leaderboard",
+        ["os.arcade_tab_weekly"] = "This week",
+        ["os.arcade_tab_alltime"] = "All time",
+        ["os.arcade_loading"] = "Loading...",
+        ["os.arcade_empty"] = "No scores yet. Be the first!",
+        ["os.arcade_error"] = "Couldn't load the leaderboard.",
+        ["os.arcade_you"] = "You",
+        ["os.arcade_back"] = "Back",
     };
 }

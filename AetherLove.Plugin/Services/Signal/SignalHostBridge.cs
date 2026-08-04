@@ -23,4 +23,10 @@ public sealed class SignalHostBridge : ISignalHost
 
     public void RequestModeratorLiveAcknowledge() =>
         _services.GetRequiredService<ModeratorMessageScreen>().RequestLiveAcknowledge();
+
+    public void RequestStaffNoticeLiveAcknowledge() =>
+        _services.GetRequiredService<StaffNoticeScreen>().RequestLiveAcknowledge();
+
+    public void RefreshStaffNoticeGate() =>
+        _services.GetRequiredService<StaffNoticeScreen>().RefreshBatch();
 }

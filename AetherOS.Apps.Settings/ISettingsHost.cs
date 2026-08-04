@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using AetherLove.Shared.Patreon;
 using AetherLove.Shared.Profile;
+using AetherLove.Shared.Sparks;
 using Dalamud.Interface.Textures;
 
 namespace AetherOS.Apps.Settings;
@@ -22,7 +23,8 @@ public enum SupporterFlowState
 }
 
 /// <summary>Host bridge into the plugin: wallpaper operations, the OS avatar texture, the account card
-/// snapshot, the file-pick machinery, the supporter/Patreon flow, and a few plugin-only navigations.</summary>
+/// snapshot, the file-pick machinery, the supporter/Patreon flow, the account-level staff notices, and a few
+/// plugin-only navigations.</summary>
 public interface ISettingsHost
 {
     /// <summary>The built-in wallpaper file names bundled with the plugin.</summary>
@@ -62,4 +64,21 @@ public interface ISettingsHost
 
     /// <summary>Opens the plugin's changelog window.</summary>
     void OpenChangelog();
+
+    /// <summary>The account-level staff warnings (the OS moderation track), newest first; empty when there are
+    /// none. Disjoint from the profile-sourced AetherLove warnings, which stay in the AetherLove app.</summary>
+    IReadOnlyList<WarningDto> StaffWarnings { get; }
+
+    /// <summary>The account-level staff messages, newest first; empty when there are none.</summary>
+    IReadOnlyList<ModeratorMessageDto> StaffMessages { get; }
+
+    /// <summary>How many staff notices are still unacknowledged, across both lists; drives the menu row badge.</summary>
+    int UnseenStaffNoticeCount { get; }
+
+    /// <summary>Clears the staff-notice OS notification, so the shade entry, the home widget and the bell count
+    /// all drop together when the history page is opened.</summary>
+    void DismissStaffNoticeNotification();
+
+    /// <summary>The caller's spark wallet snapshot, for the hidden developer page.</summary>
+    Task<SparkStatusDto> GetSparkStatusAsync();
 }

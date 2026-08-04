@@ -231,5 +231,11 @@ internal static class SettingsRu
         ["settings.font_default"] = "Стандартный",
         ["settings.phone_size_header"] = "Размер телефона",
         ["settings.mini_phone_size_header"] = "Размер миниатюры",
+
+        // added after update 2.1.3
+        ["settings.staff_notices_title"] = "Сообщения от команды",
+        ["settings.staff_notices_empty"] = "От команды пока ничего нет.",
+        ["settings.staff_warnings_section"] = "Предупреждения",
+        ["settings.staff_messages_section"] = "Сообщения",
     };
 }

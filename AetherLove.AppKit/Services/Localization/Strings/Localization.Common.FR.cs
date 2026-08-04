@@ -172,5 +172,11 @@ internal static class CommonFr
 
         // added after update 2.0.1
         ["common.passphrase_correct_unrecoverable"] = "Votre phrase secrète est correcte, mais aucune de vos clés enregistrées n'a pu être ouverte avec. Contactez le support avant d'envisager une réinitialisation ; celle-ci rendrait vos anciens messages définitivement illisibles.",
+
+        // added after update 2.1.3
+        ["common.staff_notice_heading_one"] = "Vous avez un avis de l'équipe",
+        ["common.staff_notice_heading_many"] = "Vous avez {0} avis de l'équipe",
+        ["common.staff_notice_body"] = "L'équipe AetherOS vous a envoyé ceci au sujet de votre compte :",
+        ["common.staff_notice_ack"] = "J'ai compris",
     };
 }

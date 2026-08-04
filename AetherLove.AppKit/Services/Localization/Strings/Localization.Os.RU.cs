@@ -7,6 +7,12 @@ internal static class OsRu
         // added after update 1.5.1
         // App names
         ["os.app_clock"] = "Часы",
+        ["os.app_snake"] = "Змейка",
+        ["os.app_stacker"] = "Блоки",
+        ["os.app_breaker"] = "Кирпичи",
+        ["os.app_meteor"] = "Метеоры",
+        ["os.app_invaders"] = "Захватчики",
+        ["os.app_muncher"] = "Лабиринт",
         ["os.app_camera"] = "Камера",
 
         // Notification shade
@@ -45,7 +51,6 @@ internal static class OsRu
         ["os.wallpaper_dim"] = "Затемнить обои",
         ["os.home_edit_hint"] = "Удерживайте значок на главном экране, чтобы переставить его. Перетаскивайте значки в док или между страницами.",
         ["os.home_reset"] = "Сбросить расположение",
-        ["os.about_demo"] = "Демонстрация интерфейса AetherOS",
 
         // Love settings hub after the appearance move
         ["settings.menu_language"] = "Язык и время",
@@ -140,6 +145,7 @@ internal static class OsRu
         ["os.new_folder"] = "Новая папка",
         ["os.folder_name_hint"] = "Название папки…",
         ["os.folder_default_name"] = "Папка",
+        ["os.folder_arcade"] = "Аркады",
         ["os.folder_edit"] = "Изменить",
         ["os.folder_empty"] = "Пока пусто. Перетащите иконку на папку, чтобы добавить приложение.",
         // photo filters + screenshot import
@@ -230,5 +236,17 @@ internal static class OsRu
         ["os.menu_audio"] = "Настройки звука",
         ["os.app_market"] = "Маркет",
         ["os.app_realtor"] = "Риелтор",
+
+        // added after update 2.1.3
+        ["os.app_wayfinder"] = "Wayfinder",
+        ["os.app_yapper"] = "Yapper",
+        ["os.arcade_leaderboard"] = "Таблица лидеров",
+        ["os.arcade_tab_weekly"] = "За неделю",
+        ["os.arcade_tab_alltime"] = "За всё время",
+        ["os.arcade_loading"] = "Загрузка...",
+        ["os.arcade_empty"] = "Пока нет результатов. Станьте первым!",
+        ["os.arcade_error"] = "Не удалось загрузить таблицу лидеров.",
+        ["os.arcade_you"] = "Вы",
+        ["os.arcade_back"] = "Назад",
     };
 }

@@ -55,4 +55,12 @@ public sealed class NotificationCenter
     public void RaisePendingModeratorMessage() => HasPendingModeratorMessage = true;
 
     public void ClearPendingModeratorMessage() => HasPendingModeratorMessage = false;
+
+    /// <summary>Set when an account-level staff notice arrives while the phone is closed; cleared on the next
+    /// phone open. Deliberately raises no event: this is the OS track and must never drive AetherLove surfaces.</summary>
+    public bool HasPendingStaffNotice { get; private set; }
+
+    public void RaisePendingStaffNotice() => HasPendingStaffNotice = true;
+
+    public void ClearPendingStaffNotice() => HasPendingStaffNotice = false;
 }

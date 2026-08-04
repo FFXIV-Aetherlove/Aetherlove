@@ -9,6 +9,20 @@ namespace AetherLove.Emoji.Segments;
 /// <summary>A plain-text segment that renders inline using the active font and wrap position.</summary>
 public sealed class SegmentText : ISegment
 {
+    /// <summary>Ambient opt-in: #hashtag tokens render in the theme accent. Set for a whole app frame
+    /// (Yapper); chats leave it off.</summary>
+    public static bool HighlightHashtags;
+
+    /// <summary>Ambient click handler for highlighted hashtags; receives the tag without the '#'.
+    /// Set alongside <see cref="HighlightHashtags"/>; tags are inert when null.</summary>
+    public static Action<string>? OnHashtagClick;
+
+    public static bool HighlightMentions;
+
+    /// <summary>Ambient click handler for highlighted @mentions; receives the handle without the '@'.
+    /// Set alongside <see cref="HighlightMentions"/>; mentions are inert when null.</summary>
+    public static Action<string>? OnMentionClick;
+
     public readonly string Text;
 
     public SegmentText(string text)
@@ -65,9 +79,35 @@ public sealed class SegmentText : ISegment
             {
                 ImGui.NewLine();
             }
+            var tagColored = HighlightHashtags && word.Length > 1 && word[0] == '#';
+            var mentionColored = !tagColored && HighlightMentions && word.Length > 1 && word[0] == '@';
+            if (tagColored || mentionColored)
+            {
+                ImGui.PushStyleColor(ImGuiCol.Text, AetherLove.Services.ThemeService.Current.AccentU32);
+            }
             if (wordW <= lineW || lineW < 1f)
             {
                 ImGui.TextUnformatted(word);
+                var opener = tagColored ? OnHashtagClick : mentionColored ? OnMentionClick : null;
+                if ((tagColored || mentionColored) && opener is { } open)
+                {
+                    if (ImGui.IsItemHovered())
+                    {
+                        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+                    }
+                    if (ImGui.IsItemClicked())
+                    {
+                        var end = 1;
+                        while (end < word.Length && (char.IsLetterOrDigit(word[end]) || word[end] == '_'))
+                        {
+                            end++;
+                        }
+                        if (end > 1)
+                        {
+                            open(word[1..end]);
+                        }
+                    }
+                }
                 ImGui.SameLine(0, 0);
             }
             else
@@ -83,6 +123,10 @@ public sealed class SegmentText : ISegment
                     ImGui.TextUnformatted(chunks[c]);
                     ImGui.SameLine(0, 0);
                 }
+            }
+            if (tagColored || mentionColored)
+            {
+                ImGui.PopStyleColor();
             }
         }
     }

@@ -15,4 +15,5 @@ public enum Screen
     EncryptionRecovery,
     Offline,
     Outdated,
+    StaffNotice,
 }

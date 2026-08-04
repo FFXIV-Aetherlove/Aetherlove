@@ -24,6 +24,8 @@ internal sealed class DistrictScreen
 
     private readonly RealtorDataService _data;
     private readonly RealtorFilters _filters;
+    private readonly LotteryClock _clock;
+    private readonly RealtorSettings _settings;
     private readonly Action _back;
     private readonly EntranceAnimation _entrance = new();
 
@@ -34,10 +36,13 @@ internal sealed class DistrictScreen
     private volatile List<PaissaPlot>? _plots;
     private int _generation;
 
-    public DistrictScreen(RealtorDataService data, RealtorFilters filters, Action back)
+    public DistrictScreen(RealtorDataService data, RealtorFilters filters, LotteryClock clock,
+        RealtorSettings settings, Action back)
     {
         _data = data;
         _filters = filters;
+        _clock = clock;
+        _settings = settings;
         _back = back;
     }
 
@@ -90,7 +95,6 @@ internal sealed class DistrictScreen
     public void Draw(OsAppContext ctx)
     {
         _entrance.BeginFrame();
-        var winW = ImGui.GetWindowSize().X;
         if (RealtorHeader.Draw($"{_districtName} · {_worldName}"))
         {
             _back();
@@ -98,46 +102,58 @@ internal sealed class DistrictScreen
             return;
         }
 
-        ImGui.SetCursorPosX(Px(PadX));
-        RealtorUi.DrawFilterRow("district", _filters);
-        ImGui.Dummy(new Vector2(0f, Px(8f)));
-
-        var plots = _plots ?? [];
-        if (plots.Count == 0)
+        RealtorUi.ScrollBody("##realtorDistrictBody", () =>
         {
-            ImGui.Dummy(new Vector2(0f, Px(24f)));
-            DrawCenteredHint(Loc.T("os.realtor_empty_district"), winW);
-            _entrance.EndFrame();
-            return;
-        }
+            var winW = ImGui.GetWindowSize().X;
+            ImGui.SetCursorPosX(Px(PadX));
+            RealtorUi.DrawFilterRow("district", _filters);
+            ImGui.Dummy(new Vector2(0f, Px(8f)));
 
-        var any = false;
-        foreach (var plot in plots)
-        {
-            if (!_filters.Matches(plot))
+            var plots = _plots ?? [];
+            if (plots.Count == 0)
             {
-                continue;
+                ImGui.Dummy(new Vector2(0f, Px(24f)));
+                DrawCenteredHint(Loc.T("os.realtor_empty_district"), winW);
+                return;
             }
-            DrawPlotRow(plot, winW);
-            any = true;
-        }
-        if (!any)
-        {
-            ImGui.Dummy(new Vector2(0f, Px(24f)));
-            DrawCenteredHint(Loc.T("os.realtor_empty_filtered"), winW);
-        }
-        ImGui.Dummy(new Vector2(0f, Px(14f)));
+
+            // Two passes rather than a sort: confirmed plots first, then the stale ones, each keeping their
+            // ward and plot order. Cheaper than re-ordering the list every frame and does the same job.
+            var globalPhase = _clock.Current?.Phase;
+            var any = false;
+            for (var pass = 0; pass < 2; pass++)
+            {
+                foreach (var plot in plots)
+                {
+                    var stale = LotteryClock.IsStale(plot, globalPhase);
+                    if ((stale && !_settings.ShowStale) || !_filters.Matches(plot) || stale != (pass == 1))
+                    {
+                        continue;
+                    }
+                    DrawPlotRow(plot, winW, stale);
+                    any = true;
+                }
+            }
+            if (!any)
+            {
+                ImGui.Dummy(new Vector2(0f, Px(24f)));
+                DrawCenteredHint(Loc.T("os.realtor_empty_filtered"), winW);
+            }
+            ImGui.Dummy(new Vector2(0f, Px(14f)));
+        });
         _entrance.EndFrame();
     }
 
-    private void DrawPlotRow(PaissaPlot plot, float winW)
+    private void DrawPlotRow(PaissaPlot plot, float winW, bool stale)
     {
+        // Stale rows stay readable but visibly demoted, so the eye lands on the trustworthy ones first.
+        var fade = stale ? 0.45f : 1f;
         var cardW = winW - Px(PadX) * 2f;
         var cardH = Px(72f);
         ImGui.SetCursorPosX(Px(PadX));
         var tl = ImGui.GetCursorScreenPos();
         var dl = ImGui.GetWindowDrawList();
-        dl.AddRectFilled(tl, tl + new Vector2(cardW, cardH), ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.05f)), Px(12f));
+        dl.AddRectFilled(tl, tl + new Vector2(cardW, cardH), ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.05f * fade)), Px(12f));
 
         var (sizeLabel, sizeColor) = plot.Size switch
         {
@@ -147,10 +163,10 @@ internal sealed class DistrictScreen
         };
         var chip = Px(26f);
         var chipTl = new Vector2(tl.X + Px(10f), tl.Y + (cardH - chip) * 0.5f);
-        dl.AddRectFilled(chipTl, chipTl + new Vector2(chip, chip), ImGui.GetColorU32(sizeColor with { W = 0.20f }), Px(7f));
+        dl.AddRectFilled(chipTl, chipTl + new Vector2(chip, chip), ImGui.GetColorU32(sizeColor with { W = 0.20f * fade }), Px(7f));
         var chipSz = ImGui.CalcTextSize(sizeLabel);
         dl.AddText(chipTl + new Vector2((chip - chipSz.X) * 0.5f, (chip - chipSz.Y) * 0.5f),
-            ImGui.GetColorU32(sizeColor), sizeLabel);
+            ImGui.GetColorU32(sizeColor with { W = fade }), sizeLabel);
 
         var textX = tl.X + Px(10f) + chip + Px(10f);
         var lineH = ImGui.GetTextLineHeight();
@@ -161,10 +177,10 @@ internal sealed class DistrictScreen
         var price = $"{MarketFormat.GilFull(plot.Price)} gil";
         var priceSz = ImGui.CalcTextSize(price);
         var priceX = tl.X + cardW - priceSz.X - Px(12f);
-        dl.AddText(new Vector2(priceX, line1Y), ImGui.GetColorU32(new Vector4(0.98f, 0.80f, 0.36f, 1f)), price);
+        dl.AddText(new Vector2(priceX, line1Y), ImGui.GetColorU32(new Vector4(0.98f, 0.80f, 0.36f, fade)), price);
 
         var title = Loc.T("os.realtor_ward_plot", plot.WardNumber + 1, plot.PlotNumber + 1);
-        dl.AddText(new Vector2(textX, line1Y), ImGui.GetColorU32(UiColors.Body),
+        dl.AddText(new Vector2(textX, line1Y), ImGui.GetColorU32(UiColors.Body with { W = fade }),
             TruncateToWidth(title, priceX - textX - Px(8f)));
 
         var tenantParts = new List<string>(2);
@@ -181,15 +197,17 @@ internal sealed class DistrictScreen
         var tenantX = tl.X + cardW - tenantSz.X - Px(12f);
         if (tenant.Length > 0)
         {
-            dl.AddText(new Vector2(tenantX, line2Y), ImGui.GetColorU32(UiColors.Hint), tenant);
+            dl.AddText(new Vector2(tenantX, line2Y), ImGui.GetColorU32(UiColors.Hint with { W = fade }), tenant);
         }
         else
         {
             tenantX = tl.X + cardW - Px(12f);
         }
 
-        var (status, statusColor) = StatusLine(plot);
-        dl.AddText(new Vector2(textX, line2Y), ImGui.GetColorU32(statusColor),
+        var (status, statusColor) = stale
+            ? (Loc.T("os.realtor_stale_row"), UiColors.Hint)
+            : StatusLine(plot, _clock.Current?.Phase);
+        dl.AddText(new Vector2(textX, line2Y), ImGui.GetColorU32(statusColor with { W = fade }),
             TruncateToWidth(status, tenantX - textX - Px(10f)));
 
         if (ImGui.IsWindowHovered() && ImGui.IsMouseHoveringRect(tl, tl + new Vector2(cardW, cardH)))
@@ -200,15 +218,17 @@ internal sealed class DistrictScreen
         ImGui.Dummy(new Vector2(0f, cardH + Px(6f)));
     }
 
-    /// <summary>The per-plot status. The phase countdown is deliberately absent: it is identical for every
-    /// plot on the world, so the home screen shows it once instead of truncating it on every row.</summary>
-    private static (string Text, Vector4 Color) StatusLine(PaissaPlot plot)
+    /// <summary>The per-plot status. The phase comes from the global clock rather than the plot's own
+    /// <c>LottoPhase</c>, which is only what a scout saw the last time they walked past and may be cycles
+    /// out of date; the entry count beside it is genuinely per-plot. The countdown is deliberately absent:
+    /// it is identical everywhere, so the home screen shows it once instead of on every row.</summary>
+    private static (string Text, Vector4 Color) StatusLine(PaissaPlot plot, int? globalPhase)
     {
         if (!plot.IsLottery)
         {
             return (Loc.T("os.realtor_fcfs"), UiColors.Body);
         }
-        switch (plot.LottoPhase)
+        switch (globalPhase ?? plot.LottoPhase)
         {
             case PaissaLottoPhase.Accepting:
             {

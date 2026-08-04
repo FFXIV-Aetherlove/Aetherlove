@@ -68,4 +68,7 @@ public sealed record AetherConnectionDto(
     bool HangoutsEnabled = true,
     bool LevemetesEnabled = true,
     bool HolidayMode = false,
-    string HolidayMessage = "");
+    string HolidayMessage = "",
+    bool WayfinderEnabled = true,
+    bool IsWayfinderScout = false,
+    bool YapperEnabled = true);

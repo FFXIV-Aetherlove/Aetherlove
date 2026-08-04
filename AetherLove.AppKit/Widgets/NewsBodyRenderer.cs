@@ -31,9 +31,21 @@ public sealed class NewsBodyRenderer
 
     private readonly record struct Token(string? Word, string? Emoji, float Width);
 
+    /// <summary>Colored block accents for card and button lines, keyed by the authored color name.</summary>
+    private static readonly Dictionary<string, (Vector4 Fill, Vector4 Strong)> BlockPalette = new(StringComparer.Ordinal)
+    {
+        ["green"] = (new Vector4(0.18f, 0.55f, 0.33f, 0.20f), new Vector4(0.22f, 0.66f, 0.40f, 1f)),
+        ["yellow"] = (new Vector4(0.75f, 0.59f, 0.16f, 0.20f), new Vector4(0.80f, 0.61f, 0.20f, 1f)),
+        ["red"] = (new Vector4(0.71f, 0.24f, 0.24f, 0.20f), new Vector4(0.80f, 0.31f, 0.31f, 1f)),
+        ["blue"] = (new Vector4(0.24f, 0.43f, 0.78f, 0.20f), new Vector4(0.30f, 0.51f, 0.84f, 1f)),
+    };
+
     private readonly Dictionary<string, ISharedImmediateTexture?> _images = new();
     private readonly string _cacheDir =
         Path.Combine(UiHost.PluginInterface.ConfigDirectory.FullName, "NewsCache");
+
+    /// <summary>Opens a button line's link; wired by the hosting screen to the system browser capability.</summary>
+    public Action<string>? OpenUrl { get; set; }
 
     public void Draw(string idScope, NewsLineDto[] lines, float leftPad, float contentWidth)
     {
@@ -50,12 +62,112 @@ public sealed class NewsBodyRenderer
             {
                 DrawTextLine($"{idScope}_t{i}", line.Text!, leftPad, contentWidth);
             }
+            else if (line.Kind == NewsLineKind.Heading && !string.IsNullOrWhiteSpace(line.Text))
+            {
+                DrawHeading($"{idScope}_h{i}", line.Text!.Trim(), leftPad, contentWidth);
+            }
+            else if (line.Kind == NewsLineKind.Card && !string.IsNullOrWhiteSpace(line.Text))
+            {
+                DrawCard($"{idScope}_c{i}", line, leftPad, contentWidth);
+            }
+            else if (line.Kind == NewsLineKind.Button && !string.IsNullOrWhiteSpace(line.Text))
+            {
+                DrawButton($"{idScope}_b{i}", line, leftPad, contentWidth);
+            }
+            else if (line.Kind == NewsLineKind.Divider)
+            {
+                DrawDivider(leftPad, contentWidth);
+            }
             else
             {
                 // A blank line is an authored paragraph break.
                 ImGui.Dummy(new Vector2(1f, ImGui.GetTextLineHeight() * 0.4f));
             }
         }
+    }
+
+    private static (Vector4 Fill, Vector4 Strong) PaletteFor(string? color)
+        => BlockPalette.TryGetValue(color ?? string.Empty, out var entry) ? entry : BlockPalette["blue"];
+
+    /// <summary>A colored callout: tinted rounded panel with an optional emoji icon beside wrapped text.</summary>
+    private static void DrawCard(string id, NewsLineDto line, float leftPad, float contentWidth)
+    {
+        var (fill, strong) = PaletteFor(line.Color);
+        var pad = Px(11f);
+        var iconSz = Px(24f);
+        var iconTex = string.IsNullOrEmpty(line.Icon)
+            ? null
+            : UiHost.EmojiService.GetEmoji(line.Icon!)?.GetWrapOrDefault();
+        var textX = pad + (iconTex is not null ? iconSz + Px(9f) : 0f);
+        var textW = contentWidth - textX - pad;
+        var msg = ParsedMessage.Parse(line.Text!.Trim());
+        var textH = MathF.Max(ImGui.GetTextLineHeight(), msg.MeasureHeight(textW));
+        var cardH = MathF.Max(iconTex is not null ? iconSz : 0f, textH) + pad * 2f;
+
+        ImGui.SetCursorPosX(leftPad);
+        var pos = ImGui.GetCursorScreenPos();
+        var dl = ImGui.GetWindowDrawList();
+        var rounding = Px(9f);
+        dl.AddRectFilled(pos, pos + new Vector2(contentWidth, cardH), ImGui.GetColorU32(fill), rounding);
+        dl.AddRect(pos, pos + new Vector2(contentWidth, cardH),
+            ImGui.GetColorU32(strong with { W = 0.65f }), rounding, ImDrawFlags.None, Px(1.2f));
+        if (iconTex is not null)
+        {
+            var iconY = pos.Y + (cardH - iconSz) * 0.5f;
+            dl.AddImage(iconTex.Handle, new Vector2(pos.X + pad, iconY), new Vector2(pos.X + pad + iconSz, iconY + iconSz));
+        }
+
+        ImGui.SetCursorScreenPos(new Vector2(pos.X + textX, pos.Y + (cardH - textH) * 0.5f));
+        msg.DrawWrapped($"{id}_txt", textW);
+        ImGui.SetCursorScreenPos(pos);
+        ImGui.Dummy(new Vector2(contentWidth, cardH));
+        ImGui.Dummy(new Vector2(1f, Px(8f)));
+    }
+
+    /// <summary>A light accent hairline fading out toward both edges.</summary>
+    private static void DrawDivider(float leftPad, float contentWidth)
+    {
+        ImGui.Dummy(new Vector2(1f, Px(7f)));
+        ImGui.SetCursorPosX(leftPad);
+        var t = ThemeService.Current;
+        var p = ImGui.GetCursorScreenPos();
+        var h = Px(1.2f);
+        var half = contentWidth * 0.5f;
+        var mid = ImGui.GetColorU32(t.Accent with { W = 0.40f });
+        var edge = ImGui.GetColorU32(t.Accent with { W = 0f });
+        var dl = ImGui.GetWindowDrawList();
+        dl.AddRectFilledMultiColor(p, p + new Vector2(half, h), edge, mid, mid, edge);
+        dl.AddRectFilledMultiColor(p + new Vector2(half, 0f), p + new Vector2(contentWidth, h), mid, edge, edge, mid);
+        ImGui.Dummy(new Vector2(contentWidth, h));
+        ImGui.Dummy(new Vector2(1f, Px(7f)));
+    }
+
+    /// <summary>A centered colored pill button whose click opens the authored link.</summary>
+    private void DrawButton(string id, NewsLineDto line, float leftPad, float contentWidth)
+    {
+        var (_, strong) = PaletteFor(line.Color);
+        var label = line.Text!.Trim();
+        var padX = Px(20f);
+        var padY = Px(9f);
+        var textSz = ImGui.CalcTextSize(label);
+        var w = MathF.Min(contentWidth, textSz.X + padX * 2f);
+        var h = textSz.Y + padY * 2f;
+
+        ImGui.SetCursorPosX(leftPad + MathF.Max(0f, (contentWidth - w) * 0.5f));
+        var pos = ImGui.GetCursorScreenPos();
+        var pressed = ImGui.InvisibleButton(id, new Vector2(w, h));
+        SharedUiHelpers.HandOnHover();
+
+        var fill = ImGui.IsItemHovered() ? Vector4.Lerp(strong, Vector4.One, 0.12f) : strong;
+        var dl = ImGui.GetWindowDrawList();
+        dl.AddRectFilled(pos, pos + new Vector2(w, h), ImGui.GetColorU32(fill), h * 0.5f);
+        dl.AddText(new Vector2(pos.X + (w - textSz.X) * 0.5f, pos.Y + padY), ImGui.GetColorU32(Vector4.One), label);
+
+        if (pressed && !string.IsNullOrWhiteSpace(line.Url))
+        {
+            OpenUrl?.Invoke(line.Url!);
+        }
+        ImGui.Dummy(new Vector2(1f, Px(8f)));
     }
 
     private static void DrawTextLine(string id, string text, float leftPad, float contentWidth)

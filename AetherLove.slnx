@@ -11,6 +11,9 @@
   <Project Path="AetherLove.Core/AetherLove.Core.csproj">
     <Platform Project="x64" />
   </Project>
+  <Project Path="AetherOS.Apps.Breaker/AetherOS.Apps.Breaker.csproj">
+    <Platform Project="x64" />
+  </Project>
   <Project Path="AetherOS.Apps.Calendar/AetherOS.Apps.Calendar.csproj">
     <Platform Project="x64" />
   </Project>
@@ -35,7 +38,13 @@
   <Project Path="AetherOS.Apps.Market/AetherOS.Apps.Market.csproj">
     <Platform Project="x64" />
   </Project>
+  <Project Path="AetherOS.Apps.MazeMuncher/AetherOS.Apps.MazeMuncher.csproj">
+    <Platform Project="x64" />
+  </Project>
   <Project Path="AetherOS.Apps.Messenger/AetherOS.Apps.Messenger.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="AetherOS.Apps.MeteorCommand/AetherOS.Apps.MeteorCommand.csproj">
     <Platform Project="x64" />
   </Project>
   <Project Path="AetherOS.Apps.News/AetherOS.Apps.News.csproj">
@@ -53,7 +62,22 @@
   <Project Path="AetherOS.Apps.Settings/AetherOS.Apps.Settings.csproj">
     <Platform Project="x64" />
   </Project>
+  <Project Path="AetherOS.Apps.Snake/AetherOS.Apps.Snake.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="AetherOS.Apps.Stacker/AetherOS.Apps.Stacker.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="AetherOS.Apps.VoidInvaders/AetherOS.Apps.VoidInvaders.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="AetherOS.Apps.Wayfinder/AetherOS.Apps.Wayfinder.csproj">
+    <Platform Project="x64" />
+  </Project>
   <Project Path="AetherOS.Apps.Weather/AetherOS.Apps.Weather.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="AetherOS.Apps.Yapper/AetherOS.Apps.Yapper.csproj">
     <Platform Project="x64" />
   </Project>
   <Project Path="AetherOS.Sdk/AetherOS.Sdk.csproj">

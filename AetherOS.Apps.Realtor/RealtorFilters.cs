@@ -67,15 +67,6 @@ internal sealed class RealtorFilters
         return true;
     }
 
-    public int CountFor(PaissaDistrict district)
-    {
-        if (!Active)
-        {
-            return district.NumOpenPlots;
-        }
-        return district.OpenPlots?.Count(Matches) ?? 0;
-    }
-
     private void Persist()
     {
         var mask = 0;

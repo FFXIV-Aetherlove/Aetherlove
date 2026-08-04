@@ -23,7 +23,9 @@ public sealed class OsShell : IOsShell
 
     /// <summary>Apps whose home tile carries the red "new" badge until first opened. Edit per release when a
     /// new app ships; stale ids in users' <see cref="OsConfig.SeenNewApps"/> drop out harmlessly.</summary>
-    internal static readonly string[] NewAppIds = ["levemetes", "market", "realtor"];
+    internal static readonly string[] NewAppIds =
+        ["levemetes", "market", "realtor", "wayfinder", "yapper", "snake", "stacker", "breaker",
+         "meteor", "invaders", "muncher"];
 
     public bool IsNewApp(string appId) =>
         Array.IndexOf(NewAppIds, appId) >= 0 && !UiHost.Configuration.Os.SeenNewApps.Contains(appId);
@@ -178,6 +180,13 @@ public sealed class OsShell : IOsShell
     }
 
     public void GoHome() => _router.Navigate(Screen.Home);
+
+    /// <summary>Resolved lazily like the tour: the home screen depends on this shell.</summary>
+    public void GoHomeToFolder(string folderId)
+    {
+        _services.GetRequiredService<Screens.HomeScreen>().OpenFolder(folderId);
+        GoHome();
+    }
 
     public void PostNotification(string appId, string title, string body, Action? onTap = null, string? tag = null)
     {

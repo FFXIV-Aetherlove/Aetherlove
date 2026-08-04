@@ -32,5 +32,11 @@ internal static class NotificationsEs
 
         // Chat notification link (added after update 2.0.0.0)
         ["notif.view_link"] = "Ver",
+
+        // added after update 2.1.3
+        ["notif.realtor_accepting"] = "La lotería de viviendas ya acepta solicitudes. Mira las parcelas libres en la app de Inmobiliaria.",
+        ["notif.realtor_results"] = "La lotería de viviendas ha pasado al periodo de resultados. Consulta cómo te ha ido en la app de Inmobiliaria.",
+        ["notif.staff_notice_title"] = "Mensaje del equipo",
+        ["notif.staff_notice_body"] = "Abre Ajustes para leerlo.",
     };
 }

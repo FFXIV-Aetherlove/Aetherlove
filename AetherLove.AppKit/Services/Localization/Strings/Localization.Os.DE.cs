@@ -7,6 +7,12 @@ internal static class OsDe
         // added after update 1.5.1
         // App names
         ["os.app_clock"] = "Uhr",
+        ["os.app_snake"] = "Snake",
+        ["os.app_stacker"] = "Stacker",
+        ["os.app_breaker"] = "Breaker",
+        ["os.app_meteor"] = "Meteor Command",
+        ["os.app_invaders"] = "Void Invaders",
+        ["os.app_muncher"] = "Maze Muncher",
         ["os.app_camera"] = "Kamera",
 
         // Notification shade
@@ -45,7 +51,6 @@ internal static class OsDe
         ["os.wallpaper_dim"] = "Hintergrund abdunkeln",
         ["os.home_edit_hint"] = "Halte ein Symbol auf dem Startbildschirm gedrückt, um es zu verschieben. Ziehe Symbole ins Dock oder zwischen Seiten.",
         ["os.home_reset"] = "Layout zurücksetzen",
-        ["os.about_demo"] = "AetherOS-UI-Demo",
 
         // Love settings hub after the appearance move
         ["settings.menu_language"] = "Sprache & Zeit",
@@ -140,6 +145,7 @@ internal static class OsDe
         ["os.new_folder"] = "Neuer Ordner",
         ["os.folder_name_hint"] = "Ordnername…",
         ["os.folder_default_name"] = "Ordner",
+        ["os.folder_arcade"] = "Arcade",
         ["os.folder_edit"] = "Bearbeiten",
         ["os.folder_empty"] = "Noch keine Apps. Zieh ein Symbol auf diesen Ordner, um es hinzuzufügen.",
         // photo filters + screenshot import
@@ -230,5 +236,17 @@ internal static class OsDe
         ["os.menu_audio"] = "Audio-Einstellungen",
         ["os.app_market"] = "Markt",
         ["os.app_realtor"] = "Makler",
+
+        // added after update 2.1.3
+        ["os.app_wayfinder"] = "Wayfinder",
+        ["os.app_yapper"] = "Yapper",
+        ["os.arcade_leaderboard"] = "Bestenliste",
+        ["os.arcade_tab_weekly"] = "Diese Woche",
+        ["os.arcade_tab_alltime"] = "Allzeit",
+        ["os.arcade_loading"] = "Lädt...",
+        ["os.arcade_empty"] = "Noch keine Ergebnisse. Hol dir den ersten Platz!",
+        ["os.arcade_error"] = "Bestenliste konnte nicht geladen werden.",
+        ["os.arcade_you"] = "Du",
+        ["os.arcade_back"] = "Zurück",
     };
 }

@@ -7,6 +7,12 @@ internal static class OsEs
         // added after update 1.5.1
         // App names
         ["os.app_clock"] = "Reloj",
+        ["os.app_snake"] = "Snake",
+        ["os.app_stacker"] = "Stacker",
+        ["os.app_breaker"] = "Breaker",
+        ["os.app_meteor"] = "Meteor Command",
+        ["os.app_invaders"] = "Void Invaders",
+        ["os.app_muncher"] = "Maze Muncher",
         ["os.app_camera"] = "Cámara",
 
         // Notification shade
@@ -45,7 +51,6 @@ internal static class OsEs
         ["os.wallpaper_dim"] = "Oscurecer fondo",
         ["os.home_edit_hint"] = "Mantén pulsado un icono en la pantalla de inicio para reordenarlo. Arrastra iconos al dock o entre páginas.",
         ["os.home_reset"] = "Restablecer diseño",
-        ["os.about_demo"] = "Demo de la interfaz de AetherOS",
 
         // Love settings hub after the appearance move
         ["settings.menu_language"] = "Idioma y hora",
@@ -140,6 +145,7 @@ internal static class OsEs
         ["os.new_folder"] = "Nueva carpeta",
         ["os.folder_name_hint"] = "Nombre de la carpeta…",
         ["os.folder_default_name"] = "Carpeta",
+        ["os.folder_arcade"] = "Arcade",
         ["os.folder_edit"] = "Editar",
         ["os.folder_empty"] = "Aún no hay apps. Arrastra un icono sobre esta carpeta para añadirlo.",
         // photo filters + screenshot import
@@ -230,5 +236,17 @@ internal static class OsEs
         ["os.menu_audio"] = "Ajustes de audio",
         ["os.app_market"] = "Mercado",
         ["os.app_realtor"] = "Inmobiliaria",
+
+        // added after update 2.1.3
+        ["os.app_wayfinder"] = "Wayfinder",
+        ["os.app_yapper"] = "Yapper",
+        ["os.arcade_leaderboard"] = "Clasificación",
+        ["os.arcade_tab_weekly"] = "Esta semana",
+        ["os.arcade_tab_alltime"] = "Histórico",
+        ["os.arcade_loading"] = "Cargando...",
+        ["os.arcade_empty"] = "Aún no hay puntuaciones. ¡Sé el primero!",
+        ["os.arcade_error"] = "No se pudo cargar la clasificación.",
+        ["os.arcade_you"] = "Tú",
+        ["os.arcade_back"] = "Volver",
     };
 }

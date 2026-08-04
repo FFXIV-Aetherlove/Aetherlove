@@ -180,5 +180,11 @@ internal static class CommonEn
 
         // added after update 2.0.1
         ["common.passphrase_correct_unrecoverable"] = "Your passphrase is correct, but none of your stored keys could be opened with it. Please contact support before considering a reset; a reset leaves your old messages permanently unreadable.",
+
+        // added after update 2.1.3
+        ["common.staff_notice_heading_one"] = "You have a notice from the team",
+        ["common.staff_notice_heading_many"] = "You have {0} notices from the team",
+        ["common.staff_notice_body"] = "The AetherOS team sent you the following about your account:",
+        ["common.staff_notice_ack"] = "I understand",
     };
 }

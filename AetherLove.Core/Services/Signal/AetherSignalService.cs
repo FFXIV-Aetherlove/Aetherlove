@@ -44,6 +44,7 @@ public sealed class AetherSignalService : IAsyncDisposable
     private readonly Messenger.MessengerStore _messenger;
     private readonly SiblingBadgeStore _siblingBadges;
     private readonly ScreenRouter _router;
+    private readonly Yapper.YapperNotificationRelay _yapperRelay;
     // Lazy-resolved to break the SessionBootstrapper <-> AetherSignalService ctor cycle.
     private readonly IServiceProvider _services;
 
@@ -75,8 +76,10 @@ public sealed class AetherSignalService : IAsyncDisposable
         Messenger.MessengerStore messenger,
         SiblingBadgeStore siblingBadges,
         ScreenRouter router,
+        Yapper.YapperNotificationRelay yapperRelay,
         IServiceProvider services)
     {
+        _yapperRelay = yapperRelay;
         _log = log;
         _config = config;
         _tokens = tokens;
@@ -286,6 +289,7 @@ public sealed class AetherSignalService : IAsyncDisposable
             RestoreOnline();
             InvalidateProfileCaches();
             RefreshConnectionInfo();
+            _ = RefreshStaffNoticesAsync();
             _ = _services.GetRequiredService<Messenger.MessengerSyncService>().SyncAsync();
             _log.Information($"[AetherSignalService] Hub reconnected (connectionId={id}).");
             return Task.CompletedTask;
@@ -517,6 +521,20 @@ public sealed class AetherSignalService : IAsyncDisposable
             }
         });
 
+        hub.On<AccountWarningPushDto>("AccountWarningIssued", payload =>
+        {
+            _log.Information($"[AetherSignalService] AccountWarningIssued push: {payload.Warning.Id}.");
+            _services.GetRequiredService<SessionBootstrapper>().AppendStaffWarningToSnapshot(payload.Warning);
+            RaiseStaffNotice();
+        });
+
+        hub.On<AccountModeratorMessagePushDto>("AccountModeratorMessageIssued", payload =>
+        {
+            _log.Information($"[AetherSignalService] AccountModeratorMessageIssued push: {payload.Message.Id}.");
+            _services.GetRequiredService<SessionBootstrapper>().AppendStaffMessageToSnapshot(payload.Message);
+            RaiseStaffNotice();
+        });
+
         hub.On<NewsPublishedPushDto>("NewsPublished", payload =>
         {
             _log.Information($"[AetherSignalService] NewsPublished push: {payload.Summary.Id}.");
@@ -573,8 +591,37 @@ public sealed class AetherSignalService : IAsyncDisposable
         });
 
         RegisterMessengerHandlers(hub);
+        RegisterYapperHandlers(hub);
 
         return hub;
+    }
+
+    private void RegisterYapperHandlers(HubConnection hub)
+    {
+        hub.On<Shared.Yapper.YapperNotificationPushDto>("YapperNotification", payload =>
+        {
+            _yapperRelay.Raise(payload);
+        });
+        hub.On<Shared.Yapper.YapperDmPushDto>("YapperDm", payload =>
+        {
+            _yapperRelay.RaiseDm(payload);
+        });
+        hub.On<Shared.Yapper.YapperDmReadPushDto>("YapperDmRead", payload =>
+        {
+            _yapperRelay.RaiseDmRead(payload);
+        });
+        hub.On<Shared.Yapper.YapperDmReactionPushDto>("YapperDmReaction", payload =>
+        {
+            _yapperRelay.RaiseDmReaction(payload);
+        });
+        hub.On<Shared.Yapper.YapperDmPinPushDto>("YapperDmPin", payload =>
+        {
+            _yapperRelay.RaiseDmPinned(payload);
+        });
+        hub.On<Shared.Yapper.YapperDmDeletedPushDto>("YapperDmDeleted", payload =>
+        {
+            _yapperRelay.RaiseDmDeleted(payload);
+        });
     }
 
     private void RegisterMessengerHandlers(HubConnection hub)
@@ -821,6 +868,39 @@ public sealed class AetherSignalService : IAsyncDisposable
         _ = _services.GetRequiredService<FlairCatalog>().RefreshAsync();
         // A superlike that landed while disconnected sent no push; only a fresh pull can surface it.
         _notifications.NotifyDeckRefreshRequested();
+    }
+
+    /// <summary>Re-pulls the account snapshot after a reconnect and surfaces anything issued during the outage:
+    /// staff notices do not ride the connection-info refresh the way the AetherLove track does, so without this
+    /// a notice pushed while the client was away would wait for the next plugin restart.</summary>
+    private async Task RefreshStaffNoticesAsync()
+    {
+        var bootstrap = _services.GetRequiredService<SessionBootstrapper>();
+        await bootstrap.RefreshAccountInfoAsync().ConfigureAwait(false);
+        if (bootstrap.HasUnseenStaffNotices)
+        {
+            RaiseStaffNotice();
+        }
+    }
+
+    /// <summary>Shows the OS staff-notice gate, or defers it to the next phone open. Never raises an AetherLove
+    /// notification, badge or chat line, and never auto-acknowledges: only the gate's button acks.</summary>
+    private void RaiseStaffNotice()
+    {
+        if (!_host.IsPhoneOpen)
+        {
+            _notifications.RaisePendingStaffNotice();
+            return;
+        }
+        // Navigating to the screen the router is already on skips OnShow, so a notice arriving mid-gate has to
+        // be folded into the displayed batch instead.
+        if (_router.Current == Screen.StaffNotice)
+        {
+            _host.RefreshStaffNoticeGate();
+            return;
+        }
+        _host.RequestStaffNoticeLiveAcknowledge();
+        _router.Navigate(Screen.StaffNotice);
     }
 
     private void AppendWarningToCachedSnapshot(WarningDto warning)

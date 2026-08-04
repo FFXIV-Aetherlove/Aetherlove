@@ -32,5 +32,11 @@ internal static class NotificationsRu
 
         // Chat notification link (added after update 2.0.0.0)
         ["notif.view_link"] = "Открыть",
+
+        // added after update 2.1.3
+        ["notif.realtor_accepting"] = "Жилищная лотерея снова принимает заявки. Свободные участки смотрите в приложении Риелтор.",
+        ["notif.realtor_results"] = "У жилищной лотереи начался период результатов. Загляните в Риелтор и узнайте, как всё сложилось.",
+        ["notif.staff_notice_title"] = "Сообщение от команды",
+        ["notif.staff_notice_body"] = "Откройте Настройки, чтобы прочитать.",
     };
 }

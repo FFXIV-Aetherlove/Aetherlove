@@ -32,4 +32,9 @@ public interface IImagePicker
     /// <summary>Opens a file dialog, validates the minimum size, then a crop popup;
     /// <paramref name="onPicked"/> fires once the user confirms the crop.</summary>
     void PickAndCrop(ImageCropRequest request, Action<CroppedImage> onPicked);
+
+    /// <summary>Validates the minimum size of an already-chosen disk image (e.g. from the Photos app or the
+    /// camera), then opens the crop popup; <paramref name="onPicked"/> fires once the user confirms the crop.
+    /// The request's dialog title/filters are ignored.</summary>
+    void CropFile(string path, ImageCropRequest request, Action<CroppedImage> onPicked);
 }

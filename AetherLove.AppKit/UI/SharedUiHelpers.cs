@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
+using System.Text;
 using AetherLove.Services;
 using AetherLove.Services.Localization;
 using AetherLove.Shared;
@@ -28,6 +29,70 @@ internal static class SharedUiHelpers
         }
         var visibleY = srcAspect / destAspect;
         return (new Vector2(0f, (1f - visibleY) * 0.5f), new Vector2(1f, (1f + visibleY) * 0.5f));
+    }
+
+    /// <summary>Pseudo-blur via concentric rings of low-alpha image draws plus a frosted tint; ImGui has
+    /// no real blur, and sparse fixed offsets read as discrete ghost copies on detailed images, so the
+    /// rings are dense and tight to approximate a gaussian. Callers pass their own UVs so blurred and
+    /// revealed states crop identically.</summary>
+    internal static void DrawBlurredCover(ImDrawListPtr dl, Dalamud.Interface.Textures.TextureWraps.IDalamudTextureWrap wrap,
+        Vector2 tl, Vector2 sz, Vector2 uv0, Vector2 uv1, float alpha = 1f, float rounding = 0f)
+    {
+        if (alpha <= 0f)
+        {
+            return;
+        }
+
+        // Center + 4 rings x 8 directions = 33 samples, radii chosen so neighbours overlap.
+        ReadOnlySpan<float> radii = [2.5f, 5.5f, 9f, 13f];
+        var samples = 1 + radii.Length * 8;
+        var sampleA = (uint)Math.Clamp((int)(alpha / samples * 255f), 1, 255);
+        var sampleCol = (sampleA << 24) | 0x00FFFFFFu;
+
+        dl.PushClipRect(tl, tl + sz, true);
+        dl.AddImage(wrap.Handle, tl, tl + sz, uv0, uv1, sampleCol);
+        foreach (var radius in radii)
+        {
+            var r = Px(radius);
+            for (var i = 0; i < 8; i++)
+            {
+                var angle = i * (MathF.PI / 4f) + (radius * 0.7f);
+                var off = new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * r;
+                dl.AddImage(wrap.Handle, tl + off, tl + sz + off, uv0, uv1, sampleCol);
+            }
+        }
+        dl.PopClipRect();
+
+        var tintA = (uint)Math.Clamp((int)(alpha * 0.55f * 255f), 0, 255);
+        dl.AddRectFilled(tl, tl + sz, (tintA << 24) | 0x00101010u, rounding);
+    }
+
+    /// <summary>Copies to the clipboard and shows the one-time "chat outside the app at your own risk"
+    /// warning modal until acknowledged.</summary>
+    internal static void CopyTextWithLinkWarning(string text)
+    {
+        ImGui.SetClipboardText(text ?? string.Empty);
+        if (!UiHost.Configuration.AcknowledgedProfileCopyTextWarning)
+        {
+            Widgets.ModalHost.Instance?.Open(320f, DrawCopyTextWarningBody);
+        }
+    }
+
+    private static void DrawCopyTextWarningBody(float availW)
+    {
+        Widgets.ModalUi.Header(availW, FontAwesomeIcon.ExclamationTriangle,
+            Loc.T("profile.copy_warning_title"), UiColors.Amber);
+
+        ImGui.TextColored(UiColors.Body, Loc.T("profile.copy_warning_body"));
+        ImGui.Spacing();
+        ImGui.Spacing();
+
+        if (Widgets.ModalUi.Button($"{Loc.T("profile.copy_warning_agree")}##copyWarnAgree", availW))
+        {
+            UiHost.Configuration.AcknowledgedProfileCopyTextWarning = true;
+            UiHost.Configuration.Save();
+            Widgets.ModalHost.Instance?.Close();
+        }
     }
 
     /// <summary>Red destructive-action button colours; pop 3 after the button.</summary>

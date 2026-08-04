@@ -47,6 +47,28 @@ public class PulseState
     public bool MutePulse { get; set; }
 }
 
+/// <summary>Client-side tracking for spark activity milestones. Only an optimization: the server dedups
+/// every report, so lost or stale state costs at most one wasted call.</summary>
+[Serializable]
+public class SparkClientState
+{
+    /// <summary>The UTC day (yyyy-MM-dd) the fields below belong to; a new day resets them.</summary>
+    public string ActivityDayUtc { get; set; } = string.Empty;
+
+    /// <summary>Distinct app ids foregrounded today, kept until the three-apps milestone is reported.</summary>
+    public List<string> AppsOpenedToday { get; set; } = [];
+
+    public bool AppsMilestoneReported { get; set; }
+
+    public bool MarketActivityReported { get; set; }
+
+    public bool YapperCheckReported { get; set; }
+
+    /// <summary>Arcade rounds already reported today. Unlike the milestones this one counts rather than
+    /// flags, because the action is worth several grants a day.</summary>
+    public int ArcadeGamesReported { get; set; }
+}
+
 /// <summary>Places browse preferences.</summary>
 [Serializable]
 public class PlacesState
@@ -220,6 +242,10 @@ public class Configuration : IPluginConfiguration
     /// <summary>Debug-screen override: force the server to send JPEG photos regardless of the WebP probe.</summary>
     public bool ForceJpegImages { get; set; } = false;
 
+    /// <summary>The Market app's "view on the market board" entry in the game's item context menus;
+    /// toggled from the Market menu.</summary>
+    public bool MarketContextMenuEnabled { get; set; } = true;
+
     /// <summary>Skip the "close AetherLove?" confirmation modal. Forwards to <see cref="OsSettings"/>.</summary>
     public bool SkipCloseConfirmation { get => OsSettings.SkipCloseConfirmation; set => OsSettings.SkipCloseConfirmation = value; }
 
@@ -312,6 +338,9 @@ public class Configuration : IPluginConfiguration
 
     /// <summary>Background presence cadence state.</summary>
     public PulseState Pulse { get; set; } = new();
+
+    /// <summary>Client-side spark milestone tracking.</summary>
+    public SparkClientState Sparks { get; set; } = new();
 
     /// <summary>Places browse preferences.</summary>
     public PlacesState Places { get; set; } = new();

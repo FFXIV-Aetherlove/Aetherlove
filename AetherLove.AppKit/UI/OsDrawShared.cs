@@ -26,16 +26,16 @@ internal static class OsDrawShared
         }
     }
 
-    public static void CenteredText(ImDrawListPtr dl, string text, float centerX, float y, uint color,
+    /// <summary>Draws centred text, clamped to <paramref name="maxWidth"/> when given. Returns true when the
+    /// text had to be ellipsized, so the caller can offer the full string in a tooltip.</summary>
+    public static bool CenteredText(ImDrawListPtr dl, string text, float centerX, float y, uint color,
         float sizeMul = 1f, float maxWidth = 0f)
     {
         var fsz = ImGui.GetFontSize() * sizeMul;
-        if (maxWidth > 0f)
-        {
-            text = Ellipsize(text, sizeMul, maxWidth);
-        }
-        var sz = ImGui.CalcTextSize(text) * sizeMul;
-        dl.AddText(ImGui.GetFont(), fsz, new Vector2(centerX - sz.X * 0.5f, y), color, text);
+        var drawn = maxWidth > 0f ? Ellipsize(text, sizeMul, maxWidth) : text;
+        var sz = ImGui.CalcTextSize(drawn) * sizeMul;
+        dl.AddText(ImGui.GetFont(), fsz, new Vector2(centerX - sz.X * 0.5f, y), color, drawn);
+        return drawn.Length != text.Length;
     }
 
     /// <summary>Trims text to fit <paramref name="maxWidth"/> at the given scale, appending an ellipsis;

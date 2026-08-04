@@ -247,6 +247,101 @@ public sealed class SessionBootstrapper : IDisposable
         }
     }
 
+    /// <summary>True when the account snapshot carries an unacknowledged account-level staff notice (the OS
+    /// track). Independent of <see cref="HasUnseenWarnings"/>, which covers the profile-sourced AetherLove track.</summary>
+    public bool HasUnseenStaffNotices
+    {
+        get
+        {
+            var a = _lastAccount;
+            if (a is null)
+            {
+                return false;
+            }
+            // Null-guarded for version skew: an older server sends neither list.
+            var warnings = a.StaffWarnings;
+            if (warnings is not null)
+            {
+                for (int i = 0; i < warnings.Length; i++)
+                {
+                    if (!warnings[i].Seen)
+                    {
+                        return true;
+                    }
+                }
+            }
+            var messages = a.StaffMessages;
+            if (messages is not null)
+            {
+                for (int i = 0; i < messages.Length; i++)
+                {
+                    if (!messages[i].Seen)
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+    }
+
+    /// <summary>Prepends a live account-level warning to the cached account snapshot, keeping the newest-first
+    /// order the server serves. Ignores a duplicate id.</summary>
+    public void AppendStaffWarningToSnapshot(WarningDto warning)
+    {
+        if (_lastAccount is not { } account)
+        {
+            return;
+        }
+        var current = account.StaffWarnings ?? [];
+        if (current.Any(w => w.Id == warning.Id))
+        {
+            return;
+        }
+        var grown = new WarningDto[current.Length + 1];
+        grown[0] = warning;
+        Array.Copy(current, 0, grown, 1, current.Length);
+        _lastAccount = account with { StaffWarnings = grown };
+    }
+
+    /// <summary>Account-level counterpart of <see cref="AppendStaffWarningToSnapshot"/> for staff messages.</summary>
+    public void AppendStaffMessageToSnapshot(ModeratorMessageDto message)
+    {
+        if (_lastAccount is not { } account)
+        {
+            return;
+        }
+        var current = account.StaffMessages ?? [];
+        if (current.Any(m => m.Id == message.Id))
+        {
+            return;
+        }
+        var grown = new ModeratorMessageDto[current.Length + 1];
+        grown[0] = message;
+        Array.Copy(current, 0, grown, 1, current.Length);
+        _lastAccount = account with { StaffMessages = grown };
+    }
+
+    /// <summary>Flips the given account-level notices to Seen in the cached snapshot after a successful
+    /// acknowledge, so the startup ladder stops routing to the staff-notice gate. Ids may name warnings,
+    /// messages, or both.</summary>
+    public void MarkStaffNoticesSeenInSnapshot(IReadOnlyCollection<Guid> seenIds)
+    {
+        if (_lastAccount is not { } account || seenIds.Count == 0)
+        {
+            return;
+        }
+        var warnings = account.StaffWarnings;
+        var messages = account.StaffMessages;
+        var updatedWarnings = warnings is null
+            ? null
+            : warnings.Select(w => !w.Seen && seenIds.Contains(w.Id) ? w with { Seen = true } : w).ToArray();
+        var updatedMessages = messages is null
+            ? null
+            : messages.Select(m => !m.Seen && seenIds.Contains(m.Id) ? m with { Seen = true } : m).ToArray();
+        _lastAccount = account with { StaffWarnings = updatedWarnings, StaffMessages = updatedMessages };
+    }
+
     /// <summary>The next screen in the startup gate order; each gate clears its condition in the cached snapshot, then calls this again.</summary>
     public Screen ResolveNextStartupScreen()
     {
@@ -280,6 +375,11 @@ public sealed class SessionBootstrapper : IDisposable
                                                        or SessionBootstrapResult.SignedInOnboarding)
         {
             return Screen.ModeratorMessages;
+        }
+        if (HasUnseenStaffNotices && _lastResult is SessionBootstrapResult.SignedInActive
+                                                 or SessionBootstrapResult.SignedInOnboarding)
+        {
+            return Screen.StaffNotice;
         }
         if (NeedsPassphraseUnlock)
         {

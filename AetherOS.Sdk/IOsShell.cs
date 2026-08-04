@@ -8,8 +8,15 @@ public interface IOsShell
 {
     IReadOnlyList<IAetherApp> Apps { get; }
 
+    /// <summary>The built-in Arcade folder's id, for games navigating back into it.</summary>
+    const string ArcadeFolderId = "folder:arcade";
+
     void OpenApp(string appId);
     void GoHome();
+
+    /// <summary>Returns to the home screen with the given folder overlay open; hosts without folders
+    /// fall back to a plain home.</summary>
+    void GoHomeToFolder(string folderId) => GoHome();
 
     void PostNotification(string appId, string title, string body, Action? onTap = null, string? tag = null);
     IReadOnlyList<OsNotification> Notifications { get; }

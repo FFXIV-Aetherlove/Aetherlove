@@ -25,6 +25,7 @@ public class MainPluginWindow : Window, IDisposable
     private readonly BannedScreen _bannedScreen;
     private readonly WarningAcknowledgeScreen _warningsAckScreen;
     private readonly ModeratorMessageScreen _moderatorMessageScreen;
+    private readonly StaffNoticeScreen _staffNoticeScreen;
     private readonly PassphraseUnlockScreen _passphraseUnlockScreen;
     private readonly EncryptionRecoveryScreen _encryptionRecoveryScreen;
     private readonly OfflineScreen _offlineScreen;
@@ -57,6 +58,7 @@ public class MainPluginWindow : Window, IDisposable
         BannedScreen bannedScreen,
         WarningAcknowledgeScreen warningsAckScreen,
         ModeratorMessageScreen moderatorMessageScreen,
+        StaffNoticeScreen staffNoticeScreen,
         PassphraseUnlockScreen passphraseUnlockScreen,
         EncryptionRecoveryScreen encryptionRecoveryScreen,
         OfflineScreen offlineScreen,
@@ -71,7 +73,8 @@ public class MainPluginWindow : Window, IDisposable
         Os.StatusBar osStatusBar,
         Os.AppCapabilities capabilities,
         Os.ShareSheet osShareSheet,
-        Os.OsTour osTour
+        Os.OsTour osTour,
+        Services.Sparks.SparkActivityReporter sparkActivity
     ) : base("AetherLove##MainWindow",
              ImGuiWindowFlags.NoResize
            | ImGuiWindowFlags.NoScrollbar
@@ -90,6 +93,7 @@ public class MainPluginWindow : Window, IDisposable
         _bannedScreen = bannedScreen;
         _warningsAckScreen = warningsAckScreen;
         _moderatorMessageScreen = moderatorMessageScreen;
+        _staffNoticeScreen = staffNoticeScreen;
         _passphraseUnlockScreen = passphraseUnlockScreen;
         _encryptionRecoveryScreen = encryptionRecoveryScreen;
         _offlineScreen = offlineScreen;
@@ -105,7 +109,9 @@ public class MainPluginWindow : Window, IDisposable
         _capabilities = capabilities;
         _osShareSheet = osShareSheet;
         _osTour = osTour;
+        _sparkActivity = sparkActivity;
     }
+    private readonly Services.Sparks.SparkActivityReporter _sparkActivity;
     private readonly Os.OsShell _osShell;
     private readonly Os.NotificationShade _osShade;
     private readonly Os.StatusBar _osStatusBar;
@@ -144,6 +150,30 @@ public class MainPluginWindow : Window, IDisposable
             _moderatorMessageScreen.RequestLiveAcknowledge();
             _router.Navigate(Screen.ModeratorMessages);
         }
+        else if (_notifications.HasPendingStaffNotice)
+        {
+            _notifications.ClearPendingStaffNotice();
+            PostStaffNoticeNotification();
+            _staffNoticeScreen.RequestLiveAcknowledge();
+            _router.Navigate(Screen.StaffNotice);
+        }
+    }
+
+    /// <summary>Posts the shade entry that survives the staff-notice gate: once acknowledged, it is the pointer
+    /// back to the Settings history, and the Settings staff page clears it by tag. Tagged, so a second batch
+    /// replaces it rather than stacking.</summary>
+    private void PostStaffNoticeNotification()
+    {
+        if (_router.Current == Screen.StaffNotice)
+        {
+            return;
+        }
+        _osShell.PostNotification(
+            appId: "settings",
+            title: Loc.T("notif.staff_notice_title"),
+            body: Loc.T("notif.staff_notice_body"),
+            onTap: () => _osShell.OpenApp("settings"),
+            tag: StaffNoticeScreen.NotificationTag);
     }
 
     /// <summary>Fires on every close path (minimize, close button, ESC), so the foreground app always gets its
@@ -323,6 +353,10 @@ public class MainPluginWindow : Window, IDisposable
                 _foregroundApp?.OnBackground();
                 _foregroundApp = surfaceApp;
                 surfaceApp?.OnForeground();
+                if (surfaceApp is not null)
+                {
+                    _sparkActivity.NoteAppForeground(surfaceApp.Id);
+                }
             }
 
             _transitionAlpha = 0.88f;
@@ -411,6 +445,9 @@ public class MainPluginWindow : Window, IDisposable
                 break;
             case Screen.ModeratorMessages:
                 _moderatorMessageScreen.Draw();
+                break;
+            case Screen.StaffNotice:
+                _staffNoticeScreen.Draw();
                 break;
             case Screen.PassphraseUnlock:
                 _passphraseUnlockScreen.Draw();
@@ -515,6 +552,9 @@ public class MainPluginWindow : Window, IDisposable
             case Screen.ModeratorMessages:
                 _moderatorMessageScreen.OnShow();
                 break;
+            case Screen.StaffNotice:
+                _staffNoticeScreen.OnShow();
+                break;
             case Screen.PassphraseUnlock:
                 _passphraseUnlockScreen.OnShow();
                 break;
@@ -594,6 +634,7 @@ public class MainPluginWindow : Window, IDisposable
         }
         if (_router.Current == Screen.Home)
         {
+            _homeScreen.CloseOpenFolder();
             return;
         }
         var appId = _osShell.AppIdForScreen(_router.Current);

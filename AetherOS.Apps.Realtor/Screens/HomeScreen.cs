@@ -13,6 +13,8 @@ using AetherOS.Sdk;
 using AetherLove.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
+using Dalamud.Interface.Utility.Raii;
+using Dalamud.Plugin;
 
 namespace AetherOS.Apps.Realtor;
 
@@ -24,6 +26,13 @@ internal sealed class HomeScreen
 
     private readonly RealtorDataService _data;
     private readonly RealtorFilters _filters;
+    private readonly LotteryClock _clock;
+    private readonly RealtorSettings _settings;
+    private readonly Action _openSettings = null!;
+    private PaissaWorldDetail? _observed;
+    private const string MenuPopupId = "##realtorMenuPopup";
+    private Vector2 _menuTL;
+    private bool _showContribute;
     private readonly Action _openWorldPick;
     private readonly Action<int, string, PaissaDistrict> _openDistrict;
     private readonly Action _openTour;
@@ -36,14 +45,18 @@ internal sealed class HomeScreen
     private volatile bool _failed;
     private int _generation;
 
-    public HomeScreen(RealtorDataService data, RealtorFilters filters, Action openWorldPick,
-        Action<int, string, PaissaDistrict> openDistrict, Action openTour)
+    public HomeScreen(RealtorDataService data, RealtorFilters filters, LotteryClock clock, RealtorSettings settings,
+        Action openWorldPick,
+        Action<int, string, PaissaDistrict> openDistrict, Action openTour, Action openSettings)
     {
         _data = data;
         _filters = filters;
+        _clock = clock;
+        _settings = settings;
         _openWorldPick = openWorldPick;
         _openDistrict = openDistrict;
         _openTour = openTour;
+        _openSettings = openSettings;
     }
 
     public string WorldName => _worldName;
@@ -118,6 +131,10 @@ internal sealed class HomeScreen
         });
     }
 
+    /// <summary>The lottery phase right now. Global, so it holds on every world regardless of how stale that
+    /// world's scouting is; null only before the very first sighting this install has ever seen.</summary>
+    public int? LotteryPhase => _clock.Current?.Phase;
+
     public void Draw(OsAppContext ctx)
     {
         _entrance.BeginFrame();
@@ -134,46 +151,181 @@ internal sealed class HomeScreen
 
         ImGui.Dummy(new Vector2(0f, Px(6f)));
 
-        if (_worldName.Length == 0)
+        // The title and world pill stay put; everything below them scrolls.
+        RealtorUi.ScrollBody("##realtorHomeBody", () =>
         {
-            DrawCenteredHint(Loc.T("os.realtor_unknown_world"), winW);
-            _entrance.EndFrame();
-            return;
-        }
-
-        var detail = _detail;
-        if (detail is null)
-        {
-            if (_loading)
+            var bodyW = ImGui.GetWindowSize().X;
+            if (_worldName.Length == 0)
             {
-                ImGui.Dummy(new Vector2(0f, Px(40f)));
-                var center = new Vector2(ImGui.GetWindowPos().X + winW * 0.5f, ImGui.GetCursorScreenPos().Y + Px(20f));
-                LoadingSpinner.Draw(center, Px(14f), Px(3f), ImGui.GetColorU32(t.Accent));
-                ImGui.Dummy(new Vector2(0f, Px(50f)));
-                DrawCenteredHint(Loc.T("os.realtor_loading"), winW);
+                DrawCenteredHint(Loc.T("os.realtor_unknown_world"), bodyW);
+                return;
             }
-            else if (_failed)
+
+            var detail = _detail;
+            if (detail is null)
             {
-                DrawCenteredHint(Loc.T("os.realtor_offline"), winW);
-                DrawRetry(winW);
+                if (_loading)
+                {
+                    ImGui.Dummy(new Vector2(0f, Px(40f)));
+                    var center = new Vector2(ImGui.GetWindowPos().X + bodyW * 0.5f, ImGui.GetCursorScreenPos().Y + Px(20f));
+                    LoadingSpinner.Draw(center, Px(14f), Px(3f), ImGui.GetColorU32(t.Accent));
+                    ImGui.Dummy(new Vector2(0f, Px(50f)));
+                    DrawCenteredHint(Loc.T("os.realtor_loading"), bodyW);
+                }
+                else if (_failed)
+                {
+                    DrawCenteredHint(Loc.T("os.realtor_offline"), bodyW);
+                    DrawRetry(bodyW);
+                }
+                return;
             }
-            _entrance.EndFrame();
-            return;
-        }
 
-        DrawPhaseCard(detail, winW);
-        DrawHero(detail, winW);
-        ImGui.Dummy(new Vector2(0f, Px(10f)));
-        ImGui.SetCursorPosX(Px(PadX));
-        RealtorUi.DrawFilterRow("home", _filters);
-        ImGui.Dummy(new Vector2(0f, Px(8f)));
-        foreach (var district in detail.Districts)
-        {
-            DrawDistrictRow(district, winW);
-        }
+            if (!ReferenceEquals(_observed, detail))
+            {
+                _observed = detail;
+                _clock.Observe(detail);
+            }
 
-        ImGui.Dummy(new Vector2(0f, Px(14f)));
+            DrawPhaseCard(bodyW);
+
+            // Nothing is claimable during results, so the headline count goes entirely. Otherwise it counts
+            // only plots the current cycle confirms; anything older is reported beside it, not folded in.
+            if (_clock.Current?.Phase != PaissaLottoPhase.Results)
+            {
+                var (verified, stale) = LotteryClock.CountPlots(detail, _clock.Current?.Phase);
+                stale = _settings.ShowStale ? stale : 0;
+                DrawHero(detail, bodyW, verified, stale);
+            }
+            ImGui.Dummy(new Vector2(0f, Px(10f)));
+            ImGui.SetCursorPosX(Px(PadX));
+            RealtorUi.DrawFilterRow("home", _filters);
+            ImGui.Dummy(new Vector2(0f, Px(8f)));
+            foreach (var district in detail.Districts)
+            {
+                DrawDistrictRow(district, bodyW);
+            }
+
+            ImGui.Dummy(new Vector2(0f, Px(14f)));
+        });
+
+        DrawMenuDropdown();
+        DrawContributeOverlay(ctx);
         _entrance.EndFrame();
+    }
+
+    private void DrawMenuDropdown()
+    {
+        var size = Px(30f);
+        ImGui.SetNextWindowPos(new Vector2(_menuTL.X + size, _menuTL.Y + size + Px(4f)),
+            ImGuiCond.Always, new Vector2(1f, 0f));
+        ImGui.PushStyleColor(ImGuiCol.PopupBg, new Vector4(0.13f, 0.12f, 0.15f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.Border, ThemeService.Current.Accent with { W = 0.5f });
+        ImGui.PushStyleVar(ImGuiStyleVar.PopupRounding, Px(10f));
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(Px(4f), Px(4f)));
+        ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(0f, Px(2f)));
+        if (ImGui.BeginPopup(MenuPopupId))
+        {
+            var contribute = Loc.T("os.realtor_menu_contribute");
+            var w = MathF.Max(Px(150f), ImGui.CalcTextSize(contribute).X + Px(56f));
+            var rowH = ImGui.GetTextLineHeight() + Px(12f);
+            if (AppHeader.MenuRow(FontAwesomeIcon.HandsHelping, contribute, w, rowH))
+            {
+                _showContribute = true;
+                ImGui.CloseCurrentPopup();
+            }
+            if (AppHeader.MenuRow(FontAwesomeIcon.Cog, Loc.T("os.realtor_menu_settings"), w, rowH))
+            {
+                ImGui.CloseCurrentPopup();
+                _openSettings();
+            }
+            if (AppHeader.MenuRow(FontAwesomeIcon.Compass, Loc.T("os.realtor_menu_tour"), w, rowH))
+            {
+                ImGui.CloseCurrentPopup();
+                _openTour();
+            }
+            ImGui.EndPopup();
+        }
+        ImGui.PopStyleVar(3);
+        ImGui.PopStyleColor(2);
+    }
+
+    /// <summary>Explains where the plot data comes from and how to help it stay fresh. In-phone overlay: the
+    /// scrim covers only the app's own content rect, never the whole game screen.</summary>
+    private void DrawContributeOverlay(OsAppContext ctx)
+    {
+        if (!_showContribute)
+        {
+            return;
+        }
+        var origin = ImGui.GetWindowPos();
+        var avail = ImGui.GetWindowSize();
+
+        // The overlay gets its own child, submitted after the scrolling body. ImGui renders every child
+        // window above the parent's draw list, so a scrim drawn straight onto the parent would sit UNDER
+        // the content it is supposed to cover.
+        ImGui.SetCursorScreenPos(origin);
+        using var layer = ImRaii.Child("##realtorOverlay", avail, false,
+            ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoBackground);
+        if (!layer)
+        {
+            return;
+        }
+
+        var dl = ImGui.GetWindowDrawList();
+        dl.AddRectFilled(origin, origin + avail, OsDrawShared.Black(0.72f));
+
+        var panelW = avail.X - Px(44f);
+        var panelTL = origin + new Vector2((avail.X - panelW) * 0.5f, avail.Y * 0.20f);
+        var panelH = avail.Y * 0.52f;
+        dl.AddRectFilled(panelTL, panelTL + new Vector2(panelW, panelH),
+            ImGui.ColorConvertFloat4ToU32(new Vector4(0.10f, 0.09f, 0.12f, 1f)), Px(16f));
+        dl.AddRect(panelTL, panelTL + new Vector2(panelW, panelH),
+            ImGui.GetColorU32(ThemeService.Current.Accent with { W = 0.45f }),
+            Px(16f), ImDrawFlags.RoundCornersAll, Px(1.2f));
+
+        var innerW = panelW - Px(32f);
+        ImGui.SetCursorScreenPos(panelTL + Px(16f, 14f));
+        ImGui.BeginGroup();
+        ModalUi.Header(innerW, FontAwesomeIcon.HandsHelping, Loc.T("os.realtor_contribute_title"),
+            ThemeService.Current.AccentLight);
+        ImGui.Dummy(new Vector2(0f, Px(6f)));
+        ImGui.SetCursorPosX(ImGui.GetCursorPosX());
+        ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + innerW);
+        ImGui.TextColored(UiColors.Body, Loc.T("os.realtor_contribute_body"));
+        ImGui.PopTextWrapPos();
+        ImGui.Dummy(new Vector2(0f, Px(12f)));
+        if (ModalUi.Button(Loc.T("os.realtor_contribute_open"), innerW))
+        {
+            OpenPluginInstaller();
+        }
+        if (ModalUi.Button(Loc.T("os.realtor_contribute_close"), innerW))
+        {
+            _showContribute = false;
+        }
+        ImGui.EndGroup();
+
+        // Scrim last so the panel's own controls win their clicks, per the first-submitted-wins rule.
+        ImGui.SetCursorScreenPos(origin);
+        if (ImGui.InvisibleButton("##realtorContributeScrim", avail))
+        {
+            var m = ImGui.GetMousePos();
+            if (m.X < panelTL.X || m.X > panelTL.X + panelW || m.Y < panelTL.Y || m.Y > panelTL.Y + panelH)
+            {
+                _showContribute = false;
+            }
+        }
+    }
+
+    private static void OpenPluginInstaller()
+    {
+        try
+        {
+            UiHost.PluginInterface.OpenPluginInstallerTo(PluginInstallerOpenKind.AllPlugins, "PaissaHouse");
+        }
+        catch (Exception ex)
+        {
+            UiHost.Log.Debug($"[Realtor] Could not open the plugin installer: {ex.Message}");
+        }
     }
 
     private void DrawWorldPill(float winW)
@@ -186,30 +338,27 @@ internal sealed class HomeScreen
         var pillH = textSz.Y + Px(10f);
         var dlTop = ImGui.GetWindowDrawList();
 
+        // Hamburger sits outermost, the way every other app's header does it; the world pill moves inboard.
         ImGui.SameLine();
         var baseY = ImGui.GetCursorPosY() + Px(2f);
-        ImGui.SetCursorPosX(winW - pillW - Px(PadX) - pillH - Px(8f));
+        ImGui.SetCursorPosX(winW - pillH - Px(PadX));
         ImGui.SetCursorPosY(baseY);
-        var btnTl = ImGui.GetCursorScreenPos();
-        var tourClicked = ImGui.InvisibleButton("##realtorTourBtn", new Vector2(pillH, pillH));
+        _menuTL = ImGui.GetCursorScreenPos();
+        if (ImGui.InvisibleButton("##realtorMenuBtn", new Vector2(pillH, pillH)))
+        {
+            ImGui.OpenPopup(MenuPopupId);
+        }
         HandOnHover();
-        var tourHovered = ImGui.IsItemHovered();
-        dlTop.AddCircleFilled(btnTl + new Vector2(pillH * 0.5f, pillH * 0.5f), pillH * 0.5f,
-            ImGui.GetColorU32(t.Accent with { W = tourHovered ? 0.32f : 0.16f }));
-        var qSz = IconDraw.Measure(FontAwesomeIcon.QuestionCircle, iconPx);
-        IconDraw.Add(dlTop, FontAwesomeIcon.QuestionCircle, iconPx,
-            btnTl + new Vector2((pillH - qSz.X) * 0.5f, (pillH - qSz.Y) * 0.5f), ImGui.GetColorU32(t.AccentLight));
-        if (tourHovered)
-        {
-            ImGui.SetTooltip(Loc.T("os.realtor_menu_tour"));
-        }
-        if (tourClicked)
-        {
-            _openTour();
-        }
+        var menuActive = ImGui.IsItemHovered() || ImGui.IsPopupOpen(MenuPopupId);
+        dlTop.AddRectFilled(_menuTL, _menuTL + new Vector2(pillH, pillH),
+            ImGui.GetColorU32(menuActive ? t.Accent with { W = 0.30f } : new Vector4(1f, 1f, 1f, 0.06f)), Px(8f));
+        var barsSz = IconDraw.Measure(FontAwesomeIcon.Bars, iconPx);
+        IconDraw.Add(dlTop, FontAwesomeIcon.Bars, iconPx,
+            _menuTL + new Vector2((pillH - barsSz.X) * 0.5f, (pillH - barsSz.Y) * 0.5f),
+            ImGui.GetColorU32(t.AccentLight));
 
         ImGui.SameLine();
-        ImGui.SetCursorPosX(winW - pillW - Px(PadX));
+        ImGui.SetCursorPosX(winW - pillH - Px(PadX) - Px(8f) - pillW);
         ImGui.SetCursorPosY(baseY);
         var tl = ImGui.GetCursorScreenPos();
         var clicked = ImGui.InvisibleButton("##realtorWorldPill", new Vector2(pillW, pillH));
@@ -229,9 +378,9 @@ internal sealed class HomeScreen
     }
 
     /// <summary>The world's lottery phase and its live countdown, above the open-plot hero.</summary>
-    private static void DrawPhaseCard(PaissaWorldDetail detail, float winW)
+    private void DrawPhaseCard(float winW)
     {
-        if (RealtorUi.FindLotteryPhase(detail) is not { } lottery)
+        if (_clock.Current is not { } lottery)
         {
             return;
         }
@@ -245,9 +394,7 @@ internal sealed class HomeScreen
         dl.AddRectFilled(tl, tl + new Vector2(cardW, cardH), ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.05f)), Px(14f));
 
         var (phaseText, phaseColor) = RealtorUi.PhaseLabel(lottery.Phase);
-        var remaining = lottery.Until is { } until && until > DateTimeOffset.UtcNow
-            ? RealtorUi.FormatSpan(until - DateTimeOffset.UtcNow)
-            : "—";
+        var remaining = RealtorUi.FormatSpan(lottery.Until - DateTimeOffset.UtcNow);
 
         DrawPhaseRow(dl, tl, cardW, tl.Y + Px(11f), Loc.T("os.realtor_phase_label"), phaseText, phaseColor);
         DrawPhaseRow(dl, tl, cardW, tl.Y + Px(11f) + lineH + rowGap, Loc.T("os.realtor_time_label"), remaining,
@@ -264,7 +411,7 @@ internal sealed class HomeScreen
         dl.AddText(new Vector2(tl.X + cardW - valueSz.X - Px(14f), y), ImGui.GetColorU32(valueColor), value);
     }
 
-    private void DrawHero(PaissaWorldDetail detail, float winW)
+    private void DrawHero(PaissaWorldDetail detail, float winW, int openCount, int staleCount)
     {
         var t = ThemeService.Current;
         var cardW = winW - Px(PadX) * 2f;
@@ -276,20 +423,32 @@ internal sealed class HomeScreen
         dl.AddRect(tl, tl + new Vector2(cardW, cardH), ImGui.GetColorU32(t.Accent with { W = 0.45f }), Px(16f),
             ImDrawFlags.None, Px(1.2f));
 
-        using (UiFonts.H1?.Push())
-        {
-            dl.AddText(new Vector2(tl.X + Px(16f), tl.Y + Px(12f)), ImGui.GetColorU32(t.AccentLight),
-                detail.NumOpenPlots.ToString());
-        }
         float bigH;
+        float bigW;
+        var big = openCount.ToString();
         using (UiFonts.H1?.Push())
         {
+            dl.AddText(new Vector2(tl.X + Px(16f), tl.Y + Px(12f)), ImGui.GetColorU32(t.AccentLight), big);
             bigH = ImGui.GetTextLineHeight();
+            bigW = ImGui.CalcTextSize(big).X;
+        }
+
+        // Plots whose data predates this cycle are counted separately rather than inflating the headline.
+        if (staleCount > 0)
+        {
+            var pill = Loc.T("os.realtor_stale_pill", staleCount);
+            var pillSz = ImGui.CalcTextSize(pill);
+            var pillH = pillSz.Y + Px(6f);
+            var pillTl = new Vector2(tl.X + Px(16f) + bigW + Px(10f),
+                tl.Y + Px(12f) + ((bigH - pillH) * 0.5f));
+            dl.AddRectFilled(pillTl, pillTl + new Vector2(pillSz.X + Px(14f), pillH),
+                ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f)), pillH * 0.5f);
+            dl.AddText(pillTl + new Vector2(Px(7f), Px(3f)), ImGui.GetColorU32(UiColors.Hint), pill);
         }
         dl.AddText(new Vector2(tl.X + Px(16f), tl.Y + Px(12f) + bigH + Px(2f)),
             ImGui.GetColorU32(UiColors.Body), Loc.T("os.realtor_hero_sub", detail.Name));
 
-        if (detail.NumOpenPlots > 0 && detail.OldestPlotTime > 0)
+        if (openCount > 0 && detail.OldestPlotTime > 0)
         {
             var stale = Loc.T("os.realtor_stale",
                 RealtorUi.FormatAgoCoarse(DateTimeOffset.FromUnixTimeSeconds((long)detail.OldestPlotTime)));
@@ -305,8 +464,32 @@ internal sealed class HomeScreen
         var t = ThemeService.Current;
         var cardW = winW - Px(PadX) * 2f;
         var cardH = Px(58f);
-        var count = _filters.CountFor(district);
-        var enabled = count > 0;
+        // Split the row's own count the same way the headline and the plot list do: confirmed plots are the
+        // number, anything predating this cycle is reported separately rather than padding it out.
+        var globalPhase = _clock.Current?.Phase;
+        var count = 0;
+        var staleCount = 0;
+        foreach (var plot in district.OpenPlots ?? [])
+        {
+            if (!_filters.Matches(plot))
+            {
+                continue;
+            }
+            if (LotteryClock.IsStale(plot, globalPhase))
+            {
+                staleCount++;
+            }
+            else
+            {
+                count++;
+            }
+        }
+        if (!_settings.ShowStale)
+        {
+            staleCount = 0;
+        }
+        // Still worth opening when everything is stale: the list is where you see what is actually known.
+        var enabled = count + staleCount > 0;
         ImGui.SetCursorPosX(Px(PadX));
         var tl = ImGui.GetCursorScreenPos();
         var clicked = false;
@@ -339,17 +522,34 @@ internal sealed class HomeScreen
             circleTl + new Vector2((circle - iconSz.X) * 0.5f, (circle - iconSz.Y) * 0.5f),
             ImGui.GetColorU32(color with { W = dim }));
 
-        var textX = circleTl.X + circle + Px(11f);
-        dl.AddText(new Vector2(textX, tl.Y + (cardH - ImGui.GetTextLineHeight()) * 0.5f),
-            ImGui.GetColorU32(UiColors.Body with { W = dim }), district.Name);
-
-        var pillLabel = enabled
+        var pillLabel = count > 0
             ? Loc.T("os.realtor_district_open", count)
             : Loc.T("os.realtor_district_none");
-        var pillColor = enabled ? t.AccentLight : UiColors.Hint with { W = 0.6f };
+        var pillColor = count > 0 ? t.AccentLight : UiColors.Hint with { W = 0.6f };
         var pillSz = ImGui.CalcTextSize(pillLabel);
         var pillH = pillSz.Y + Px(8f);
-        var pillTl = new Vector2(tl.X + cardW - pillSz.X - Px(28f), tl.Y + (cardH - pillH) * 0.5f);
+        var pillY = tl.Y + (cardH - pillH) * 0.5f;
+
+        // Stale sits outermost, after the confirmed count, so the number you can trust reads first.
+        var staleLabel = staleCount > 0 ? Loc.T("os.realtor_stale_pill", staleCount) : string.Empty;
+        var staleW = staleCount > 0 ? ImGui.CalcTextSize(staleLabel).X + Px(14f) : 0f;
+        var staleTl = new Vector2(tl.X + cardW - staleW - Px(14f), pillY);
+        var pillRight = staleCount > 0 ? staleTl.X - Px(6f) : tl.X + cardW - Px(14f);
+        var pillTl = new Vector2(pillRight - pillSz.X - Px(16f), pillY);
+
+        var textX = circleTl.X + circle + Px(11f);
+        var nameLimit = pillTl.X - textX - Px(8f);
+        dl.AddText(new Vector2(textX, tl.Y + (cardH - ImGui.GetTextLineHeight()) * 0.5f),
+            ImGui.GetColorU32(UiColors.Body with { W = dim }), TruncateToWidth(district.Name, nameLimit));
+
+        if (staleCount > 0)
+        {
+            dl.AddRectFilled(staleTl, staleTl + new Vector2(staleW, pillH),
+                ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.08f * dim)), pillH * 0.5f);
+            dl.AddText(staleTl + new Vector2(Px(7f), Px(4f)),
+                ImGui.GetColorU32(UiColors.Hint with { W = dim }), staleLabel);
+        }
+
         dl.AddRectFilled(pillTl, pillTl + new Vector2(pillSz.X + Px(16f), pillH),
             ImGui.GetColorU32(pillColor with { W = 0.14f * dim }), pillH * 0.5f);
         dl.AddText(pillTl + new Vector2(Px(8f), Px(4f)), ImGui.GetColorU32(pillColor), pillLabel);

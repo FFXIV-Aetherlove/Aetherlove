@@ -529,13 +529,19 @@ public sealed class NotificationShade
         dl.AddText(ImGui.GetFont(), ageFsz,
             new Vector2(cardBR.X - ageSz.X - Px(12f), cardTL.Y + Px(11f)), OsDraw.White(0.5f * slideAlpha), age);
 
-        var textW = cardBR.X - textX - ageSz.X - Px(24f);
-        dl.PushClipRect(new Vector2(textX, cardTL.Y), new Vector2(textX + textW, cardBR.Y), true);
-        dl.AddText(ImGui.GetFont(), ImGui.GetFontSize() * 1.06f,
-            new Vector2(textX, cardTL.Y + Px(11f)), OsDraw.White(0.96f * slideAlpha), n.Title);
-        dl.AddText(ImGui.GetFont(), ImGui.GetFontSize() * 0.94f,
-            new Vector2(textX, cardTL.Y + Px(35f)), OsDraw.White(0.66f * slideAlpha), n.Body);
-        dl.PopClipRect();
+        // Ellipsized per line rather than clipped: the title shares its row with the age, and a hard clip
+        // cuts it mid-glyph right against the timestamp. TruncateToWidth measures at the current font size,
+        // so each line's budget is divided by its own scale.
+        const float titleScale = 1.06f;
+        const float bodyScale = 0.94f;
+        var titleW = cardBR.X - textX - ageSz.X - Px(24f);
+        var bodyW = cardBR.X - textX - Px(12f);
+        var title = SharedUiHelpers.TruncateToWidth(n.Title, titleW / titleScale);
+        var body = SharedUiHelpers.TruncateToWidth(n.Body, bodyW / bodyScale);
+        dl.AddText(ImGui.GetFont(), ImGui.GetFontSize() * titleScale,
+            new Vector2(textX, cardTL.Y + Px(11f)), OsDraw.White(0.96f * slideAlpha), title);
+        dl.AddText(ImGui.GetFont(), ImGui.GetFontSize() * bodyScale,
+            new Vector2(textX, cardTL.Y + Px(35f)), OsDraw.White(0.66f * slideAlpha), body);
     }
 
     private void OpenNotification(AetherOS.Sdk.OsNotification n)

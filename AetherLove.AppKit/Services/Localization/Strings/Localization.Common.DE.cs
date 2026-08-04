@@ -181,5 +181,11 @@ internal static class CommonDe
 
         // added after update 2.0.1
         ["common.passphrase_correct_unrecoverable"] = "Deine Passphrase ist korrekt, aber keiner deiner gespeicherten Schlüssel ließ sich damit öffnen. Bitte kontaktiere den Support, bevor du ein Zurücksetzen in Betracht ziehst; dabei bleiben deine alten Nachrichten dauerhaft unlesbar.",
+
+        // added after update 2.1.3
+        ["common.staff_notice_heading_one"] = "Du hast einen Hinweis vom Team",
+        ["common.staff_notice_heading_many"] = "Du hast {0} Hinweise vom Team",
+        ["common.staff_notice_body"] = "Das AetherOS-Team hat dir Folgendes zu deinem Konto geschickt:",
+        ["common.staff_notice_ack"] = "Verstanden",
     };
 }

@@ -108,6 +108,35 @@ public sealed class ImageEffectsService : IImageEffects
         });
     }
 
+    public void PrepareUpload(string sourcePath, int maxWidth, int maxHeight, Action<string?, float> onDone)
+    {
+        Task.Run(() =>
+        {
+            try
+            {
+                using var img = Image.Load(sourcePath);
+                if (img.Width <= maxWidth && img.Height <= maxHeight)
+                {
+                    onDone(sourcePath, 1f);
+                    return;
+                }
+                var scale = MathF.Min((float)maxWidth / img.Width, (float)maxHeight / img.Height);
+                var w = Math.Max(1, (int)MathF.Round(img.Width * scale));
+                var h = Math.Max(1, (int)MathF.Round(img.Height * scale));
+                img.Mutate(x => x.Resize(w, h));
+                Directory.CreateDirectory(_dir);
+                var path = Path.Combine(_dir, $"{Guid.NewGuid():N}.png");
+                img.Save(path, new PngEncoder());
+                onDone(path, scale);
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.Warning(ex, "[ImageEffects] Upload prepare failed.");
+                onDone(null, 1f);
+            }
+        });
+    }
+
     private static Rgba32 HueColor(float hueDeg)
     {
         var h = ((hueDeg % 360f) + 360f) % 360f / 60f;

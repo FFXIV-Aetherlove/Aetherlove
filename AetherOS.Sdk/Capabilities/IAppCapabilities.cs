@@ -20,6 +20,9 @@ public interface IAppCapabilities
     /// <summary>Host/system side effects (open a URL, write the clipboard).</summary>
     ISystemBridge System { get; }
 
+    /// <summary>Live key state for keyboard-driven apps. Reading consumes the key for that frame.</summary>
+    IKeyboardInput Keyboard { get; }
+
     /// <summary>Offer content to whichever apps accept its type (the generic share sheet).</summary>
     IShareService Share { get; }
 
