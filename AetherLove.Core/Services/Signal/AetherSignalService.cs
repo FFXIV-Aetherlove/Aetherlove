@@ -291,6 +291,7 @@ public sealed class AetherSignalService : IAsyncDisposable
             RefreshConnectionInfo();
             _ = RefreshStaffNoticesAsync();
             _ = _services.GetRequiredService<Messenger.MessengerSyncService>().SyncAsync();
+            _ = _services.GetRequiredService<Yapper.YapperDmCryptoService>().EnsureProvisionedAsync();
             _log.Information($"[AetherSignalService] Hub reconnected (connectionId={id}).");
             return Task.CompletedTask;
         };

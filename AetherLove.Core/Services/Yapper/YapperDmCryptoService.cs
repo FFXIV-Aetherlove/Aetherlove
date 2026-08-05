@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AetherLove.Services.Crypto;
 using AetherLove.Services.Hub;
+using AetherLove.Shared;
 using AetherLove.Shared.Yapper;
 using Dalamud.Plugin.Services;
 
@@ -22,6 +23,7 @@ public sealed class YapperDmCryptoService
     private readonly AetherHubContext _hub;
     private readonly IPluginLog _log;
 
+    private readonly SemaphoreSlim _gate = new(1, 1);
     private (byte[] PublicKey, byte[] PrivateKey)? _pair;
 
     public YapperDmCryptoService(CryptoService crypto, KeyStorageService keys, AetherHubContext hub, IPluginLog log)
@@ -41,7 +43,9 @@ public sealed class YapperDmCryptoService
 
     /// <summary>Ensures the yapper keypair exists locally: unwraps the server bundle under the stored
     /// account KEK, generates and publishes one when the server has none, or re-publishes a fresh pair
-    /// when the stored KEK can't open the existing bundle. Never prompts.</summary>
+    /// when the stored KEK can't open the existing bundle. Never prompts. Safe to fire blindly on every
+    /// connect: an account without a yapper profile is a quiet no-op, and concurrent callers serialize
+    /// so a double generate-and-publish race cannot retire its own fresh bundle.</summary>
     public async Task<bool> EnsureProvisionedAsync(CancellationToken ct = default)
     {
         if (_pair is not null)
@@ -53,8 +57,13 @@ public sealed class YapperDmCryptoService
         {
             return false;
         }
+        await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
+            if (_pair is not null)
+            {
+                return true;
+            }
             var bundle = await _hub.GetYapperDmKeysAsync(ct).ConfigureAwait(false);
             if (bundle is not null
                 && _crypto.UnwrapPrivateKey(bundle.EncryptedPrivateKey, bundle.WrapNonce, kek) is { } unwrapped)
@@ -74,8 +83,19 @@ public sealed class YapperDmCryptoService
         }
         catch (Exception ex)
         {
-            _log.Warning(ex, "[YapperDmCrypto] Key provisioning failed.");
+            if (ex.Message.Contains(HubErrors.YapperNoProfile) || ex.Message.Contains(HubErrors.YapperDisabled))
+            {
+                _log.Debug("[YapperDmCrypto] No yapper profile (or yapper disabled); skipping provisioning.");
+            }
+            else
+            {
+                _log.Warning(ex, "[YapperDmCrypto] Key provisioning failed.");
+            }
             return false;
+        }
+        finally
+        {
+            _gate.Release();
         }
     }
 

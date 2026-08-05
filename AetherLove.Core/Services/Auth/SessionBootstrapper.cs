@@ -44,6 +44,7 @@ public sealed class SessionBootstrapper : IDisposable
     private readonly Chat.ChatCacheStore _chatCache;
     private readonly Hangouts.HangoutStateService _hangouts;
     private readonly Messenger.MessengerSyncService _messengerSync;
+    private readonly Yapper.YapperDmCryptoService _yapperDmCrypto;
     private readonly SiblingBadgeStore _siblingBadges;
     private readonly OwnAvatarCache _ownAvatar;
     private readonly OsAvatarCache _osAvatar;
@@ -72,6 +73,7 @@ public sealed class SessionBootstrapper : IDisposable
         Chat.ChatCacheStore chatCache,
         Hangouts.HangoutStateService hangouts,
         Messenger.MessengerSyncService messengerSync,
+        Yapper.YapperDmCryptoService yapperDmCrypto,
         SiblingBadgeStore siblingBadges,
         OwnAvatarCache ownAvatar,
         OsAvatarCache osAvatar)
@@ -88,6 +90,7 @@ public sealed class SessionBootstrapper : IDisposable
         _chatCache = chatCache;
         _hangouts = hangouts;
         _messengerSync = messengerSync;
+        _yapperDmCrypto = yapperDmCrypto;
         _siblingBadges = siblingBadges;
         _ownAvatar = ownAvatar;
         _osAvatar = osAvatar;
@@ -598,6 +601,9 @@ public sealed class SessionBootstrapper : IDisposable
             await TryAutoProvisionAsync(ct).ConfigureAwait(false);
             // Fire-and-forget: messenger state is account-level and non-blocking for the profile session.
             _ = _messengerSync.SyncAsync(CancellationToken.None);
+            // Same for the yapper DM keypair: provisioned at login so peers can DM this user before
+            // they ever open the Yapper app; a no-op for accounts without a yapper profile.
+            _ = _yapperDmCrypto.EnsureProvisionedAsync(CancellationToken.None);
 
             if (status.Status == ProfileLifecycle.Onboarding)
             {

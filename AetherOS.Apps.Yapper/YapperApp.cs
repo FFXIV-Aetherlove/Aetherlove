@@ -339,11 +339,15 @@ public sealed class YapperApp : IAetherApp, IAppSettings
         }
         if (!_dmKeysEnsured && _me is not null)
         {
-            _dmKeysEnsured = true;
+            // Marked ensured only on success, so a failed attempt (KEK not unlocked yet, brief
+            // disconnect) retries on the next foreground instead of staying keyless all session.
             _ = Task.Run(async () =>
             {
-                await _host.EnsureDmKeysAsync().ConfigureAwait(false);
-                _messages.Refresh();
+                if (await _host.EnsureDmKeysAsync().ConfigureAwait(false))
+                {
+                    _dmKeysEnsured = true;
+                    _messages.Refresh();
+                }
             });
         }
     }
@@ -574,6 +578,15 @@ public sealed class YapperApp : IAetherApp, IAppSettings
     private void OnOnboarded(YapperMyProfileDto me)
     {
         _me = me;
+        // The DM keypair publishes the moment the profile exists, so peers can message this user
+        // before they ever open the Messages tab.
+        _ = Task.Run(async () =>
+        {
+            if (await _host.EnsureDmKeysAsync().ConfigureAwait(false))
+            {
+                _dmKeysEnsured = true;
+            }
+        });
         _view = View.Tour;
         _tour.OnShow();
     }
