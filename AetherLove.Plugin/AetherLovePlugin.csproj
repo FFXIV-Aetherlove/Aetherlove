@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
-    <Version>2.3.0.0</Version>
+    <Version>2.3.1.0</Version>
     <!-- Windows-versioned TFM so the Windows SDK projection resolves: Groove's media backend reads
          GSMTC (Windows.Media.Control). 17763 = Windows 10 1809, where GSMTC first shipped. -->
     <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>

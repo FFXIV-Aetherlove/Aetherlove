@@ -145,6 +145,9 @@ public sealed class AetherlingApp : IAetherApp
     {
         ResolveView(_host.Snapshot);
         Refresh();
+        // ResolveView only arms a screen it actually switches to, so re-entering while already on the adopt
+        // screen would keep showing the balance from the first visit.
+        _adopt.RefreshBalance();
     }
 
     public void OnBackground() => _host.StopBgm();

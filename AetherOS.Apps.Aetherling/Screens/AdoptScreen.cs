@@ -14,7 +14,16 @@ namespace AetherOS.Apps.Aetherling.Screens;
 /// <summary>The way in. One button, one price, and not a word about what it buys.</summary>
 internal sealed class AdoptScreen(IAetherlingHost host)
 {
-    private long? _balance;
+    /// <summary>Sentinel for "not fetched yet", which the chip renders as an ellipsis. A wallet can never be
+    /// negative, so it can never collide with a real balance.</summary>
+    private const long Unknown = -1;
+
+    /// <summary>Written from the fetch's continuation, read on the draw thread, so it is a plain long behind
+    /// interlocked access rather than a long?: a nullable's flag and value are two separate stores, and a
+    /// draw landing between them would show a balance of zero.</summary>
+    private long _balance = Unknown;
+
+    private volatile bool _fetching;
     private bool _busy;
     private bool _purchased;
     private string? _error;
@@ -27,7 +36,31 @@ internal sealed class AdoptScreen(IAetherlingHost host)
     {
         _shown = ImGui.GetTime();
         _error = null;
-        _ = RefreshBalanceAsync();
+        RefreshBalance();
+    }
+
+    /// <summary>Refetches the wallet. Called on every foreground as well as on entry, because the sparks are
+    /// earned everywhere else in the phone: someone short of the price leaves, does a Wayfinder run and comes
+    /// back, and a stale balance would tell them they still cannot afford it. Guarded, so the two paths
+    /// arriving on the same frame make one round trip.</summary>
+    public void RefreshBalance()
+    {
+        if (_fetching)
+        {
+            return;
+        }
+        _fetching = true;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await RefreshBalanceAsync().ConfigureAwait(false);
+            }
+            finally
+            {
+                _fetching = false;
+            }
+        });
     }
 
     /// <summary>True once, on the frame after the server has confirmed the purchase. The caller swaps the
@@ -42,7 +75,8 @@ internal sealed class AdoptScreen(IAetherlingHost host)
         return true;
     }
 
-    private async Task RefreshBalanceAsync() => _balance = await host.GetSparkBalanceAsync().ConfigureAwait(false);
+    private async Task RefreshBalanceAsync() =>
+        Interlocked.Exchange(ref _balance, await host.GetSparkBalanceAsync().ConfigureAwait(false) ?? Unknown);
 
     public void Draw(OsAppContext ctx, int price)
     {
@@ -73,8 +107,11 @@ internal sealed class AdoptScreen(IAetherlingHost host)
         Look.CentredBlock(dl, noise, origin.X + (size.X * 0.5f), origin.Y + (size.Y * 0.63f),
             Look.U32(Look.Whisper, 0.5f * fade), 0.85f, ImGui.GetTextLineHeight());
 
-        DrawBalance(dl, origin, size, price, fade);
-        DrawBuy(ctx, dl, origin, size, price, fade, time);
+        // Sampled once: the chip and the button both judge affordability, and a fetch landing between them
+        // would colour the price red under a button that still let you buy.
+        var balance = Interlocked.Read(ref _balance);
+        DrawBalance(dl, origin, size, price, fade, balance);
+        DrawBuy(ctx, dl, origin, size, price, fade, time, balance);
 
         if (_error is { Length: > 0 } && time < _errorUntil)
         {
@@ -83,10 +120,10 @@ internal sealed class AdoptScreen(IAetherlingHost host)
         }
     }
 
-    private void DrawBalance(ImDrawListPtr dl, Vector2 origin, Vector2 size, int price, float fade)
+    private void DrawBalance(ImDrawListPtr dl, Vector2 origin, Vector2 size, int price, float fade, long balance)
     {
-        var label = _balance?.ToString("N0") ?? "···";
-        var enough = _balance is null || _balance >= price;
+        var label = balance == Unknown ? "···" : balance.ToString("N0");
+        var enough = balance == Unknown || balance >= price;
         var textWidth = ImGui.CalcTextSize(label).X;
         var chipW = textWidth + Px(34f);
         var chipH = Px(24f);
@@ -100,9 +137,10 @@ internal sealed class AdoptScreen(IAetherlingHost host)
     }
 
     private void DrawBuy(
-        OsAppContext ctx, ImDrawListPtr dl, Vector2 origin, Vector2 size, int price, float fade, double time)
+        OsAppContext ctx, ImDrawListPtr dl, Vector2 origin, Vector2 size, int price, float fade, double time,
+        long balance)
     {
-        var enough = _balance is null || _balance >= price;
+        var enough = balance == Unknown || balance >= price;
         var live = enough && !_busy;
         var label = ctx.Localize("os.aetherling_purchase");
         var priceText = price.ToString("N0");
