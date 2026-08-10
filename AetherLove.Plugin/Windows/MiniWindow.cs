@@ -161,6 +161,19 @@ public sealed class MiniWindow : Window, IDisposable
         }
     }
 
+    /// <summary>What the bubble counts: every app's own unread model plus the OS badges laid on top, the same
+    /// sum the home screen's tiles show. It deliberately does NOT read <see cref="NotificationCenter"/>, which
+    /// only ever knew about AetherLove and so left the messenger, Yapper and everything since uncounted.</summary>
+    private int TotalBadge()
+    {
+        var total = 0;
+        foreach (var app in _osShell.Apps)
+        {
+            total += System.Math.Max(0, app.Badge) + System.Math.Max(0, _osShell.OsBadge(app.Id));
+        }
+        return total;
+    }
+
     public override void Draw()
     {
         PreWarm();
@@ -225,9 +238,8 @@ public sealed class MiniWindow : Window, IDisposable
             var warnSz = ImGui.CalcTextSize("!") * badgeScale;
             dl.AddText(badgeFont, badgePx, dotCenter - warnSz * 0.5f, 0xFF111111u, "!");
         }
-        else if (_notifications.TotalBadge > 0)
+        else if (TotalBadge() is > 0 and var badgeCount)
         {
-            var badgeCount = _notifications.TotalBadge;
             dl.AddCircleFilled(dotCenter, DotR, UiColors.UnreadBadge);
             var badgeLabel = badgeCount > 9 ? "9+" : badgeCount.ToString();
             var badgeSz = ImGui.CalcTextSize(badgeLabel) * badgeScale;

@@ -364,6 +364,6 @@ internal static class OsRu
         ["echo.quality_1080"] = "1080p",
         ["echo.settings_captions"] = "Субтитры",
         ["echo.settings_autoplay"] = "Автоматически включать следующее видео",
-        ["echo.settings_software_render"] = "Программный рендеринг (лечит подтормаживания)",
+        ["echo.settings_software_render"] = "Программный рендеринг",
     };
 }

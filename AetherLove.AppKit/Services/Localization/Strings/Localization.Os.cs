@@ -364,6 +364,6 @@ internal static class OsEn
         ["echo.quality_1080"] = "1080p",
         ["echo.settings_captions"] = "Subtitles",
         ["echo.settings_autoplay"] = "Play the next video automatically",
-        ["echo.settings_software_render"] = "Software rendering (fixes some stutter)",
+        ["echo.settings_software_render"] = "Software rendering",
     };
 }

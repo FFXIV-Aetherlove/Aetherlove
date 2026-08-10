@@ -89,7 +89,11 @@ public sealed class GrooveHostService : IGrooveHost, IOsMediaRemote, IDisposable
 
     bool IOsMediaRemote.TileVisible => _settings.ShowShadeTile && ((IOsMediaRemote)this).HasSession;
 
-    bool IOsMediaRemote.HasSession => Ready && !BridgeUnavailable && Current is { Title.Length: > 0 };
+    // Removing the Groove app from the home screen means "I don't want this feature": nothing OS-owned
+    // (shade tile, bubble transport) may keep showing what the PC is playing. HasSession is the one gate
+    // every one of those surfaces reads.
+    bool IOsMediaRemote.HasSession => !UiHost.Configuration.Os.RemovedApps.Contains("groove")
+        && Ready && !BridgeUnavailable && Current is { Title.Length: > 0 };
 
     string IOsMediaRemote.Title => Current?.Title ?? string.Empty;
 

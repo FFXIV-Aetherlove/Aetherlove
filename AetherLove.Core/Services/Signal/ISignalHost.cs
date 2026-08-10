@@ -8,6 +8,12 @@ public interface ISignalHost
     /// <summary>True while the phone window is open; gates deferred acknowledge screens and notification fallbacks.</summary>
     bool IsPhoneOpen { get; }
 
+    /// <summary>True only while the given app is the surface the phone is actually showing. Notification
+    /// suppression gates on this rather than on an app's own "which chat is open" stamp alone, because that
+    /// stamp deliberately survives a trip to the home screen (warm resume) and a message arriving there must
+    /// not be swallowed as if the chat were on screen.</summary>
+    bool IsAppInForeground(string appId);
+
     void RequestWarningLiveAcknowledge();
 
     void RequestModeratorLiveAcknowledge();

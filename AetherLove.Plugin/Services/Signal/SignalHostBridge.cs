@@ -18,6 +18,19 @@ public sealed class SignalHostBridge : ISignalHost
 
     public bool IsPhoneOpen => _services.GetRequiredService<MainPluginWindow>().IsOpen;
 
+    public bool IsAppInForeground(string appId)
+    {
+        if (!_services.GetRequiredService<MainPluginWindow>().IsOpen)
+        {
+            return false;
+        }
+        if (_services.GetRequiredService<Navigation.ScreenRouter>().Current != Navigation.Screen.App)
+        {
+            return false;
+        }
+        return _services.GetRequiredService<Os.OsShell>().ActiveSurfaceApp?.Id == appId;
+    }
+
     public void RequestWarningLiveAcknowledge() =>
         _services.GetRequiredService<WarningAcknowledgeScreen>().RequestLiveAcknowledge();
 

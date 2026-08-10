@@ -364,6 +364,6 @@ internal static class OsEs
         ["echo.quality_1080"] = "1080p",
         ["echo.settings_captions"] = "Subtítulos",
         ["echo.settings_autoplay"] = "Reproducir el siguiente vídeo automáticamente",
-        ["echo.settings_software_render"] = "Renderizado por software (arregla algunos tirones)",
+        ["echo.settings_software_render"] = "Renderizado por software",
     };
 }

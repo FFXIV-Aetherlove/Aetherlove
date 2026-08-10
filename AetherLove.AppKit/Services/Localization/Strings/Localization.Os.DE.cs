@@ -364,6 +364,6 @@ internal static class OsDe
         ["echo.quality_1080"] = "1080p",
         ["echo.settings_captions"] = "Untertitel",
         ["echo.settings_autoplay"] = "Nächstes Video automatisch abspielen",
-        ["echo.settings_software_render"] = "Software-Rendering (behebt manches Ruckeln)",
+        ["echo.settings_software_render"] = "Software-Rendering",
     };
 }

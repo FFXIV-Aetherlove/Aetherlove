@@ -705,8 +705,11 @@ public sealed class AetherSignalService : IAsyncDisposable
         hub.On<Shared.Messenger.MessengerMessagePushDto>("MessengerMessage", payload =>
         {
             var fromMe = payload.Message.SenderAccountId == _messenger.MyAccountId;
-            var viewing = _host.IsPhoneOpen && _messenger.ActiveChatId == payload.Message.ChatId;
-            _messenger.ApplyMessage(payload.Message);
+            // Both legs must hold: the chat stamp says WHICH chat, the foreground check says it is actually
+            // on screen. The stamp alone is not enough, because it survives a trip to the home screen.
+            var viewing = _host.IsAppInForeground("messenger")
+                && _messenger.ActiveChatId == payload.Message.ChatId;
+            _messenger.ApplyMessage(payload.Message, viewing);
             if (!fromMe && !viewing)
             {
                 if (_config.Messenger.NotifyMessage)

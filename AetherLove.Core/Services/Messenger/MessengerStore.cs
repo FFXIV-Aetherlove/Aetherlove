@@ -372,8 +372,10 @@ public sealed class MessengerStore
     }
 
     /// <summary>Appends a pushed or sent message, bumping the owning row's denormals (and unread when it is
-    /// someone else's message in a chat the user isn't looking at).</summary>
-    public void ApplyMessage(MessengerMessageDto message)
+    /// someone else's message in a chat the user isn't looking at). <paramref name="viewing"/> is the push
+    /// handler's foreground-aware verdict; the default covers the app's own echo of a message it just sent
+    /// from the open chat, where the sender check makes the value moot anyway.</summary>
+    public void ApplyMessage(MessengerMessageDto message, bool viewing = true)
     {
         lock (_lock)
         {
@@ -387,7 +389,6 @@ public sealed class MessengerStore
             if (_sync is not null)
             {
                 var fromMe = message.SenderAccountId == _sync.MyAccountId;
-                var viewing = ActiveChatId == message.ChatId;
                 if (message.Kind == MessengerChatKind.Direct)
                 {
                     _sync = _sync with

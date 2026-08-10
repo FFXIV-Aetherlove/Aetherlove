@@ -74,7 +74,9 @@ public sealed class GrooveDtrService
             return;
         }
         IGrooveHost host = _host;
+        // Removing the Groove app is an opt-out of the whole feature, so the server-bar line goes with it.
         var session = _config.EnableDtrEntry && _settings.ShowDtr && _mainWindow.IsPoweredOn
+                      && !_config.Os.RemovedApps.Contains("groove")
             ? host.Current
             : null;
         var shown = session is { Title.Length: > 0 };

@@ -364,6 +364,6 @@ internal static class OsPt
         ["echo.quality_1080"] = "1080p",
         ["echo.settings_captions"] = "Legendas",
         ["echo.settings_autoplay"] = "Reproduzir o vídeo seguinte automaticamente",
-        ["echo.settings_software_render"] = "Renderização por software (corrige engasgos)",
+        ["echo.settings_software_render"] = "Renderização por software",
     };
 }
