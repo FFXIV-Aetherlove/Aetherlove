@@ -103,7 +103,7 @@ public sealed class DtrBarService
 
     private void Refresh(bool force)
     {
-        var enabled = _config.EnableDtrEntry;
+        var enabled = _config.EnableDtrEntry && _mainWindow.IsPoweredOn;
         foreach (var c in _categories)
         {
             if (c.Entry is null)

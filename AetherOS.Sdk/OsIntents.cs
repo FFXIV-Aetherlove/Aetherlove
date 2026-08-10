@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Numerics;
 using System.Text.Json;
 
@@ -44,12 +44,40 @@ public static class OsIntents
     /// <summary>Open the messenger's add-contact flow prefilled with a friend code (payload key "code").</summary>
     public const string MessengerAdd = "msgr.add";
 
+    /// <summary>Replays the ceremony's last act without touching anything the server knows. For tuning it,
+    /// which otherwise means spending two hundred sparks and waiting out four gates per look.</summary>
+    public const string AetherlingReplayBirth = "aetherling.replay_birth";
+
+    /// <summary>Open the pet's status page. Fired by the floating creature's own menu, which is outside the
+    /// phone and so has no other way in.</summary>
+    public const string AetherlingStatus = "aetherling.status";
+
+    /// <summary>The staff reset landed: forget everything local about the creature and go back to the start.
+    /// The app cannot notice on its own, because the thing it would ask about no longer exists.</summary>
+    public const string AetherlingReset = "aetherling.reset";
+
+    /// <summary>Join an Echo watch room from a tapped share card (payload keys "id" and "code", plus the
+    /// usual optional "returnApp"). Both are carried because the room id addresses the room and the code
+    /// authorises the join, exactly as the share token pairs them.</summary>
+    public const string EchoJoin = "echo.join";
+
     // The camera round trip: an app requests a framed shot, the camera app replies with the saved photo.
     public const string CameraCapture = "camera.capture";
     public const string CameraCaptured = "camera.captured";
 
     /// <summary>Add an event to the calendar app (a tapped shared-event card's "add to calendar").</summary>
     public const string CalendarAdd = "calendar.add";
+
+    /// <summary>Deep-link into the Store (payload key "path", e.g. "crystals/fire": a category key,
+    /// optionally followed by a search seed). The Aetherling crystal-shop chip targets this.</summary>
+    public const string StoreOpen = "store.open";
+
+    /// <summary>Open the Wallet. Sent with a "returnApp" payload so the wallet offers a one-click way back
+    /// to whatever sent the user there.</summary>
+    public const string WalletOpen = "wallet.open";
+
+    /// <summary>Open the Wallet straight on its ways-to-earn page (the store's "you need more sparks" path).</summary>
+    public const string WalletEarn = "wallet.earn";
 
     public static OsIntent Create(string type) => new() { Type = type };
 
@@ -107,6 +135,42 @@ public static class OsIntents
         Type = OpenMarketItem,
         PayloadJson = JsonSerializer.Serialize(new MarketItemPayload(itemId, returnAppId)),
     };
+
+    /// <summary>An Echo room deep link: the id addresses the room, the code authorises the join.</summary>
+    public static OsIntent CreateRoomJoin(string type, Guid id, string code, string? returnAppId = null) => new()
+    {
+        Type = type,
+        PayloadJson = JsonSerializer.Serialize(new RoomJoinPayload(id, code, returnAppId)),
+    };
+
+    public static bool TryGetRoomJoin(OsIntent intent, out Guid id, out string code)
+    {
+        id = Guid.Empty;
+        code = "";
+        if (string.IsNullOrEmpty(intent.PayloadJson))
+        {
+            return false;
+        }
+        try
+        {
+            using var doc = JsonDocument.Parse(intent.PayloadJson);
+            if (doc.RootElement.ValueKind != JsonValueKind.Object
+                || !doc.RootElement.TryGetProperty("id", out var idEl)
+                || !doc.RootElement.TryGetProperty("code", out var codeEl)
+                || !Guid.TryParse(idEl.GetString(), out var parsed)
+                || codeEl.GetString() is not { Length: > 0 } parsedCode)
+            {
+                return false;
+            }
+            id = parsed;
+            code = parsedCode;
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
 
     public static bool TryGetMarketItem(OsIntent intent, out uint itemId)
     {
@@ -328,6 +392,8 @@ public static class OsIntents
     private sealed record IdReturnPayload(Guid id, string returnApp);
 
     private sealed record MarketItemPayload(uint itemId, string? returnApp);
+
+    private sealed record RoomJoinPayload(Guid id, string code, string? returnApp);
 
     private sealed record CameraCapturePayload(string returnApp, float aspect, int minWidth);
 

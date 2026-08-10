@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
-    <Version>2.2.3.0</Version>
+    <Version>2.3.0.0</Version>
+    <!-- Windows-versioned TFM so the Windows SDK projection resolves: Groove's media backend reads
+         GSMTC (Windows.Media.Control). 17763 = Windows 10 1809, where GSMTC first shipped. -->
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
     <Authors>Astraea, Nihal</Authors>
     <Company>Astraea</Company>
     <Copyright>Copyright © 2026 Astraea</Copyright>
@@ -34,6 +38,19 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+
+  <!--
+    Echo's browser host. Built so a developer can point Configuration.Echo.HostPathOverride at the output,
+    but deliberately NOT referenced and NOT copied: shipped installs download it at runtime, and its CEF
+    assemblies must never enter the plugin's load context. ReferenceOutputAssembly false gives the build
+    ordering without the reference.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\AetherOS.WatchHost\AetherOS.WatchHost.csproj"
+                      ReferenceOutputAssembly="false"
+                      OutputItemType="none"
+                      Private="false" />
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="System.Windows.Extensions" Version="10.0.10" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.10" />
@@ -64,11 +81,15 @@
     <ProjectReference Include="..\AetherOS.Apps.Camera\AetherOS.Apps.Camera.csproj" />
     <ProjectReference Include="..\AetherOS.Apps.Clock\AetherOS.Apps.Clock.csproj" />
     <ProjectReference Include="..\AetherOS.Apps.Snake\AetherOS.Apps.Snake.csproj" />
+    <ProjectReference Include="..\AetherOS.Apps.Doom\AetherOS.Apps.Doom.csproj" />
+    <ProjectReference Include="..\AetherOS.Apps.Sudoku\AetherOS.Apps.Sudoku.csproj" />
+    <ProjectReference Include="..\AetherOS.Apps.EchoVidya\AetherOS.Apps.EchoVidya.csproj" />
     <ProjectReference Include="..\AetherOS.Apps.Stacker\AetherOS.Apps.Stacker.csproj" />
     <ProjectReference Include="..\AetherOS.Apps.Breaker\AetherOS.Apps.Breaker.csproj" />
     <ProjectReference Include="..\AetherOS.Apps.MeteorCommand\AetherOS.Apps.MeteorCommand.csproj" />
     <ProjectReference Include="..\AetherOS.Apps.VoidInvaders\AetherOS.Apps.VoidInvaders.csproj" />
     <ProjectReference Include="..\AetherOS.Apps.MazeMuncher\AetherOS.Apps.MazeMuncher.csproj" />
+    <ProjectReference Include="..\AetherOS.Apps.Plappy\AetherOS.Apps.Plappy.csproj" />
     <ProjectReference Include="..\AetherOS.Apps.Weather\AetherOS.Apps.Weather.csproj" />
     <ProjectReference Include="..\AetherOS.Apps.Messenger\AetherOS.Apps.Messenger.csproj" />
     <ProjectReference Include="..\AetherOS.Apps.Photos\AetherOS.Apps.Photos.csproj" />
@@ -79,9 +100,13 @@
     <ProjectReference Include="..\AetherOS.Apps.News\AetherOS.Apps.News.csproj" />
     <ProjectReference Include="..\AetherOS.Apps.Market\AetherOS.Apps.Market.csproj" />
     <ProjectReference Include="..\AetherOS.Apps.Realtor\AetherOS.Apps.Realtor.csproj" />
+    <ProjectReference Include="..\AetherOS.Apps.Store\AetherOS.Apps.Store.csproj" />
+    <ProjectReference Include="..\AetherOS.Apps.Wallet\AetherOS.Apps.Wallet.csproj" />
     <ProjectReference Include="..\AetherOS.Apps.Wayfinder\AetherOS.Apps.Wayfinder.csproj" />
     <ProjectReference Include="..\AetherOS.Apps.Yapper\AetherOS.Apps.Yapper.csproj" />
     <ProjectReference Include="..\AetherOS.Apps.Feedback\AetherOS.Apps.Feedback.csproj" />
+    <ProjectReference Include="..\AetherOS.Apps.Groove\AetherOS.Apps.Groove.csproj" />
+    <ProjectReference Include="..\AetherOS.Apps.Aetherling\AetherOS.Apps.Aetherling.csproj" />
     <ProjectReference Include="..\AetherOS.Shell\AetherOS.Shell.csproj" />
     <ProjectReference Include="..\OtterGui\OtterGui.csproj" />
   </ItemGroup>

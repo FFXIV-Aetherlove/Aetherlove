@@ -18,6 +18,8 @@ public enum HangoutCategory : short
     TripleTriad = 11,
     TreasureHunting = 12,
     Fates = 13,
+    /// <summary>Created only from an Echo room, never offered in the hangout create form.</summary>
+    WatchParty = 14,
 }
 
 /// <summary>How a hangout ended, as exposed over the wire. Internal server reasons (moderation removal,
@@ -50,7 +52,12 @@ public sealed record HangoutSummaryDto(
     bool UnlistWhenFull,
     bool IsPublic,
     // Drives the little supporter star on the owner's avatar in hangout cards.
-    bool OwnerIsSupporter = false);
+    bool OwnerIsSupporter = false,
+    // Set only on a WatchParty. The room purges long before the hangout does, so both may point at a dead
+    // room; the code is null once that happens and the join action disappears.
+    Guid? EchoRoomId = null,
+    string? EchoRoomCode = null,
+    string? OwnerFrameRef = null);
 
 /// <summary>Creation payload. The server clamps <see cref="StartUtc"/> to now when it lies in the past and
 /// validates lead/duration bounds; duration is minutes from the (clamped) start.</summary>

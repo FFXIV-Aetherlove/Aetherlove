@@ -22,7 +22,8 @@ public sealed record DeckCardDto(
     NameStyle NameStyle = NameStyle.None,
     bool IsSupporter = false,
     // True when this card was injected because its profile superliked the caller.
-    bool SuperlikedYou = false);
+    bool SuperlikedYou = false,
+    string? FrameRef = null);
 
 /// <summary>One slot's worth of candidates plus the next-slot timestamp.</summary>
 [MessagePackObject(keyAsPropertyName: true)]

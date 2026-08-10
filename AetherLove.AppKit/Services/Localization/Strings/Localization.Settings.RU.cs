@@ -1,4 +1,4 @@
-namespace AetherLove.Services.Localization;
+﻿namespace AetherLove.Services.Localization;
 
 internal static class SettingsRu
 {
@@ -27,7 +27,7 @@ internal static class SettingsRu
         ["settings.phone_size_large"] = "Большой",
         ["settings.phone_size_xl"] = "XL",
         ["settings.phone_size_xxl"] = "XXL",
-        ["settings.phone_size_caption"] = "Масштабирует весь телефон. Большие размеры подходят для экранов с высоким разрешением; XL и XXL рассчитаны на 4K и могут не поместиться на экранах меньшего размера.",
+        ["settings.phone_size_caption"] = "Масштабирует весь телефон. XS подойдёт для небольших экранов и оконного режима; размеры побольше рассчитаны на экраны с высоким разрешением, а XL и XXL - на 4K.",
         ["settings.section_mini_phone_size"] = "Размер мини-телефона",
         ["settings.mini_phone_size_caption"] = "Размер свёрнутого пузырька-виджета (показывается, когда телефон свёрнут). Предпросмотр ниже показывает выбранный размер.",
 
@@ -237,5 +237,15 @@ internal static class SettingsRu
         ["settings.staff_notices_empty"] = "От команды пока ничего нет.",
         ["settings.staff_warnings_section"] = "Предупреждения",
         ["settings.staff_messages_section"] = "Сообщения",
+
+        // added after update 2.2.3
+        ["settings.premium_themes"] = "Премиум-темы",
+        ["settings.premium_refresh"] = "Обновить тему",
+        ["settings.premium_backgrounds"] = "Премиум-обои",
+        ["settings.premium_enable_failed"] = "Не удалось сменить",
+        ["settings.phone_size_xs"] = "XS",
+        ["settings.supporter_store_perks_header"] = "В магазине",
+        ["settings.supporter_perk_store_title"] = "Скидка 10% в магазине",
+        ["settings.supporter_perk_store_body"] = "Спонсоры платят на 10% меньше за каждую покупку в магазине, и это вдобавок к текущим распродажам.",
     };
 }

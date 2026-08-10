@@ -15,6 +15,13 @@ public sealed class PhoneShellWidget : IDisposable
 
     public void DrawBackground(Vector2 windowPos, Vector2 windowSize)
     {
+        // A purchased frame lives in memory only; it wins as soon as its seal has been opened.
+        if (ThemeService.Current.BezelTexture?.Invoke() is { } premium)
+        {
+            ImGui.GetWindowDrawList().AddImage(premium.Handle, windowPos, windowPos + windowSize);
+            return;
+        }
+
         EnsureTexture();
         var wrap = _texture?.GetWrapOrDefault();
         if (wrap == null)

@@ -13,4 +13,10 @@ public sealed partial class AetherHubContext
 
     public async Task<SparkStatusDto> GetSparkStatusAsync(CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync<SparkStatusDto>("GetSparkStatusAsync", ct).ConfigureAwait(false);
+
+    public async Task<SparkWalletDto> GetSparkWalletAsync(CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<SparkWalletDto>("GetSparkWalletAsync", ct).ConfigureAwait(false);
+
+    public async Task<SparkLedgerPageDto> GetSparkLedgerAsync(long? beforeSequence, int take, CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<SparkLedgerPageDto>("GetSparkLedgerAsync", beforeSequence, take, ct).ConfigureAwait(false);
 }

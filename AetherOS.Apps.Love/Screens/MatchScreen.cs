@@ -42,6 +42,8 @@ public sealed class MatchScreen
 
         MatchContent.OwnAvatar = _ownAvatar.Texture;
         MatchContent.PeerAvatar = _peerAvatarTex;
+        MatchContent.OwnFrameRef = _bootstrap.LastConnection?.EquippedFrameRef;
+        MatchContent.PeerFrameRef = _pending.HasPending ? _pending.PeerFrameRef : null;
         MatchContent.OwnName = string.IsNullOrWhiteSpace(_bootstrap.LastDisplayName)
             ? Loc.T("deck.match_you")
             : _bootstrap.LastDisplayName!;

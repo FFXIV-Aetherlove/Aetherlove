@@ -30,6 +30,43 @@ public class CryptoKeys
     public byte[] PrivateKey { get; set; } = [];
 }
 
+/// <summary>Echo's local state: where its browser runtime lives and how it is played back.</summary>
+[Serializable]
+public class EchoClientState
+{
+    /// <summary>Development escape hatch pointing straight at a local WatchHost build output, skipping the
+    /// runtime download entirely. Empty in every shipped install.</summary>
+    public string HostPathOverride { get; set; } = "";
+
+    /// <summary>The installed runtime version, so a manifest bump can be detected without touching disk.</summary>
+    public string InstalledHostVersion { get; set; } = "";
+
+    /// <summary>Playback volume, 0 to 1, shared by solo and room watching.</summary>
+    public float Volume { get; set; } = 0.7f;
+
+    /// <summary>Set once the onboarding has been completed; the app opens straight into its home after.</summary>
+    public bool SetupDone { get; set; }
+
+    /// <summary>What the browser renders at, which is what YouTube picks its stream quality from. Matching
+    /// the stage was the old behaviour and is why a small window got a low-resolution stream.</summary>
+    public EchoRenderQuality Quality { get; set; } = EchoRenderQuality.Hd1080;
+
+    /// <summary>Subtitles and closed captions, off by default. Toggling it re-loads the current video.</summary>
+    public bool Captions { get; set; }
+
+    /// <summary>The room owner's queue auto-advance. Only the owner's client acts on it.</summary>
+    public bool AutoPlayNext { get; set; } = true;
+}
+
+/// <summary>The browser's render size. <see cref="MatchStage"/> follows the stage, which is cheapest and
+/// worst-looking; the fixed sizes cost the same copy no matter how small the window is.</summary>
+public enum EchoRenderQuality
+{
+    MatchStage = 0,
+    Hd720 = 1,
+    Hd1080 = 2,
+}
+
 /// <summary>Background presence cadence.</summary>
 [Serializable]
 public class PulseState
@@ -63,6 +100,12 @@ public class SparkClientState
     public bool MarketActivityReported { get; set; }
 
     public bool YapperCheckReported { get; set; }
+
+    public bool GrooveReported { get; set; }
+
+    public bool StoreVisitReported { get; set; }
+
+    public bool WalletVisitReported { get; set; }
 
     /// <summary>Arcade rounds already reported today. Unlike the milestones this one counts rather than
     /// flags, because the action is worth several grants a day.</summary>
@@ -174,6 +217,10 @@ public class Configuration : IPluginConfiguration
 
     /// <summary>The active colour theme.</summary>
     public AppTheme SelectedTheme { get; set; } = AppTheme.CrystalVoid;
+
+    /// <summary>The purchased theme in use, null when a built-in is selected. <see cref="SelectedTheme"/>
+    /// stays the fallback the phone draws until the seal is decrypted (or if it never can be).</summary>
+    public Guid? SelectedPremiumThemeId { get; set; }
 
     /// <summary>AetherOS appearance and home screen layout.</summary>
     public AetherOS.Sdk.OsConfig Os { get; set; } = new();
@@ -341,6 +388,9 @@ public class Configuration : IPluginConfiguration
 
     /// <summary>Client-side spark milestone tracking.</summary>
     public SparkClientState Sparks { get; set; } = new();
+
+    /// <summary>Echo runtime location and playback preferences.</summary>
+    public EchoClientState Echo { get; set; } = new();
 
     /// <summary>Places browse preferences.</summary>
     public PlacesState Places { get; set; } = new();

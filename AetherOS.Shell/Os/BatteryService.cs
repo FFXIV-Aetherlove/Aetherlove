@@ -6,7 +6,7 @@ namespace AetherLove.Os;
 
 /// <summary>The phone's fake battery. Starts full every game session (the state is in-memory, so a reload or a
 /// relog refills it), drains while the player keeps playing, and at zero the home screen dies and asks them to go
-/// outside. Muting that prompt in settings pins the floor at <see cref="MutedFloor"/>, which is the joke.</summary>
+/// outside. Muting that prompt in settings parks the battery at full and stops the drain entirely.</summary>
 public static class BatteryService
 {
     public const int Full = 100;
@@ -16,9 +16,6 @@ public static class BatteryService
 
     /// <summary>At or below this the icon goes red and pulses.</summary>
     public const int CriticalPercent = 10;
-
-    /// <summary>Floor once the user has opted out of the empty-battery prompt.</summary>
-    public const int MutedFloor = 67;
 
     private const float SecondsPerPercent = 60f;
     private const float LowSecondsPerPercent = 120f;
@@ -33,9 +30,9 @@ public static class BatteryService
 
     private static volatile int _requested = -1;
 
-    /// <summary>Set when a requested level sits under the muted floor, so the debug command can still reach the
-    /// low, critical and flat states while the opt-out is on. Cleared by any request at or above the floor, and
-    /// by switching the opt-out on, which is a fresh instruction to stop draining.</summary>
+    /// <summary>Set when a level under full is requested, so the debug command can still reach the low,
+    /// critical and flat states while the opt-out is on. Cleared by a full-battery request and by switching
+    /// the opt-out on, which is a fresh instruction to stop draining.</summary>
     private static bool _ignoreFloor;
 
     private static bool _wasMuted;
@@ -75,7 +72,7 @@ public static class BatteryService
         {
             _requested = -1;
             _percent = requested;
-            _ignoreFloor = requested < MutedFloor;
+            _ignoreFloor = requested < Full;
         }
         // Switching the opt-out on is a fresh instruction, so it retires any debug override still in force.
         var muted = Muted;
@@ -90,7 +87,7 @@ public static class BatteryService
             return;
         }
 
-        var floor = muted && !_ignoreFloor ? MutedFloor : 0f;
+        var floor = muted && !_ignoreFloor ? Full : 0f;
         if (_percent <= floor)
         {
             // Opting out mid-drain tops the battery back up rather than freezing it wherever it happened to be.

@@ -147,7 +147,14 @@ public sealed class HomeScreen
         }
     }
 
-    public void SetAddAppsOpen(bool open) => _addAppsOpen = open;
+    public void SetAddAppsOpen(bool open)
+    {
+        _addAppsOpen = open;
+        if (open)
+        {
+            _restoredApps.Clear();
+        }
+    }
 
     private Vector2 _donePillTL;
     private Vector2 _donePillBR;
@@ -285,7 +292,8 @@ public sealed class HomeScreen
     /// <summary>Two id sets: everything that may KEEP a cell, and the subset that is actually drawn. An app the
     /// server has switched off is registered but not shown, and it must hold on to its cell rather than be
     /// dropped from the saved layout and reappear somewhere else when the switch flips back. Only an id that is
-    /// gone entirely (an uninstalled plugin, a deleted folder, an app moved into a folder) loses its cell.</summary>
+    /// gone entirely (an uninstalled plugin, a deleted folder, an app moved into a folder, an app the user
+    /// removed) loses its cell.</summary>
     private (HashSet<string> Keep, HashSet<string> Shown) LayoutIds()
     {
         var os = UiHost.Configuration.Os;
@@ -294,7 +302,7 @@ public sealed class HomeScreen
         var shown = new HashSet<string>(StringComparer.Ordinal);
         foreach (var app in _shell.Apps)
         {
-            if (foldered.Contains(app.Id))
+            if (foldered.Contains(app.Id) || _shell.IsAppRemoved(app.Id))
             {
                 continue;
             }
@@ -330,7 +338,11 @@ public sealed class HomeScreen
             Repack(os, rows, cols);
         }
 
-        if (Os.OsFolders.EnsureArcade(os))
+        // Both seeds have to run before the append below, or a newly shipped app would be placed loose on the
+        // grid first and the Media seed would read that as the user having already arranged it.
+        var seeded = Os.OsFolders.EnsureArcade(os);
+        seeded |= Os.OsFolders.EnsureMedia(os);
+        if (seeded)
         {
             UiHost.Configuration.Save();
         }
@@ -517,7 +529,7 @@ public sealed class HomeScreen
 
     private void DrawWallpaper(ImDrawListPtr dl, Vector2 origin, Vector2 avail, float time)
     {
-        var tex = _wallpapers.Current()?.GetWrapOrDefault();
+        var tex = _wallpapers.CurrentWrap();
         if (tex != null)
         {
             var (uv0, uv1) = OsDraw.CoverUv(tex.Width, tex.Height, avail.X, avail.Y);
@@ -708,14 +720,7 @@ public sealed class HomeScreen
             {
                 _removing.Remove(appId);
                 _tileRects.Remove(appId);
-                if (IsFolderId(appId))
-                {
-                    RemoveFolder(appId);
-                }
-                else
-                {
-                    _shell.RemoveExternalApp(appId);
-                }
+                CommitRemove(appId);
                 return;
             }
             _removing[appId] = rt;
@@ -733,14 +738,14 @@ public sealed class HomeScreen
         var br = center + new Vector2(half, half);
         _tileRects[appId] = (tl, br);
 
-        var removable = removingT < 0f && _editMode && _dragId == null && !Os.OsFolders.IsBuiltIn(appId)
-            && (folder != null || appId.StartsWith(Os.ExternalApp.IdPrefix, StringComparison.Ordinal));
+        var removable = removingT < 0f && _editMode && _dragId == null && !Os.OsFolders.IsBuiltIn(appId);
         var removePressed = false;
         var removeC = tl + Px(2f, 2f);
         if (removable)
         {
             ImGui.SetCursorScreenPos(removeC - Px(11f, 11f));
             removePressed = ImGui.InvisibleButton($"##rm_{appId}", Px(22f, 22f));
+            SharedUiHelpers.HandOnHover();
         }
 
         var hovered = false;
@@ -873,17 +878,28 @@ public sealed class HomeScreen
     {
         if (AccessibilityService.ReduceMotion)
         {
-            if (IsFolderId(appId))
-            {
-                RemoveFolder(appId);
-            }
-            else
-            {
-                _shell.RemoveExternalApp(appId);
-            }
+            CommitRemove(appId);
             return;
         }
         _removing[appId] = 0f;
+    }
+
+    /// <summary>Deleting a folder spills its apps back onto the grid, unpinning an external app drops it from
+    /// config, and removing a built-in app hides and silences it until it is added back.</summary>
+    private void CommitRemove(string appId)
+    {
+        if (IsFolderId(appId))
+        {
+            RemoveFolder(appId);
+        }
+        else if (appId.StartsWith(Os.ExternalApp.IdPrefix, StringComparison.Ordinal))
+        {
+            _shell.RemoveExternalApp(appId);
+        }
+        else
+        {
+            _shell.RemoveBuiltInApp(appId);
+        }
     }
 
     private static void DrawOfflineMarker(ImDrawListPtr dl, Vector2 center)
@@ -1361,7 +1377,7 @@ public sealed class HomeScreen
 
         foreach (var app in _shell.Apps)
         {
-            if (!app.Available)
+            if (!app.Available || _shell.IsAppRemoved(app.Id))
             {
                 continue;
             }
@@ -1377,10 +1393,29 @@ public sealed class HomeScreen
     /// tap opens the app.</summary>
     private float DrawAppWidget(ImDrawListPtr dl, float x, float y, float w, IAetherApp app, IReadOnlyList<OsWidgetItem> items)
     {
+        var actions = app.WidgetActions;
         var rowH = Px(23f);
-        var h = Px(38f) + items.Count * rowH + Px(8f);
+        var actionR = Px(15f);
+        var actionsH = actions.Count > 0 ? actionR * 2f + Px(12f) : 0f;
+        var h = Px(38f) + items.Count * rowH + Px(8f) + actionsH;
         var tl = new Vector2(x, y);
         var br = new Vector2(x + w, y + h);
+
+        GlassCard(dl, tl, br);
+
+        // Action buttons claim their clicks first; the card's open target is submitted after them.
+        if (actions.Count > 0)
+        {
+            var gap = Px(14f);
+            var totalW = actions.Count * actionR * 2f + (actions.Count - 1) * gap;
+            var cx = x + (w - totalW) * 0.5f + actionR;
+            var cy = y + h - Px(8f) - actionR;
+            for (var i = 0; i < actions.Count; i++)
+            {
+                DrawWidgetAction(dl, app.Id, i, actions[i], new Vector2(cx, cy), actionR);
+                cx += actionR * 2f + gap;
+            }
+        }
 
         ImGui.SetCursorScreenPos(tl);
         if (ImGui.InvisibleButton($"##widget_{app.Id}", br - tl))
@@ -1389,7 +1424,6 @@ public sealed class HomeScreen
         }
         var hovered = ImGui.IsItemHovered();
 
-        GlassCard(dl, tl, br);
         if (hovered)
         {
             dl.AddRect(tl, br, ThemeService.Current.AccentU32, Px(18f), ImDrawFlags.RoundCornersAll, Px(1.2f));
@@ -1414,6 +1448,31 @@ public sealed class HomeScreen
             rowY += rowH;
         }
         return y + h + Px(12f);
+    }
+
+    private static void DrawWidgetAction(ImDrawListPtr dl, string appId, int index, OsWidgetAction action,
+        Vector2 center, float radius)
+    {
+        ImGui.SetCursorScreenPos(center - new Vector2(radius, radius));
+        var clicked = ImGui.InvisibleButton($"##widgetAct_{appId}_{index}", new Vector2(radius * 2f, radius * 2f));
+        var hovered = ImGui.IsItemHovered();
+        if (hovered)
+        {
+            SharedUiHelpers.HandOnHover();
+            ImGui.SetTooltip(action.Tooltip);
+        }
+
+        var t = ThemeService.Current;
+        var fill = action.Primary
+            ? ImGui.ColorConvertFloat4ToU32(t.Accent with { W = hovered ? 0.95f : 0.8f })
+            : OsDraw.White(hovered ? 0.20f : 0.10f);
+        dl.AddCircleFilled(center, radius, fill);
+        IconDraw.AddCentered(dl, action.Icon, radius * 0.9f, center, OsDraw.White(0.95f));
+
+        if (clicked)
+        {
+            action.Invoke();
+        }
     }
 
     private float DrawClockWidget(ImDrawListPtr dl, float x, float y, float w)
@@ -1497,6 +1556,10 @@ public sealed class HomeScreen
     }
 
     private bool _addAppsOpen;
+
+    /// <summary>Apps added back during the open sheet, so their row stays put with an "Added" pill instead of
+    /// disappearing the instant it is clicked.</summary>
+    private readonly HashSet<string> _restoredApps = new(StringComparer.Ordinal);
     private string _addAppsSearch = "";
 
     private const string AddTileKey = "__addtile__";
@@ -1516,7 +1579,7 @@ public sealed class HomeScreen
         ImGui.SetCursorScreenPos(tl);
         if (ImGui.InvisibleButton("##addApps", br - tl))
         {
-            _addAppsOpen = true;
+            SetAddAppsOpen(true);
             _addAppsSearch = "";
         }
         var hovered = ImGui.IsItemHovered();
@@ -1649,12 +1712,9 @@ public sealed class HomeScreen
         dl.AddRect(panelTL, panelBR, OsDraw.White(0.12f), Px(18f), ImDrawFlags.RoundCornersAll, Px(1f));
 
         var builtIn = Os.OsFolders.IsBuiltIn(folder.Id);
-        if (builtIn)
-        {
-            _folderEditMode = false;
-        }
 
-        if (_folderEditMode)
+        // The built-in folder cannot be renamed, so its edit mode keeps the plain title and offers only removal.
+        if (_folderEditMode && !builtIn)
         {
             ImGui.SetCursorScreenPos(panelTL + Px(14f, 12f));
             ImGui.SetNextItemWidth(panelW - Px(130f));
@@ -1687,22 +1747,20 @@ public sealed class HomeScreen
         }
         IconDraw.AddCentered(dl, FontAwesomeIcon.Times, Px(12f), closeC, OsDraw.White(0.7f));
 
-        if (!builtIn)
+        var editLabel = Loc.T(_folderEditMode ? "os.edit_done" : "os.folder_edit");
+        var editSz = ImGui.CalcTextSize(editLabel);
+        var editTL = new Vector2(closeC.X - Px(11f) - editSz.X - Px(24f), panelTL.Y + Px(11f));
+        var editBR = editTL + editSz + Px(16f, 9f);
+        ImGui.SetCursorScreenPos(editTL);
+        if (ImGui.InvisibleButton("##folderEdit", editBR - editTL))
         {
-            var editLabel = Loc.T(_folderEditMode ? "os.edit_done" : "os.folder_edit");
-            var editSz = ImGui.CalcTextSize(editLabel);
-            var editTL = new Vector2(closeC.X - Px(11f) - editSz.X - Px(24f), panelTL.Y + Px(11f));
-            var editBR = editTL + editSz + Px(16f, 9f);
-            ImGui.SetCursorScreenPos(editTL);
-            if (ImGui.InvisibleButton("##folderEdit", editBR - editTL))
-            {
-                _folderEditMode = !_folderEditMode;
-            }
-            dl.AddRectFilled(editTL, editBR,
-                ImGui.IsItemHovered() || _folderEditMode ? ThemeService.Current.AccentU32 : OsDraw.White(0.14f),
-                (editBR.Y - editTL.Y) * 0.5f);
-            dl.AddText(editTL + Px(8f, 4f), OsDraw.White(0.96f), editLabel);
+            _folderEditMode = !_folderEditMode;
         }
+        SharedUiHelpers.HandOnHover();
+        dl.AddRectFilled(editTL, editBR,
+            ImGui.IsItemHovered() || _folderEditMode ? ThemeService.Current.AccentU32 : OsDraw.White(0.14f),
+            (editBR.Y - editTL.Y) * 0.5f);
+        dl.AddText(editTL + Px(8f, 4f), OsDraw.White(0.96f), editLabel);
 
         var top = panelTL.Y + Px(52f);
         var apps = new List<IAetherApp>();
@@ -1746,9 +1804,10 @@ public sealed class HomeScreen
 
     }
 
-    /// <summary>Confirm for ejecting an app from the open folder; a full sub-mode like the remove prompt,
+    /// <summary>Confirm for taking an app out of the open folder; a full sub-mode like the remove prompt,
     /// because anything drawn in the folder's child window would render above (and steal input from) an
-    /// in-place overlay.</summary>
+    /// in-place overlay. A user folder ejects the app back onto the grid; the built-in one removes it outright,
+    /// since an ejected arcade app would just be adopted again on the next frame.</summary>
     private void DrawFolderEjectPrompt(Vector2 origin, Vector2 avail)
     {
         var folder = FindFolder(_openFolderId);
@@ -1765,7 +1824,8 @@ public sealed class HomeScreen
         var pad = Px(16f);
         var innerW = panelW - pad * 2f;
 
-        var bodyText = Loc.T("os.folder_eject_body", app.Name);
+        var removes = Os.OsFolders.IsBuiltIn(folder.Id);
+        var bodyText = Loc.T(removes ? "os.remove_app_body" : "os.folder_eject_body", app.Name);
         var bodyH = ImGui.CalcTextSize(bodyText, false, innerW).Y;
         var panelH = Px(58f) + bodyH + Px(54f);
         var panelBR = panelTL + new Vector2(panelW, panelH);
@@ -1775,7 +1835,8 @@ public sealed class HomeScreen
 
         using (UiFonts.H3?.Push())
         {
-            dl.AddText(panelTL + new Vector2(pad, Px(14f)), OsDraw.White(0.95f), Loc.T("os.folder_eject_title"));
+            dl.AddText(panelTL + new Vector2(pad, Px(14f)), OsDraw.White(0.95f),
+                Loc.T(removes ? "os.remove_app_title" : "os.folder_eject_title"));
         }
         dl.AddText(ImGui.GetFont(), ImGui.GetFontSize(), panelTL + new Vector2(pad, Px(44f)),
             OsDraw.White(0.78f), bodyText, innerW);
@@ -1808,7 +1869,7 @@ public sealed class HomeScreen
             _folderEjectId = null;
             if (AccessibilityService.ReduceMotion)
             {
-                EjectFromFolder(folder, app.Id);
+                CommitFolderRemoval(folder, app.Id);
             }
             else
             {
@@ -1817,8 +1878,13 @@ public sealed class HomeScreen
         }
     }
 
-    private static void EjectFromFolder(OsFolder folder, string appId)
+    private void CommitFolderRemoval(OsFolder folder, string appId)
     {
+        if (Os.OsFolders.IsBuiltIn(folder.Id))
+        {
+            _shell.RemoveBuiltInApp(appId);
+            return;
+        }
         folder.AppIds.Remove(appId);
         HomeLayout.PlaceInConfig(UiHost.Configuration.Os, appId);
         UiHost.Configuration.Save();
@@ -1849,7 +1915,7 @@ public sealed class HomeScreen
                 if (et >= 1f)
                 {
                     _folderEjecting.Remove(app.Id);
-                    EjectFromFolder(folder, app.Id);
+                    CommitFolderRemoval(folder, app.Id);
                     continue;
                 }
                 _folderEjecting[app.Id] = et;
@@ -1905,13 +1971,13 @@ public sealed class HomeScreen
 
             if (_folderEditMode && ejectT < 0f)
             {
-                // The minus badge ejects the app back onto the home grid, after a confirm.
                 var rmC = tl + Px(2f, 2f);
                 ImGui.SetCursorScreenPos(rmC - Px(10f, 10f));
                 if (ImGui.InvisibleButton($"##feject_{app.Id}", Px(20f, 20f)))
                 {
                     _folderEjectId = app.Id;
                 }
+                SharedUiHelpers.HandOnHover();
                 cdl.AddCircleFilled(rmC, Px(9f), ImGui.ColorConvertFloat4ToU32(new Vector4(0.22f, 0.22f, 0.26f, 0.98f)), 20);
                 cdl.AddCircle(rmC, Px(9f), OsDraw.White(0.5f), 20, Px(1f));
                 IconDraw.AddCentered(cdl, FontAwesomeIcon.Minus, Px(9f), rmC, OsDraw.White(0.9f));
@@ -1927,12 +1993,34 @@ public sealed class HomeScreen
         ImGui.Dummy(new Vector2(1f, 1f));
     }
 
+    /// <summary>The apps the user removed, which is what the sheet offers first: getting one of your own apps back
+    /// is a far more common errand than pinning someone else's plugin. Rows added back this visit stay listed with
+    /// a dead "Added" pill, so the row does not vanish out from under the click.</summary>
+    private List<IAetherApp> RestorableApps(string query)
+    {
+        var ids = new List<string>(UiHost.Configuration.Os.RemovedApps);
+        foreach (var id in _restoredApps)
+        {
+            if (!ids.Contains(id))
+            {
+                ids.Add(id);
+            }
+        }
+        return ids
+            .Select(_shell.Find)
+            .OfType<IAetherApp>()
+            .Where(app => query.Length == 0 || app.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(app => app.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
     private void DrawInstallableRows(float w)
     {
         w = ImGui.GetContentRegionAvail().X;
         var dl = ImGui.GetWindowDrawList();
         var added = new HashSet<string>(UiHost.Configuration.Os.ExternalApps);
         var query = _addAppsSearch.Trim();
+        var restorable = RestorableApps(query);
         var plugins = UiHost.PluginInterface.InstalledPlugins
             .Where(pl => pl.IsLoaded && pl.HasMainUi && pl.InternalName != "AetherLovePlugin")
             .Where(pl => query.Length == 0 || pl.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
@@ -1940,6 +2028,21 @@ public sealed class HomeScreen
             .Select(g => g.First())
             .OrderBy(pl => pl.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
+
+        // Headings only earn their place once there is something above the plugins to separate them from.
+        if (restorable.Count > 0)
+        {
+            DrawAddSectionLabel(dl, Loc.T("os.add_apps_section_removed"));
+            foreach (var app in restorable)
+            {
+                if (DrawAddRow(dl, w, app.Id, app, app.Name, !_shell.IsAppRemoved(app.Id)))
+                {
+                    _restoredApps.Add(app.Id);
+                    _shell.RestoreBuiltInApp(app.Id);
+                }
+            }
+            DrawAddSectionLabel(dl, Loc.T("os.add_apps_section_plugins"));
+        }
 
         if (plugins.Length == 0)
         {
@@ -1949,57 +2052,71 @@ public sealed class HomeScreen
             return;
         }
 
+        foreach (var pl in plugins)
+        {
+            var visual = new Os.ExternalApp(pl.InternalName, pl.Name);
+            if (DrawAddRow(dl, w, pl.InternalName, visual, pl.Name, added.Contains(pl.InternalName)))
+            {
+                _shell.AddExternalApp(pl.InternalName);
+            }
+        }
+    }
+
+    private static void DrawAddSectionLabel(ImDrawListPtr dl, string label)
+    {
+        var tl = ImGui.GetCursorScreenPos();
+        dl.AddText(ImGui.GetFont(), ImGui.GetFontSize() * 0.86f, tl + Px(4f, 8f), OsDraw.White(0.48f), label);
+        ImGui.SetCursorScreenPos(tl + new Vector2(0f, Px(28f)));
+    }
+
+    /// <summary>One tile/name/button row in the add-apps sheet, shared by removed first-party apps and installed
+    /// plugins. True when the add button was pressed this frame.</summary>
+    private static bool DrawAddRow(ImDrawListPtr dl, float w, string key, IAetherApp visual, string name, bool isAdded)
+    {
         var rowH = Px(60f);
         var btnW = Px(72f);
         var btnH = Px(30f);
-        foreach (var pl in plugins)
+        var rowTL = ImGui.GetCursorScreenPos();
+
+        var btnTL = new Vector2(rowTL.X + w - btnW - Px(4f), rowTL.Y + (rowH - btnH) * 0.5f - Px(3f));
+        var btnBR = btnTL + new Vector2(btnW, btnH);
+        var pressed = false;
+        if (!isAdded)
         {
-            var rowTL = ImGui.GetCursorScreenPos();
-            var isAdded = added.Contains(pl.InternalName);
-
-            var btnTL = new Vector2(rowTL.X + w - btnW - Px(4f), rowTL.Y + (rowH - btnH) * 0.5f - Px(3f));
-            var btnBR = btnTL + new Vector2(btnW, btnH);
-            var pressed = false;
-            if (!isAdded)
-            {
-                ImGui.SetCursorScreenPos(btnTL);
-                pressed = ImGui.InvisibleButton($"##addPl_{pl.InternalName}", btnBR - btnTL);
-            }
-
-            var tileSz = Px(42f);
-            var visual = new Os.ExternalApp(pl.InternalName, pl.Name);
-            var tileTL = rowTL + new Vector2(Px(4f), (rowH - tileSz) * 0.5f - Px(3f));
-            OsDraw.AppTile(dl, visual, tileTL, tileTL + new Vector2(tileSz, tileSz));
-
-            var namePx = ImGui.GetFontSize() * 1.05f;
-            dl.PushClipRect(rowTL, new Vector2(btnTL.X - Px(6f), rowTL.Y + rowH), true);
-            dl.AddText(ImGui.GetFont(), namePx,
-                new Vector2(tileTL.X + tileSz + Px(12f), rowTL.Y + (rowH - namePx) * 0.5f - Px(3f)),
-                OsDraw.White(0.94f), pl.Name);
-            dl.PopClipRect();
-
-            if (isAdded)
-            {
-                dl.AddRectFilled(btnTL, btnBR, OsDraw.White(0.10f), btnH * 0.5f);
-                OsDraw.CenteredText(dl, Loc.T("os.add_apps_added"), (btnTL.X + btnBR.X) * 0.5f,
-                    btnTL.Y + (btnH - ImGui.GetFontSize()) * 0.5f, OsDraw.White(0.55f));
-            }
-            else
-            {
-                var hovered = ImGui.IsMouseHoveringRect(btnTL, btnBR);
-                dl.AddRectFilled(btnTL, btnBR, hovered
-                    ? ThemeService.Current.AccentU32
-                    : ImGui.ColorConvertFloat4ToU32(ThemeService.Current.ButtonNormal), btnH * 0.5f);
-                OsDraw.CenteredText(dl, Loc.T("os.add_apps_add"), (btnTL.X + btnBR.X) * 0.5f,
-                    btnTL.Y + (btnH - ImGui.GetFontSize()) * 0.5f, OsDraw.White(0.97f));
-                if (pressed)
-                {
-                    _shell.AddExternalApp(pl.InternalName);
-                }
-            }
-
-            ImGui.SetCursorScreenPos(rowTL + new Vector2(0f, rowH));
+            ImGui.SetCursorScreenPos(btnTL);
+            pressed = ImGui.InvisibleButton($"##addRow_{key}", btnBR - btnTL);
+            SharedUiHelpers.HandOnHover();
         }
+
+        var tileSz = Px(42f);
+        var tileTL = rowTL + new Vector2(Px(4f), (rowH - tileSz) * 0.5f - Px(3f));
+        OsDraw.AppTile(dl, visual, tileTL, tileTL + new Vector2(tileSz, tileSz));
+
+        var namePx = ImGui.GetFontSize() * 1.05f;
+        dl.PushClipRect(rowTL, new Vector2(btnTL.X - Px(6f), rowTL.Y + rowH), true);
+        dl.AddText(ImGui.GetFont(), namePx,
+            new Vector2(tileTL.X + tileSz + Px(12f), rowTL.Y + (rowH - namePx) * 0.5f - Px(3f)),
+            OsDraw.White(0.94f), name);
+        dl.PopClipRect();
+
+        if (isAdded)
+        {
+            dl.AddRectFilled(btnTL, btnBR, OsDraw.White(0.10f), btnH * 0.5f);
+            OsDraw.CenteredText(dl, Loc.T("os.add_apps_added"), (btnTL.X + btnBR.X) * 0.5f,
+                btnTL.Y + (btnH - ImGui.GetFontSize()) * 0.5f, OsDraw.White(0.55f));
+        }
+        else
+        {
+            var hovered = ImGui.IsMouseHoveringRect(btnTL, btnBR);
+            dl.AddRectFilled(btnTL, btnBR, hovered
+                ? ThemeService.Current.AccentU32
+                : ImGui.ColorConvertFloat4ToU32(ThemeService.Current.ButtonNormal), btnH * 0.5f);
+            OsDraw.CenteredText(dl, Loc.T("os.add_apps_add"), (btnTL.X + btnBR.X) * 0.5f,
+                btnTL.Y + (btnH - ImGui.GetFontSize()) * 0.5f, OsDraw.White(0.97f));
+        }
+
+        ImGui.SetCursorScreenPos(rowTL + new Vector2(0f, rowH));
+        return pressed;
     }
 
     private static void DrawWordmark(ImDrawListPtr dl, Vector2 origin, Vector2 avail)

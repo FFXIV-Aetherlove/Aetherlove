@@ -30,6 +30,7 @@ public partial class PlacesScreen
     private readonly AetherLove.Os.ISocialBridge _social;
     private readonly Action _openMyVenues;
     private IOsShell? _shell;
+    private IAppCapabilities? _caps;
     private IShareService? _share;
     private readonly CancellationTokenSource _cts = new();
 
@@ -246,10 +247,11 @@ public partial class PlacesScreen
         }
     }
 
-    public void Draw(IOsShell shell, IShareService? share)
+    public void Draw(IOsShell shell, IAppCapabilities caps)
     {
         _shell = shell;
-        _share = share;
+        _caps = caps;
+        _share = caps.Share;
         switch (_section)
         {
             case Section.Browse:

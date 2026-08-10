@@ -15,6 +15,7 @@ public static class UiScale
 
     public static float MultiplierFor(PhoneScalePreset preset) => preset switch
     {
+        PhoneScalePreset.XS     => 0.85f,
         PhoneScalePreset.Medium => 1.15f,
         PhoneScalePreset.Large  => 1.30f,
         PhoneScalePreset.XL     => 1.75f,

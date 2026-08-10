@@ -157,5 +157,14 @@ internal static class ChatRu
         ["chat.delete_message_body"] = "Удалить это сообщение у всех? Вместо него останется пометка, что вы его удалили.",
         ["chat.delete_message_confirm"] = "Удалить",
         ["chat.deleted_by_author"] = "Это сообщение удалено автором.",
+        // added after update 2.2.3 (echo)
+        ["chat.preview_echo"] = "Поделился комнатой Echo",
+        ["chat.echo_card_label"] = "Комната Echo",
+        ["chat.echo_card_host"] = "Хост: {0}",
+        ["chat.echo_card_members"] = "смотрят: {0}",
+        ["chat.echo_card_idle"] = "Пока ничего не играет",
+        ["chat.echo_card_view"] = "Присоединиться к комнате",
+        ["chat.echo_card_loading"] = "Загружаем комнату...",
+        ["chat.echo_card_unavailable"] = "Эта комната уже закрыта",
     };
 }

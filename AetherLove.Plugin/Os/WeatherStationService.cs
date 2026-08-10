@@ -161,6 +161,10 @@ public sealed class WeatherStationService : IWeatherStation, IDisposable
 
     private unsafe void OnFrameworkUpdate(IFramework _)
     {
+        if (!PhonePower.IsOn)
+        {
+            return;
+        }
         if (_weatherOverride == null && _timeOverrideMinutes == null)
         {
             return;

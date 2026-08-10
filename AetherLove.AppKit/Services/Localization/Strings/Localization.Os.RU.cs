@@ -1,4 +1,4 @@
-namespace AetherLove.Services.Localization;
+﻿namespace AetherLove.Services.Localization;
 
 internal static class OsRu
 {
@@ -8,6 +8,8 @@ internal static class OsRu
         // App names
         ["os.app_clock"] = "Часы",
         ["os.app_snake"] = "Змейка",
+        ["os.app_doom"] = "DOOM",
+        ["os.app_sudoku"] = "Sudoku",
         ["os.app_stacker"] = "Блоки",
         ["os.app_breaker"] = "Кирпичи",
         ["os.app_meteor"] = "Метеоры",
@@ -67,7 +69,7 @@ internal static class OsRu
         // Home screen app launcher
         ["os.add_apps"] = "Добавить приложения",
         ["os.add_apps_title"] = "Добавить приложения",
-        ["os.add_apps_hint"] = "Закрепите другие установленные плагины Dalamud на главном экране.",
+        ["os.add_apps_hint"] = "Верните убранное приложение или закрепите другой установленный плагин Dalamud.",
         ["os.add_apps_none"] = "Другие плагины не предоставляют главное окно.",
         ["os.add_apps_add"] = "Добавить",
         ["os.add_apps_added"] = "Добавлено",
@@ -146,6 +148,7 @@ internal static class OsRu
         ["os.folder_name_hint"] = "Название папки…",
         ["os.folder_default_name"] = "Папка",
         ["os.folder_arcade"] = "Аркады",
+        ["os.folder_media"] = "Медиа",
         ["os.folder_edit"] = "Изменить",
         ["os.folder_empty"] = "Пока пусто. Перетащите иконку на папку, чтобы добавить приложение.",
         // photo filters + screenshot import
@@ -248,5 +251,118 @@ internal static class OsRu
         ["os.arcade_error"] = "Не удалось загрузить таблицу лидеров.",
         ["os.arcade_you"] = "Вы",
         ["os.arcade_back"] = "Назад",
+
+        // wallet app (added after update 2.2.1)
+        ["os.app_wallet"] = "Кошелёк",
+
+        // plappy birb (added after update 2.2.3)
+        ["os.app_plappy"] = "Плаппи",
+
+        // removable first-party apps (added after update 2.2.3)
+        ["os.add_apps_section_removed"] = "Убранные приложения",
+        ["os.add_apps_section_plugins"] = "Другие плагины",
+
+        // groove app (added after update 2.2.3)
+        ["os.app_groove"] = "Groove",
+
+        // store (added after update 2.2.3)
+        ["os.app_store"] = "Магазин",
+        ["os.store_preview_caption"] = "Просто примерка, пока не твоё",
+        ["os.store_preview_close"] = "Закрыть примерку",
+        ["os.store_preview_loading"] = "Загружаем примерку…",
+        ["os.store_preview_failed"] = "Не удалось загрузить примерку.",
+
+        // added after update 2.2.3 (echo)
+        ["os.app_echo"] = "Echo",
+        // player and transport
+        ["echo.play"] = "Воспроизвести",
+        ["echo.pause"] = "Пауза",
+        ["echo.mute"] = "Выключить звук",
+        ["echo.unmute"] = "Включить звук",
+        ["echo.skip"] = "Пропустить",
+        ["echo.skip_tip"] = "Пропустить это видео для всех",
+        ["echo.buffering"] = "Буферизация…",
+        ["echo.solo_idle"] = "Вставьте ссылку, чтобы начать просмотр",
+        ["echo.unavailable"] = "Недоступно",
+        ["echo.close"] = "Закрыть",
+        // playlist
+        ["echo.add"] = "Добавить",
+        ["echo.add_hint"] = "Вставьте ссылку на YouTube",
+        ["echo.added_by"] = "Добавлено: {0}",
+        ["echo.added_by_unknown"] = "Добавлено участником, который уже вышел",
+        ["echo.remove"] = "Убрать",
+        ["echo.queue_empty"] = "В очереди пока пусто",
+        ["echo.playlist_full"] = "Очередь заполнена",
+        ["echo.bad_link"] = "Это не ссылка на YouTube",
+        // room
+        ["echo.room_code"] = "Код комнаты",
+        ["echo.copy_code"] = "Скопировать код",
+        ["echo.copied"] = "Скопировано",
+        ["echo.host_only"] = "Только хост",
+        ["echo.host_only_hint"] = "Управлять воспроизведением может только хост",
+        ["echo.host_only_tip"] = "Хост заблокировал управление",
+        ["echo.kick"] = "Исключить",
+        ["echo.kick_confirm"] = "Убрать этого участника из комнаты?",
+        ["echo.leave_room"] = "Покинуть комнату",
+        ["echo.end_room"] = "Закрыть комнату",
+        ["echo.end_room_confirm"] = "Закрыть комнату для всех?",
+        ["echo.you"] = "{0} (вы)",
+        ["echo.tab_playlist"] = "Плейлист",
+        ["echo.tab_members"] = "Участники",
+        ["echo.tab_chat"] = "Чат",
+        ["echo.toggle_panel"] = "Показать или скрыть боковую панель",
+        ["echo.new_messages"] = "Новых сообщений: {0}",
+        // room ended
+        ["echo.room_ended_title"] = "Комната закрыта",
+        ["echo.room_ended_owner"] = "Хост закрыл комнату",
+        ["echo.room_ended_owner_left"] = "Хост отключился",
+        ["echo.room_ended_empty"] = "Все вышли",
+        ["echo.room_ended_moderation"] = "Эту комнату закрыла модерация",
+        ["echo.kicked_title"] = "Вас убрали из комнаты",
+        ["echo.kicked_body"] = "Вас убрали из «{0}»",
+        // runtime and errors
+        ["echo.runtime_title"] = "Echo нужен свой плеер",
+        ["echo.runtime_body"] = "Для видео нужен небольшой компонент плеера. Он скачивается один раз, а дальше Echo готов к просмотру при каждом запуске.",
+        ["echo.runtime_install"] = "Скачать",
+        ["echo.installing_title"] = "Готовим Echo",
+        ["echo.install_downloading"] = "Скачивание…",
+        ["echo.install_verifying"] = "Проверка…",
+        ["echo.install_extracting"] = "Распаковка…",
+        ["echo.install_failed_title"] = "Не удалось скачать",
+        ["echo.reinstall"] = "Переустановить",
+        ["echo.retry"] = "Повторить",
+        ["echo.host_failed_title"] = "Плеер остановился",
+        ["echo.host_failed_body"] = "Перезапустить его не вышло. Попробуйте ещё раз.",
+        ["echo.protocol_title"] = "Версия плеера не совпадает",
+        ["echo.protocol_body"] = "Переустановите плеер Echo, чтобы продолжить.",
+        ["echo.embed_blocked_title"] = "Это видео нельзя встроить",
+        ["echo.embed_blocked_body"] = "Владелец запретил воспроизведение за пределами YouTube.",
+        ["echo.video_gone_title"] = "Видео недоступно",
+        ["echo.video_gone_body"] = "Его удалили или сделали приватным.",
+        ["echo.bad_id_title"] = "Неверная ссылка",
+        ["echo.bad_id_body"] = "Этот идентификатор видео выглядит неправильно.",
+        ["echo.player_error_title"] = "Не удалось воспроизвести",
+        ["echo.player_error_body"] = "При загрузке этого видео что-то пошло не так.",
+
+        // avatar rings (added after update 2.2.3)
+        ["rings.section_title"] = "Кольцо аватара",
+        ["rings.picker_title"] = "Кольцо аватара",
+        ["rings.none"] = "Без кольца",
+        ["rings.none_owned_title"] = "Колец пока нет",
+        ["rings.none_owned_body"] = "Кольца аватара - это декоративные рамки вокруг вашего фото, которые видят все. Их можно купить за Спарки в Store.",
+        ["rings.open_store"] = "Открыть Store",
+        ["rings.preview_hint"] = "Ваше кольцо видят все, где бы ни показывалось ваше фото.",
+
+        // aetherling (added after update 2.2.3)
+        ["os.app_aetherling"] = "???",
+
+        // echo playback settings (added after update 2.2.3)
+        ["echo.settings_tip"] = "Настройки воспроизведения",
+        ["echo.settings_quality"] = "Качество видео",
+        ["echo.quality_auto"] = "Авто",
+        ["echo.quality_720"] = "720p",
+        ["echo.quality_1080"] = "1080p",
+        ["echo.settings_captions"] = "Субтитры",
+        ["echo.settings_autoplay"] = "Автоматически включать следующее видео",
     };
 }

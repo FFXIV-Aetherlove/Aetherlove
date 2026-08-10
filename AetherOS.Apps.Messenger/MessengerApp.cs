@@ -425,7 +425,7 @@ public sealed partial class MessengerApp : IAetherApp, IAppSettings
     }
 
     private void DrawAvatar(ImDrawListPtr dl, Guid id, string title, byte[]? bytes, bool isGroup,
-        Vector2 center, float radius)
+        Vector2 center, float radius, string? frameRef = null)
     {
         if (!isGroup)
         {
@@ -434,13 +434,16 @@ public sealed partial class MessengerApp : IAetherApp, IAppSettings
             {
                 dl.AddImageRounded(tex.Value, center - new Vector2(radius, radius), center + new Vector2(radius, radius),
                     Vector2.Zero, Vector2.One, 0xFFFFFFFFu, radius, ImDrawFlags.RoundCornersAll);
-                return;
             }
-            dl.AddCircleFilled(center, radius, AuthorColor(id));
-            var letter = title.Length > 0 ? char.ToUpperInvariant(title[0]).ToString() : "?";
-            var fs = radius * 1.05f;
-            var sz = ImGui.CalcTextSize(letter) * (fs / ImGui.GetFontSize());
-            dl.AddText(ImGui.GetFont(), fs, center - sz * 0.5f, 0xFFFFFFFFu, letter);
+            else
+            {
+                dl.AddCircleFilled(center, radius, AuthorColor(id));
+                var letter = title.Length > 0 ? char.ToUpperInvariant(title[0]).ToString() : "?";
+                var fs = radius * 1.05f;
+                var sz = ImGui.CalcTextSize(letter) * (fs / ImGui.GetFontSize());
+                dl.AddText(ImGui.GetFont(), fs, center - sz * 0.5f, 0xFFFFFFFFu, letter);
+            }
+            AetherLove.UI.AvatarRings.Draw(dl, center, radius, frameRef);
             return;
         }
         var groupTex = AvatarTex(id, bytes);

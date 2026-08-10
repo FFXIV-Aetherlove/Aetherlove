@@ -9,4 +9,6 @@ public interface IOsAccountInfo
     string? DisplayName { get; }
 
     ISharedImmediateTexture? Avatar { get; }
+
+    string? FrameRef => null;
 }

@@ -48,7 +48,8 @@ public sealed record MessengerContactDto(
     byte[]? LastMessageCiphertext,
     byte[]? LastMessageNonce,
     bool LastMessageFromMe,
-    bool RemovedByPeer);
+    bool RemovedByPeer,
+    string? PeerFrameRef = null);
 
 /// <summary>A pending add: incoming rows render above the chat list with accept/decline; outgoing rows show
 /// the pending state on the sender's side.</summary>
@@ -59,7 +60,8 @@ public sealed record MessengerRequestDto(
     string PeerName,
     byte[]? PeerAvatar,
     bool Incoming,
-    DateTimeOffset RequestedAtUtc);
+    DateTimeOffset RequestedAtUtc,
+    string? PeerFrameRef = null);
 
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record MessengerGroupMemberDto(
@@ -68,7 +70,8 @@ public sealed record MessengerGroupMemberDto(
     byte[]? Avatar,
     byte[]? PublicKey,
     bool IsOwner,
-    DateTimeOffset JoinedAtUtc);
+    DateTimeOffset JoinedAtUtc,
+    string? FrameRef = null);
 
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record MessengerGroupDto(

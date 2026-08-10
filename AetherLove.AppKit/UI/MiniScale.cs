@@ -11,6 +11,7 @@ public static class MiniScale
 
     public static float MultiplierFor(PhoneScalePreset preset) => preset switch
     {
+        PhoneScalePreset.XS    => 0.58f,
         PhoneScalePreset.Small => 0.75f,
         PhoneScalePreset.Large => 1.30f,
         PhoneScalePreset.XL    => 1.70f,

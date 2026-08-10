@@ -16,6 +16,7 @@ public sealed class NotificationShade
     private readonly OsShell _shell;
     private readonly WallpaperService _wallpapers;
     private readonly IOsAccountInfo _account;
+    private readonly IOsMediaRemote _media;
 
     private float _openT;
     private bool _targetOpen;
@@ -37,11 +38,13 @@ public sealed class NotificationShade
 
     private const float AnimSpeed = 7f;
 
-    public NotificationShade(OsShell shell, WallpaperService wallpapers, IOsAccountInfo account)
+    public NotificationShade(OsShell shell, WallpaperService wallpapers, IOsAccountInfo account,
+        IOsMediaRemote media)
     {
         _shell = shell;
         _wallpapers = wallpapers;
         _account = account;
+        _media = media;
     }
 
     public bool Visible => _openT > 0.001f || _targetOpen || _dragging;
@@ -247,7 +250,107 @@ public sealed class NotificationShade
 
         y = DrawQuickToggles(dl, innerTL.X, y, innerW);
         y = DrawBrightness(dl, innerTL.X, y, innerW);
+        if (_media.TileVisible)
+        {
+            y = DrawMediaTile(dl, innerTL.X, y, innerW);
+        }
         DrawNotificationList(innerTL.X, y, innerW, panelBR.Y - Px(26f) - y);
+    }
+
+    /// <summary>The now-playing card: art, title/artist and transport. Buttons are submitted before the
+    /// whole-card open target so they win their clicks (first-submitted-wins).</summary>
+    private float DrawMediaTile(ImDrawListPtr dl, float x, float y, float w)
+    {
+        var t = ThemeService.Current;
+        var cardH = Px(58f);
+        var tl = new Vector2(x, y);
+        var br = tl + new Vector2(w, cardH);
+        var rounding = Px(14f);
+        dl.AddRectFilled(tl, br, OsDraw.White(0.08f), rounding);
+
+        var artSz = Px(42f);
+        var artTl = tl + new Vector2(Px(8f), (cardH - artSz) * 0.5f);
+        if (_media.Art is { } art)
+        {
+            dl.AddImageRounded(art, artTl, artTl + new Vector2(artSz, artSz), Vector2.Zero, Vector2.One,
+                0xFFFFFFFFu, Px(9f));
+        }
+        else
+        {
+            dl.AddRectFilled(artTl, artTl + new Vector2(artSz, artSz), OsDraw.White(0.08f), Px(9f));
+            IconDraw.AddCentered(dl, FontAwesomeIcon.Music, Px(16f), artTl + new Vector2(artSz, artSz) * 0.5f,
+                OsDraw.White(0.55f));
+        }
+
+        var buttonR = Px(13f);
+        var gap = Px(8f);
+        var playC = new Vector2(br.X - Px(12f) - buttonR * 3f - gap, tl.Y + cardH * 0.5f);
+        var prevC = playC - new Vector2(buttonR * 2f + gap, 0f);
+        var nextC = playC + new Vector2(buttonR * 2f + gap, 0f);
+
+        if (_media.CanControl)
+        {
+            DrawMediaButton(dl, prevC, buttonR, FontAwesomeIcon.StepBackward, Px(9f), _media.Previous);
+            DrawMediaButton(dl, playC, buttonR, _media.IsPlaying ? FontAwesomeIcon.Pause : FontAwesomeIcon.Play,
+                Px(10f), _media.TogglePlayPause);
+            DrawMediaButton(dl, nextC, buttonR, FontAwesomeIcon.StepForward, Px(9f), _media.Next);
+        }
+
+        var textX = artTl.X + artSz + Px(10f);
+        var textW = prevC.X - buttonR - Px(10f) - textX;
+        var lineH = ImGui.GetTextLineHeight();
+        var title = SharedUiHelpers.TruncateToWidth(_media.Title, textW);
+        var artist = SharedUiHelpers.TruncateToWidth(_media.Artist, textW);
+        if (artist.Length > 0)
+        {
+            dl.AddText(new Vector2(textX, tl.Y + cardH * 0.5f - lineH - Px(1f)), OsDraw.White(0.95f), title);
+            dl.AddText(new Vector2(textX, tl.Y + cardH * 0.5f + Px(1f)), OsDraw.White(0.6f), artist);
+        }
+        else
+        {
+            dl.AddText(new Vector2(textX, tl.Y + (cardH - lineH) * 0.5f), OsDraw.White(0.95f), title);
+        }
+
+        if (!InputLocked)
+        {
+            // The open target covers the card but is submitted after the buttons, so it only catches
+            // clicks they did not.
+            ImGui.SetCursorScreenPos(tl);
+            if (ImGui.InvisibleButton("##shadeMediaOpen", new Vector2(w, cardH)))
+            {
+                _shell.OpenApp("groove");
+                Close();
+            }
+            if (ImGui.IsItemHovered())
+            {
+                SharedUiHelpers.HandOnHover();
+                dl.AddRect(tl, br, ImGui.ColorConvertFloat4ToU32(t.AccentLight with { W = 0.4f }), rounding,
+                    ImDrawFlags.None, Px(1f));
+            }
+        }
+
+        return y + cardH + Px(12f);
+    }
+
+    private void DrawMediaButton(ImDrawListPtr dl, Vector2 center, float radius, FontAwesomeIcon icon,
+        float iconPx, Action onClick)
+    {
+        var hovered = false;
+        if (!InputLocked)
+        {
+            ImGui.SetCursorScreenPos(center - new Vector2(radius, radius));
+            if (ImGui.InvisibleButton($"##shadeMedia{icon}", new Vector2(radius * 2f, radius * 2f)))
+            {
+                onClick();
+            }
+            hovered = ImGui.IsItemHovered();
+            if (hovered)
+            {
+                SharedUiHelpers.HandOnHover();
+            }
+        }
+        dl.AddCircleFilled(center, radius, OsDraw.White(hovered ? 0.18f : 0.10f));
+        IconDraw.AddCentered(dl, icon, iconPx, center, OsDraw.White(0.92f));
     }
 
     /// <summary>Compact account chip at the top of the shade: the OS avatar + display name. Skipped until the
@@ -274,6 +377,7 @@ public sealed class NotificationShade
             dl.AddText(avC - ImGui.CalcTextSize(initial) * 0.5f, 0xFFFFFFFF, initial);
         }
         dl.AddCircle(avC, avR, OsDraw.White(0.18f), 32, 1.5f);
+        AetherLove.UI.AvatarRings.Draw(dl, avC, avR, _account.FrameRef);
 
         using (UiFonts.H3?.Push())
         {

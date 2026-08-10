@@ -157,5 +157,14 @@ internal static class ChatEs
         ["chat.delete_message_body"] = "¿Eliminar este mensaje para todos? En su lugar quedará un aviso de que lo has eliminado.",
         ["chat.delete_message_confirm"] = "Eliminar",
         ["chat.deleted_by_author"] = "Este mensaje fue eliminado por su autor.",
+        // added after update 2.2.3 (echo)
+        ["chat.preview_echo"] = "Compartió una sala de Echo",
+        ["chat.echo_card_label"] = "Sala de Echo",
+        ["chat.echo_card_host"] = "Anfitrión: {0}",
+        ["chat.echo_card_members"] = "{0} viendo",
+        ["chat.echo_card_idle"] = "Todavía no se reproduce nada",
+        ["chat.echo_card_view"] = "Unirse a esta sala",
+        ["chat.echo_card_loading"] = "Cargando sala...",
+        ["chat.echo_card_unavailable"] = "Esta sala ya ha terminado",
     };
 }

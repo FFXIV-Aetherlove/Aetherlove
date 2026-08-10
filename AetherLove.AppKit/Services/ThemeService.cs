@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Numerics;
 using AetherLove.Config;
@@ -280,6 +281,10 @@ public static class ThemeService
     public static AppTheme CurrentTheme { get; private set; } = AppTheme.CrystalVoid;
     public static ThemeDefinition Current { get; private set; } = Themes[AppTheme.CrystalVoid];
 
+    /// <summary>The purchased theme in use, null on a built-in. <see cref="CurrentTheme"/> keeps naming the
+    /// built-in underneath, which is what the phone falls back to if a seal ever stops opening.</summary>
+    public static Guid? PremiumThemeId { get; private set; }
+
     public static void Initialise(Configuration config)
     {
         _config = config;
@@ -289,18 +294,50 @@ public static class ThemeService
 
     public static void SetTheme(AppTheme theme)
     {
-        if (CurrentTheme == theme)
+        if (CurrentTheme == theme && PremiumThemeId == null)
         {
             return;
         }
         CurrentTheme = theme;
         Current = Themes[theme];
+        PremiumThemeId = null;
         if (_config == null)
         {
             return;
         }
         _config.SelectedTheme = theme;
+        _config.SelectedPremiumThemeId = null;
         _config.Save();
     }
 
+    /// <summary>Switches to a purchased theme built from its sealed assets. The built-in selection is left
+    /// alone so it stays the fallback.</summary>
+    public static void SetPremiumTheme(Guid productId, ThemeDefinition definition)
+    {
+        Current = definition;
+        PremiumThemeId = productId;
+        if (_config == null)
+        {
+            return;
+        }
+        _config.SelectedPremiumThemeId = productId;
+        _config.Save();
+    }
+
+    /// <summary>Drops back to the selected built-in, for a seal that will not open.</summary>
+    public static void ClearPremiumTheme()
+    {
+        if (PremiumThemeId == null)
+        {
+            return;
+        }
+        PremiumThemeId = null;
+        Current = Themes.TryGetValue(CurrentTheme, out var t) ? t : Themes[AppTheme.CrystalVoid];
+        if (_config == null)
+        {
+            return;
+        }
+        _config.SelectedPremiumThemeId = null;
+        _config.Save();
+    }
 }

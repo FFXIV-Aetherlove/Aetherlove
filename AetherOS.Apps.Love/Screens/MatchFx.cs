@@ -48,9 +48,9 @@ internal static class MatchFx
     }
 
     /// <summary>Draws the logo_mini avatar (or a fallback circle) at <paramref name="center"/>, with an
-    /// optional solid rim.</summary>
+    /// optional solid rim and the wearer's equipped ring on top.</summary>
     public static void Avatar(ImDrawListPtr dl, Vector2 center, float radius, ISharedImmediateTexture? tex,
-        uint rim, float rimThickness)
+        uint rim, float rimThickness, string? frameRef = null)
     {
         var wrap = tex?.GetWrapOrDefault();
         var tl = center - new Vector2(radius, radius);
@@ -68,6 +68,20 @@ internal static class MatchFx
         {
             dl.AddCircle(center, radius, rim, 64, rimThickness);
         }
+        // Effects pass MatchContent.OwnAvatar/PeerAvatar (directly or via a local), so texture identity
+        // resolves whose ring this is without threading a ref through all 21 call sites.
+        if (frameRef is null && wrap != null)
+        {
+            if (ReferenceEquals(tex, MatchContent.OwnAvatar))
+            {
+                frameRef = MatchContent.OwnFrameRef;
+            }
+            else if (ReferenceEquals(tex, MatchContent.PeerAvatar))
+            {
+                frameRef = MatchContent.PeerFrameRef;
+            }
+        }
+        AvatarRings.Draw(dl, center, radius, frameRef);
     }
 
     /// <summary>Draws <paramref name="text"/> horizontally centred on <paramref name="cx"/> in the

@@ -19,12 +19,14 @@ public sealed class ShareService : IShareService
     }
 
     public IReadOnlyList<IAetherApp> TargetsFor(string type) =>
-        _shell.Apps.Where(a => a.Available && a.AcceptedShareTypes.Contains(type)).ToList();
+        _shell.Apps.Where(a => Offers(a) && a.AcceptedShareTypes.Contains(type)).ToList();
+
+    private bool Offers(IAetherApp app) => app.Available && !_shell.IsAppRemoved(app.Id);
 
     public void Offer(ShareItem item, string? title = null)
     {
         var targets = _shell.Apps
-            .Where(a => a.Available && a.AcceptedShareTypes.Contains(item.Type) && a.Id != item.SourceAppId)
+            .Where(a => Offers(a) && a.AcceptedShareTypes.Contains(item.Type) && a.Id != item.SourceAppId)
             .ToList();
         if (targets.Count == 0)
         {

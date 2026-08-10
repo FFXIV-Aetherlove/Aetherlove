@@ -28,7 +28,7 @@ internal sealed class PeerProfileScreen
     private bool _revealed;
 
     public PeerProfileScreen(IYapperHost host, YapperStore store, YapperMediaCache mediaCache, Action back,
-        Action<Guid> openDm, Action<Guid, string> report,
+        Action<Guid> openDm, Action<Guid, string> report, Action<Guid, string, bool, Action> moderate,
         Action<Guid, bool> openFollowList, Action onFollowChanged, Action<YapDto> openYap)
     {
         _openYap = openYap;
@@ -38,12 +38,16 @@ internal sealed class PeerProfileScreen
         _back = back;
         _openDm = openDm;
         _report = report;
+        _moderate = moderate;
         _openFollowList = openFollowList;
         _onFollowChanged = onFollowChanged;
     }
 
     private readonly Action<Guid> _openDm;
     private readonly Action<Guid, string> _report;
+
+    /// <summary>Profile id, handle, whether it is a block, and what to do once it goes through.</summary>
+    private readonly Action<Guid, string, bool, Action> _moderate;
     private readonly Action<Guid, bool> _openFollowList;
     private readonly Action _onFollowChanged;
     private readonly Action<YapDto> _openYap;
@@ -179,6 +183,7 @@ internal sealed class PeerProfileScreen
         {
             dl.AddCircleFilled(avatarCenter, avatarR, ImGui.GetColorU32(ctx.Theme.Accent with { W = 0.35f }));
         }
+        AvatarRings.Draw(dl, avatarCenter, avatarR, view.FrameRef);
         ImGui.SetCursorScreenPos(origin + new Vector2(0f, bannerH));
 
         // The follow pill, right of the avatar per the reference layout.
@@ -279,24 +284,21 @@ internal sealed class PeerProfileScreen
                 Loc.T(view.MutedByMe ? "os.yapper_menu_unmute" : "os.yapper_menu_mute")))
             {
                 ImGui.CloseCurrentPopup();
-                var target = !view.MutedByMe;
-                _view = view with { MutedByMe = target };
-                _ = Task.Run(() => _host.SetMuteAsync(view.ProfileId, target, default));
+                if (view.MutedByMe)
+                {
+                    // Unmuting gives nothing away and undoes itself, so it asks nothing.
+                    _view = view with { MutedByMe = false };
+                    _ = Task.Run(() => _host.SetMuteAsync(view.ProfileId, false, default));
+                }
+                else
+                {
+                    _moderate(view.ProfileId, view.Handle, false, () => _view = view with { MutedByMe = true });
+                }
             }
             if (DrawIconMenuItem(FontAwesomeIcon.Ban, Loc.T("os.yapper_menu_block")))
             {
                 ImGui.CloseCurrentPopup();
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        await _host.BlockAsync(view.ProfileId).ConfigureAwait(false);
-                    }
-                    catch (Exception)
-                    {
-                    }
-                });
-                _back();
+                _moderate(view.ProfileId, view.Handle, true, _back);
             }
             if (DrawIconMenuItem(FontAwesomeIcon.Flag, Loc.T("os.yapper_menu_report")))
             {

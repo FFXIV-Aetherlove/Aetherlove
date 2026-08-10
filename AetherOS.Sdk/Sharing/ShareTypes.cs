@@ -10,4 +10,5 @@ public static class ShareTypes
     public const string CalendarEvent = "calendar_event";
     public const string Levemete = "levemete";
     public const string MarketItem = "market_item";
+    public const string Echo = "echo";
 }

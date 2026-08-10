@@ -34,7 +34,13 @@ public sealed class ScreenshotImportService : IDisposable
                 {
                     IncludeSubdirectories = recursive,
                 };
-                watcher.Created += (_, e) => HandleFile(e.FullPath);
+                watcher.Created += (_, e) =>
+                {
+                    if (PhonePower.IsOn)
+                    {
+                        HandleFile(e.FullPath);
+                    }
+                };
                 watcher.Renamed += (_, e) => HandleFile(e.FullPath);
                 watcher.EnableRaisingEvents = true;
                 _watchers.Add(watcher);

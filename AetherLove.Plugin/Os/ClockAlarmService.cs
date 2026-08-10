@@ -251,6 +251,10 @@ public sealed class ClockAlarmService : IClockAlarms, IDisposable
 
     private void OnFrameworkUpdate(IFramework framework)
     {
+        if (!PhonePower.IsOn)
+        {
+            return;
+        }
         if (_pendingReconcile)
         {
             _pendingReconcile = false;

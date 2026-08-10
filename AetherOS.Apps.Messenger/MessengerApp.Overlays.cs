@@ -415,7 +415,7 @@ public sealed partial class MessengerApp
         var avatarR = Px(AvatarR);
         var start = ImGui.GetCursorScreenPos();
         var avatarC = new Vector2(start.X + avatarR, start.Y + avatarR);
-        DrawAvatar(dl, member.AccountId, member.Name, member.Avatar, false, avatarC, avatarR);
+        DrawAvatar(dl, member.AccountId, member.Name, member.Avatar, false, avatarC, avatarR, member.FrameRef);
         dl.AddCircle(avatarC, avatarR, ThemeService.Current.AccentWithAlpha(0.65f), 0, Px(1.5f));
 
         var nameX = avatarC.X + avatarR + Px(12f);

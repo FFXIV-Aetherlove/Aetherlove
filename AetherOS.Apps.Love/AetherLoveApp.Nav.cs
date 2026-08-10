@@ -189,6 +189,7 @@ public sealed partial class AetherLoveApp
                 DrawGradientRing(drawList, center, radius, Px(2.5f), th.SecondaryStart, th.SecondaryEnd);
             }
         }
+        AvatarRings.Draw(drawList, center, radius, _bootstrap.LastConnection?.EquippedFrameRef);
 
         if (_bootstrap.LastConnection is { IsSupporter: true, ShowSupporterBadge: true })
         {

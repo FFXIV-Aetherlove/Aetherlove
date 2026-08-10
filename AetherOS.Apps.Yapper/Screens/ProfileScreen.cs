@@ -226,6 +226,7 @@ internal sealed class ProfileScreen
         {
             dl.AddCircleFilled(avatarCenter, avatarR, ImGui.GetColorU32(ctx.Theme.Accent with { W = 0.35f }));
         }
+        AvatarRings.Draw(dl, avatarCenter, avatarR, me.EquippedFrameRef);
         if (avatarHovered)
         {
             IconDraw.AddCentered(dl, FontAwesomeIcon.Camera, Px(14f), avatarCenter,

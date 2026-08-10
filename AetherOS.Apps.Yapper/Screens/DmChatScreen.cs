@@ -242,6 +242,7 @@ internal sealed class DmChatScreen
         {
             dl.AddCircleFilled(center, Px(15f), ImGui.GetColorU32(ctx.Theme.Accent with { W = 0.35f }));
         }
+        AvatarRings.Draw(dl, center, Px(15f), peer.FrameRef);
         dl.AddText(tl + new Vector2(Px(36f), Px(1f)), 0xFFFFFFFFu, peer.DisplayName);
         dl.AddText(tl + new Vector2(Px(36f), Px(18f)),
             ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.45f)), $"@{peer.Handle}");

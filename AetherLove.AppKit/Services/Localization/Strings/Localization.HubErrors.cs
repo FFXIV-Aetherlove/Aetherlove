@@ -1,4 +1,4 @@
-namespace AetherLove.Services.Localization;
+﻿namespace AetherLove.Services.Localization;
 
 internal static class HubErrorsEn
 {
@@ -135,5 +135,37 @@ internal static class HubErrorsEn
         ["huberror.yap_invalid"] = "The yap could not be saved. Please check your entries.",
         ["huberror.yap_dm_not_allowed"] = "This user can't receive your messages.",
         ["huberror.yap_dm_keys_missing"] = "@{0} still needs to finish setting up. Try messaging them again in a little while.",
+
+        // store (added after update 2.2.3)
+        ["huberror.store_disabled"] = "The store is closed for maintenance right now.",
+        ["huberror.store_product_not_found"] = "That item no longer exists.",
+        ["huberror.store_product_unavailable"] = "That item isn't for sale right now.",
+        ["huberror.store_insufficient_sparks"] = "Not enough sparks: this costs {0} and you have {1}.",
+        ["huberror.store_limit_reached"] = "You already own the maximum ({0}) of this item.",
+        ["huberror.store_quantity_invalid"] = "That quantity isn't allowed.",
+        ["huberror.store_conflict"] = "The store hiccuped mid-purchase. Nothing was charged twice; just try again.",
+        ["huberror.aetherling_disabled"] = "It is not listening right now.",
+        ["huberror.aetherling_exists"] = "There is already one of these.",
+        ["huberror.aetherling_none"] = "There is nothing here to give it to.",
+        ["huberror.aetherling_insufficient"] = "Not enough sparks: it wants {0}, you have {1}.",
+        ["huberror.aetherling_gated"] = "Not yet. Something has to happen first. Try again in {0} minutes.",
+        ["huberror.aetherling_complete"] = "It will not take any more.",
+        ["huberror.aetherling_unready"] = "Not yet. It is not ready for that.",
+        ["huberror.aetherling_named"] = "It already has its name.",
+        ["huberror.aetherling_name_invalid"] = "That name will not do. Try another.",
+
+        // echo (added after update 2.2.3)
+        ["huberror.echo_disabled"] = "Watching together is switched off right now.",
+        ["huberror.echo_room_not_found"] = "That watch party has already ended.",
+        ["huberror.echo_room_full"] = "This room is full ({0} people).",
+        ["huberror.echo_not_member"] = "You aren't in that room.",
+        ["huberror.echo_not_owner"] = "Only whoever started the room can do that.",
+        ["huberror.echo_host_only"] = "The host is driving playback right now.",
+        ["huberror.echo_kicked"] = "You were removed from that room.",
+        ["huberror.echo_playlist_full"] = "The queue is full ({0} videos).",
+        ["huberror.echo_live_room_exists"] = "You already have a room running. End it to start another one.",
+        ["huberror.echo_invalid_video"] = "That doesn't look like a YouTube link.",
+        ["huberror.echo_name_invalid"] = "That room name can't be used.",
+        ["huberror.hangout_watch_room_invalid"] = "That watch party isn't available any more.",
     };
 }

@@ -49,6 +49,15 @@ public sealed partial class AetherHubContext
         catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl) { throw rl; }
     }
 
+    public async Task DeleteYapperProfileAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            await (await ConnAsync(ct)).InvokeAsync("DeleteYapperProfileAsync", ct).ConfigureAwait(false);
+        }
+        catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl) { throw rl; }
+    }
+
     public async Task SetYapperRatingAsync(bool isNsfw, bool nsfwEnabled, CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync("SetYapperRatingAsync", isNsfw, nsfwEnabled, ct).ConfigureAwait(false);
 

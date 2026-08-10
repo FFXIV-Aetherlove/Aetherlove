@@ -122,6 +122,15 @@ public sealed class CryptoService
         => HKDF.DeriveKey(HashAlgorithmName.SHA256, siblingPrivateKey, AesGcmKeyLength,
             SHA256.HashData(newProfilePublicKey), SiblingWrapInfo);
 
+    private static readonly byte[] SkinKeyInfo = Encoding.UTF8.GetBytes("aetheros.skin.v1");
+
+    /// <summary>Seal key for a purchased skin's assets, derived from the account keypair with the product id
+    /// as the salt: one key per product, and a blob copied to another install is inert. Its own info string
+    /// keeps it domain-separated from the message and wrap derivations.</summary>
+    public byte[] DeriveSkinKey(byte[] accountPrivateKey, Guid productId)
+        => HKDF.DeriveKey(HashAlgorithmName.SHA256, accountPrivateKey, AesGcmKeyLength,
+            productId.ToByteArray(), SkinKeyInfo);
+
     public (byte[] Ciphertext, byte[] Nonce) Encrypt(byte[] messageKey, byte[] plaintext)
     {
         var nonce = new byte[AesGcmNonceLength];

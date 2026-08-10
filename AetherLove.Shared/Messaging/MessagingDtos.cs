@@ -138,7 +138,8 @@ public sealed record MatchSummaryDto(
     // The peer's key timeline; more than one entry means they reset their E2E keys at some point.
     KeyHistoryEntryDto[]? PeerKeyHistory = null,
     // Away marker on the match list avatar while the peer's holiday mode is on.
-    bool PeerHolidayMode = false);
+    bool PeerHolidayMode = false,
+    string? PeerFrameRef = null);
 
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record MatchListDto(MatchSummaryDto[] Matches);

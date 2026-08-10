@@ -475,6 +475,9 @@ public partial class MyProfileScreen
             case Section.Holiday:
                 DrawHolidayView();
                 break;
+            case Section.AvatarRing:
+                DrawAvatarRingView();
+                break;
         }
     }
 

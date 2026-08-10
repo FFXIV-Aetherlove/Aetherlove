@@ -24,6 +24,7 @@ public sealed class HangoutsApp : IAetherApp, IAppSettings
     private readonly HangoutDetailOverlay _detail;
     private readonly MyHangoutView _manage;
     private IShareService? _shareSvc;
+    private IOsShell? _shell;
     private View _view = View.Directory;
 
     public HangoutsApp(Func<string> name, Func<bool> available, IHangoutsHost host, AetherLove.Os.ISocialBridge social, HangoutStateService state)
@@ -35,6 +36,7 @@ public sealed class HangoutsApp : IAetherApp, IAppSettings
         _detail = new HangoutDetailOverlay(host, social, state);
         _manage = new MyHangoutView(host, state, GoDirectory);
         _detail.ShareHandler = OfferHangout;
+        _detail.JoinWatchRoomHandler = JoinWatchRoom;
         _manage.ShareHandler = OfferHangout;
         _screen = new HangoutsScreen(host, state, OpenDetail, OpenManage);
     }
@@ -50,6 +52,10 @@ public sealed class HangoutsApp : IAetherApp, IAppSettings
             SourceAppId = "hangouts",
         }, title: h.Description);
     }
+
+    /// <summary>Hands a watch party off to Echo, which joins by code and offers a way back here.</summary>
+    private void JoinWatchRoom(Guid roomId, string code) =>
+        _shell?.SendIntent("echo", OsIntents.CreateRoomJoin(OsIntents.EchoJoin, roomId, code, Id));
 
     public string Id => "hangouts";
     public string Name => _name();
@@ -73,6 +79,7 @@ public sealed class HangoutsApp : IAetherApp, IAppSettings
     public void Draw(OsAppContext ctx)
     {
         _shareSvc = ctx.Capabilities.Share;
+        _shell = ctx.Shell;
 
         if (_host.TakePendingOpenHangout() is { } pending)
         {

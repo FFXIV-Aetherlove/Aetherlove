@@ -29,15 +29,22 @@ internal static class AppHeader
     }
 
     /// <summary>Draws the filled hamburger button top-right and opens <paramref name="popupId"/> on click.
-    /// Returns the button's top-left so the popup can anchor under it. Call right after the title row.</summary>
-    public static Vector2 DrawMenuButton(float winW, float padX, string popupId, bool badge = false)
+    /// Returns the button's top-left so the popup can anchor under it. Call right after the title row.
+    ///
+    /// The default vertical placement is inferred from the DEFAULT font's line height, which only lands right
+    /// for a title drawn in H3. Anything titled larger (H1) must pass <paramref name="centerY"/>, or the
+    /// button sinks below the title by the difference between the two line heights.</summary>
+    public static Vector2 DrawMenuButton(
+        float winW, float padX, string popupId, bool badge = false, float? centerY = null)
     {
         var t = ThemeService.Current;
         var dl = ImGui.GetWindowDrawList();
         var size = Px(MenuSize);
         var winPos = ImGui.GetWindowPos();
-        var tl = new Vector2(winPos.X + winW - Px(padX) - size,
-            ImGui.GetCursorScreenPos().Y - ImGui.GetTextLineHeight() - Px(6f));
+        var top = centerY is { } center
+            ? center - (size * 0.5f)
+            : ImGui.GetCursorScreenPos().Y - ImGui.GetTextLineHeight() - Px(6f);
+        var tl = new Vector2(winPos.X + winW - Px(padX) - size, top);
 
         ImGui.SetCursorScreenPos(tl);
         if (ImGui.InvisibleButton($"##menuBtn{popupId}", new Vector2(size, size)))

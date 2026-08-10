@@ -58,6 +58,10 @@ public sealed class RealtorPhaseWatchService : IRealtorAlerts, IDisposable
 
     private void OnUpdate(IFramework framework)
     {
+        if (!PhonePower.IsOn)
+        {
+            return;
+        }
         if (DateTime.UtcNow < _nextCheckUtc)
         {
             return;

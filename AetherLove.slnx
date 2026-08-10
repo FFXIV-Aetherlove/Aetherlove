@@ -11,6 +11,9 @@
   <Project Path="AetherLove.Core/AetherLove.Core.csproj">
     <Platform Project="x64" />
   </Project>
+  <Project Path="AetherOS.Apps.Aetherling/AetherOS.Apps.Aetherling.csproj">
+    <Platform Project="x64" />
+  </Project>
   <Project Path="AetherOS.Apps.Breaker/AetherOS.Apps.Breaker.csproj">
     <Platform Project="x64" />
   </Project>
@@ -23,7 +26,19 @@
   <Project Path="AetherOS.Apps.Clock/AetherOS.Apps.Clock.csproj">
     <Platform Project="x64" />
   </Project>
+  <Project Path="AetherOS.Apps.Doom.Engine/AetherOS.Apps.Doom.Engine.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="AetherOS.Apps.Doom/AetherOS.Apps.Doom.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="AetherOS.Apps.EchoVidya/AetherOS.Apps.EchoVidya.csproj">
+    <Platform Project="x64" />
+  </Project>
   <Project Path="AetherOS.Apps.Feedback/AetherOS.Apps.Feedback.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="AetherOS.Apps.Groove/AetherOS.Apps.Groove.csproj">
     <Platform Project="x64" />
   </Project>
   <Project Path="AetherOS.Apps.Hangouts/AetherOS.Apps.Hangouts.csproj">
@@ -56,6 +71,9 @@
   <Project Path="AetherOS.Apps.Places/AetherOS.Apps.Places.csproj">
     <Platform Project="x64" />
   </Project>
+  <Project Path="AetherOS.Apps.Plappy/AetherOS.Apps.Plappy.csproj">
+    <Platform Project="x64" />
+  </Project>
   <Project Path="AetherOS.Apps.Realtor/AetherOS.Apps.Realtor.csproj">
     <Platform Project="x64" />
   </Project>
@@ -68,7 +86,16 @@
   <Project Path="AetherOS.Apps.Stacker/AetherOS.Apps.Stacker.csproj">
     <Platform Project="x64" />
   </Project>
+  <Project Path="AetherOS.Apps.Store/AetherOS.Apps.Store.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="AetherOS.Apps.Sudoku/AetherOS.Apps.Sudoku.csproj">
+    <Platform Project="x64" />
+  </Project>
   <Project Path="AetherOS.Apps.VoidInvaders/AetherOS.Apps.VoidInvaders.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="AetherOS.Apps.Wallet/AetherOS.Apps.Wallet.csproj">
     <Platform Project="x64" />
   </Project>
   <Project Path="AetherOS.Apps.Wayfinder/AetherOS.Apps.Wayfinder.csproj">
@@ -84,6 +111,9 @@
     <Platform Project="x64" />
   </Project>
   <Project Path="AetherOS.Shell/AetherOS.Shell.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="AetherOS.WatchHost/AetherOS.WatchHost.csproj">
     <Platform Project="x64" />
   </Project>
 </Solution>

@@ -158,5 +158,14 @@ internal static class ChatFr
         ["chat.delete_message_body"] = "Supprimer ce message pour tout le monde ? Une mention indiquant que vous l'avez supprimé restera à sa place.",
         ["chat.delete_message_confirm"] = "Supprimer",
         ["chat.deleted_by_author"] = "Ce message a été supprimé par son auteur.",
+        // added after update 2.2.3 (echo)
+        ["chat.preview_echo"] = "A partagé un salon Echo",
+        ["chat.echo_card_label"] = "Salon Echo",
+        ["chat.echo_card_host"] = "Hôte : {0}",
+        ["chat.echo_card_members"] = "{0} spectateurs",
+        ["chat.echo_card_idle"] = "Rien en cours pour l'instant",
+        ["chat.echo_card_view"] = "Rejoindre ce salon",
+        ["chat.echo_card_loading"] = "Chargement du salon...",
+        ["chat.echo_card_unavailable"] = "Ce salon est terminé",
     };
 }

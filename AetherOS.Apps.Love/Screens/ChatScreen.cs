@@ -66,6 +66,7 @@ public partial class ChatScreen
     private bool _peerIsSupporter;
     private NameStyle _peerNameStyle;
     private bool _peerHolidayMode;
+    private string? _peerFrameRef;
     private byte[]? _peerPublicKey;
     private byte[]? _messageKey;
     private string _inputText = string.Empty;
@@ -244,6 +245,7 @@ public partial class ChatScreen
         _peerIsSupporter = _chatListScreen.SelectedPeerIsSupporter;
         _peerNameStyle = _chatListScreen.SelectedPeerNameStyle;
         _peerHolidayMode = _chatListScreen.SelectedPeerHolidayMode;
+        _peerFrameRef = _chatListScreen.SelectedPeerFrameRef;
         if (_shareCtx.PendingShareVenueId is { } shareVenueId)
         {
             _shareCtx.PendingShareVenueId = null;
@@ -289,6 +291,7 @@ public partial class ChatScreen
         ResetFailedHangoutCards();
         ResetFailedNewsCards();
         ResetFailedLevemeteCards();
+        ResetFailedEchoCards();
         lock (_messagesLock)
         {
             _messages.Clear();
@@ -963,6 +966,7 @@ public partial class ChatScreen
             dl.AddCircleFilled(avatarCenter, Px(AvatarR), UiColors.AvatarFallback);
         }
         dl.AddCircle(avatarCenter, Px(AvatarR), t.AccentWithAlpha(0.65f), 0, 1.5f);
+        AvatarRings.Draw(dl, avatarCenter, Px(AvatarR), _peerFrameRef);
 
         if (_peerHolidayMode)
         {
@@ -1535,6 +1539,11 @@ public partial class ChatScreen
             DrawCalendarEventCard(msg, sharedCalEvent, windowWidth, isGroupEnd);
             return;
         }
+        if (EchoShare.TryParse(msg.Text, out var sharedRoomId, out var sharedRoomCode))
+        {
+            DrawEchoCardMessage(msg, sharedRoomId, sharedRoomCode, windowWidth, isGroupEnd);
+            return;
+        }
 
         var parsed = ParsedMessage.Parse(msg.Text);
         var maxBubW = windowWidth * 0.72f;
@@ -1735,6 +1744,15 @@ public partial class ChatScreen
         if (LevemeteShare.TryParse(msg.Text, out _))
         {
             var cardRow = Px(LevemeteCardH) + (isGroupEnd ? lineH + Px(8f) : Px(2f));
+            if (needsDivider)
+            {
+                cardRow += lineH + Px(16f);
+            }
+            return cardRow;
+        }
+        if (EchoShare.TryParse(msg.Text, out _, out _))
+        {
+            var cardRow = Px(EchoCardH) + (isGroupEnd ? lineH + Px(8f) : Px(2f));
             if (needsDivider)
             {
                 cardRow += lineH + Px(16f);

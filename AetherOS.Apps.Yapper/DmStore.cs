@@ -17,6 +17,15 @@ internal sealed class DmStore
     private readonly Dictionary<Guid, YapAuthorDto> _peers = [];
     private readonly Dictionary<Guid, Guid> _messagePeer = [];
 
+    /// <summary>Drops every cached thread; the profile they belonged to is gone.</summary>
+    public void Clear()
+    {
+        _threads.Clear();
+        _peerKeys.Clear();
+        _peers.Clear();
+        _messagePeer.Clear();
+    }
+
     public void SetConversations(YapperDmConversationDto[] rows)
     {
         lock (_gate)

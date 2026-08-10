@@ -24,8 +24,8 @@ public sealed class OsShell : IOsShell
     /// <summary>Apps whose home tile carries the red "new" badge until first opened. Edit per release when a
     /// new app ships; stale ids in users' <see cref="OsConfig.SeenNewApps"/> drop out harmlessly.</summary>
     internal static readonly string[] NewAppIds =
-        ["levemetes", "market", "realtor", "wayfinder", "yapper", "snake", "stacker", "breaker",
-         "meteor", "invaders", "muncher"];
+        ["levemetes", "market", "realtor", "wayfinder", "yapper", "wallet", "snake", "stacker", "breaker",
+         "meteor", "invaders", "muncher", "plappy", "doom", "sudoku", "groove", "echo", "store", "aetherling"];
 
     public bool IsNewApp(string appId) =>
         Array.IndexOf(NewAppIds, appId) >= 0 && !UiHost.Configuration.Os.SeenNewApps.Contains(appId);
@@ -129,6 +129,50 @@ public sealed class OsShell : IOsShell
         RefreshExternalApps();
     }
 
+    public bool IsAppRemoved(string appId) => UiHost.Configuration.Os.RemovedApps.Contains(appId);
+
+    /// <summary>Takes a built-in app off the home screen: it loses its cell, its folder membership, its badge and
+    /// every notification it has posted, and it stays silent until it is added back from the add-apps sheet. The
+    /// app itself keeps running, so a deep link, an intent, or a chat card still opens it.</summary>
+    public void RemoveBuiltInApp(string appId)
+    {
+        if (appId.StartsWith(ExternalApp.IdPrefix, StringComparison.Ordinal) || Find(appId) == null)
+        {
+            return;
+        }
+        var os = UiHost.Configuration.Os;
+        if (!os.RemovedApps.Contains(appId))
+        {
+            os.RemovedApps.Add(appId);
+        }
+        foreach (var folder in os.Folders)
+        {
+            folder.AppIds.Remove(appId);
+        }
+        HomeLayout.RemoveFromConfig(os, appId);
+        os.DockIds.Remove(appId);
+        UiHost.Configuration.Save();
+
+        ClearBadge(appId);
+        lock (_lock)
+        {
+            _notifications.RemoveAll(n => n.AppId == appId);
+        }
+    }
+
+    /// <summary>Puts a removed built-in app back on the grid. An arcade game lands in a free cell and the Arcade
+    /// folder adopts it again on the next home frame.</summary>
+    public void RestoreBuiltInApp(string appId)
+    {
+        var os = UiHost.Configuration.Os;
+        if (!os.RemovedApps.Remove(appId))
+        {
+            return;
+        }
+        HomeLayout.PlaceInConfig(os, appId);
+        UiHost.Configuration.Save();
+    }
+
     public IAetherApp? ActiveSurfaceApp { get; private set; }
 
     /// <summary>Whether the AetherLove session is connected; set by the host window each frame, read by the home widget.</summary>
@@ -190,6 +234,10 @@ public sealed class OsShell : IOsShell
 
     public void PostNotification(string appId, string title, string body, Action? onTap = null, string? tag = null)
     {
+        if (IsAppRemoved(appId))
+        {
+            return;
+        }
         lock (_lock)
         {
             if (tag != null)
@@ -248,6 +296,10 @@ public sealed class OsShell : IOsShell
 
     public void AddBadge(string appId, int delta)
     {
+        if (IsAppRemoved(appId))
+        {
+            return;
+        }
         lock (_lock)
         {
             _badges[appId] = Math.Max(0, _badges.GetValueOrDefault(appId) + delta);

@@ -74,7 +74,8 @@ public class MainPluginWindow : Window, IDisposable
         Os.AppCapabilities capabilities,
         Os.ShareSheet osShareSheet,
         Os.OsTour osTour,
-        Services.Sparks.SparkActivityReporter sparkActivity
+        Services.Sparks.SparkActivityReporter sparkActivity,
+        SkinPreviewWindow skinPreview
     ) : base("AetherLove##MainWindow",
              ImGuiWindowFlags.NoResize
            | ImGuiWindowFlags.NoScrollbar
@@ -110,8 +111,10 @@ public class MainPluginWindow : Window, IDisposable
         _osShareSheet = osShareSheet;
         _osTour = osTour;
         _sparkActivity = sparkActivity;
+        _skinPreview = skinPreview;
     }
     private readonly Services.Sparks.SparkActivityReporter _sparkActivity;
+    private readonly SkinPreviewWindow _skinPreview;
     private readonly Os.OsShell _osShell;
     private readonly Os.NotificationShade _osShade;
     private readonly Os.StatusBar _osStatusBar;
@@ -124,6 +127,11 @@ public class MainPluginWindow : Window, IDisposable
     private bool _recenterRequested;
     private bool _offlineGateWasActive;
     private bool _phoneFocused;
+    private bool _poweredOff;
+
+    /// <summary>Whether the phone has been open at all this session, which is what makes restoring from the
+    /// bubble a return rather than a first launch.</summary>
+    private bool _hasContext;
 
     /// <summary>Whether the phone window (or one of its child regions) currently holds ImGui focus. False when
     /// the user clicks out to the game world or another window; used to pause the tomestone emote.</summary>
@@ -134,8 +142,18 @@ public class MainPluginWindow : Window, IDisposable
 
     public override void OnOpen()
     {
+        _hasContext = true;
         _ownAvatar.Refresh(onlyIfCold: true);
         _osAvatar.Refresh(onlyIfCold: true);
+
+        // Coming back from a power-off has to bring the session up again, because powering off dropped the
+        // connection. Restoring the bubble is not a power-on and must not re-run the ladder.
+        if (_poweredOff)
+        {
+            _poweredOff = false;
+            PhonePower.Set(true);
+            _ = _bootstrap.RunAsync();
+        }
 
         // Runs before this frame's navigation is processed, so it wins over the open path's target.
         if (_notifications.HasPendingWarning)
@@ -185,6 +203,11 @@ public class MainPluginWindow : Window, IDisposable
         _phoneFocused = false;
     }
 
+    /// <summary>Whether either surface of the phone is up. Everything AetherOS puts outside its own windows
+    /// (the DTR entries, the floating Aetherling) hangs off this, so a powered-off phone leaves nothing of
+    /// itself on screen.</summary>
+    public bool IsPoweredOn => IsOpen || (_miniWindow?.IsOpen ?? false);
+
     public void OpenToChat()
     {
         if (_miniWindow != null)
@@ -204,7 +227,25 @@ public class MainPluginWindow : Window, IDisposable
             _miniWindow.IsOpen = false;
         }
         IsOpen = true;
+        _hasContext = true;
         _osShell.GoHome();
+    }
+
+    /// <summary>Comes back from the bubble on whatever was open before. Minimising is not leaving, so the app
+    /// and screen are still where they were; only a phone that has not been opened this session has nothing to
+    /// return to, and that one lands on home.</summary>
+    public void Restore()
+    {
+        if (!_hasContext)
+        {
+            OpenToHome();
+            return;
+        }
+        if (_miniWindow != null)
+        {
+            _miniWindow.IsOpen = false;
+        }
+        IsOpen = true;
     }
 
     public void OpenToDeck()
@@ -247,6 +288,18 @@ public class MainPluginWindow : Window, IDisposable
         _osShell.OpenApp("hangouts");
     }
 
+    /// <summary>Brings the phone up full size on the Aetherling's status page. The floating creature's own
+    /// menu is the only caller: it sits outside the phone, including while the phone is a bubble.</summary>
+    public void OpenToAetherlingStatus()
+    {
+        if (_miniWindow != null)
+        {
+            _miniWindow.IsOpen = false;
+        }
+        IsOpen = true;
+        _osShell.SendIntent("aetherling", AetherOS.Sdk.OsIntents.Create(AetherOS.Sdk.OsIntents.AetherlingStatus));
+    }
+
     public void OpenToMessenger()
     {
         if (_miniWindow != null)
@@ -255,6 +308,16 @@ public class MainPluginWindow : Window, IDisposable
         }
         IsOpen = true;
         _osShell.OpenApp("messenger");
+    }
+
+    public void OpenToGroove()
+    {
+        if (_miniWindow != null)
+        {
+            _miniWindow.IsOpen = false;
+        }
+        IsOpen = true;
+        _osShell.OpenApp("groove");
     }
 
     public void OpenToMarketItem(uint itemId)
@@ -307,7 +370,9 @@ public class MainPluginWindow : Window, IDisposable
     {
         Size = Px(ThemeService.Current.WindowWidth, UiScale.Design.Y);
 
-        if (Plugin.Configuration.LockPhonePosition)
+        var appHoldsDrags = _router.Current == Screen.App
+            && _osShell.ActiveSurfaceApp is { LocksWindowDrag: true };
+        if (Plugin.Configuration.LockPhonePosition || appHoldsDrags)
         {
             Flags |= ImGuiWindowFlags.NoMove;
         }
@@ -402,6 +467,7 @@ public class MainPluginWindow : Window, IDisposable
         _phoneFocused = ImGui.IsWindowFocused(ImGuiFocusedFlags.RootAndChildWindows);
 
         ModalHost.Instance?.SetAnchor(ImGui.GetWindowPos(), ImGui.GetWindowSize());
+        _skinPreview.SetAnchor(ImGui.GetWindowPos(), ImGui.GetWindowSize());
 
         _phoneShell.DrawBackground(ImGui.GetWindowPos(), ImGui.GetWindowSize());
 
@@ -584,7 +650,7 @@ public class MainPluginWindow : Window, IDisposable
         }
         // The account-ban gate replaces the app's surface, so the home indicator must stay even if the app's own
         // flow would normally lock the shell (e.g. AetherLove sitting on a locked onboarding/verify view).
-        if (app.RequiresConnection && _bootstrap.LastAccount is { AccountDisabled: true })
+        if (app.UsesAccount && _bootstrap.LastAccount is { AccountDisabled: true })
         {
             return true;
         }
@@ -608,7 +674,11 @@ public class MainPluginWindow : Window, IDisposable
         // unchanged, its size lives entirely in the renderer.
         var hitSize = Px(button.HitSize.X * 2f, button.HitSize.Y);
         ImGui.SetCursorScreenPos(center - hitSize * 0.5f);
-        if (ImGui.InvisibleButton("##osHome", hitSize))
+        var released = ImGui.InvisibleButton("##osHome", hitSize);
+        // Under exclusive key capture (Doom mid-run) the hidden field reclaims the active id on the frame
+        // after any press, so the release this button normally fires on can never land; fire on the press
+        // instead for exactly those frames, leaving the capture itself untouched.
+        if (released || (Os.AppCapabilities.ExclusiveInputActive && ImGui.IsItemActivated()))
         {
             GoHomeAnimated();
         }
@@ -660,7 +730,7 @@ public class MainPluginWindow : Window, IDisposable
 
         // An account-wide ban blocks every server-backed app in place; the home grid and local apps stay usable.
         // The reason comes from the exempt account-info fetch, so it renders even while the account is banned.
-        if (app.RequiresConnection && _bootstrap.LastAccount is { AccountDisabled: true } bannedAccount)
+        if (app.UsesAccount && _bootstrap.LastAccount is { AccountDisabled: true } bannedAccount)
         {
             DrawAccountBannedCard(bannedAccount.AccountDisabledReason);
             return;
@@ -971,13 +1041,21 @@ public class MainPluginWindow : Window, IDisposable
         Minimize();
     }
 
+    /// <summary>Powering the phone off, which means off: the hub connection goes with it, so no pushes, no
+    /// notifications, no native chat lines and no DTR entries until it is switched on again. Minimising is
+    /// the way to keep all of that while getting the window out of the way.</summary>
     private void PerformClose()
     {
-        // Closing keeps the hub connected (it lives for the plugin's lifetime), so notifications keep arriving.
         if (_miniWindow is not null)
         {
             _miniWindow.IsOpen = false;
         }
         IsOpen = false;
+        _poweredOff = true;
+        _hasContext = false;
+        // Off means off: the services that tick on their own timers read this rather than the windows, so
+        // nothing keeps printing ads or polling behind a phone the player has switched off.
+        PhonePower.Set(false);
+        _ = _signal.DisconnectAsync();
     }
 }

@@ -34,7 +34,7 @@ public static class AppearancePicker
         {
             var key = themes[i];
             var def = ThemeService.Themes[key];
-            var selected = ThemeService.CurrentTheme == key;
+            var selected = ThemeService.PremiumThemeId == null && ThemeService.CurrentTheme == key;
 
             var offset = new Vector2((i % Cols) * (cardW + Gap), (i / Cols) * (CardH + Gap));
             var tl = originScreen + offset;
@@ -206,20 +206,21 @@ public static class AppearancePicker
         var gap = Px(6f);
         var avail = winW - Px(padX) * 2f;
         var w3 = (avail - gap * 2f) / 3f;
-        var w2 = (avail - gap) / 2f;
 
         ImGui.SetCursorPosX(Px(padX));
+        DrawPhoneSizePill(Loc.T("settings.phone_size_xs"), PhoneScalePreset.XS, current, w3, t, idPrefix, onSelect);
+        ImGui.SameLine(0f, gap);
         DrawPhoneSizePill(Loc.T("settings.phone_size_small"), PhoneScalePreset.Small, current, w3, t, idPrefix, onSelect);
         ImGui.SameLine(0f, gap);
         DrawPhoneSizePill(Loc.T("settings.phone_size_medium"), PhoneScalePreset.Medium, current, w3, t, idPrefix, onSelect);
-        ImGui.SameLine(0f, gap);
-        DrawPhoneSizePill(Loc.T("settings.phone_size_large"), PhoneScalePreset.Large, current, w3, t, idPrefix, onSelect);
 
         ImGui.Spacing();
         ImGui.SetCursorPosX(Px(padX));
-        DrawPhoneSizePill(Loc.T("settings.phone_size_xl"), PhoneScalePreset.XL, current, w2, t, idPrefix, onSelect);
+        DrawPhoneSizePill(Loc.T("settings.phone_size_large"), PhoneScalePreset.Large, current, w3, t, idPrefix, onSelect);
         ImGui.SameLine(0f, gap);
-        DrawPhoneSizePill(Loc.T("settings.phone_size_xxl"), PhoneScalePreset.XXL, current, w2, t, idPrefix, onSelect);
+        DrawPhoneSizePill(Loc.T("settings.phone_size_xl"), PhoneScalePreset.XL, current, w3, t, idPrefix, onSelect);
+        ImGui.SameLine(0f, gap);
+        DrawPhoneSizePill(Loc.T("settings.phone_size_xxl"), PhoneScalePreset.XXL, current, w3, t, idPrefix, onSelect);
     }
 
     private static void DrawSizeCaption(float winW, float padX, string text)

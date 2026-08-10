@@ -338,7 +338,11 @@ public partial class PlacesScreen
         var line1 = VenueFields.LocationLine(venue.World, venue.District, venue.Ward, venue.Plot, venue.Room);
         var line2 = $"{venue.DataCenter} · {RegionLabel(venue.Region)}";
         var lineH = ImGui.GetTextLineHeight();
-        var cardH = Px(12f) + lineH + Px(3f) + lineH + Px(12f);
+
+        var address = TravelUi.ForVenue(venue);
+        var travel = TravelUi.CanOffer(_caps?.Travel, address) ? _caps!.Travel : null;
+        var pillH = travel is null ? 0f : lineH + Px(10f) + Px(8f);
+        var cardH = Px(12f) + lineH + Px(3f) + lineH + pillH + Px(12f);
 
         var origin = ImGui.GetCursorScreenPos();
         var tl = new Vector2(origin.X + pad, origin.Y);
@@ -347,8 +351,10 @@ public partial class PlacesScreen
 
         var iconPx = Px(20f);
         var iconSz = IconDraw.Measure(FontAwesomeIcon.MapMarkerAlt, iconPx);
+        // Centred on the two address lines rather than the card, so the pill below never drags it off them.
+        var textBlockH = lineH * 2f + Px(3f);
         IconDraw.Add(dl, FontAwesomeIcon.MapMarkerAlt, iconPx,
-            new Vector2(tl.X + Px(12f), tl.Y + (cardH - iconSz.Y) * 0.5f),
+            new Vector2(tl.X + Px(12f), tl.Y + Px(12f) + (textBlockH - iconSz.Y) * 0.5f),
             ImGui.GetColorU32(ThemeService.Current.AccentLight));
 
         var textX = tl.X + Px(12f) + iconSz.X + Px(12f);
@@ -357,6 +363,12 @@ public partial class PlacesScreen
             TruncateToWidth(line1, textMaxW));
         dl.AddText(new Vector2(textX, tl.Y + Px(12f) + lineH + Px(3f)), ImGui.GetColorU32(UiColors.Muted),
             TruncateToWidth(line2, textMaxW));
+
+        if (travel is not null)
+        {
+            ImGui.SetCursorScreenPos(new Vector2(textX, tl.Y + Px(12f) + textBlockH + Px(8f)));
+            TravelUi.DrawTeleportPill(travel, address, "venueDetail");
+        }
 
         ImGui.SetCursorScreenPos(new Vector2(origin.X, br.Y));
     }

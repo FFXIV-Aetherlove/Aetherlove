@@ -79,6 +79,10 @@ public sealed class MarketAlertService : IDisposable
 
     private async Task TickAsync(CancellationToken ct)
     {
+        if (!PhonePower.IsOn)
+        {
+            return;
+        }
         var loggedIn = await Plugin.Framework.RunOnFrameworkThread(() => Plugin.ClientState.IsLoggedIn)
             .ConfigureAwait(false);
         if (!loggedIn)

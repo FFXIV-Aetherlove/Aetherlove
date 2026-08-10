@@ -19,4 +19,6 @@ public sealed class OsAccountInfo : IOsAccountInfo
     public string? DisplayName => _bootstrap.LastAccount?.OsDisplayName;
 
     public ISharedImmediateTexture? Avatar => _avatar.Texture;
+
+    public string? FrameRef => _bootstrap.LastAccount?.EquippedFrameRef;
 }

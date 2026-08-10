@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using AetherLove.Changelog;
@@ -35,6 +35,9 @@ public sealed class AetherLoveBootstrap : IHostedService
     private readonly MiniWindow _miniWindow;
     private readonly ChangelogWindow _changelogWindow;
     private readonly DebugWindow _debugWindow;
+    private readonly EchoWindow _echoWindow;
+    private readonly SkinPreviewWindow _skinPreviewWindow;
+    private readonly Os.AetherlingHostService _aetherlingHost;
     private readonly Widgets.ModalHost _modalHost = new();
     private readonly Widgets.SelfieCaptureOverlay _selfieOverlay;
     private readonly ScreenRouter _router;
@@ -78,6 +81,8 @@ public sealed class AetherLoveBootstrap : IHostedService
         MiniWindow miniWindow,
         ChangelogWindow changelogWindow,
         DebugWindow debugWindow,
+        EchoWindow echoWindow,
+        SkinPreviewWindow skinPreviewWindow,
         ScreenRouter router,
         Configuration config,
         SessionBootstrapper bootstrap,
@@ -94,11 +99,20 @@ public sealed class AetherLoveBootstrap : IHostedService
         Services.Sparks.SparkActivityReporter sparkActivity,
         Os.OsShell osShell,
         Services.DtrBarService dtrBar,
+        Services.GrooveDtrService grooveDtr,
+        Services.GrooveAutoMuteService grooveAutoMute,
         Os.ScreenshotImportService screenshotImport,
         Services.Chat.ChatCacheStore chatCache,
         Services.Messenger.MessengerStore messenger,
-        Os.RealtorPhaseWatchService realtorPhase)
+        Os.RealtorPhaseWatchService realtorPhase,
+        Services.AvatarRingService avatarRings,
+        Services.Store.PremiumThemeService premiumThemes,
+        Os.AetherlingHostService aetherlingHost)
     {
+        AetherLove.UI.AvatarRings.Install(avatarRings.Texture);
+        // ThemeService.Initialise runs in the plugin ctor, before any of this exists, so a purchased theme
+        // can only be restored here; until then the phone draws the built-in fallback.
+        premiumThemes.TryRestoreOnBoot();
         _log = log;
         _pluginInterface = pluginInterface;
         _commandManager = commandManager;
@@ -108,6 +122,9 @@ public sealed class AetherLoveBootstrap : IHostedService
         _miniWindow = miniWindow;
         _changelogWindow = changelogWindow;
         _debugWindow = debugWindow;
+        _echoWindow = echoWindow;
+        _skinPreviewWindow = skinPreviewWindow;
+        _aetherlingHost = aetherlingHost;
         _router = router;
         _config = config;
         _bootstrap = bootstrap;
@@ -124,6 +141,8 @@ public sealed class AetherLoveBootstrap : IHostedService
         _sparkActivity = sparkActivity;
         _osShell = osShell;
         _dtrBar = dtrBar;
+        _grooveDtr = grooveDtr;
+        _grooveAutoMute = grooveAutoMute;
         _screenshotImport = screenshotImport;
         _chatCache = chatCache;
         _messenger = messenger;
@@ -132,6 +151,8 @@ public sealed class AetherLoveBootstrap : IHostedService
 
     private readonly Os.OsShell _osShell;
     private readonly Services.DtrBarService _dtrBar;
+    private readonly Services.GrooveDtrService _grooveDtr;
+    private readonly Services.GrooveAutoMuteService _grooveAutoMute;
     private readonly Os.ScreenshotImportService _screenshotImport;
     private readonly Services.Chat.ChatCacheStore _chatCache;
     private readonly Services.Messenger.MessengerStore _messenger;
@@ -144,11 +165,14 @@ public sealed class AetherLoveBootstrap : IHostedService
         UiFonts.Rebuild();
 
         _mainWindow.SetMiniWindow(_miniWindow);
+        _aetherlingHost.PhoneOpener = _mainWindow.OpenToAetherlingStatus;
 
         _windowSystem.AddWindow(_mainWindow);
         _windowSystem.AddWindow(_miniWindow);
         _windowSystem.AddWindow(_changelogWindow);
         _windowSystem.AddWindow(_debugWindow);
+        _windowSystem.AddWindow(_echoWindow);
+        _windowSystem.AddWindow(_skinPreviewWindow);
         _windowSystem.AddWindow(_modalHost);
         _windowSystem.AddWindow(_selfieOverlay);
 
@@ -160,6 +184,8 @@ public sealed class AetherLoveBootstrap : IHostedService
 
         _commandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
+            // The staff subcommands are deliberately absent: this string is public, in the installer and in
+            // /xlhelp, and the server refuses them anyway.
             HelpMessage = "Open AetherOS. Subcommands: \"resetscreen\" (recenter the window), \"debug\" (diagnostics), \"clearcache\" (wipe local caches and restart the phone)."
         });
         foreach (var alias in AliasCommandNames)
@@ -184,6 +210,8 @@ public sealed class AetherLoveBootstrap : IHostedService
         _tomestoneEmote.Start(() => _mainWindow.IsOpen && _mainWindow.IsPhoneFocused);
         _capture.Initialize();
         _dtrBar.Initialize();
+        _grooveDtr.Initialize();
+        _grooveAutoMute.Initialize();
         Widgets.SelfieCaptureOverlay.PurgeTempFiles();
 
         var changelogVersion = ChangelogRegistry.CurrentVersion;
@@ -254,9 +282,13 @@ public sealed class AetherLoveBootstrap : IHostedService
         _capture.Dispose();
         _realtorPhase.Dispose();
         _dtrBar.Shutdown();
+        _grooveDtr.Shutdown();
+        _grooveAutoMute.Shutdown();
         Widgets.SelfieCaptureOverlay.PurgeTempFiles();
 
         _windowSystem.RemoveAllWindows();
+        _echoWindow.Dispose();
+        _skinPreviewWindow.Dispose();
         _mainWindow.Dispose();
         UiFonts.Dispose();
 
@@ -265,6 +297,7 @@ public sealed class AetherLoveBootstrap : IHostedService
     }
 
     private bool _fontScaleLeakLogged;
+    private bool _appsResolved;
 
     /// <summary>Restores ImGui's global font scale even if a window callback throws, so the phone's pin
     /// can never bleed into other plugins' rendering.</summary>
@@ -275,6 +308,23 @@ public sealed class AetherLoveBootstrap : IHostedService
         try
         {
             _windowSystem.Draw();
+
+            // Apps are resolved lazily, and the Aetherling app hands over its floating creature from its
+            // constructor, so without this it would only appear once the phone had been opened at least once.
+            if (!_appsResolved)
+            {
+                _appsResolved = true;
+                _ = _osShell.Apps;
+            }
+
+            // Outside the window system on purpose: the floating creature opens its own window, sized and
+            // placed by the app, and a wrapper window would only be an invisible rectangle around it. It
+            // goes away with the phone: a switched-off phone leaves nothing of AetherOS on screen.
+            var phoneOn = _mainWindow.IsOpen || _miniWindow.IsOpen;
+            if (phoneOn && _aetherlingHost.Overlay is { Visible: true } overlay)
+            {
+                overlay.Draw();
+            }
             if (io.FontGlobalScale != savedScale && !_fontScaleLeakLogged)
             {
                 _fontScaleLeakLogged = true;
@@ -492,7 +542,50 @@ public sealed class AetherLoveBootstrap : IHostedService
             StartClearCache();
             return;
         }
+        if (sub.Equals("hatchling reset", StringComparison.OrdinalIgnoreCase))
+        {
+            StartAetherlingReset();
+            return;
+        }
+        if (sub.Equals("hatchling replay", StringComparison.OrdinalIgnoreCase))
+        {
+            ReplayAetherlingBirth();
+            return;
+        }
         OpenIfClosed();
+    }
+
+    /// <summary>Staff-only: puts the account back to before it ever bought one and refunds what it spent, so
+    /// the whole ceremony can be walked again. The server does the checking; a non-staff caller is refused
+    /// there, not here.</summary>
+    private void StartAetherlingReset()
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _hubClient.ResetAetherlingAsync().ConfigureAwait(false);
+
+                // The snapshot is what every surface reads, so clearing it is what actually puts the app back
+                // to the beginning; without it the phone keeps drawing the creature the server just deleted.
+                _aetherlingHost.ClearSnapshot();
+                _osShell.SendIntent("aetherling", AetherOS.Sdk.OsIntents.Create(AetherOS.Sdk.OsIntents.AetherlingReset));
+                _log.Information("[AetherLove] Aetherling reset; sparks refunded.");
+                Plugin.ChatGui.Print("[AetherOS] Aetherling reset. Sparks refunded.");
+            }
+            catch (Exception ex)
+            {
+                _log.Warning(ex, "[AetherLove] Aetherling reset failed.");
+                Plugin.ChatGui.PrintError($"[AetherOS] Aetherling reset failed: {ex.Message}");
+            }
+        });
+    }
+
+    /// <summary>Replays the birth animation without touching the server, for tuning its timing.</summary>
+    private void ReplayAetherlingBirth()
+    {
+        OpenIfClosed();
+        _osShell.SendIntent("aetherling", AetherOS.Sdk.OsIntents.Create(AetherOS.Sdk.OsIntents.AetherlingReplayBirth));
     }
 
     /// <summary>Wipes local caches (chats, messenger, cached photos/avatars/icons) then restarts the phone:

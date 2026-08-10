@@ -40,7 +40,7 @@ internal static class OsDrawShared
 
     /// <summary>Trims text to fit <paramref name="maxWidth"/> at the given scale, appending an ellipsis;
     /// never splits a surrogate pair.</summary>
-    private static string Ellipsize(string text, float sizeMul, float maxWidth)
+    public static string Ellipsize(string text, float sizeMul, float maxWidth)
     {
         if (ImGui.CalcTextSize(text).X * sizeMul <= maxWidth)
         {

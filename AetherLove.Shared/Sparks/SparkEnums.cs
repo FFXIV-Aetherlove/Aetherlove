@@ -67,4 +67,30 @@ public enum SparkAction : short
 
     /// <summary>Wayfinder finds three through five of the spark week.</summary>
     WayfinderFind = 13,
+
+    /// <summary>A store checkout debit; RefId is the StorePurchase row id.</summary>
+    StorePurchase = 14,
+
+    /// <summary>Used the Groove remote today; client-reported, since Groove never touches the server.</summary>
+    GrooveActivity = 15,
+
+    /// <summary>Opened an Echo room; credited server-side, RefId is the room so one room pays once.</summary>
+    EchoHosted = 16,
+
+    /// <summary>Joined someone's Echo room; credited server-side, RefId is the room.</summary>
+    EchoJoined = 17,
+
+    /// <summary>Opened the Store today; client-reported.</summary>
+    StoreVisit = 18,
+
+    /// <summary>Opened the Wallet today; client-reported.</summary>
+    WalletVisit = 19,
+
+    /// <summary>Condensed an Aethercore. One per account for life; RefId is derived from the account so
+    /// two clicks in the same instant can never book it twice.</summary>
+    AetherlingAdopt = 20,
+
+    /// <summary>Offered sparks to an Aethercore, moving it one stage up. RefId is derived from the
+    /// account and the stage being left, so a stage can only ever be paid for once.</summary>
+    AetherlingAttune = 21,
 }

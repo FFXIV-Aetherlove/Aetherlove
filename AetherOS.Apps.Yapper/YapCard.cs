@@ -26,6 +26,7 @@ internal sealed class YapCard(
     Action<Guid> openProfile,
     Action<YapDto, int> openImage,
     Action<YapDto> onReport,
+    Action<YapAuthorDto, bool> onModerate,
     Action<YapEmbedDto> openEmbed,
     Func<Guid?> pinnedYapId,
     Action<Guid?> setPinned)
@@ -50,8 +51,20 @@ internal sealed class YapCard(
         return parsed;
     }
 
-    /// <summary>Draws one card; returns its height contribution implicitly via the cursor.</summary>
+    /// <summary>Draws one card; returns its height contribution implicitly via the cursor. The height is
+    /// remembered so a muted or blocked author's cards can roll up from the size they actually had. An inset
+    /// card is a quote or reply parent rather than a feed row, so its height is not the row's.</summary>
     public void Draw(OsAppContext ctx, YapDto dto, bool inset = false, bool clickable = true, bool replyContext = true)
+    {
+        var top = ImGui.GetCursorPosY();
+        DrawCard(ctx, dto, inset, clickable, replyContext);
+        if (!inset)
+        {
+            store.NoteHeight(dto.Id, dto.Author?.ProfileId, ImGui.GetCursorPosY() - top);
+        }
+    }
+
+    private void DrawCard(OsAppContext ctx, YapDto dto, bool inset, bool clickable, bool replyContext)
     {
         var live = store.Get(dto.Id) ?? store.Upsert(dto);
         var winW = ImGui.GetWindowSize().X;
@@ -156,6 +169,7 @@ internal sealed class YapCard(
             var sz = ImGui.CalcTextSize(initial);
             dl.AddText(center - sz * 0.5f, 0xFFFFFFFFu, initial);
         }
+        AvatarRings.Draw(dl, center, Px(AvatarR), dto.Author?.FrameRef);
 
         var textX = ImGui.GetCursorPosX() + Px(AvatarR * 2f) + Px(10f);
         ImGui.SetCursorPos(new Vector2(textX, ImGui.GetCursorPosY()));
@@ -241,21 +255,12 @@ internal sealed class YapCard(
                     if (DrawIconMenuItem(FontAwesomeIcon.VolumeMute, Loc.T("os.yapper_menu_mute")))
                     {
                         ImGui.CloseCurrentPopup();
-                        _ = Task.Run(() => host.SetMuteAsync(who.ProfileId, true, default));
+                        onModerate(who, false);
                     }
                     if (DrawIconMenuItem(FontAwesomeIcon.Ban, Loc.T("os.yapper_menu_block")))
                     {
                         ImGui.CloseCurrentPopup();
-                        _ = Task.Run(async () =>
-                        {
-                            try
-                            {
-                                await host.BlockAsync(who.ProfileId).ConfigureAwait(false);
-                            }
-                            catch (Exception)
-                            {
-                            }
-                        });
+                        onModerate(who, true);
                     }
                 }
                 if (DrawIconMenuItem(FontAwesomeIcon.Flag, Loc.T("os.yapper_menu_report")))

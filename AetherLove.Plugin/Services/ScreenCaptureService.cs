@@ -332,9 +332,13 @@ public sealed unsafe class ScreenCaptureService : IDisposable
         }
     }
 
+    /// <summary>Every format here is 4 bytes per pixel, which the row copy in <see cref="DoReadback"/> assumes.
+    /// A wider one (the 16-bit-float backbuffer a real HDR path would use) needs that stride made per-format
+    /// first.</summary>
     private static bool IsSupportedFormat(DXGI_FORMAT f)
         => f is DXGI_FORMAT.DXGI_FORMAT_B8G8R8A8_UNORM or DXGI_FORMAT.DXGI_FORMAT_B8G8R8A8_UNORM_SRGB
-             or DXGI_FORMAT.DXGI_FORMAT_R8G8B8A8_UNORM or DXGI_FORMAT.DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+             or DXGI_FORMAT.DXGI_FORMAT_R8G8B8A8_UNORM or DXGI_FORMAT.DXGI_FORMAT_R8G8B8A8_UNORM_SRGB
+             or DXGI_FORMAT.DXGI_FORMAT_R10G10B10A2_UNORM;
 
     private void StoreResult(byte[] pixels, int w, int h, DXGI_FORMAT fmt)
     {
@@ -359,14 +363,13 @@ public sealed unsafe class ScreenCaptureService : IDisposable
 
     public static byte[] EncodePng(byte[] pixels, int w, int h, DXGI_FORMAT fmt, Rectangle? crop = null)
     {
-        var copy = (byte[])pixels.Clone();
-        for (var i = 3; i < copy.Length; i += 4)
+        using Image img = fmt switch
         {
-            copy[i] = 0xFF;
-        }
-        using Image img = fmt is DXGI_FORMAT.DXGI_FORMAT_R8G8B8A8_UNORM or DXGI_FORMAT.DXGI_FORMAT_R8G8B8A8_UNORM_SRGB
-            ? Image.LoadPixelData<Rgba32>(copy, w, h)
-            : Image.LoadPixelData<Bgra32>(copy, w, h);
+            DXGI_FORMAT.DXGI_FORMAT_R10G10B10A2_UNORM => LoadRgb10A2(pixels, w, h),
+            DXGI_FORMAT.DXGI_FORMAT_R8G8B8A8_UNORM or DXGI_FORMAT.DXGI_FORMAT_R8G8B8A8_UNORM_SRGB
+                => Image.LoadPixelData<Rgba32>(Opaque(pixels), w, h),
+            _ => Image.LoadPixelData<Bgra32>(Opaque(pixels), w, h),
+        };
         if (crop is { } r)
         {
             r = Rectangle.Intersect(r, new Rectangle(0, 0, w, h));
@@ -378,6 +381,35 @@ public sealed unsafe class ScreenCaptureService : IDisposable
         using var ms = new MemoryStream();
         img.Save(ms, new PngEncoder());
         return ms.ToArray();
+    }
+
+    /// <summary>A screenshot is opaque whatever the backbuffer left in its alpha channel.</summary>
+    private static byte[] Opaque(byte[] pixels)
+    {
+        var copy = (byte[])pixels.Clone();
+        for (var i = 3; i < copy.Length; i += 4)
+        {
+            copy[i] = 0xFF;
+        }
+        return copy;
+    }
+
+    /// <summary>Unpacks a 10-bit-per-channel backbuffer, which is what a player running the desktop or the game
+    /// at 10 bits gets. Still 4 bytes per pixel, but one 32-bit word rather than four bytes, so the alpha byte
+    /// carries the top of blue and must never be overwritten. Shifting by two is exact at both ends (1023 maps
+    /// to 255), and the colours are ordinary SDR: the game has no HDR output of its own.</summary>
+    private static Image LoadRgb10A2(byte[] pixels, int w, int h)
+    {
+        var rgba = new byte[pixels.Length];
+        for (var i = 0; i + 3 < pixels.Length; i += 4)
+        {
+            var v = (uint)(pixels[i] | (pixels[i + 1] << 8) | (pixels[i + 2] << 16) | (pixels[i + 3] << 24));
+            rgba[i] = (byte)((v & 0x3FF) >> 2);
+            rgba[i + 1] = (byte)(((v >> 10) & 0x3FF) >> 2);
+            rgba[i + 2] = (byte)(((v >> 20) & 0x3FF) >> 2);
+            rgba[i + 3] = 0xFF;
+        }
+        return Image.LoadPixelData<Rgba32>(rgba, w, h);
     }
 
     public void Dispose()

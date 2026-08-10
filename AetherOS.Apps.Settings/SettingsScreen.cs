@@ -34,7 +34,7 @@ public sealed class SettingsScreen
         _caps = caps;
     }
 
-    private enum View { Hub, General, Language, Notifications, Audio, Appearance, Wallpaper, Profile, Supporter, StaffNotices, Tos, Contributors, Developer }
+    private enum View { Hub, General, Language, Notifications, Audio, Appearance, Wallpaper, Profile, AvatarRing, Supporter, StaffNotices, Tos, Contributors, Developer }
 
     private View _view = View.Hub;
 
@@ -138,6 +138,9 @@ public sealed class SettingsScreen
                 break;
             case View.Profile:
                 DrawProfilePage(ctx);
+                break;
+            case View.AvatarRing:
+                DrawAvatarRingPage(ctx);
                 break;
             case View.Supporter:
                 DrawSupporterPage();
@@ -341,6 +344,7 @@ public sealed class SettingsScreen
             dl.AddImageRounded(wrap.Handle, center - new Vector2(r, r), center + new Vector2(r, r),
                 Vector2.Zero, Vector2.One, 0xFFFFFFFFu, r, ImDrawFlags.RoundCornersAll);
             dl.AddCircle(center, r, OsDrawShared.White(0.20f), 64, Px(1.5f));
+            AvatarRings.Draw(dl, center, r, _host.EquippedFrameRef);
         }
         else
         {
@@ -387,6 +391,13 @@ public sealed class SettingsScreen
         ImGui.InputTextWithHint("##osProfName", Loc.T("os_onboarding.name_hint"), ref _profName, 32);
         ImGui.PopStyleVar(2);
 
+        ImGui.Dummy(Px(0f, 10f));
+        ImGui.SetCursorPosX(Px(PadX));
+        if (SharedUiHelpers.Button($"{Loc.T("rings.section_title")}##osProfRing", new Vector2(winW - Px(PadX) * 2f, Px(32f))))
+        {
+            OpenRingPicker();
+        }
+
         if (_profError is { } err)
         {
             ImGui.Dummy(Px(0f, 6f));
@@ -429,6 +440,69 @@ public sealed class SettingsScreen
         ImGui.Dummy(Px(0f, 14f));
     }
 
+    private readonly AetherLove.Widgets.RingPickerUi _ringPicker = new();
+
+    private void OpenRingPicker()
+    {
+        _ringPicker.Open(_host.EquippedFrameRef);
+        _view = View.AvatarRing;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                _ringPicker.SetOwned(await _host.GetOwnedRingsAsync().ConfigureAwait(false));
+            }
+            catch (Exception ex)
+            {
+                _ringPicker.FailLoad(HubErrorText.Localize(ex));
+                UiHost.Log.Warning(ex, "[Settings] GetOwnedRingsAsync failed.");
+            }
+        });
+    }
+
+    private void DrawAvatarRingPage(OsAppContext ctx)
+    {
+        ImGui.Spacing();
+        ImGui.Spacing();
+        ImGui.SetCursorPosX(Px(PadX));
+        if (DrawFloatingBackPill(ImGui.GetCursorScreenPos(), Loc.T("settings.back_arrow"), FontAwesomeIcon.User))
+        {
+            _view = View.Profile;
+        }
+        ImGui.Spacing();
+        DrawSubpageHeading(Loc.T("rings.picker_title"), PadX);
+
+        PushScrollbarStyle();
+        using var scroll = ImRaii.Child("##osSettRing", ImGui.GetContentRegionAvail(), false);
+        PopScrollbarStyle();
+        if (!scroll)
+        {
+            return;
+        }
+        var winW = ImGui.GetWindowSize().X;
+        _ringPicker.Draw(_host.OsAvatar, winW, Px(PadX),
+            selected =>
+            {
+                _ringPicker.BeginSave();
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _host.SetAvatarRingAsync(selected).ConfigureAwait(false);
+                        _ringPicker.NotifySaved();
+                    }
+                    catch (Exception ex)
+                    {
+                        _ringPicker.NotifyError(HubErrorText.Localize(ex));
+                        UiHost.Log.Warning(ex, "[Settings] SetAvatarRingAsync failed.");
+                    }
+                });
+            },
+            () => ctx.Shell.SendIntent("store",
+                AetherOS.Sdk.OsIntents.CreatePath(AetherOS.Sdk.OsIntents.StoreOpen, "avatar-packs")));
+        ImGui.Dummy(Px(0f, 14f));
+    }
+
     /// <summary>Account card: the OS avatar (with a supporter star badge) + display name, plus an Edit button that
     /// opens the in-app profile editor.</summary>
     private void DrawUserCard(float winW)
@@ -463,6 +537,7 @@ public sealed class SettingsScreen
             dl.AddText(avC - ImGui.CalcTextSize(initial) * 0.5f, 0xFFFFFFFF, initial);
         }
         dl.AddCircle(avC, avR, OsDrawShared.White(0.18f), 32, 1.5f);
+        AvatarRings.Draw(dl, avC, avR, _host.EquippedFrameRef);
 
         if (_host.IsSupporter)
         {
@@ -839,6 +914,7 @@ public sealed class SettingsScreen
         var t = ThemeService.Current;
         ImGui.Spacing();
         AppearancePicker.DrawThemeCards(winW, PadX);
+        DrawPremiumThemes(winW);
         ImGui.Spacing();
         ImGui.Spacing();
         DrawSubpageHeading(Loc.T("settings.font_header"), PadX);
@@ -857,6 +933,177 @@ public sealed class SettingsScreen
         DrawLockRow();
         ImGui.Spacing();
     }
+
+    private enum PremiumThemeState { Busy, Failed }
+
+    private AetherLove.Shared.Store.OwnedThemeDto[] _ownedThemes = [];
+    private bool _ownedThemesRequested;
+
+    // Written from the enable task, read by the draw thread.
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, PremiumThemeState> _themeStates = new();
+
+    private void EnsureOwnedThemes()
+    {
+        if (_ownedThemesRequested)
+        {
+            return;
+        }
+        _ownedThemesRequested = true;
+        _ = Task.Run(async () =>
+        {
+            if (await _host.GetOwnedThemesAsync().ConfigureAwait(false) is { } themes)
+            {
+                _ownedThemes = themes;
+            }
+        });
+    }
+
+    /// <summary>The themes the account bought, in their own shelf under the built-ins, each badged with the
+    /// spark coin. Hidden entirely for an account that owns none.</summary>
+    private void DrawPremiumThemes(float winW)
+    {
+        EnsureOwnedThemes();
+        var owned = _ownedThemes;
+        if (owned.Length == 0)
+        {
+            return;
+        }
+        ImGui.Spacing();
+        DrawSubpageHeading(Loc.T("settings.premium_themes"), PadX);
+
+        var dl = ImGui.GetWindowDrawList();
+        var cardH = Px(66f);
+        var swatchH = Px(28f);
+        var gap = Px(8f);
+        var rounding = Px(8f);
+        const int cols = 2;
+        var cardW = (winW - Px(PadX) * 2f - gap * (cols - 1)) / cols;
+
+        ImGui.SetCursorPosX(Px(PadX));
+        var originLocal = ImGui.GetCursorPos();
+        var originScreen = ImGui.GetCursorScreenPos();
+
+        for (var i = 0; i < owned.Length; i++)
+        {
+            var theme = owned[i];
+            var selected = _host.ActivePremiumThemeId == theme.ProductId;
+            var state = _themeStates.TryGetValue(theme.ProductId, out var s) ? s : (PremiumThemeState?)null;
+            var busy = state == PremiumThemeState.Busy;
+            var offset = new Vector2((i % cols) * (cardW + gap), (i / cols) * (cardH + gap));
+            var tl = originScreen + offset;
+            var br = tl + new Vector2(cardW, cardH);
+
+            ImGui.SetCursorPos(originLocal + offset);
+            ImGui.InvisibleButton($"##premiumTheme{i}", new Vector2(cardW, cardH));
+            if (ImGui.IsItemClicked() && !busy)
+            {
+                EnablePremiumTheme(theme.ProductId);
+            }
+            var hovered = ImGui.IsItemHovered();
+            if (hovered && !busy)
+            {
+                SharedUiHelpers.HandOnHover();
+            }
+            if (ImGui.BeginPopupContextItem($"##premiumThemeCtx{i}", ImGuiPopupFlags.MouseButtonRight))
+            {
+                ImGui.TextDisabled(ThemeName(theme));
+                ImGui.Separator();
+                if (SharedUiHelpers.DrawIconMenuItem(FontAwesomeIcon.SyncAlt, Loc.T("settings.premium_refresh"))
+                    && !busy)
+                {
+                    ImGui.CloseCurrentPopup();
+                    RefreshPremiumTheme(theme.ProductId);
+                }
+                ImGui.EndPopup();
+            }
+
+            var accent = ImGui.ColorConvertU32ToFloat4(Rgba(theme.Colors.Accent));
+            dl.AddRectFilled(tl, br,
+                ImGui.ColorConvertFloat4ToU32(accent with { W = selected ? 0.28f : (hovered ? 0.14f : 0.07f) }),
+                rounding);
+            var swatchBR = new Vector2(br.X, tl.Y + swatchH);
+            dl.AddRectFilledMultiColor(tl, swatchBR, Rgba(theme.Colors.Accent), Rgba(theme.Colors.SecondaryEnd),
+                Rgba(theme.Colors.SecondaryEnd), Rgba(theme.Colors.Accent));
+            dl.AddRect(tl, br,
+                ImGui.ColorConvertFloat4ToU32(accent with { W = selected ? 1f : (hovered ? 0.55f : 0.28f) }),
+                rounding, ImDrawFlags.None, selected ? 2f : 1f);
+            SparkIcon.Draw(dl, tl + new Vector2(cardW - Px(13f), Px(13f)), Px(14f));
+
+            if (busy)
+            {
+                LoadingSpinner.Draw(new Vector2((tl.X + br.X) * 0.5f, tl.Y + swatchH + (cardH - swatchH) * 0.5f),
+                    Px(8f), Px(2f), ImGui.ColorConvertFloat4ToU32(accent));
+            }
+            else
+            {
+                var name = state == PremiumThemeState.Failed
+                    ? Loc.T("settings.premium_enable_failed")
+                    : ThemeName(theme);
+                var nameSz = ImGui.CalcTextSize(name);
+                var nameY = tl.Y + swatchH + (cardH - swatchH - nameSz.Y) * 0.5f;
+                dl.AddText(new Vector2(tl.X + (cardW - nameSz.X) * 0.5f, nameY),
+                    OsDrawShared.White(selected ? 1f : (hovered ? 0.85f : 0.62f)), name);
+            }
+        }
+
+        var rows = (owned.Length + cols - 1) / cols;
+        ImGui.SetCursorPos(new Vector2(originLocal.X, originLocal.Y + rows * cardH + (rows - 1) * gap + Px(6f)));
+    }
+
+    /// <summary>Re-pulls a theme's assets. The owned list is re-fetched too, so a renamed theme shows its
+    /// new name in the same beat.</summary>
+    private void RefreshPremiumTheme(Guid productId)
+    {
+        _themeStates[productId] = PremiumThemeState.Busy;
+        _ = Task.Run(async () =>
+        {
+            var ok = await _host.RefreshPremiumThemeAsync(productId).ConfigureAwait(false);
+            if (ok)
+            {
+                _themeStates.TryRemove(productId, out _);
+                _ownedThemesRequested = false;
+            }
+            else
+            {
+                _themeStates[productId] = PremiumThemeState.Failed;
+            }
+        });
+    }
+
+    private void EnablePremiumTheme(Guid productId)
+    {
+        _themeStates[productId] = PremiumThemeState.Busy;
+        _ = Task.Run(async () =>
+        {
+            var ok = await _host.EnablePremiumThemeAsync(productId).ConfigureAwait(false);
+            if (ok)
+            {
+                _themeStates.TryRemove(productId, out _);
+            }
+            else
+            {
+                _themeStates[productId] = PremiumThemeState.Failed;
+            }
+        });
+    }
+
+    private static string ThemeName(AetherLove.Shared.Store.OwnedThemeDto theme)
+    {
+        var pick = UiHost.Configuration.PluginLanguage switch
+        {
+            "Spanish" => theme.NameSpanish,
+            "French" => theme.NameFrench,
+            "Russian" => theme.NameRussian,
+            "German" => theme.NameGerman,
+            "Portuguese" => theme.NamePortuguese,
+            _ => null,
+        };
+        return string.IsNullOrWhiteSpace(pick) ? theme.NameEnglish : pick;
+    }
+
+    /// <summary>Theme colours ride the wire as 0xAARRGGBB; ImGui wants 0xAABBGGRR.</summary>
+    private static uint Rgba(uint argb) =>
+        (argb & 0xFF00FF00u) | ((argb & 0x00FF0000u) >> 16) | ((argb & 0x000000FFu) << 16);
 
     // Labels are the column-by-typical-row counts, matching how Android launchers present grid presets.
     private static readonly (HomeGridPreset Preset, string Label)[] HomeGridChoices =
@@ -1542,11 +1789,22 @@ public sealed class SettingsScreen
 
     private void DrawPerkSections(float winW)
     {
+        DrawSectionHeader(Loc.T("settings.supporter_store_perks_header"), PadX);
+        DrawStorePerks(winW);
+        ImGui.Spacing();
         DrawSectionHeader(Loc.T("settings.supporter_msgr_perks_header"), PadX);
         DrawMessengerPerks(winW);
         ImGui.Spacing();
         DrawSectionHeader(Loc.T("settings.supporter_perks_header"), PadX);
         DrawSupporterPerks(winW);
+    }
+
+    private void DrawStorePerks(float winW)
+    {
+        var gold = new Vector4(0.95f, 0.78f, 0.34f, 1f);
+
+        DrawPerkCard(winW, PadX, FontAwesomeIcon.ShoppingBag, gold,
+            Loc.T("settings.supporter_perk_store_title"), Loc.T("settings.supporter_perk_store_body"));
     }
 
     private void DrawMessengerPerks(float winW)
@@ -1671,6 +1929,8 @@ public sealed class SettingsScreen
         var rows = (idx + 2) / 3;
         ImGui.SetCursorScreenPos(gridStart + new Vector2(0f, rows * (thumbH + Px(12f))));
 
+        DrawPremiumWallpapers(thumbW, thumbH);
+
         ImGui.SetCursorPosX(padX);
         var t = ThemeService.Current;
         ImGui.PushStyleColor(ImGuiCol.Button, t.ButtonNormal);
@@ -1699,6 +1959,56 @@ public sealed class SettingsScreen
         {
             UiHost.Configuration.Save();
         }
+    }
+
+    /// <summary>The wallpapers that came with purchased themes, in their own shelf. Picking one changes only
+    /// the background; the palette stays whatever the user has chosen.</summary>
+    private void DrawPremiumWallpapers(float thumbW, float thumbH)
+    {
+        EnsureOwnedThemes();
+        var owned = Array.FindAll(_ownedThemes, t => t.HasBackground);
+        if (owned.Length == 0)
+        {
+            return;
+        }
+        var os = UiHost.Configuration.Os;
+        var dl = ImGui.GetWindowDrawList();
+
+        ImGui.Spacing();
+        DrawSubpageHeading(Loc.T("settings.premium_backgrounds"), PadX);
+        ImGui.SetCursorPosX(Px(PadX));
+        var gridStart = ImGui.GetCursorScreenPos();
+
+        for (var i = 0; i < owned.Length; i++)
+        {
+            var theme = owned[i];
+            var rect = ThumbRect(gridStart, thumbW, thumbH, i);
+            ImGui.SetCursorScreenPos(rect.TL);
+            if (ImGui.InvisibleButton($"##wallPremium{i}", rect.BR - rect.TL))
+            {
+                _ = Task.Run(() => _host.SelectPremiumWallpaperAsync(theme.ProductId));
+            }
+            SharedUiHelpers.HandOnHover();
+            if (_host.PremiumWallpaper(theme.ProductId) is { } wrap)
+            {
+                var (uv0, uv1) = OsDrawShared.CoverUv(wrap.Width, wrap.Height,
+                    rect.BR.X - rect.TL.X, rect.BR.Y - rect.TL.Y);
+                dl.AddImageRounded(wrap.Handle, rect.TL, rect.BR, uv0, uv1, 0xFFFFFFFFu, Px(12f));
+                DrawDimPreview(dl, rect);
+            }
+            else
+            {
+                dl.AddRectFilled(rect.TL, rect.BR, OsDrawShared.White(0.06f), Px(12f));
+                LoadingSpinner.Draw((rect.TL + rect.BR) * 0.5f, Px(9f), Px(2f), ThemeService.Current.AccentU32);
+            }
+            var selected = os.WallpaperMode == WallpaperMode.Premium
+                && os.PremiumWallpaperProductId == theme.ProductId;
+            FinishThumb(dl, rect, selected, null);
+            SparkIcon.Draw(dl, rect.TL + new Vector2(Px(14f), Px(14f)), Px(15f));
+        }
+
+        var rows = (owned.Length + 2) / 3;
+        ImGui.SetCursorScreenPos(gridStart + new Vector2(0f, rows * (thumbH + Px(12f))));
     }
 
     private static (Vector2 TL, Vector2 BR) ThumbRect(Vector2 gridStart, float w, float h, int index)
@@ -1824,10 +2134,10 @@ public sealed class SettingsScreen
         }
     }
 
-    /// <summary>An app owns a row here when it exposes a settings surface and is actually available: a
-    /// server-disabled app hides its tile, so it must not keep a settings entry either.</summary>
-    private static bool HasHostedSettings(IAetherApp app) =>
-        app.Id != "settings" && app is IAppSettings && app.Available;
+    /// <summary>An app owns a row here when it exposes a settings surface and is actually on the phone: a
+    /// server-disabled or user-removed app hides its tile, so it must not keep a settings entry either.</summary>
+    private bool HasHostedSettings(IAetherApp app) =>
+        app.Id != "settings" && app is IAppSettings && app.Available && _shell?.IsAppRemoved(app.Id) != true;
 
     /// <summary>Rows for apps that expose their own settings surface (<see cref="IAppSettings"/>). The Settings
     /// app's own settings are the hub above, so it is excluded; the group hides entirely when nothing qualifies.</summary>

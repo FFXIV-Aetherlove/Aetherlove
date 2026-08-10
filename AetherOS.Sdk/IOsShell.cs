@@ -14,6 +14,11 @@ public interface IOsShell
     void OpenApp(string appId);
     void GoHome();
 
+    /// <summary>Whether the user removed this app from the home screen. It is still registered and still
+    /// reachable through a deep link, but it must not appear in any list the user browses. Hosts without a
+    /// removal concept report false.</summary>
+    bool IsAppRemoved(string appId) => false;
+
     /// <summary>Returns to the home screen with the given folder overlay open; hosts without folders
     /// fall back to a plain home.</summary>
     void GoHomeToFolder(string folderId) => GoHome();

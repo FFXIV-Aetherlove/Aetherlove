@@ -44,7 +44,8 @@ public sealed record YapperMyProfileDto(
     bool IsBanned,
     bool NsfwEnabled = false,
     bool AllowDms = true,
-    bool BlurNsfw = false);
+    bool BlurNsfw = false,
+    string? EquippedFrameRef = null);
 
 /// <summary>Another user's profile as the viewer sees it. <see cref="Handicapped"/> marks an
 /// NSFW-matrix mismatch: the client renders the blurred variant with the warning popup.</summary>
@@ -69,7 +70,8 @@ public sealed record YapperProfileViewDto(
     bool MutedByMe,
     bool NotifyPostsByMe,
     bool HideRepostsByMe,
-    bool Handicapped);
+    bool Handicapped,
+    string? FrameRef = null);
 
 /// <summary>One user row in follower/following/blocked/muted lists and people search.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
@@ -81,7 +83,8 @@ public sealed record YapperUserRowDto(
     bool IsNsfw,
     bool IsSupporter,
     bool FollowedByMe,
-    bool FollowsMe);
+    bool FollowsMe,
+    string? FrameRef = null);
 
 /// <summary>A keyset page of user rows; <see cref="NextCursor"/> is null on the last page.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
@@ -97,7 +100,8 @@ public sealed record YapAuthorDto(
     string DisplayName,
     byte[]? Avatar,
     bool IsNsfw,
-    bool IsSupporter);
+    bool IsSupporter,
+    string? FrameRef = null);
 
 /// <summary>Metadata for one attached image; the client fetches the bytes lazily per visible card.</summary>
 [MessagePackObject(keyAsPropertyName: true)]

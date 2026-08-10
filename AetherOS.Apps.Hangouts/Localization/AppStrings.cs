@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace AetherOS.Apps.Hangouts;
 
@@ -58,6 +58,7 @@ internal static class AppStrings
         ["hangout.dir_later"] = "Later today",
         ["hangout.dir_loading"] = "Looking for hangouts...",
         ["hangout.dir_empty"] = "No hangouts right now.",
+        ["hangout.dir_public_empty"] = "No public hangouts right now.",
         ["hangout.dir_load_more"] = "Load more",
         ["hangout.menu_filter"] = "Filter...",
         ["hangout.menu_refresh"] = "Refresh",
@@ -93,6 +94,10 @@ internal static class AppStrings
         ["hangout.tour_filters_sticky"] = "Your picks stay until you clear them, and the menu button carries a dot for as long as a filter is on.",
         ["hangout.tour_reopen_hint"] = "Want to read this again? Open the menu at the top right and pick \"View tour\".",
         ["hangout.dir_empty_cta"] = "Start a hangout now!",
+        // added after update 2.2.3 (watch parties)
+        ["hangout.cat_watchparty"] = "Watching videos together",
+        ["hangout.join_watch_room"] = "Join watch room",
+        ["huberror.hangout_watch_room_invalid"] = "That watch room has ended or isn't yours.",
     };
 
     public static readonly Dictionary<string, string> De = new()
@@ -148,6 +153,7 @@ internal static class AppStrings
         ["hangout.dir_later"] = "Später heute",
         ["hangout.dir_loading"] = "Suche nach Treffen...",
         ["hangout.dir_empty"] = "Gerade keine Treffen.",
+        ["hangout.dir_public_empty"] = "Gerade keine öffentlichen Treffen.",
         ["hangout.dir_load_more"] = "Mehr laden",
         ["hangout.menu_filter"] = "Filtern...",
         ["hangout.menu_refresh"] = "Aktualisieren",
@@ -183,6 +189,10 @@ internal static class AppStrings
         ["hangout.tour_filters_sticky"] = "Deine Auswahl bleibt, bis du sie löschst, und der Menü-Button trägt einen Punkt, solange ein Filter aktiv ist.",
         ["hangout.tour_reopen_hint"] = "Willst du das noch mal lesen? Öffne das Menü oben rechts und wähle \"Tour ansehen\".",
         ["hangout.dir_empty_cta"] = "Jetzt ein Treffen starten!",
+        // added after update 2.2.3 (watch parties)
+        ["hangout.cat_watchparty"] = "Gemeinsam Videos schauen",
+        ["hangout.join_watch_room"] = "Raum betreten",
+        ["huberror.hangout_watch_room_invalid"] = "Dieser Raum ist beendet oder gehört dir nicht.",
     };
 
     public static readonly Dictionary<string, string> Es = new()
@@ -238,6 +248,7 @@ internal static class AppStrings
         ["hangout.dir_later"] = "Más tarde",
         ["hangout.dir_loading"] = "Buscando quedadas...",
         ["hangout.dir_empty"] = "No hay quedadas ahora mismo.",
+        ["hangout.dir_public_empty"] = "No hay quedadas públicas ahora mismo.",
         ["hangout.dir_load_more"] = "Cargar más",
         ["hangout.menu_filter"] = "Filtrar...",
         ["hangout.menu_refresh"] = "Actualizar",
@@ -273,6 +284,10 @@ internal static class AppStrings
         ["hangout.tour_filters_sticky"] = "Tu selección se mantiene hasta que la borres, y el botón del menú lleva un punto mientras haya un filtro activo.",
         ["hangout.tour_reopen_hint"] = "¿Quieres volver a leerlo? Abre el menú de arriba a la derecha y elige \"Ver el tour\".",
         ["hangout.dir_empty_cta"] = "¡Crea una quedada ya!",
+        // added after update 2.2.3 (watch parties)
+        ["hangout.cat_watchparty"] = "Ver vídeos juntos",
+        ["hangout.join_watch_room"] = "Entrar en la sala",
+        ["huberror.hangout_watch_room_invalid"] = "Esa sala ya ha terminado o no es tuya.",
     };
 
     public static readonly Dictionary<string, string> Fr = new()
@@ -328,6 +343,7 @@ internal static class AppStrings
         ["hangout.dir_later"] = "Plus tard",
         ["hangout.dir_loading"] = "Recherche de rencontres...",
         ["hangout.dir_empty"] = "Aucune rencontre pour le moment.",
+        ["hangout.dir_public_empty"] = "Aucune rencontre publique pour le moment.",
         ["hangout.dir_load_more"] = "Charger plus",
         ["hangout.menu_filter"] = "Filtrer...",
         ["hangout.menu_refresh"] = "Actualiser",
@@ -363,6 +379,10 @@ internal static class AppStrings
         ["hangout.tour_filters_sticky"] = "Vos choix restent jusqu'à ce que vous les effaciez, et le bouton du menu porte un point tant qu'un filtre est actif.",
         ["hangout.tour_reopen_hint"] = "Envie de relire tout ça ? Ouvrez le menu en haut à droite et choisissez \"Revoir la visite\".",
         ["hangout.dir_empty_cta"] = "Lancez une rencontre !",
+        // added after update 2.2.3 (watch parties)
+        ["hangout.cat_watchparty"] = "Regarder des vidéos ensemble",
+        ["hangout.join_watch_room"] = "Rejoindre la salle",
+        ["huberror.hangout_watch_room_invalid"] = "Cette salle est terminée ou ne vous appartient pas.",
     };
 
     public static readonly Dictionary<string, string> Pt = new()
@@ -418,6 +438,7 @@ internal static class AppStrings
         ["hangout.dir_later"] = "Mais tarde",
         ["hangout.dir_loading"] = "Procurando encontros...",
         ["hangout.dir_empty"] = "Nenhum encontro no momento.",
+        ["hangout.dir_public_empty"] = "Nenhum encontro público no momento.",
         ["hangout.dir_load_more"] = "Carregar mais",
         ["hangout.menu_filter"] = "Filtrar...",
         ["hangout.menu_refresh"] = "Atualizar",
@@ -453,6 +474,10 @@ internal static class AppStrings
         ["hangout.tour_filters_sticky"] = "Suas escolhas ficam até você limpar, e o botão do menu mostra um ponto enquanto houver filtro ativo.",
         ["hangout.tour_reopen_hint"] = "Quer ler isso de novo? Abra o menu do canto superior direito e escolha \"Ver o tour\".",
         ["hangout.dir_empty_cta"] = "Crie um encontro agora!",
+        // added after update 2.2.3 (watch parties)
+        ["hangout.cat_watchparty"] = "Assistir vídeos juntos",
+        ["hangout.join_watch_room"] = "Entrar na sala",
+        ["huberror.hangout_watch_room_invalid"] = "Essa sala já terminou ou não é sua.",
     };
 
     public static readonly Dictionary<string, string> Ru = new()
@@ -508,6 +533,7 @@ internal static class AppStrings
         ["hangout.dir_later"] = "Позже",
         ["hangout.dir_loading"] = "Ищем встречи...",
         ["hangout.dir_empty"] = "Сейчас встреч нет.",
+        ["hangout.dir_public_empty"] = "Открытых встреч сейчас нет.",
         ["hangout.dir_load_more"] = "Показать ещё",
         ["hangout.menu_filter"] = "Фильтр...",
         ["hangout.menu_refresh"] = "Обновить",
@@ -543,6 +569,10 @@ internal static class AppStrings
         ["hangout.tour_filters_sticky"] = "Выбор сохраняется, пока вы его не сбросите, а на кнопке меню горит точка, пока фильтр активен.",
         ["hangout.tour_reopen_hint"] = "Хотите перечитать? Откройте меню справа сверху и выберите «Показать тур».",
         ["hangout.dir_empty_cta"] = "Создать встречу прямо сейчас!",
+        // added after update 2.2.3 (watch parties)
+        ["hangout.cat_watchparty"] = "Смотрим видео вместе",
+        ["hangout.join_watch_room"] = "Зайти в комнату",
+        ["huberror.hangout_watch_room_invalid"] = "Эта комната уже закрыта или принадлежит не вам.",
     };
 
     public static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> Packs = new Dictionary<string, IReadOnlyDictionary<string, string>>

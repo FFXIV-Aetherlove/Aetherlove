@@ -10,4 +10,6 @@ internal static class MatchContent
     public static ISharedImmediateTexture? PeerAvatar { get; set; }
     public static string OwnName { get; set; } = "You";
     public static string PeerName { get; set; } = string.Empty;
+    public static string? OwnFrameRef { get; set; }
+    public static string? PeerFrameRef { get; set; }
 }

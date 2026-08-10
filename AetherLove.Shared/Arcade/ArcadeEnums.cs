@@ -9,6 +9,8 @@ public enum ArcadeGame : short
     Meteor = 3,
     Invaders = 4,
     Muncher = 5,
+    Plappy = 6,
+    Sudoku = 7,
 }
 
 /// <summary>Which leaderboard window to fetch.</summary>

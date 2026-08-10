@@ -1,4 +1,4 @@
-namespace AetherLove.Services.Localization;
+﻿namespace AetherLove.Services.Localization;
 
 internal static class HubErrorsEs
 {
@@ -135,5 +135,37 @@ internal static class HubErrorsEs
         ["huberror.yap_invalid"] = "No se pudo guardar el yap. Revisa lo que has escrito.",
         ["huberror.yap_dm_not_allowed"] = "Este usuario no puede recibir tus mensajes.",
         ["huberror.yap_dm_keys_missing"] = "@{0} todavía tiene que terminar de configurarse. Inténtalo de nuevo dentro de un rato.",
+
+        // store (added after update 2.2.3)
+        ["huberror.store_disabled"] = "La tienda está cerrada por mantenimiento.",
+        ["huberror.store_product_not_found"] = "Ese artículo ya no existe.",
+        ["huberror.store_product_unavailable"] = "Ese artículo no está a la venta ahora mismo.",
+        ["huberror.store_insufficient_sparks"] = "No tienes suficientes sparks: cuesta {0} y tienes {1}.",
+        ["huberror.store_limit_reached"] = "Ya tienes el máximo ({0}) de este artículo.",
+        ["huberror.store_quantity_invalid"] = "Esa cantidad no está permitida.",
+        ["huberror.store_conflict"] = "La tienda tuvo un tropiezo. No se cobró nada dos veces; inténtalo de nuevo.",
+        ["huberror.aetherling_disabled"] = "Ahora mismo no escucha.",
+        ["huberror.aetherling_exists"] = "Ya hay uno de estos.",
+        ["huberror.aetherling_none"] = "Aquí no hay nada a lo que darle esto.",
+        ["huberror.aetherling_insufficient"] = "No tienes suficientes sparks: quiere {0} y tienes {1}.",
+        ["huberror.aetherling_gated"] = "Todavía no. Antes tiene que pasar algo. Vuelve a intentarlo en {0} minutos.",
+        ["huberror.aetherling_complete"] = "Ya no acepta más.",
+        ["huberror.aetherling_unready"] = "Todavía no. No está listo para eso.",
+        ["huberror.aetherling_named"] = "Ya tiene su nombre.",
+        ["huberror.aetherling_name_invalid"] = "Ese nombre no sirve. Prueba con otro.",
+
+        // echo (added after update 2.2.3)
+        ["huberror.echo_disabled"] = "Ver juntos está desactivado ahora mismo.",
+        ["huberror.echo_room_not_found"] = "Esa fiesta de visionado ya ha terminado.",
+        ["huberror.echo_room_full"] = "Esta sala está llena ({0} personas).",
+        ["huberror.echo_not_member"] = "No estás en esa sala.",
+        ["huberror.echo_not_owner"] = "Eso solo puede hacerlo quien creó la sala.",
+        ["huberror.echo_host_only"] = "Ahora mismo el anfitrión lleva la reproducción.",
+        ["huberror.echo_kicked"] = "Te sacaron de esa sala.",
+        ["huberror.echo_playlist_full"] = "La cola está llena ({0} vídeos).",
+        ["huberror.echo_live_room_exists"] = "Ya tienes una sala abierta. Ciérrala para empezar otra.",
+        ["huberror.echo_invalid_video"] = "Eso no parece un enlace de YouTube.",
+        ["huberror.echo_name_invalid"] = "Ese nombre de sala no se puede usar.",
+        ["huberror.hangout_watch_room_invalid"] = "Esa fiesta de visionado ya no está disponible.",
     };
 }

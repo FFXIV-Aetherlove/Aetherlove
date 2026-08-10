@@ -40,6 +40,34 @@ public interface ISettingsHost
     /// <summary>The account's OS avatar, or null before the first fetch / for an account with none set.</summary>
     ISharedImmediateTexture? OsAvatar { get; }
 
+    /// <summary>The equipped OS avatar ring ref, null when none.</summary>
+    string? EquippedFrameRef => null;
+
+    /// <summary>The avatar rings the account owns, for the picker.</summary>
+    Task<AetherLove.Shared.Store.AvatarRingDto[]> GetOwnedRingsAsync();
+
+    /// <summary>Equips (or clears, on null) the OS avatar ring and refreshes the account snapshot.</summary>
+    Task SetAvatarRingAsync(string? frameRef);
+
+    /// <summary>The phone themes the account bought, for the premium section; null when the fetch failed.</summary>
+    Task<AetherLove.Shared.Store.OwnedThemeDto[]?> GetOwnedThemesAsync();
+
+    /// <summary>The purchased theme currently painting the phone, null when a built-in is active.</summary>
+    Guid? ActivePremiumThemeId { get; }
+
+    /// <summary>Switches the phone to a purchased theme, sealing its assets first if needed.</summary>
+    Task<bool> EnablePremiumThemeAsync(Guid productId);
+
+    /// <summary>Drops this install's copy of a purchased theme and pulls it again, so a corrected palette
+    /// or frame geometry lands without a reinstall.</summary>
+    Task<bool> RefreshPremiumThemeAsync(Guid productId);
+
+    /// <summary>Sets the wallpaper to a purchased theme's background without touching the palette.</summary>
+    Task<bool> SelectPremiumWallpaperAsync(Guid productId);
+
+    /// <summary>A purchased theme's wallpaper for the picker thumb, null while it is still decoding.</summary>
+    Dalamud.Interface.Textures.TextureWraps.IDalamudTextureWrap? PremiumWallpaper(Guid productId);
+
     /// <summary>Saves the OS profile: the display name (when changed) and optionally a new avatar, then
     /// refreshes the cached avatar and account snapshot. Throws a hub error on failure.</summary>
     Task SaveOsProfileAsync(string name, PhotoUploadDto? avatar);

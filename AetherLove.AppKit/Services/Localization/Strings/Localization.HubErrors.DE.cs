@@ -1,4 +1,4 @@
-namespace AetherLove.Services.Localization;
+﻿namespace AetherLove.Services.Localization;
 
 internal static class HubErrorsDe
 {
@@ -135,5 +135,37 @@ internal static class HubErrorsDe
         ["huberror.yap_invalid"] = "Der Yap konnte nicht gespeichert werden. Bitte überprüfe deine Eingaben.",
         ["huberror.yap_dm_not_allowed"] = "Dieser Nutzer kann deine Nachrichten nicht empfangen.",
         ["huberror.yap_dm_keys_missing"] = "@{0} muss die Einrichtung noch abschließen. Versuch es gleich noch einmal.",
+
+        // store (added after update 2.2.3)
+        ["huberror.store_disabled"] = "Der Laden ist gerade wegen Wartung geschlossen.",
+        ["huberror.store_product_not_found"] = "Diesen Artikel gibt es nicht mehr.",
+        ["huberror.store_product_unavailable"] = "Dieser Artikel ist gerade nicht im Verkauf.",
+        ["huberror.store_insufficient_sparks"] = "Zu wenige Sparks: das kostet {0}, du hast {1}.",
+        ["huberror.store_limit_reached"] = "Du besitzt schon das Maximum ({0}) dieses Artikels.",
+        ["huberror.store_quantity_invalid"] = "Diese Menge ist nicht erlaubt.",
+        ["huberror.store_conflict"] = "Der Laden hat kurz gestockt. Es wurde nichts doppelt berechnet; versuch es einfach noch einmal.",
+        ["huberror.aetherling_disabled"] = "Es hört gerade nicht zu.",
+        ["huberror.aetherling_exists"] = "So etwas gibt es schon.",
+        ["huberror.aetherling_none"] = "Hier ist nichts, dem du das geben könntest.",
+        ["huberror.aetherling_insufficient"] = "Zu wenige Sparks: es will {0}, du hast {1}.",
+        ["huberror.aetherling_gated"] = "Noch nicht. Erst muss etwas geschehen. Versuch es in {0} Minuten wieder.",
+        ["huberror.aetherling_complete"] = "Es nimmt nichts mehr an.",
+        ["huberror.aetherling_unready"] = "Noch nicht. Dafür ist es nicht bereit.",
+        ["huberror.aetherling_named"] = "Es hat seinen Namen schon.",
+        ["huberror.aetherling_name_invalid"] = "Dieser Name geht nicht. Versuch einen anderen.",
+
+        // echo (added after update 2.2.3)
+        ["huberror.echo_disabled"] = "Gemeinsam schauen ist gerade abgeschaltet.",
+        ["huberror.echo_room_not_found"] = "Diese Watch-Party ist schon vorbei.",
+        ["huberror.echo_room_full"] = "Dieser Raum ist voll ({0} Personen).",
+        ["huberror.echo_not_member"] = "Du bist nicht in diesem Raum.",
+        ["huberror.echo_not_owner"] = "Das kann nur machen, wer den Raum gestartet hat.",
+        ["huberror.echo_host_only"] = "Gerade steuert der Host die Wiedergabe.",
+        ["huberror.echo_kicked"] = "Du wurdest aus diesem Raum entfernt.",
+        ["huberror.echo_playlist_full"] = "Die Warteschlange ist voll ({0} Videos).",
+        ["huberror.echo_live_room_exists"] = "Du hast schon einen Raum laufen. Beende ihn, um einen neuen zu starten.",
+        ["huberror.echo_invalid_video"] = "Das sieht nicht nach einem YouTube-Link aus.",
+        ["huberror.echo_name_invalid"] = "Dieser Raumname geht nicht.",
+        ["huberror.hangout_watch_room_invalid"] = "Diese Watch-Party gibt es nicht mehr.",
     };
 }

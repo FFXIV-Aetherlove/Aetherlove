@@ -103,7 +103,10 @@ public static class NotificationSoundPlayer
             : $"{configured} (not found, using the system default)";
     }
 
-    private static int ResolveDeviceIndex()
+    /// <summary>The waveOut device index the app should play through, or -1 for the system default. Public
+    /// because every other sound the phone makes (the arcade's Doom cabinet) has to land on the same device
+    /// the user picked here.</summary>
+    public static int ResolveDeviceIndex()
     {
         var configured = UiHost.Configuration.OsSettings.AudioOutputDevice;
         if (configured.Length == 0)

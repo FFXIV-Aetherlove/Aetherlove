@@ -213,6 +213,7 @@ internal sealed class NotificationsScreen
             {
                 dl.AddCircleFilled(avatarCenter, Px(13f), ImGui.GetColorU32(ctx.Theme.Accent with { W = 0.35f }));
             }
+            AvatarRings.Draw(dl, avatarCenter, Px(13f), who.FrameRef);
         }
 
         dl.AddText(tl + new Vector2(pad + Px(58f), Px(8f)),

@@ -155,6 +155,24 @@ public static class AppStrings
         ["os.yapper_report_done"] = "Thanks. The team will take a look.",
         ["os.yapper_report_close"] = "Close",
 
+        // added after update 2.2.3
+        ["os.yapper_confirm_cancel"] = "Cancel",
+        ["os.yapper_confirm_mute_title"] = "Mute @{0}?",
+        ["os.yapper_confirm_mute_body"] = "Their yaps stop showing up for you. They are not told, and you can undo this any time.",
+        ["os.yapper_confirm_block_title"] = "Block @{0}?",
+        ["os.yapper_confirm_block_body"] = "You both stop seeing each other, and any follows between you are undone. They are not told.",
+        ["os.yapper_settings_bio"] = "Bio",
+        ["os.yapper_settings_danger"] = "Danger zone",
+        ["os.yapper_muted_empty"] = "You have not muted anyone.",
+        ["os.yapper_blocked_empty"] = "You have not blocked anyone.",
+        ["os.yapper_delete_btn"] = "Delete my profile",
+        ["os.yapper_delete_hint"] = "Your handle stays reserved so nobody can be mistaken for you. You can start a new profile afterwards with a different one.",
+        ["os.yapper_delete_confirm_title"] = "Delete your Yapper profile?",
+        ["os.yapper_delete_confirm_body"] = "Your posts go for good and your replies become unavailable in other people’s threads. This cannot be undone.",
+        ["os.yapper_deleted_title"] = "All gone",
+        ["os.yapper_deleted_body"] = "Your account and your yaps have been removed. Open Yapper again whenever you like and you can start fresh.",
+        ["os.yapper_deleted_home"] = "Back to home",
+
         // added after update 2.2.1
         ["os.yapper_tombstone_blocked"] = "You can't view this post because this user has blocked you.",
         ["os.yapper_menu_pin"] = "Pin to profile",
@@ -312,6 +330,24 @@ public static class AppStrings
         ["os.yapper_report_send"] = "Meldung senden",
         ["os.yapper_report_done"] = "Danke. Das Team schaut sich das an.",
         ["os.yapper_report_close"] = "Schließen",
+
+        // added after update 2.2.3
+        ["os.yapper_confirm_cancel"] = "Abbrechen",
+        ["os.yapper_confirm_mute_title"] = "@{0} stummschalten?",
+        ["os.yapper_confirm_mute_body"] = "Ihre Yaps tauchen bei dir nicht mehr auf. Sie erfahren nichts davon, und du kannst es jederzeit rückgängig machen.",
+        ["os.yapper_confirm_block_title"] = "@{0} blockieren?",
+        ["os.yapper_confirm_block_body"] = "Ihr seht euch gegenseitig nicht mehr, und alle Follows zwischen euch werden aufgelöst. Sie erfahren nichts davon.",
+        ["os.yapper_settings_bio"] = "Über mich",
+        ["os.yapper_settings_danger"] = "Gefahrenzone",
+        ["os.yapper_muted_empty"] = "Du hast niemanden stummgeschaltet.",
+        ["os.yapper_blocked_empty"] = "Du hast niemanden blockiert.",
+        ["os.yapper_delete_btn"] = "Mein Profil löschen",
+        ["os.yapper_delete_hint"] = "Dein Handle bleibt reserviert, damit niemand für dich gehalten werden kann. Danach kannst du mit einem anderen ein neues Profil anlegen.",
+        ["os.yapper_delete_confirm_title"] = "Yapper-Profil löschen?",
+        ["os.yapper_delete_confirm_body"] = "Deine Beiträge sind endgültig weg, und deine Antworten erscheinen in fremden Threads als nicht verfügbar. Das lässt sich nicht rückgängig machen.",
+        ["os.yapper_deleted_title"] = "Alles weg",
+        ["os.yapper_deleted_body"] = "Dein Konto und deine Yaps wurden entfernt. Öffne Yapper einfach wieder, wann immer du magst, und fang neu an.",
+        ["os.yapper_deleted_home"] = "Zurück zum Start",
 
         // added after update 2.2.1
         ["os.yapper_tombstone_blocked"] = "Du kannst diesen Beitrag nicht sehen, weil dieser Nutzer dich blockiert hat.",
@@ -471,6 +507,24 @@ public static class AppStrings
         ["os.yapper_report_done"] = "Gracias. El equipo lo revisará.",
         ["os.yapper_report_close"] = "Cerrar",
 
+        // added after update 2.2.3
+        ["os.yapper_confirm_cancel"] = "Cancelar",
+        ["os.yapper_confirm_mute_title"] = "¿Silenciar a @{0}?",
+        ["os.yapper_confirm_mute_body"] = "Sus yaps dejan de aparecerte. No se le avisa, y puedes deshacerlo cuando quieras.",
+        ["os.yapper_confirm_block_title"] = "¿Bloquear a @{0}?",
+        ["os.yapper_confirm_block_body"] = "Dejaréis de veros mutuamente y se deshará cualquier seguimiento entre vosotros. No se le avisa.",
+        ["os.yapper_settings_bio"] = "Biografía",
+        ["os.yapper_settings_danger"] = "Zona de peligro",
+        ["os.yapper_muted_empty"] = "No has silenciado a nadie.",
+        ["os.yapper_blocked_empty"] = "No has bloqueado a nadie.",
+        ["os.yapper_delete_btn"] = "Eliminar mi perfil",
+        ["os.yapper_delete_hint"] = "Tu nombre de usuario queda reservado para que nadie pueda hacerse pasar por ti. Después puedes crear un perfil nuevo con otro distinto.",
+        ["os.yapper_delete_confirm_title"] = "¿Eliminar tu perfil de Yapper?",
+        ["os.yapper_delete_confirm_body"] = "Tus publicaciones desaparecen para siempre y tus respuestas quedan como no disponibles en los hilos de otras personas. Esto no se puede deshacer.",
+        ["os.yapper_deleted_title"] = "Todo eliminado",
+        ["os.yapper_deleted_body"] = "Tu cuenta y tus yaps se han eliminado. Abre Yapper cuando quieras y podrás empezar de cero.",
+        ["os.yapper_deleted_home"] = "Volver al inicio",
+
         // added after update 2.2.1
         ["os.yapper_tombstone_blocked"] = "No puedes ver esta publicación porque este usuario te ha bloqueado.",
         ["os.yapper_menu_pin"] = "Fijar en el perfil",
@@ -628,6 +682,24 @@ public static class AppStrings
         ["os.yapper_report_send"] = "Envoyer le signalement",
         ["os.yapper_report_done"] = "Merci. L'équipe va y jeter un œil.",
         ["os.yapper_report_close"] = "Fermer",
+
+        // added after update 2.2.3
+        ["os.yapper_confirm_cancel"] = "Annuler",
+        ["os.yapper_confirm_mute_title"] = "Masquer @{0} ?",
+        ["os.yapper_confirm_mute_body"] = "Ses yaps n'apparaîtront plus chez vous. Cette personne n'en est pas informée, et vous pouvez revenir en arrière à tout moment.",
+        ["os.yapper_confirm_block_title"] = "Bloquer @{0} ?",
+        ["os.yapper_confirm_block_body"] = "Vous ne vous verrez plus l'un l'autre, et les abonnements entre vous seront annulés. Cette personne n'en est pas informée.",
+        ["os.yapper_settings_bio"] = "Bio",
+        ["os.yapper_settings_danger"] = "Zone sensible",
+        ["os.yapper_muted_empty"] = "Vous n'avez masqué personne.",
+        ["os.yapper_blocked_empty"] = "Vous n'avez bloqué personne.",
+        ["os.yapper_delete_btn"] = "Supprimer mon profil",
+        ["os.yapper_delete_hint"] = "Votre identifiant reste réservé pour que personne ne puisse se faire passer pour vous. Vous pourrez ensuite créer un profil avec un autre.",
+        ["os.yapper_delete_confirm_title"] = "Supprimer votre profil Yapper ?",
+        ["os.yapper_delete_confirm_body"] = "Vos publications disparaissent définitivement et vos réponses deviennent indisponibles dans les fils des autres. C'est irréversible.",
+        ["os.yapper_deleted_title"] = "C'est fait",
+        ["os.yapper_deleted_body"] = "Votre compte et vos yaps ont été supprimés. Rouvrez Yapper quand vous voulez pour repartir de zéro.",
+        ["os.yapper_deleted_home"] = "Retour à l'accueil",
 
         // added after update 2.2.1
         ["os.yapper_tombstone_blocked"] = "Vous ne pouvez pas voir cette publication car cette personne vous a bloqué.",
@@ -787,6 +859,24 @@ public static class AppStrings
         ["os.yapper_report_done"] = "Obrigado. A equipe vai dar uma olhada.",
         ["os.yapper_report_close"] = "Fechar",
 
+        // added after update 2.2.3
+        ["os.yapper_confirm_cancel"] = "Cancelar",
+        ["os.yapper_confirm_mute_title"] = "Silenciar @{0}?",
+        ["os.yapper_confirm_mute_body"] = "Os yaps dessa pessoa param de aparecer para você. Ela não é avisada, e você pode desfazer quando quiser.",
+        ["os.yapper_confirm_block_title"] = "Bloquear @{0}?",
+        ["os.yapper_confirm_block_body"] = "Vocês deixam de se ver, e qualquer follow entre vocês é desfeito. Ela não é avisada.",
+        ["os.yapper_settings_bio"] = "Bio",
+        ["os.yapper_settings_danger"] = "Zona de perigo",
+        ["os.yapper_muted_empty"] = "Você não silenciou ninguém.",
+        ["os.yapper_blocked_empty"] = "Você não bloqueou ninguém.",
+        ["os.yapper_delete_btn"] = "Excluir meu perfil",
+        ["os.yapper_delete_hint"] = "Seu @ continua reservado para que ninguém possa se passar por você. Depois dá para criar um perfil novo com outro.",
+        ["os.yapper_delete_confirm_title"] = "Excluir seu perfil do Yapper?",
+        ["os.yapper_delete_confirm_body"] = "Seus posts somem de vez e suas respostas viram indisponíveis nas conversas dos outros. Isso não tem volta.",
+        ["os.yapper_deleted_title"] = "Tudo removido",
+        ["os.yapper_deleted_body"] = "Sua conta e seus yaps foram removidos. Abra o Yapper quando quiser e comece do zero.",
+        ["os.yapper_deleted_home"] = "Voltar ao início",
+
         // added after update 2.2.1
         ["os.yapper_tombstone_blocked"] = "Você não pode ver esta publicação porque este usuário bloqueou você.",
         ["os.yapper_menu_pin"] = "Fixar no perfil",
@@ -944,6 +1034,24 @@ public static class AppStrings
         ["os.yapper_report_send"] = "Отправить жалобу",
         ["os.yapper_report_done"] = "Спасибо! Команда всё проверит.",
         ["os.yapper_report_close"] = "Закрыть",
+
+        // added after update 2.2.3
+        ["os.yapper_confirm_cancel"] = "Отмена",
+        ["os.yapper_confirm_mute_title"] = "Скрыть @{0}?",
+        ["os.yapper_confirm_mute_body"] = "Япы этого человека перестанут вам попадаться. Он об этом не узнает, а вы сможете вернуть всё обратно когда угодно.",
+        ["os.yapper_confirm_block_title"] = "Заблокировать @{0}?",
+        ["os.yapper_confirm_block_body"] = "Вы перестанете видеть друг друга, а взаимные подписки снимутся. Он об этом не узнает.",
+        ["os.yapper_settings_bio"] = "О себе",
+        ["os.yapper_settings_danger"] = "Опасная зона",
+        ["os.yapper_muted_empty"] = "Вы пока никого не скрывали.",
+        ["os.yapper_blocked_empty"] = "Вы пока никого не блокировали.",
+        ["os.yapper_delete_btn"] = "Удалить профиль",
+        ["os.yapper_delete_hint"] = "Ваш ник останется закреплён за вами, чтобы никто не смог выдать себя за вас. Новый профиль потом можно завести под другим.",
+        ["os.yapper_delete_confirm_title"] = "Удалить профиль в Yapper?",
+        ["os.yapper_delete_confirm_body"] = "Ваши посты исчезнут навсегда, а ответы в чужих ветках станут недоступны. Вернуть уже не получится.",
+        ["os.yapper_deleted_title"] = "Готово",
+        ["os.yapper_deleted_body"] = "Аккаунт и все япы удалены. Откройте Yapper когда захотите и начните с чистого листа.",
+        ["os.yapper_deleted_home"] = "На главную",
 
         // added after update 2.2.1
         ["os.yapper_tombstone_blocked"] = "Вы не можете посмотреть этот пост, потому что пользователь вас заблокировал.",

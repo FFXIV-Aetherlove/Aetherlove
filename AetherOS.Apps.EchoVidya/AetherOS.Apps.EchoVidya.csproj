@@ -1,0 +1,14 @@
+<Project Sdk="Dalamud.NET.Sdk/15.0.0">
+  <PropertyGroup>
+    <RootNamespace>AetherOS.Apps.EchoVidya</RootNamespace>
+    <AssemblyName>AetherOS.Apps.EchoVidya</AssemblyName>
+    <Use_DalamudPackager>false</Use_DalamudPackager>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Dalamud.Bindings.ImGui" Private="false" />
+    <ProjectReference Include="..\AetherOS.Sdk\AetherOS.Sdk.csproj" />
+    <ProjectReference Include="..\AetherLove.AppKit\AetherLove.AppKit.csproj" />
+    <ProjectReference Include="..\AetherLove.Core\AetherLove.Core.csproj" />
+    <ProjectReference Include="..\AetherLove.Shared\AetherLove.Shared.csproj" />
+  </ItemGroup>
+</Project>

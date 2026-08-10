@@ -593,8 +593,54 @@ public sealed class AetherSignalService : IAsyncDisposable
 
         RegisterMessengerHandlers(hub);
         RegisterYapperHandlers(hub);
+        RegisterEchoHandlers(hub);
 
         return hub;
+    }
+
+    /// <summary>Echo watch-room pushes. Every handler only mutates the state service, which queues its own
+    /// events for the draw thread to drain; nothing here may touch ImGui.
+    ///
+    /// SignalR drops group membership when a connection dies, so a reconnect must re-join the room rather
+    /// than assume it is still in the group. That is what the reconnect re-sync below is for.</summary>
+    private void RegisterEchoHandlers(HubConnection hub)
+    {
+        var state = _services.GetRequiredService<Services.Echo.EchoStateService>();
+
+        hub.On<Shared.EchoVidya.EchoMemberDto, Guid>("EchoMemberJoined", (member, roomId) =>
+            state.ApplyMemberJoined(roomId, member));
+        hub.On<Shared.EchoVidya.EchoMemberLeftDto>("EchoMemberLeft", state.ApplyMemberLeft);
+        hub.On<Guid, Shared.EchoVidya.EchoPlaylistEntryDto[]>("EchoPlaylistChanged", (roomId, playlist) =>
+            state.ApplyPlaylistChanged(roomId, playlist));
+        hub.On<Shared.EchoVidya.EchoPlaybackDto>("EchoPlaybackChanged", state.ApplyPlaybackChanged);
+        hub.On<Guid, bool>("EchoHostOnlyChanged", (roomId, hostOnly) =>
+            state.ApplyHostOnlyChanged(roomId, hostOnly));
+        hub.On<Shared.EchoVidya.EchoChatLineDto>("EchoChat", state.ApplyChat);
+        hub.On<Shared.EchoVidya.EchoRoomEndedDto>("EchoRoomEnded", state.ApplyRoomEnded);
+        hub.On<Shared.EchoVidya.EchoKickedDto>("EchoKicked", state.ApplyKicked);
+
+        hub.Reconnected += connectionId =>
+        {
+            if (state.CurrentRoomId is not { } roomId)
+            {
+                return Task.CompletedTask;
+            }
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var hubClient = _services.GetRequiredService<Services.Hub.AetherHubContext>();
+                    state.ApplySnapshot(await hubClient.GetEchoRoomSyncAsync(roomId).ConfigureAwait(false));
+                }
+                catch (Exception ex)
+                {
+                    _log.Warning(ex, "[AetherSignalService] Echo re-join failed; treating the room as gone.");
+                    state.ApplyRoomEnded(new Shared.EchoVidya.EchoRoomEndedDto(
+                        roomId, Shared.EchoVidya.EchoEndReason.Empty));
+                }
+            });
+            return Task.CompletedTask;
+        };
     }
 
     private void RegisterYapperHandlers(HubConnection hub)

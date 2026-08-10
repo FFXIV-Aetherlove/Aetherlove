@@ -56,7 +56,7 @@ public sealed class PlacesApp : IAetherApp
 
         if (_view == View.Places)
         {
-            _places.Draw(ctx.Shell, ctx.Capabilities.Share);
+            _places.Draw(ctx.Shell, ctx.Capabilities);
         }
         else
         {

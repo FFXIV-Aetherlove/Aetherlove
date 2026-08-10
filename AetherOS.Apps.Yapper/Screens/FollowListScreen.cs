@@ -171,6 +171,7 @@ internal sealed class FollowListScreen(
         {
             dl.AddCircleFilled(center, Px(18f), ImGui.GetColorU32(ctx.Theme.Accent with { W = 0.35f }));
         }
+        AvatarRings.Draw(dl, center, Px(18f), row.FrameRef);
         dl.AddText(tl + new Vector2(pad + Px(46f), Px(9f)), 0xFFFFFFFFu, row.DisplayName);
         var handleColor = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.45f));
         dl.AddText(tl + new Vector2(pad + Px(46f), Px(27f)), handleColor, $"@{row.Handle}");

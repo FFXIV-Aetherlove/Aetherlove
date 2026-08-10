@@ -20,6 +20,9 @@ internal static class UiColors
     /// <summary>Gold star badge marking a favorited emoji.</summary>
     internal const uint FavoriteStar = 0xFF3CC8FFu; // 0xAABBGGRR gold (R255 G200 B60)
 
+    /// <summary>Spark gold: the currency's own colour, used wherever sparks bought something.</summary>
+    internal static readonly Vector4 SparkGold = new(0.95f, 0.71f, 0.24f, 1f);
+
     /// <summary>Error accent (red) for inline error text and failure-style modals.</summary>
     internal static readonly Vector4 Danger = new(0.95f, 0.45f, 0.45f, 1f);
 

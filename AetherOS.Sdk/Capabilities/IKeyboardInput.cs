@@ -1,7 +1,8 @@
 namespace AetherOS.Sdk;
 
-/// <summary>The keys an app can poll. Deliberately limited to movement and fire: every key here is
-/// swallowed from the game while an app reads it, so the set stays small enough to be safe.</summary>
+/// <summary>The keys an app can poll. Deliberately limited to what a game surface needs: every key here is
+/// swallowed from the game while an app reads it, so the set stays small enough to be safe. The order is
+/// load-bearing, because the host maps it positionally onto its ImGui and game key tables.</summary>
 public enum AppKey
 {
     Left,
@@ -13,6 +14,21 @@ public enum AppKey
     S,
     D,
     Space,
+    E,
+    Ctrl,
+    Shift,
+    Enter,
+    Escape,
+    Tab,
+    D1,
+    D2,
+    D3,
+    D4,
+    D5,
+    D6,
+    D7,
+    Y,
+    N,
 }
 
 /// <summary>Live key state for apps that are driven by the keyboard (the arcade games).
@@ -32,4 +48,18 @@ public interface IKeyboardInput
     /// <summary>True while a GAME text field owns the keyboard (the chat box is open). No keys are reaching
     /// the app at all in that state, so anything mid-run should pause rather than play itself out.</summary>
     bool GameTextFocused { get; }
+
+    /// <summary>Demands the keyboard for this frame, even while ImGui reports something else as active. Call it
+    /// every frame the app wants it, immediately before reading any key; it lapses on its own the moment the app
+    /// stops asking.
+    ///
+    /// Normally the capture declines to re-take focus while any item is active, so it can never steal a held
+    /// button out from under the user. That politeness costs the keyboard whenever the mouse is pressed on bare
+    /// window space, because ImGui makes the window's own move handle the active item, and the keys then reach
+    /// the game as well as the app. An app that hit-tests its controls by hand owns no items worth protecting,
+    /// so it can ask for the keyboard unconditionally. An app built from ordinary ImGui widgets must NOT: taking
+    /// focus back mid-press is exactly what stops those widgets firing.</summary>
+    void RequestExclusive()
+    {
+    }
 }

@@ -125,7 +125,7 @@ public sealed class MyHangoutView
         DrawSectionHeading(Loc.T("hangout.section_what"), t);
         DrawFieldLabel(Loc.T("hangout.field_category"), t);
         ImGui.SetNextItemWidth(w);
-        var labels = HangoutFields.CategoryLabels();
+        var labels = HangoutCategories.CreatableLabels();
         ImGui.Combo("##hgCat", ref _hgCategoryIdx, labels, labels.Length);
 
         ImGui.Spacing();
@@ -290,7 +290,7 @@ public sealed class MyHangoutView
         _hgSubmitting = true;
         _hgError = null;
         var req = new CreateHangoutRequest(
-            Category: HangoutFields.CategoryValues[Math.Clamp(_hgCategoryIdx, 0, HangoutFields.CategoryValues.Length - 1)],
+            Category: HangoutCategories.CreatableValues[Math.Clamp(_hgCategoryIdx, 0, HangoutCategories.CreatableValues.Length - 1)],
             Description: _hgDescription.Trim(),
             DataCenter: _hgDataCenter,
             World: _hgWorld,
@@ -333,12 +333,12 @@ public sealed class MyHangoutView
         var accent = live ? UiColors.LiveGreen : t.Accent;
         dl.AddRectFilled(tl, br, ImGui.GetColorU32(accent with { W = 0.10f }), Px(10f));
         dl.AddRect(tl, br, ImGui.GetColorU32(accent with { W = 0.55f }), Px(10f), ImDrawFlags.None, Px(1.5f));
-        IconDraw.AddCentered(dl, HangoutFields.CategoryIcon(mine.Category), Px(22f),
+        IconDraw.AddCentered(dl, HangoutCategories.Icon(mine.Category), Px(22f),
             new Vector2(tl.X + Px(28f), tl.Y + cardH * 0.5f), ImGui.GetColorU32(accent));
         var textX = tl.X + Px(52f);
         dl.AddText(new Vector2(textX, tl.Y + Px(12f)), ImGui.GetColorU32(accent),
             live ? Loc.T("hangout.status_live") : Loc.T("hangout.status_upcoming"));
-        dl.AddText(new Vector2(textX, tl.Y + Px(32f)), 0xFFFFFFFFu, HangoutFields.CategoryLabel(mine.Category));
+        dl.AddText(new Vector2(textX, tl.Y + Px(32f)), 0xFFFFFFFFu, HangoutCategories.Label(mine.Category));
         dl.AddText(new Vector2(textX, tl.Y + Px(50f)), UiColors.TextMuted, HangoutFields.TimeLabel(mine));
         ImGui.Dummy(new Vector2(w, cardH));
         ImGui.Spacing();

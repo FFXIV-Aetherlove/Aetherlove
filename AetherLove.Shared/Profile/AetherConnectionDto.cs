@@ -71,4 +71,8 @@ public sealed record AetherConnectionDto(
     string HolidayMessage = "",
     bool WayfinderEnabled = true,
     bool IsWayfinderScout = false,
-    bool YapperEnabled = true);
+    bool YapperEnabled = true,
+    bool EchoEnabled = true,
+    string? EquippedFrameRef = null,
+    bool AetherlingEnabled = true,
+    Shared.Aetherling.AetherlingDto? Aetherling = null);

@@ -7,6 +7,7 @@ using System.Numerics;
 using System.Threading.Tasks;
 using AetherLove.Services;
 using AetherLove.Services.Localization;
+using AetherLove.Shared.EchoVidya;
 using AetherLove.Shared.Hangouts;
 using AetherLove.Shared.Levemetes;
 using AetherLove.Shared.Messenger;
@@ -34,6 +35,7 @@ public sealed partial class MessengerApp
     private const float NewsCardH = 122f;
     private const float CalendarCardH = 92f;
     private const float MarketCardH = 86f;
+    private const float EchoCardH = 108f;
 
     private sealed record VenueCardVisual(VenueCardDto? Card, ISharedImmediateTexture? Tex, bool LogoBackdrop);
 
@@ -45,6 +47,7 @@ public sealed partial class MessengerApp
     private readonly ConcurrentDictionary<Guid, HangoutCardDto?> _hangoutCards = new();
     private readonly ConcurrentDictionary<Guid, NewsCardDto?> _newsCards = new();
     private readonly ConcurrentDictionary<Guid, LevemeteCardVisual> _levemeteCards = new();
+    private readonly ConcurrentDictionary<Guid, EchoRoomCardDto?> _echoCards = new();
     private readonly ConcurrentDictionary<Guid, byte> _cardFetches = new();
 
     private ShareItem? _pendingShare;
@@ -56,7 +59,8 @@ public sealed partial class MessengerApp
     private readonly ConcurrentDictionary<uint, byte> _marketPriceFetches = new();
 
     public IReadOnlyList<string> AcceptedShareTypes { get; } =
-        [ShareTypes.Venue, ShareTypes.Hangout, ShareTypes.News, ShareTypes.CalendarEvent, ShareTypes.Levemete, ShareTypes.MarketItem];
+        [ShareTypes.Venue, ShareTypes.Hangout, ShareTypes.News, ShareTypes.CalendarEvent, ShareTypes.Levemete,
+         ShareTypes.MarketItem, ShareTypes.Echo];
 
     /// <summary>A share-sheet item landed on the messenger: the chat list enters share mode and the next
     /// tapped chat receives the composed card message.</summary>
@@ -75,6 +79,7 @@ public sealed partial class MessengerApp
         ShareTypes.CalendarEvent => CalendarEventShare.TryComposeFromShareItem(item),
         ShareTypes.Levemete when Guid.TryParse(item.RefId, out var adId) => LevemeteShare.Compose(adId),
         ShareTypes.MarketItem => MarketShare.TryComposeFromShareItem(item),
+        ShareTypes.Echo when Guid.TryParse(item.RefId, out var roomId) => EchoShare.Compose(roomId, item.Subtitle),
         _ => null,
     };
 
@@ -100,6 +105,7 @@ public sealed partial class MessengerApp
             ShareTypes.Hangout => FontAwesomeIcon.Bullhorn,
             ShareTypes.CalendarEvent => FontAwesomeIcon.CalendarAlt,
             ShareTypes.MarketItem => FontAwesomeIcon.Coins,
+            ShareTypes.Echo => FontAwesomeIcon.Film,
             _ => FontAwesomeIcon.Newspaper,
         };
         IconCentered(dl, icon, Px(13f), new Vector2(tl.X + Px(17f), (tl.Y + br.Y) * 0.5f),
@@ -216,6 +222,13 @@ public sealed partial class MessengerApp
                 _levemeteCards.TryRemove(kv.Key, out _);
             }
         }
+        foreach (var kv in _echoCards)
+        {
+            if (kv.Value is null)
+            {
+                _echoCards.TryRemove(kv.Key, out _);
+            }
+        }
     }
 
     private void StartVenueCardFetch(Guid venueId)
@@ -275,6 +288,30 @@ public sealed partial class MessengerApp
             finally
             {
                 _cardFetches.TryRemove(hangoutId, out _);
+            }
+        });
+    }
+
+    private void StartEchoCardFetch(Guid roomId)
+    {
+        if (_echoCards.ContainsKey(roomId) || !_cardFetches.TryAdd(roomId, 0))
+        {
+            return;
+        }
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                _echoCards[roomId] = await _hub.GetEchoRoomCardAsync(roomId).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                AetherLove.UiHost.Log.Warning(ex, $"[MessengerApp] Echo room card fetch failed for {roomId}.");
+                _echoCards[roomId] = null;
+            }
+            finally
+            {
+                _cardFetches.TryRemove(roomId, out _);
             }
         });
     }
@@ -394,6 +431,10 @@ public sealed partial class MessengerApp
         {
             baseH = Px(MarketCardH);
         }
+        else if (EchoShare.TryParse(text, out _, out _))
+        {
+            baseH = Px(EchoCardH);
+        }
         if (baseH is not { } h)
         {
             return null;
@@ -442,6 +483,11 @@ public sealed partial class MessengerApp
         if (MarketShare.TryParse(text, out var marketItemId))
         {
             DrawMarketCardMessage(message, marketItemId, windowWidth, isGroupEnd);
+            return true;
+        }
+        if (EchoShare.TryParse(text, out var echoRoomId, out var echoCode))
+        {
+            DrawEchoCardMessage(message, echoRoomId, echoCode, windowWidth, isGroupEnd);
             return true;
         }
         return false;
@@ -633,8 +679,71 @@ public sealed partial class MessengerApp
         EndCard(msg, tl, br, cursorPos, cardH, isGroupEnd, fading);
     }
 
+    /// <summary>A shared Echo room rendered as a card; clicking deep-links into the Echo app with the join
+    /// prefilled, and back returns here.</summary>
+    private void DrawEchoCardMessage(MessengerMessageDto msg, Guid roomId, string code, float windowWidth, bool isGroupEnd)
+    {
+        StartEchoCardFetch(roomId);
+        _echoCards.TryGetValue(roomId, out var card);
+
+        var t = ThemeService.Current;
+        var dl = ImGui.GetWindowDrawList();
+        var cardH = Px(EchoCardH);
+        var (tl, br, clicked, hovered, fading, cursorPos) = BeginCard(msg, windowWidth, cardH, "msgrEchoCard");
+        var cardW = br.X - tl.X;
+
+        if (card is { } room)
+        {
+            SharedUiHelpers.HandOnHover();
+            dl.AddRectFilled(tl, br, ImGui.GetColorU32(t.Accent with { W = 0.12f }), Px(14f));
+            dl.AddRect(tl, br, ImGui.GetColorU32(t.Accent with { W = hovered ? 0.90f : 0.55f }), Px(14f),
+                ImDrawFlags.None, Px(1.5f));
+
+            IconDraw.AddCentered(dl, FontAwesomeIcon.Film, Px(20f),
+                new Vector2(tl.X + Px(26f), tl.Y + Px(28f)), ImGui.GetColorU32(t.Accent));
+
+            var textX = tl.X + Px(48f);
+            var textMaxW = br.X - textX - Px(12f);
+            dl.AddText(new Vector2(textX, tl.Y + Px(12f)), 0xFFFFFFFFu, TruncateToWidth(room.Name, textMaxW));
+            var host = Loc.T("chat.echo_card_label") + "  ·  " + Loc.T("chat.echo_card_host", room.OwnerName);
+            dl.AddText(new Vector2(textX, tl.Y + Px(31f)), ImGui.GetColorU32(t.Accent), TruncateToWidth(host, textMaxW));
+
+            var bodyX = tl.X + Px(14f);
+            var bodyMaxW = cardW - Px(28f);
+            var playing = string.IsNullOrWhiteSpace(room.NowPlayingTitle)
+                ? Loc.T("chat.echo_card_idle")
+                : room.NowPlayingTitle;
+            dl.AddText(new Vector2(bodyX, tl.Y + Px(56f)), ImGui.GetColorU32(UiColors.Body),
+                TruncateToWidth(playing, bodyMaxW));
+            dl.AddText(new Vector2(bodyX, tl.Y + Px(80f)), UiColors.TextMuted,
+                TruncateToWidth(Loc.T("chat.echo_card_members", room.MemberCount), bodyMaxW));
+
+            if (hovered)
+            {
+                ImGui.SetTooltip(Loc.T("chat.echo_card_view"));
+            }
+            if (clicked)
+            {
+                _shell?.SendIntent("echo", OsIntents.CreateRoomJoin(OsIntents.EchoJoin, roomId, code, Id));
+            }
+        }
+        else
+        {
+            dl.AddRectFilled(tl, br, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.05f)), Px(14f));
+            dl.AddRect(tl, br, ImGui.GetColorU32(t.Accent with { W = 0.35f }), Px(14f), ImDrawFlags.None, Px(1.5f));
+            var text = _echoCards.ContainsKey(roomId)
+                ? Loc.T("chat.echo_card_unavailable")
+                : Loc.T("chat.echo_card_loading");
+            var textSz = ImGui.CalcTextSize(text);
+            dl.AddText(tl + (new Vector2(cardW, cardH) - textSz) * 0.5f, ImGui.GetColorU32(UiColors.Muted), text);
+        }
+
+        EndCard(msg, tl, br, cursorPos, cardH, isGroupEnd, fading);
+    }
+
     /// <summary>Self-contained location card (no fetch): the sharer's captured spot rides inside the token.
-    /// Clicking drops an in-game map marker at the exact coordinates via the system capability.</summary>
+    /// Clicking drops an in-game map marker at the exact coordinates via the system capability, or, when the
+    /// spot is a housing address a travel provider could reach, offers that as a second choice.</summary>
     private void DrawLocationCardMessage(MessengerMessageDto msg, LocationShare.LocationCardData loc, float windowWidth, bool isGroupEnd)
     {
         var t = ThemeService.Current;
@@ -671,6 +780,10 @@ public sealed partial class MessengerApp
         dl.AddText(new Vector2(textX, textTop + 2f * (lineH + gap)), UiColors.TextMuted,
             TruncateToWidth(worldZone, textMaxW));
 
+        var address = TravelUi.ForLocation(loc);
+        var travel = TravelUi.CanOffer(_caps.Travel, address) ? _caps.Travel : null;
+        var menuId = $"##msgrLocMenu{msg.Id:N}";
+
         if (hovered)
         {
             ImGui.BeginTooltip();
@@ -682,13 +795,38 @@ public sealed partial class MessengerApp
             {
                 ImGui.TextUnformatted(worldZone);
             }
-            ImGui.Separator();
-            ImGui.TextDisabled(Loc.T("os.msgr_location_open"));
+            if (travel is null)
+            {
+                ImGui.Separator();
+                ImGui.TextDisabled(Loc.T("os.msgr_location_open"));
+            }
             ImGui.EndTooltip();
         }
         if (clicked)
         {
-            _caps.System.OpenMapMarker(loc.TerritoryId, loc.MapId, loc.MapX, loc.MapY, zone);
+            if (travel is null)
+            {
+                _caps.System.OpenMapMarker(loc.TerritoryId, loc.MapId, loc.MapX, loc.MapY, zone);
+            }
+            else
+            {
+                ImGui.OpenPopup(menuId);
+            }
+        }
+        if (travel is not null && ImGui.BeginPopup(menuId))
+        {
+            if (SharedUiHelpers.DrawIconMenuItem(FontAwesomeIcon.MapMarkedAlt, Loc.T("os.msgr_location_open")))
+            {
+                _caps.System.OpenMapMarker(loc.TerritoryId, loc.MapId, loc.MapX, loc.MapY, zone);
+                ImGui.CloseCurrentPopup();
+            }
+            if (SharedUiHelpers.DrawIconMenuItem(FontAwesomeIcon.LocationArrow, TravelUi.Label(travel),
+                    enabled: !travel.IsBusy))
+            {
+                travel.GoTo(address);
+                ImGui.CloseCurrentPopup();
+            }
+            ImGui.EndPopup();
         }
 
         EndCard(msg, tl, br, cursorPos, cardH, isGroupEnd, fading);

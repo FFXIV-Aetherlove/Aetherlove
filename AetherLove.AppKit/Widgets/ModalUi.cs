@@ -13,6 +13,10 @@ internal static class ModalUi
     /// <summary>Centering is cursor-relative so it lines up inside padded panels.</summary>
     internal static void Header(float availW, string title, Vector4 accent)
     {
+        // Taken before the title, because drawing text ends the line and puts the cursor back at the window's
+        // content left. For a panel that is only a rect painted on a bigger window, that is nowhere near it.
+        var left = ImGui.GetCursorScreenPos().X;
+
         using (UiFonts.H3?.Push())
         {
             var titleSz = ImGui.CalcTextSize(title);
@@ -21,9 +25,13 @@ internal static class ModalUi
         }
         ImGui.Spacing();
 
-        ImGui.PushStyleColor(ImGuiCol.Separator, new Vector4(accent.X, accent.Y, accent.Z, 0.35f));
-        ImGui.Separator();
-        ImGui.PopStyleColor();
+        // Not ImGui.Separator: that spans the WINDOW, so the store's sheets got a rule running the whole
+        // screen behind the card. The width and the left edge are both the panel's.
+        var thickness = System.MathF.Max(1f, Px(1f));
+        var y = ImGui.GetCursorScreenPos().Y;
+        ImGui.GetWindowDrawList().AddLine(new Vector2(left, y), new Vector2(left + availW, y),
+            ImGui.GetColorU32(accent with { W = 0.35f }), thickness);
+        ImGui.Dummy(new Vector2(availW, thickness));
         ImGui.Spacing();
     }
 

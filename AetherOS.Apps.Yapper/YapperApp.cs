@@ -4,6 +4,7 @@ using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
 using AetherLove.Services;
+using AetherLove.Services.Localization;
 using AetherLove.Shared.Yapper;
 using AetherOS.Apps.Yapper.Screens;
 using AetherOS.Sdk;
@@ -63,6 +64,7 @@ public sealed class YapperApp : IAetherApp, IAppSettings
     private readonly TagFeedScreen _tagFeed;
     private readonly SettingsScreen _settings;
     private readonly ReportOverlay _reportOverlay;
+    private readonly ConfirmOverlay _confirmOverlay = new();
     private readonly DmStore _dms = new();
     private readonly MessagesScreen _messages;
     private readonly DmChatScreen _dmChat;
@@ -88,6 +90,9 @@ public sealed class YapperApp : IAetherApp, IAppSettings
         _storage = caps.Storage("yapper");
         _mediaCache = new YapperMediaCache(host, System.IO.Path.Combine(_storage.Directory, "MediaCache"));
         _mediaViewer = new MediaViewer(_mediaCache);
+        _reportOverlay = new ReportOverlay(host);
+        _notifications = new NotificationsScreen(host, _mediaCache, OpenYapById, OpenPeerProfile, OnInboxRead);
+        host.NotificationReceived += OnNotificationPush;
         _yapCard = new YapCard(host, _store, _mediaCache,
             () => _me?.ProfileId,
             OpenDetail,
@@ -98,15 +103,16 @@ public sealed class YapperApp : IAetherApp, IAppSettings
             OpenPeerProfile,
             _mediaViewer.Open,
             dto => _reportOverlay.OpenForYap(dto),
+            // Leaving the thread on the way out: the roll-up is a feed effect, and staying would leave the
+            // yap you just acted on sitting there as if nothing happened.
+            (author, block) => ConfirmModerate(author.ProfileId, author.Handle, block,
+                () => { if (_view == View.Detail) { Back(); } }),
             OpenEmbed,
             () => _me?.PinnedYapId,
             SetPinned);
-        _reportOverlay = new ReportOverlay(host);
         _home = new HomeScreen(_store, c => host.GetFollowingFeedAsync(c), CreateForYouPane, MarkSeen,
             c => _notifications.Draw(c), () => _me?.UnreadNotifications ?? 0, () => _notifications.OnShow());
         _explore = new ExploreScreen(host, _mediaCache, () => _me?.ProfileId, OpenTag, OpenPeerProfile, OnFollowChanged);
-        _notifications = new NotificationsScreen(host, _mediaCache, OpenYapById, OpenPeerProfile, OnInboxRead);
-        host.NotificationReceived += OnNotificationPush;
         _profile = new ProfileScreen(host, _store, _mediaCache, () => _me, RefreshMe,
             () => Navigate(View.Bookmarks), () => Navigate(View.Settings),
             followers => OpenFollowList(_me?.ProfileId, followers), _imageSheet, RequestPhotoPick, OpenDetail);
@@ -118,9 +124,13 @@ public sealed class YapperApp : IAetherApp, IAppSettings
         _bookmarks = new BookmarksScreen(_store, c => host.GetBookmarksAsync(c), Back);
         _peerProfile = new PeerProfileScreen(host, _store, _mediaCache, Back, OpenDmChat,
             (profileId, handle) => _reportOverlay.OpenForProfile(profileId, handle),
+            ConfirmModerate,
             (profileId, followers) => OpenFollowList(profileId, followers), OnFollowChanged, OpenDetail);
         _tagFeed = new TagFeedScreen(host, _store, Back);
-        _settings = new SettingsScreen(host, _mediaCache, () => _me, me => _me = me, Back);
+        _settings = new SettingsScreen(host, _mediaCache, () => _me, me => _me = me, Back,
+            (title, body, confirmLabel, danger, onConfirm) =>
+                _confirmOverlay.Open(title, body, confirmLabel, danger, onConfirm),
+            OnProfileDeleted);
         _messages = new MessagesScreen(host, _dms, _mediaCache, OpenDmChat);
         _dmChat = new DmChatScreen(host, _dms, _mediaCache, () => _me?.ProfileId, Back, OpenPeerProfile);
         host.DmReceived += OnDmPush;
@@ -168,6 +178,39 @@ public sealed class YapperApp : IAetherApp, IAppSettings
         {
             return _seenReported.Count == 0 ? [] : _seenReported.TakeLast(256).ToArray();
         }
+    }
+
+    /// <summary>Asks first, then mutes or blocks and clears the author off every open feed. The server only
+    /// applies either on the next fetch, so the roll-up is what makes the action visibly land.</summary>
+    private void ConfirmModerate(Guid profileId, string handle, bool block, Action? onDone = null)
+    {
+        _confirmOverlay.Open(
+            string.Format(Loc.T(block ? "os.yapper_confirm_block_title" : "os.yapper_confirm_mute_title"), handle),
+            Loc.T(block ? "os.yapper_confirm_block_body" : "os.yapper_confirm_mute_body"),
+            Loc.T(block ? "os.yapper_menu_block" : "os.yapper_menu_mute"),
+            block,
+            () =>
+            {
+                _store.BeginVanish(profileId, ImGui.GetTime());
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        if (block)
+                        {
+                            await _host.BlockAsync(profileId).ConfigureAwait(false);
+                        }
+                        else
+                        {
+                            await _host.SetMuteAsync(profileId, true).ConfigureAwait(false);
+                        }
+                    }
+                    catch (Exception)
+                    {
+                    }
+                });
+                onDone?.Invoke();
+            });
     }
 
     internal void OpenPeerProfile(Guid profileId)
@@ -399,7 +442,7 @@ public sealed class YapperApp : IAetherApp, IAppSettings
         if (_me is not null && _pendingShare is { } pendingShare)
         {
             _pendingShare = null;
-            _compose.OpenShare(pendingShare.Kind, pendingShare.RefId, pendingShare.Title);
+            _compose.OpenShare(pendingShare.Kind, pendingShare.RefId, pendingShare.Title ?? string.Empty);
             Navigate(View.Compose);
         }
 
@@ -470,6 +513,7 @@ public sealed class YapperApp : IAetherApp, IAppSettings
             DrawBottomNav(ctx, navH);
         }
         _reportOverlay.Draw(ctx);
+        _confirmOverlay.Draw(ctx);
         _imageSheet.Draw(ctx);
         _mediaViewer.Draw();
         FlushSeen(force: false);
@@ -573,6 +617,20 @@ public sealed class YapperApp : IAetherApp, IAppSettings
             RefreshMe();
         }
         _settings.DrawSettings(ctx, onBack);
+    }
+
+    /// <summary>Leaves Yapper after the profile is gone. Everything cached belonged to a profile that no
+    /// longer exists, so it is dropped rather than carried into whatever the account starts next; the server
+    /// now resolves no profile for this account, so the next open runs onboarding.</summary>
+    private void OnProfileDeleted()
+    {
+        _me = null;
+        _dmKeysEnsured = false;
+        _store.Clear();
+        _dms.Clear();
+        _backStack.Clear();
+        _view = View.Home;
+        _shell?.GoHome();
     }
 
     private void OnOnboarded(YapperMyProfileDto me)

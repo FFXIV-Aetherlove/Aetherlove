@@ -218,6 +218,7 @@ public sealed class ProfilePickerScreen
             IconDraw.AddCentered(dl, FontAwesomeIcon.User, avatarR * 0.9f, avatarCenter, 0x66FFFFFFu);
         }
         dl.AddCircle(avatarCenter, avatarR, 0x55FFFFFFu, 0, Px(1.2f));
+        AvatarRings.Draw(dl, avatarCenter, avatarR, p.FrameRef);
 
         if (p.Locked)
         {

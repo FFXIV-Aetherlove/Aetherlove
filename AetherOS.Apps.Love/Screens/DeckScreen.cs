@@ -1394,7 +1394,8 @@ public partial class DeckScreen : IDisposable
                     _pendingMatch.Set(
                         swipedCard.ProfileId,
                         swipedCard.DisplayName,
-                        swipedCard.AvatarWebp);
+                        swipedCard.AvatarWebp,
+                        swipedCard.FrameRef);
                     _pendingMatchNav = true;
                 }
             }

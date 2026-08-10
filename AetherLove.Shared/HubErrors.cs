@@ -93,6 +93,9 @@ public static class HubErrors
     public const string HangoutTimesInvalid = "hangout_times_invalid";
     /// <summary>Arg 0: max visible characters.</summary>
     public const string HangoutDescriptionTooLong = "hangout_description_too_long";
+    /// <summary>A watch-party hangout was created without a live Echo room the caller owns, or an ordinary
+    /// hangout tried to carry a room.</summary>
+    public const string HangoutWatchRoomInvalid = "hangout_watch_room_invalid";
 
     public const string LevemetesDisabled = "levemetes_disabled";
     public const string LeveNotFound = "leve_not_found";
@@ -177,6 +180,23 @@ public static class HubErrors
     public const string YapDmNotAllowed = "yap_dm_not_allowed";
     public const string YapDmKeysMissing = "yap_dm_keys_missing";
 
+    public const string EchoDisabled = "echo_disabled";
+    public const string EchoRoomNotFound = "echo_room_not_found";
+    /// <summary>Arg 0: the member cap.</summary>
+    public const string EchoRoomFull = "echo_room_full";
+    public const string EchoNotMember = "echo_not_member";
+    public const string EchoNotOwner = "echo_not_owner";
+    /// <summary>The room is host-only: playback and playlist control belong to the owner.</summary>
+    public const string EchoHostOnly = "echo_host_only";
+    /// <summary>The caller was kicked from this room and cannot rejoin it.</summary>
+    public const string EchoKicked = "echo_kicked";
+    /// <summary>Arg 0: the playlist cap.</summary>
+    public const string EchoPlaylistFull = "echo_playlist_full";
+    /// <summary>The caller already owns a live room; ending it is the way to start another.</summary>
+    public const string EchoLiveRoomExists = "echo_live_room_exists";
+    public const string EchoInvalidVideo = "echo_invalid_video";
+    public const string EchoNameInvalid = "echo_name_invalid";
+
     public const string PatreonDisabled = "patreon_disabled";
     public const string PatreonAlreadyLinked = "patreon_already_linked";
     public const string PatreonNotLinked = "patreon_not_linked";
@@ -184,6 +204,38 @@ public static class HubErrors
     public const string PatreonAccountTaken = "patreon_account_taken";
     /// <summary>Generic OAuth exchange / identity read failure during linking.</summary>
     public const string PatreonLinkFailed = "patreon_link_failed";
+
+    public const string StoreDisabled = "store_disabled";
+    public const string StoreProductNotFound = "store_product_not_found";
+    /// <summary>The product (or its category chain, or a bundle constituent) is disabled.</summary>
+    public const string StoreProductUnavailable = "store_product_unavailable";
+    /// <summary>Arg 0: the total price. Arg 1: the caller's balance.</summary>
+    public const string StoreInsufficientSparks = "store_insufficient_sparks";
+    /// <summary>Arg 0: the product's per-account limit.</summary>
+    public const string StoreLimitReached = "store_limit_reached";
+    public const string StoreQuantityInvalid = "store_quantity_invalid";
+    /// <summary>Two same-instant checkouts collided twice; the client should simply retry.</summary>
+    public const string StoreConflict = "store_conflict";
+
+    public const string AetherlingDisabled = "aetherling_disabled";
+    /// <summary>The account already has an Aethercore; there is only ever one.</summary>
+    public const string AetherlingExists = "aetherling_exists";
+    /// <summary>The account has no Aethercore to charge.</summary>
+    public const string AetherlingNone = "aetherling_none";
+    /// <summary>Arg 0: the price. Arg 1: the caller's balance.</summary>
+    public const string AetherlingInsufficient = "aetherling_insufficient";
+    /// <summary>Arg 0: whole minutes still to wait.</summary>
+    public const string AetherlingGated = "aetherling_gated";
+    /// <summary>The core is already at the last stage a charge can reach.</summary>
+    public const string AetherlingComplete = "aetherling_complete";
+    /// <summary>Asked for something the core has not reached yet: a hatch below the last rung, or a name
+    /// before the hatch.</summary>
+    public const string AetherlingUnready = "aetherling_unready";
+    /// <summary>The name was already chosen; changing it is not free.</summary>
+    public const string AetherlingNamed = "aetherling_named";
+    /// <summary>Covers empty, too long, and moderation-flagged alike, so the moderator cannot be probed by
+    /// watching which names come back with a different answer.</summary>
+    public const string AetherlingNameInvalid = "aetherling_name_invalid";
 
     /// <summary>Builds the wire payload. Args are serialized invariant-culture; they must not contain '|'.</summary>
     public static string Format(string code, params object?[] args)

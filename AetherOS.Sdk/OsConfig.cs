@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace AetherOS.Sdk;
@@ -7,6 +8,9 @@ public enum WallpaperMode
     ThemeGradient = 0,
     BuiltIn = 1,
     Custom = 2,
+
+    /// <summary>The wallpaper that ships with a purchased theme; the image lives sealed, not on disk.</summary>
+    Premium = 3,
 }
 
 /// <summary>Home grid density, named after common Android launcher presets. Columns and tile sizing come
@@ -53,6 +57,9 @@ public class OsConfig
     /// <summary>Absolute path of the user-uploaded wallpaper copy.</summary>
     public string CustomWallpaperPath { get; set; } = string.Empty;
 
+    /// <summary>Which purchased theme's wallpaper is in use, when the mode is Premium.</summary>
+    public Guid PremiumWallpaperProductId { get; set; }
+
     /// <summary>0..0.98 dark overlay on image wallpapers; the top end blacks the wallpaper out almost entirely.</summary>
     public float WallpaperDim { get; set; } = 0.25f;
 
@@ -83,11 +90,20 @@ public class OsConfig
     /// <summary>InternalNames of other Dalamud plugins pinned to the home screen.</summary>
     public List<string> ExternalApps { get; set; } = new();
 
-    /// <summary>Skips the confirm popup when removing a pinned external app.</summary>
+    /// <summary>Ids of built-in apps the user removed from the home screen. They stay registered so deep links
+    /// keep working, but they own no tile, widget, share entry, badge or notification until they are added back.</summary>
+    public List<string> RemovedApps { get; set; } = new();
+
+    /// <summary>Skips the confirm popup when removing an app.</summary>
     public bool SkipRemoveAppConfirm { get; set; }
 
     /// <summary>Apps whose home-tile "new" badge has been dismissed by opening them once.</summary>
     public List<string> SeenNewApps { get; set; } = new();
+
+    /// <summary>The Media folder seed has been considered. It is a one-shot decision rather than a repeated
+    /// check, so a folder the user deleted never returns and a user who already had one of its apps is never
+    /// reorganised later.</summary>
+    public bool MediaFolderSeeded { get; set; }
 
     /// <summary>The guided OS tour ran (or was skipped); it auto-starts once on the first Home landing.</summary>
     public bool TourSeen { get; set; }

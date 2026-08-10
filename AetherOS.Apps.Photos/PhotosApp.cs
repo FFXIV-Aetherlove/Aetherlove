@@ -501,7 +501,8 @@ public sealed class PhotosApp : IAetherApp, IAppSettings
     }
 
     /// <summary>A card with a wrapped label plus hint on the left and a checkbox on the right; the whole card
-    /// toggles. Returns true on the frame the value changed.</summary>
+    /// toggles. Returns true on the frame the value changed. Photos is a pure-SDK app, so this cannot come
+    /// from AppKit's shared copy the way an AppKit-linked app's settings page does.</summary>
     private static bool SettingToggle(OsAppContext ctx, string id, string label, string hint, float x, float width, ref bool value)
     {
         var dl = ImGui.GetWindowDrawList();

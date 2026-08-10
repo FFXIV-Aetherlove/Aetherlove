@@ -158,5 +158,14 @@ internal static class ChatDe
         ["chat.delete_message_body"] = "Diese Nachricht für alle löschen? An ihrer Stelle bleibt ein Hinweis, dass du sie gelöscht hast.",
         ["chat.delete_message_confirm"] = "Löschen",
         ["chat.deleted_by_author"] = "Diese Nachricht wurde vom Verfasser gelöscht.",
+        // added after update 2.2.3 (echo)
+        ["chat.preview_echo"] = "Hat einen Echo-Raum geteilt",
+        ["chat.echo_card_label"] = "Echo-Raum",
+        ["chat.echo_card_host"] = "Host: {0}",
+        ["chat.echo_card_members"] = "{0} schauen zu",
+        ["chat.echo_card_idle"] = "Läuft noch nichts",
+        ["chat.echo_card_view"] = "Diesem Raum beitreten",
+        ["chat.echo_card_loading"] = "Raum wird geladen...",
+        ["chat.echo_card_unavailable"] = "Dieser Raum ist beendet",
     };
 }

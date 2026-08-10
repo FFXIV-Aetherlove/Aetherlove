@@ -63,4 +63,5 @@ public sealed record ProfileDetailDto(
     HangoutSummaryDto? ActiveHangout = null,
     // Holiday mode: the away banner between the photos and the about section.
     bool HolidayMode = false,
-    string HolidayMessage = "");
+    string HolidayMessage = "",
+    string? FrameRef = null);

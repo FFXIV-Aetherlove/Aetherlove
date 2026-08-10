@@ -33,7 +33,8 @@ public sealed partial class MessengerApp
         bool LastFromMe,
         bool HasMessages,
         bool RemovedByPeer,
-        MessengerGroupDto? Group);
+        MessengerGroupDto? Group,
+        string? PeerFrameRef = null);
 
     private const float ChatRowHeight = 80f;
     private const float CategoryRowHeight = 64f;
@@ -230,7 +231,7 @@ public sealed partial class MessengerApp
                 c.LastMessageAtUtc, c.LastMessageCiphertext, c.LastMessageNonce, 0);
             rows.Add(new ChatRow(c.ContactId, MessengerChatKind.Direct, c.PeerName, c.PeerAvatar,
                 c.PinnedByMe, c.Unread, c.LastMessageAtUtc ?? c.AddedAtUtc, preview, c.LastMessageFromMe,
-                c.LastMessageAtUtc is not null, c.RemovedByPeer, null));
+                c.LastMessageAtUtc is not null, c.RemovedByPeer, null, c.PeerFrameRef));
         }
         foreach (var g in _store.Groups)
         {
@@ -979,7 +980,8 @@ public sealed partial class MessengerApp
 
         var avatarR = Px(21f);
         var avatarC = new Vector2(tl.X + Px(12f) + avatarR, (tl.Y + br.Y) * 0.5f);
-        DrawAvatar(dl, request.PeerAccountId, request.PeerName, request.PeerAvatar, false, avatarC, avatarR);
+        DrawAvatar(dl, request.PeerAccountId, request.PeerName, request.PeerAvatar, false, avatarC, avatarR,
+            request.PeerFrameRef);
 
         var btnSize = Px(32f);
         var gap = Px(8f);
@@ -1046,7 +1048,8 @@ public sealed partial class MessengerApp
 
         var avatarR = Px(21f);
         var avatarC = new Vector2(tl.X + Px(12f) + avatarR, (tl.Y + br.Y) * 0.5f);
-        DrawAvatar(dl, request.PeerAccountId, request.PeerName, request.PeerAvatar, false, avatarC, avatarR);
+        DrawAvatar(dl, request.PeerAccountId, request.PeerName, request.PeerAvatar, false, avatarC, avatarR,
+            request.PeerFrameRef);
         // Unanswered, so the avatar sits behind a veil rather than reading as a live contact.
         dl.AddCircleFilled(avatarC, avatarR, 0x66101010u);
         IconCentered(dl, FontAwesomeIcon.Clock, Px(15f), avatarC, 0xCCFFFFFFu);
@@ -1192,7 +1195,7 @@ public sealed partial class MessengerApp
         var avatarCenter = contentStart + new Vector2(Px(40), rowHeight * 0.5f);
         var avatarRadius = Px(25f);
         DrawAvatar(drawList, row.Id, row.Title, row.Avatar, row.Kind == MessengerChatKind.Group,
-            avatarCenter, avatarRadius);
+            avatarCenter, avatarRadius, row.PeerFrameRef);
         drawList.AddCircle(avatarCenter, avatarRadius, 0xFFFFFFFF, 0, Px(2f));
 
         if (row.Unread > 0)

@@ -441,3 +441,6 @@ uploads/
 
 # Local NPC profile drafts (source material for fakes); never committed.
 NPC_Profiles*.md
+
+# Windows folder-view settings; purely local.
+desktop.ini

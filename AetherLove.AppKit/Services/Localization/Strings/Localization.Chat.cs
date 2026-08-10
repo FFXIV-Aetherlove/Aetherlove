@@ -157,5 +157,14 @@ internal static class ChatEn
         ["chat.delete_message_body"] = "Delete this message for everyone? A note that you deleted it stays in its place.",
         ["chat.delete_message_confirm"] = "Delete",
         ["chat.deleted_by_author"] = "This message was deleted by its author.",
+        // added after update 2.2.3 (echo)
+        ["chat.preview_echo"] = "Shared an Echo room",
+        ["chat.echo_card_label"] = "Echo room",
+        ["chat.echo_card_host"] = "Hosted by {0}",
+        ["chat.echo_card_members"] = "{0} watching",
+        ["chat.echo_card_idle"] = "Nothing playing yet",
+        ["chat.echo_card_view"] = "Join this room",
+        ["chat.echo_card_loading"] = "Loading room...",
+        ["chat.echo_card_unavailable"] = "This room has ended",
     };
 }

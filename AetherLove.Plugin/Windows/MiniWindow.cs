@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Numerics;
 using AetherLove.Config;
@@ -18,6 +18,14 @@ public sealed class MiniWindow : Window, IDisposable
 {
     private readonly MainPluginWindow _main;
     private readonly NotificationCenter _notifications;
+    private readonly Os.IOsMediaRemote _media;
+    private readonly AetherOS.Sdk.IOsShell _osShell;
+
+    /// <summary>How many app icons the warm-up loads per frame.</summary>
+    private const int IconsPerFrame = 2;
+
+    private bool _preWarmed;
+    private int _preWarmIndex;
     private readonly PhoneShellWidget _shell = new();
 
     private ISharedImmediateTexture? _logoTex;
@@ -43,7 +51,9 @@ public sealed class MiniWindow : Window, IDisposable
 
     public MiniWindow(
         MainPluginWindow main,
-        NotificationCenter notifications) : base(
+        NotificationCenter notifications,
+        AetherOS.Sdk.IOsShell osShell,
+        Os.IOsMediaRemote media) : base(
         "AetherLove##Mini",
         ImGuiWindowFlags.NoResize
       | ImGuiWindowFlags.NoScrollbar
@@ -55,6 +65,8 @@ public sealed class MiniWindow : Window, IDisposable
     {
         _main = main;
         _notifications = notifications;
+        _osShell = osShell;
+        _media = media;
         Size = new Vector2(85, 153);
         SizeCondition = ImGuiCond.Always;
         Position = new Vector2(80, 300);
@@ -111,8 +123,47 @@ public sealed class MiniWindow : Window, IDisposable
         io.FontGlobalScale = 1f;
     }
 
+    /// <summary>Builds what the full-size phone will need while the bubble is still up. A font handle is only
+    /// built once something pushes it, and the wallpaper and every app icon only load once something draws
+    /// them, so a phone that boots minimised does all of that in the single frame it is enlarged: on a slow
+    /// machine that reads as a freeze. A handful per frame here spreads it over the time the bubble sits idle.
+    /// Everything is cached by its owner, so this is a warm-up rather than a second copy.</summary>
+    private void PreWarm()
+    {
+        if (_preWarmed)
+        {
+            return;
+        }
+        // Pushing a handle is what makes Dalamud build it; the pairs are empty, so nothing is drawn.
+        using (UiFonts.Body?.Push()) { }
+        using (UiFonts.Reader?.Push()) { }
+        using (UiFonts.H1?.Push()) { }
+        using (UiFonts.H2?.Push()) { }
+        using (UiFonts.H3?.Push()) { }
+        using (UiFonts.Clock?.Push()) { }
+        using (UiFonts.Icon?.Push()) { }
+        if (!UiFonts.Ready)
+        {
+            return;
+        }
+
+        // A few icons per frame: each one is a file read plus a texture upload, and doing the lot at once
+        // would just move the stall here.
+        var apps = _osShell.Apps;
+        var end = System.Math.Min(_preWarmIndex + IconsPerFrame, apps.Count);
+        for (; _preWarmIndex < end; _preWarmIndex++)
+        {
+            AppIcons.Tile(apps[_preWarmIndex].Id);
+        }
+        if (_preWarmIndex >= apps.Count)
+        {
+            _preWarmed = true;
+        }
+    }
+
     public override void Draw()
     {
+        PreWarm();
         using var bodyFont = UiFonts.Body?.Push();
 
         if (_recenterRequested)
@@ -133,25 +184,33 @@ public sealed class MiniWindow : Window, IDisposable
 
         var LogoSize = MiniScale.Px(64f);
         var LogoTopMargin = MiniScale.Px(18f);
-        var IconAreaH = MiniScale.Px(28f);
-        var IconBottomMargin = MiniScale.Px(28f);
+        var IconAreaH = MiniScale.Px(24f);
+        var IconBottomMargin = MiniScale.Px(18f);
 
-        EnsureLogo();
         var logoTL = pos + new Vector2((size.X - LogoSize) * 0.5f, LogoTopMargin);
         var logoBR = logoTL + new Vector2(LogoSize, LogoSize);
-        var logoWrap = _logoTex?.GetWrapOrDefault();
-        if (logoWrap != null)
+        var transportHovered = false;
+        if (_media.HasSession)
         {
-            dl.AddImage(logoWrap.Handle, logoTL, logoBR);
+            transportHovered = DrawMediaBar(dl, logoTL, new Vector2(LogoSize, LogoSize));
         }
-
-        // Manual rect-test; InvisibleButton would steal the tap-to-restore click.
-        var logoHovered = ImGui.IsWindowHovered()
-                          && mousePos.X >= logoTL.X && mousePos.X <= logoBR.X
-                          && mousePos.Y >= logoTL.Y && mousePos.Y <= logoBR.Y;
-        if (logoHovered)
+        else
         {
-            ImGui.SetTooltip("Open AetherLove");
+            EnsureLogo();
+            var logoWrap = _logoTex?.GetWrapOrDefault();
+            if (logoWrap != null)
+            {
+                dl.AddImage(logoWrap.Handle, logoTL, logoBR);
+            }
+
+            // Manual rect-test; InvisibleButton would steal the tap-to-restore click.
+            var logoHovered = ImGui.IsWindowHovered()
+                              && mousePos.X >= logoTL.X && mousePos.X <= logoBR.X
+                              && mousePos.Y >= logoTL.Y && mousePos.Y <= logoBR.Y;
+            if (logoHovered)
+            {
+                ImGui.SetTooltip("Open AetherLove");
+            }
         }
 
         var DotR = MiniScale.Px(9f);
@@ -189,7 +248,7 @@ public sealed class MiniWindow : Window, IDisposable
 
         var iconCol = iconHovered ? 0xFFFF6060u : 0xFFAAAAAAu;
         ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
-        var iconRenderSz = ImGui.GetFontSize() * 1.4f * MiniScale.S;
+        var iconRenderSz = ImGui.GetFontSize() * 1.15f * MiniScale.S;
         ImGui.PopFont();
         IconDraw.AddCentered(dl, FontAwesomeIcon.PowerOff, iconRenderSz, iconBoxTL + iconBoxSize * 0.5f, iconCol);
 
@@ -202,7 +261,8 @@ public sealed class MiniWindow : Window, IDisposable
         }
 
         // <=5px movement counts as a tap (restore), anything more is a drag.
-        if (!iconHovered && ImGui.IsWindowHovered() && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (!iconHovered && !transportHovered
+            && ImGui.IsWindowHovered() && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
             _mouseDownOnWindow = true;
             _mouseDownPos = mousePos;
@@ -229,7 +289,7 @@ public sealed class MiniWindow : Window, IDisposable
         {
             if (!_dragThresholdMet)
             {
-                _main.OpenToHome();
+                _main.Restore();
                 IsOpen = false;
             }
             _mouseDownOnWindow = false;
@@ -275,6 +335,87 @@ public sealed class MiniWindow : Window, IDisposable
         }
     }
 
+
+    /// <summary>The logo's slot, borrowed by a now-playing readout while the PC is playing something: art,
+    /// a truncated title, and the transport. Returns whether a control is hovered, which the caller uses to
+    /// keep the tap-to-restore from firing underneath it.</summary>
+    private bool DrawMediaBar(ImDrawListPtr dl, Vector2 tl, Vector2 size)
+    {
+        var artSide = size.X * 0.66f;
+        var artTL = tl + new Vector2((size.X - artSide) * 0.5f, 0f);
+        var artBR = artTL + new Vector2(artSide, artSide);
+        var rounding = MiniScale.Px(6f);
+        if (_media.Art is { } art)
+        {
+            dl.AddImageRounded(art, artTL, artBR, Vector2.Zero, Vector2.One, 0xFFFFFFFFu, rounding);
+        }
+        else
+        {
+            dl.AddRectFilled(artTL, artBR, 0x40FFFFFFu, rounding);
+            IconDraw.AddCentered(dl, FontAwesomeIcon.Music, artSide * 0.45f,
+                (artTL + artBR) * 0.5f, 0xFFDDDDDDu);
+        }
+
+        var labelPx = MiniScale.Px(10f);
+        var title = Truncate(_media.Title, size.X, labelPx);
+        var titleW = ImGui.CalcTextSize(title).X * (labelPx / ImGui.GetFontSize());
+        dl.AddText(ImGui.GetFont(), labelPx,
+            new Vector2(tl.X + (size.X - titleW) * 0.5f, artBR.Y + MiniScale.Px(3f)), 0xFFEEEEEEu, title);
+
+        var rowY = artBR.Y + MiniScale.Px(3f) + labelPx + MiniScale.Px(3f);
+        var button = MiniScale.Px(16f);
+        var gap = MiniScale.Px(4f);
+        var rowW = (button * 3f) + (gap * 2f);
+        var x = tl.X + (size.X - rowW) * 0.5f;
+        var hovered = false;
+        hovered |= DrawTransportButton(dl, "##miniPrev", new Vector2(x, rowY), button,
+            FontAwesomeIcon.StepBackward, _media.Previous);
+        x += button + gap;
+        hovered |= DrawTransportButton(dl, "##miniPlay", new Vector2(x, rowY), button,
+            _media.IsPlaying ? FontAwesomeIcon.Pause : FontAwesomeIcon.Play, _media.TogglePlayPause);
+        x += button + gap;
+        hovered |= DrawTransportButton(dl, "##miniNext", new Vector2(x, rowY), button,
+            FontAwesomeIcon.StepForward, _media.Next);
+        return hovered;
+    }
+
+    private bool DrawTransportButton(
+        ImDrawListPtr dl, string id, Vector2 tl, float side, FontAwesomeIcon icon, Action onClick)
+    {
+        ImGui.SetCursorScreenPos(tl);
+        var pressed = ImGui.InvisibleButton(id, new Vector2(side, side));
+        var hovered = ImGui.IsItemHovered();
+        var enabled = _media.CanControl;
+        if (hovered && enabled)
+        {
+            SharedUiHelpers.HandOnHover();
+        }
+        var tint = !enabled ? 0x66FFFFFFu : hovered ? 0xFFFFFFFFu : 0xCCDDDDDDu;
+        IconDraw.AddCentered(dl, icon, side * 0.62f, tl + new Vector2(side * 0.5f, side * 0.5f), tint);
+        if (pressed && enabled)
+        {
+            onClick();
+        }
+        return hovered;
+    }
+
+    private static string Truncate(string text, float maxWidth, float renderPx)
+    {
+        var scale = renderPx / ImGui.GetFontSize();
+        if (ImGui.CalcTextSize(text).X * scale <= maxWidth)
+        {
+            return text;
+        }
+        for (var length = text.Length - 1; length > 1; length--)
+        {
+            var candidate = text[..length] + "…";
+            if (ImGui.CalcTextSize(candidate).X * scale <= maxWidth)
+            {
+                return candidate;
+            }
+        }
+        return "…";
+    }
 
     private void EnsureLogo()
     {

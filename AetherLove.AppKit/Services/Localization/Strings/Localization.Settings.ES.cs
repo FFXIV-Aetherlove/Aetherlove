@@ -1,4 +1,4 @@
-namespace AetherLove.Services.Localization;
+﻿namespace AetherLove.Services.Localization;
 
 internal static class SettingsEs
 {
@@ -27,7 +27,7 @@ internal static class SettingsEs
         ["settings.phone_size_large"] = "Grande",
         ["settings.phone_size_xl"] = "XL",
         ["settings.phone_size_xxl"] = "XXL",
-        ["settings.phone_size_caption"] = "Escala todo el teléfono. Los tamaños mayores son ideales para pantallas de alta resolución; XL y XXL están pensados para 4K y puede que no quepan en pantallas más pequeñas.",
+        ["settings.phone_size_caption"] = "Escala todo el teléfono. XS es para pantallas pequeñas o en modo ventana; los tamaños mayores son ideales para pantallas de alta resolución, y XL y XXL están pensados para 4K.",
         ["settings.section_mini_phone_size"] = "Tamaño del teléfono en miniatura",
         ["settings.mini_phone_size_caption"] = "Tamaño de la burbuja minimizada (se muestra cuando el teléfono está minimizado). La vista previa de abajo muestra el tamaño seleccionado.",
 
@@ -237,5 +237,15 @@ internal static class SettingsEs
         ["settings.staff_notices_empty"] = "Todavía no hay nada del equipo.",
         ["settings.staff_warnings_section"] = "Advertencias",
         ["settings.staff_messages_section"] = "Mensajes",
+
+        // added after update 2.2.3
+        ["settings.premium_themes"] = "Temas premium",
+        ["settings.premium_refresh"] = "Actualizar este tema",
+        ["settings.premium_backgrounds"] = "Fondos premium",
+        ["settings.premium_enable_failed"] = "No se pudo cambiar",
+        ["settings.phone_size_xs"] = "XS",
+        ["settings.supporter_store_perks_header"] = "En la tienda",
+        ["settings.supporter_perk_store_title"] = "10% de descuento en la tienda",
+        ["settings.supporter_perk_store_body"] = "Los Supporters pagan un 10% menos en cada compra de la tienda, además de cualquier rebaja activa.",
     };
 }

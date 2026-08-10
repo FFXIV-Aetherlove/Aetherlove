@@ -99,6 +99,10 @@ public sealed class PulseService : IDisposable
 
     private async Task TickAsync(CancellationToken ct)
     {
+        if (!PhonePower.IsOn)
+        {
+            return;
+        }
         Flush();
 
         var pulse = _config.Pulse;

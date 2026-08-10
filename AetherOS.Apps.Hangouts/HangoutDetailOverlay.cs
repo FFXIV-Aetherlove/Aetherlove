@@ -49,6 +49,9 @@ public sealed class HangoutDetailOverlay
     /// <summary>Wired by the app to the in-app share picker.</summary>
     public Action<HangoutSummaryDto>? ShareHandler { get; set; }
 
+    /// <summary>Wired by the app to the Echo deep link; takes the room id and its share code.</summary>
+    public Action<Guid, string>? JoinWatchRoomHandler { get; set; }
+
     public void Open(HangoutSummaryDto hangout, bool fromChat = false)
     {
         _hangout = hangout;
@@ -214,6 +217,15 @@ public sealed class HangoutDetailOverlay
         ImGui.Spacing();
 
         var buttons = new List<(string Id, string Label, bool Disabled, Action OnClick)>();
+        if (h.EchoRoomId is { } roomId && h.EchoRoomCode is { Length: > 0 } roomCode
+            && JoinWatchRoomHandler is { } joinWatch)
+        {
+            buttons.Add(("Watch", Loc.T("hangout.join_watch_room"), false, () =>
+            {
+                _open = false;
+                joinWatch(roomId, roomCode);
+            }));
+        }
         if (!isMine)
         {
             var going = _state.IsRsvped(h.Id);
@@ -266,7 +278,7 @@ public sealed class HangoutDetailOverlay
     {
         var dl = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
-        var icon = HangoutFields.CategoryIcon(h.Category);
+        var icon = HangoutCategories.Icon(h.Category);
         var avatarR = Px(27f);
         var timesPx = Px(18f);
         var catPx = Px(44f);
@@ -288,6 +300,7 @@ public sealed class HangoutDetailOverlay
             dl.AddCircleFilled(avatarCenter, avatarR, UiColors.AvatarFallback);
         }
         dl.AddCircle(avatarCenter, avatarR, ImGui.GetColorU32(accent), 0, Px(2f));
+        AvatarRings.Draw(dl, avatarCenter, avatarR, h.OwnerFrameRef);
         if (h.OwnerIsSupporter)
         {
             var badgeCenter = avatarCenter + new Vector2(avatarR * 0.74f, -avatarR * 0.74f);
@@ -305,7 +318,7 @@ public sealed class HangoutDetailOverlay
         var catPos = new Vector2(x, midY - catSz.Y * 0.5f);
         IconDraw.Add(dl, icon, catPx, catPos, ImGui.GetColorU32(accent));
 
-        var title = HangoutFields.CategoryLabel(h.Category);
+        var title = HangoutCategories.Label(h.Category);
         var titleSz = ImGui.CalcTextSize(title);
         var titleX = MathF.Max(origin.X,
             MathF.Min(catPos.X + catSz.X * 0.5f - titleSz.X * 0.5f, origin.X + w - titleSz.X));

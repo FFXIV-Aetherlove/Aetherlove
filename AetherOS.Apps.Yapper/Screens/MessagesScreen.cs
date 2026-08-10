@@ -219,8 +219,8 @@ internal sealed class MessagesScreen
             dl.AddRectFilled(tl, tl + new Vector2(winW, rowH), ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.04f)));
         }
         var center = tl + new Vector2(pad + Px(17f), rowH * 0.5f);
-        DrawAvatar(ctx, dl, new YapAuthorDto(row.ProfileId, row.Handle, row.DisplayName, row.Avatar, row.IsNsfw, row.IsSupporter),
-            center, Px(17f));
+        DrawAvatar(ctx, dl, new YapAuthorDto(row.ProfileId, row.Handle, row.DisplayName, row.Avatar, row.IsNsfw,
+            row.IsSupporter, FrameRef: row.FrameRef), center, Px(17f));
         dl.AddText(tl + new Vector2(pad + Px(44f), Px(6f)), 0xFFFFFFFFu, row.DisplayName);
         dl.AddText(tl + new Vector2(pad + Px(44f), Px(24f)),
             ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.45f)), $"@{row.Handle}");
@@ -241,6 +241,7 @@ internal sealed class MessagesScreen
             var sz = ImGui.CalcTextSize(initial);
             dl.AddText(center - sz * 0.5f, 0xFFFFFFFFu, initial);
         }
+        AvatarRings.Draw(dl, center, r, who.FrameRef);
     }
 
     private void MaybeSearch()

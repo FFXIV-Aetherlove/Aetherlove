@@ -6,6 +6,7 @@ using AetherLove.Services.Localization;
 using AetherLove.Shared.Yapper;
 using AetherOS.Sdk;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Utility.Raii;
 
 namespace AetherOS.Apps.Yapper;
 
@@ -136,17 +137,27 @@ internal sealed class FeedPane(
             return;
         }
 
+        var now = ImGui.GetTime();
         foreach (var id in _ids.ToArray())
         {
             if (id == ExcludeId)
             {
                 continue;
             }
-            if (store.Get(id) is { } dto)
+            if (store.Get(id) is not { } dto)
             {
-                card.Draw(ctx, dto);
-                markSeen(id);
+                continue;
             }
+            if (store.VanishProgress(dto, now) is { } vanish)
+            {
+                if (!DrawVanishing(ctx, card, dto, vanish))
+                {
+                    _ids.Remove(id);
+                }
+                continue;
+            }
+            card.Draw(ctx, dto);
+            markSeen(id);
         }
 
         // Auto-page once the scroll approaches the bottom.
@@ -259,6 +270,29 @@ internal sealed class FeedPane(
             ImGui.TextColored(new Vector4(1f, 1f, 1f, 0.4f), label);
         }
         ImGui.Dummy(new Vector2(0f, Px(10f)));
+    }
+
+    /// <summary>The roll-up: the card carries on drawing inside a child that shrinks to nothing, so the rows
+    /// below slide up to meet it. Clipping does the work rather than a fade, because most of a card is painted
+    /// straight onto the draw list where a pushed alpha would not reach it. Returns false once the card is
+    /// finished, or immediately when it has no measured height, which means it was never on screen.</summary>
+    private bool DrawVanishing(OsAppContext ctx, YapCard card, YapDto dto, float t)
+    {
+        if (t >= 1f || store.HeightOf(dto.Id) is not { } full)
+        {
+            return false;
+        }
+        var eased = t * t;
+        ImGui.SetCursorPosX(0f);
+        using var clip = ImRaii.Child($"##yapVanish{dto.Id:N}",
+            new Vector2(ImGui.GetWindowSize().X, MathF.Max(1f, full * (1f - eased))), false,
+            ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse
+            | ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoInputs);
+        if (clip)
+        {
+            card.Draw(ctx, dto);
+        }
+        return true;
     }
 
     private static void CenteredText(string text)

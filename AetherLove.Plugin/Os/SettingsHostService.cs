@@ -24,10 +24,13 @@ public sealed class SettingsHostService : ISettingsHost
     private readonly ChangelogWindow _changelogWindow;
     private readonly AetherHubContext _hub;
     private readonly AetherOS.Sdk.IOsShell _shell;
+    private readonly Services.Store.PremiumThemeService _premiumThemes;
 
     public SettingsHostService(WallpaperService wallpapers, OsAvatarCache osAvatar, SessionBootstrapper bootstrap,
-        PatreonLinkFlow patreon, ChangelogWindow changelogWindow, AetherHubContext hub, AetherOS.Sdk.IOsShell shell)
+        PatreonLinkFlow patreon, ChangelogWindow changelogWindow, AetherHubContext hub, AetherOS.Sdk.IOsShell shell,
+        Services.Store.PremiumThemeService premiumThemes)
     {
+        _premiumThemes = premiumThemes;
         _wallpapers = wallpapers;
         _osAvatar = osAvatar;
         _bootstrap = bootstrap;
@@ -52,6 +55,49 @@ public sealed class SettingsHostService : ISettingsHost
     public void RemoveCustom() => _wallpapers.RemoveCustom();
 
     public ISharedImmediateTexture? OsAvatar => _osAvatar.Texture;
+
+    public string? EquippedFrameRef => _bootstrap.LastAccount?.EquippedFrameRef;
+
+    public Task<AetherLove.Shared.Store.AvatarRingDto[]> GetOwnedRingsAsync() => _hub.GetMyAvatarRingsAsync();
+
+    public async Task SetAvatarRingAsync(string? frameRef)
+    {
+        await _hub.SetAvatarRingAsync(AetherLove.Shared.Store.AvatarRingSurface.Os, frameRef).ConfigureAwait(false);
+        await _bootstrap.RefreshAccountInfoAsync().ConfigureAwait(false);
+    }
+
+    public async Task<AetherLove.Shared.Store.OwnedThemeDto[]?> GetOwnedThemesAsync()
+    {
+        try
+        {
+            return await _hub.GetMyStoreThemesAsync().ConfigureAwait(false);
+        }
+        catch (System.Exception ex)
+        {
+            Plugin.Log.Debug(ex, "[Settings] Owned themes fetch failed.");
+            return null;
+        }
+    }
+
+    public System.Guid? ActivePremiumThemeId => ThemeService.PremiumThemeId;
+
+    public Task<bool> EnablePremiumThemeAsync(System.Guid productId) => _premiumThemes.EnableAsync(productId);
+
+    public Task<bool> RefreshPremiumThemeAsync(System.Guid productId) => _premiumThemes.RefreshAsync(productId);
+
+    public async Task<bool> SelectPremiumWallpaperAsync(System.Guid productId)
+    {
+        if (_premiumThemes.BackgroundWrap(productId) is null
+            && !await _premiumThemes.DownloadAndSealAsync(productId).ConfigureAwait(false))
+        {
+            return false;
+        }
+        _wallpapers.SelectPremium(productId);
+        return true;
+    }
+
+    public Dalamud.Interface.Textures.TextureWraps.IDalamudTextureWrap? PremiumWallpaper(System.Guid productId) =>
+        _premiumThemes.BackgroundWrap(productId);
 
     public async Task SaveOsProfileAsync(string name, PhotoUploadDto? avatar)
     {

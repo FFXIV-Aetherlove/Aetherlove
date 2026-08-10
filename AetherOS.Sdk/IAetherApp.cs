@@ -10,6 +10,10 @@ namespace AetherOS.Sdk;
 /// name and its start time).</summary>
 public sealed record OsWidgetItem(string Title, string Detail);
 
+/// <summary>A button on the second row of an app's home-screen widget (e.g. media transport). Drawn only
+/// when the app also returns widget items.</summary>
+public sealed record OsWidgetAction(FontAwesomeIcon Icon, string Tooltip, Action Invoke, bool Primary = false);
+
 /// <summary>An app installed on the AetherOS home screen.</summary>
 public interface IAetherApp
 {
@@ -65,13 +69,30 @@ public interface IAetherApp
     /// widgets page is visible, so keep it cheap. Default: no widget.</summary>
     IReadOnlyList<OsWidgetItem> WidgetItems => Array.Empty<OsWidgetItem>();
 
+    /// <summary>Optional buttons drawn as a second row inside the widget card, for apps whose widget is
+    /// worth acting on without opening them. Ignored when <see cref="WidgetItems"/> is empty; queried every
+    /// frame the widgets page is visible, so keep it cheap.</summary>
+    IReadOnlyList<OsWidgetAction> WidgetActions => Array.Empty<OsWidgetAction>();
+
     /// <summary>True while the surface app is running a non-interruptible flow (e.g. first-run onboarding), so the
     /// host suppresses the OS home indicator and status bar until the app clears it.</summary>
     bool LocksShell => false;
 
+    /// <summary>True while the app wants drags on its surface for itself, so the host stops ImGui reading them as
+    /// "move the phone". Needed by anything that drags to aim: with no ImGui item under the cursor a press on the
+    /// surface moves the window, and claiming one instead would take the active id that the keyboard capture
+    /// needs. Only honoured while the app is the visible surface.</summary>
+    bool LocksWindowDrag => false;
+
     /// <summary>True when the app is unusable without the AetherLove connection: while the hub is down the host
     /// draws the offline panel in place of the surface. Offline-capable apps keep the default and stay usable.</summary>
     bool RequiresConnection => false;
+
+    /// <summary>True when the app is backed by the AetherAccount, so a disabled account gets the ban card instead
+    /// of the surface. Defaults to <see cref="RequiresConnection"/> because the two normally coincide; an app that
+    /// serves account-backed and purely local content side by side overrides them apart, or a banned user is told
+    /// they have a network problem.</summary>
+    bool UsesAccount => RequiresConnection;
 
     /// <summary>Called when the phone minimises or the app goes background; drop transient state.</summary>
     void OnBackground()

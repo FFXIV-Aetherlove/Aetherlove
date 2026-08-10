@@ -1,4 +1,4 @@
-namespace AetherLove.Services.Localization;
+﻿namespace AetherLove.Services.Localization;
 
 internal static class OsDe
 {
@@ -8,6 +8,8 @@ internal static class OsDe
         // App names
         ["os.app_clock"] = "Uhr",
         ["os.app_snake"] = "Snake",
+        ["os.app_doom"] = "DOOM",
+        ["os.app_sudoku"] = "Sudoku",
         ["os.app_stacker"] = "Stacker",
         ["os.app_breaker"] = "Breaker",
         ["os.app_meteor"] = "Meteor Command",
@@ -67,7 +69,7 @@ internal static class OsDe
         // Home screen app launcher
         ["os.add_apps"] = "Apps hinzufügen",
         ["os.add_apps_title"] = "Apps hinzufügen",
-        ["os.add_apps_hint"] = "Hefte andere installierte Dalamud-Plugins an deinen Startbildschirm.",
+        ["os.add_apps_hint"] = "Hol dir eine entfernte App zurück oder hefte ein anderes installiertes Dalamud-Plugin an.",
         ["os.add_apps_none"] = "Keine anderen Plugins bieten ein Hauptfenster an.",
         ["os.add_apps_add"] = "Hinzufügen",
         ["os.add_apps_added"] = "Hinzugefügt",
@@ -146,6 +148,7 @@ internal static class OsDe
         ["os.folder_name_hint"] = "Ordnername…",
         ["os.folder_default_name"] = "Ordner",
         ["os.folder_arcade"] = "Arcade",
+        ["os.folder_media"] = "Medien",
         ["os.folder_edit"] = "Bearbeiten",
         ["os.folder_empty"] = "Noch keine Apps. Zieh ein Symbol auf diesen Ordner, um es hinzuzufügen.",
         // photo filters + screenshot import
@@ -248,5 +251,118 @@ internal static class OsDe
         ["os.arcade_error"] = "Bestenliste konnte nicht geladen werden.",
         ["os.arcade_you"] = "Du",
         ["os.arcade_back"] = "Zurück",
+
+        // wallet app (added after update 2.2.1)
+        ["os.app_wallet"] = "Wallet",
+
+        // plappy birb (added after update 2.2.3)
+        ["os.app_plappy"] = "Plappy Birb",
+
+        // removable first-party apps (added after update 2.2.3)
+        ["os.add_apps_section_removed"] = "Entfernte Apps",
+        ["os.add_apps_section_plugins"] = "Andere Plugins",
+
+        // groove app (added after update 2.2.3)
+        ["os.app_groove"] = "Groove",
+
+        // store (added after update 2.2.3)
+        ["os.app_store"] = "Store",
+        ["os.store_preview_caption"] = "Nur Vorschau, noch nicht deins",
+        ["os.store_preview_close"] = "Vorschau schließen",
+        ["os.store_preview_loading"] = "Vorschau wird geladen…",
+        ["os.store_preview_failed"] = "Vorschau konnte nicht geladen werden.",
+
+        // added after update 2.2.3 (echo)
+        ["os.app_echo"] = "Echo",
+        // player and transport
+        ["echo.play"] = "Abspielen",
+        ["echo.pause"] = "Pause",
+        ["echo.mute"] = "Stummschalten",
+        ["echo.unmute"] = "Ton an",
+        ["echo.skip"] = "Überspringen",
+        ["echo.skip_tip"] = "Dieses Video für alle überspringen",
+        ["echo.buffering"] = "Puffert…",
+        ["echo.solo_idle"] = "Füg einen Link ein, um loszuschauen",
+        ["echo.unavailable"] = "Nicht verfügbar",
+        ["echo.close"] = "Schließen",
+        // playlist
+        ["echo.add"] = "Hinzufügen",
+        ["echo.add_hint"] = "YouTube-Link einfügen",
+        ["echo.added_by"] = "Hinzugefügt von {0}",
+        ["echo.added_by_unknown"] = "Hinzugefügt von jemandem, der schon weg ist",
+        ["echo.remove"] = "Entfernen",
+        ["echo.queue_empty"] = "Noch nichts in der Warteschlange",
+        ["echo.playlist_full"] = "Die Warteschlange ist voll",
+        ["echo.bad_link"] = "Das ist kein YouTube-Link",
+        // room
+        ["echo.room_code"] = "Raumcode",
+        ["echo.copy_code"] = "Code kopieren",
+        ["echo.copied"] = "Kopiert",
+        ["echo.host_only"] = "Nur Host",
+        ["echo.host_only_hint"] = "Nur der Host kann die Wiedergabe steuern",
+        ["echo.host_only_tip"] = "Der Host hat die Steuerung gesperrt",
+        ["echo.kick"] = "Entfernen",
+        ["echo.kick_confirm"] = "Diese Person aus dem Raum entfernen?",
+        ["echo.leave_room"] = "Raum verlassen",
+        ["echo.end_room"] = "Raum schließen",
+        ["echo.end_room_confirm"] = "Den Raum für alle schließen?",
+        ["echo.you"] = "{0} (du)",
+        ["echo.tab_playlist"] = "Playlist",
+        ["echo.tab_members"] = "Mitglieder",
+        ["echo.tab_chat"] = "Chat",
+        ["echo.toggle_panel"] = "Seitenleiste ein- oder ausblenden",
+        ["echo.new_messages"] = "{0} neue Nachrichten",
+        // room ended
+        ["echo.room_ended_title"] = "Raum beendet",
+        ["echo.room_ended_owner"] = "Der Host hat den Raum geschlossen",
+        ["echo.room_ended_owner_left"] = "Die Verbindung des Hosts wurde getrennt",
+        ["echo.room_ended_empty"] = "Alle haben den Raum verlassen",
+        ["echo.room_ended_moderation"] = "Dieser Raum wurde von der Moderation geschlossen",
+        ["echo.kicked_title"] = "Aus dem Raum entfernt",
+        ["echo.kicked_body"] = "Du wurdest aus {0} entfernt",
+        // runtime and errors
+        ["echo.runtime_title"] = "Echo braucht seinen Player",
+        ["echo.runtime_body"] = "Für die Videowiedergabe wird eine kleine Player-Komponente gebraucht. Sie wird einmalig heruntergeladen, danach ist Echo bei jedem Öffnen sofort startklar.",
+        ["echo.runtime_install"] = "Herunterladen",
+        ["echo.installing_title"] = "Echo wird vorbereitet",
+        ["echo.install_downloading"] = "Wird heruntergeladen…",
+        ["echo.install_verifying"] = "Wird geprüft…",
+        ["echo.install_extracting"] = "Wird entpackt…",
+        ["echo.install_failed_title"] = "Download fehlgeschlagen",
+        ["echo.reinstall"] = "Neu installieren",
+        ["echo.retry"] = "Erneut versuchen",
+        ["echo.host_failed_title"] = "Der Player wurde beendet",
+        ["echo.host_failed_body"] = "Er ließ sich nicht neu starten. Versuch es bitte noch einmal.",
+        ["echo.protocol_title"] = "Player-Version passt nicht",
+        ["echo.protocol_body"] = "Installiere den Echo-Player neu, um fortzufahren.",
+        ["echo.embed_blocked_title"] = "Dieses Video lässt sich nicht einbetten",
+        ["echo.embed_blocked_body"] = "Der Rechteinhaber erlaubt keine Wiedergabe außerhalb von YouTube.",
+        ["echo.video_gone_title"] = "Video nicht verfügbar",
+        ["echo.video_gone_body"] = "Es wurde entfernt oder auf privat gestellt.",
+        ["echo.bad_id_title"] = "Ungültiger Link",
+        ["echo.bad_id_body"] = "Diese Video-ID sieht nicht richtig aus.",
+        ["echo.player_error_title"] = "Wiedergabe fehlgeschlagen",
+        ["echo.player_error_body"] = "Beim Laden dieses Videos ist etwas schiefgelaufen.",
+
+        // avatar rings (added after update 2.2.3)
+        ["rings.section_title"] = "Avatar-Ring",
+        ["rings.picker_title"] = "Avatar-Ring",
+        ["rings.none"] = "Kein Ring",
+        ["rings.none_owned_title"] = "Noch keine Ringe",
+        ["rings.none_owned_body"] = "Avatar-Ringe sind dekorative Rahmen um dein Bild, sichtbar für alle. Kaufe sie mit Sparks im Store.",
+        ["rings.open_store"] = "Store öffnen",
+        ["rings.preview_hint"] = "Alle sehen deinen Ring, wo immer dein Bild angezeigt wird.",
+
+        // aetherling (added after update 2.2.3)
+        ["os.app_aetherling"] = "???",
+
+        // echo playback settings (added after update 2.2.3)
+        ["echo.settings_tip"] = "Wiedergabe-Einstellungen",
+        ["echo.settings_quality"] = "Videoqualität",
+        ["echo.quality_auto"] = "Auto",
+        ["echo.quality_720"] = "720p",
+        ["echo.quality_1080"] = "1080p",
+        ["echo.settings_captions"] = "Untertitel",
+        ["echo.settings_autoplay"] = "Nächstes Video automatisch abspielen",
     };
 }

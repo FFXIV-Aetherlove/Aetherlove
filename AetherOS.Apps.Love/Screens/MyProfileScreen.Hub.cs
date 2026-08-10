@@ -18,7 +18,7 @@ namespace AetherLove.Screens;
 public partial class MyProfileScreen
 {
     /// <summary>Which slice of the "My" area is showing.</summary>
-    private enum Section { Hub, Detail, RpCharacters, Warnings, ModMessages, SupporterVanity, SupporterStats, Holiday }
+    private enum Section { Hub, Detail, RpCharacters, Warnings, ModMessages, SupporterVanity, SupporterStats, Holiday, AvatarRing }
 
     private Section _section = Section.Hub;
 
@@ -88,6 +88,7 @@ public partial class MyProfileScreen
             new(FontAwesomeIcon.Edit, t.Accent, Loc.T("profile.menu_edit"), 0, false, () => OpenDetail(Tab.Edit)),
             new(FontAwesomeIcon.Images, t.Accent, Loc.T("profile.menu_images"), 0, false, () => OpenDetail(Tab.Images)),
             new(FontAwesomeIcon.TheaterMasks, t.Accent, Loc.T("profile.menu_rp"), 0, false, OpenRpCharacters),
+            new(FontAwesomeIcon.Ring, t.Accent, Loc.T("rings.section_title"), 0, false, OpenAvatarRing),
             new(FontAwesomeIcon.UmbrellaBeach, t.Accent, Loc.T("profile.menu_holiday"), 0, false, OpenHoliday),
         };
         DrawMenuCard("myprof", winW, HubPadX, profileRows);

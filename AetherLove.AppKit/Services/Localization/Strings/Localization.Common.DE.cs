@@ -187,5 +187,9 @@ internal static class CommonDe
         ["common.staff_notice_heading_many"] = "Du hast {0} Hinweise vom Team",
         ["common.staff_notice_body"] = "Das AetherOS-Team hat dir Folgendes zu deinem Konto geschickt:",
         ["common.staff_notice_ack"] = "Verstanden",
+
+        // added after update 2.2.3
+        ["common.travel_teleport_with"] = "Teleport ({0})",
+        ["common.travel_tooltip"] = "Mit {0} hierher reisen",
     };
 }

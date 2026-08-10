@@ -15,7 +15,8 @@ public sealed record ProfileSummaryDto(
     bool Locked = false,
     // Picker badge counts, computed per profile so inactive siblings show their pending activity.
     int NewMatches = 0,
-    int UnreadChats = 0);
+    int UnreadChats = 0,
+    string? FrameRef = null);
 
 /// <summary>The account's profiles plus which one the caller's token is currently acting as.</summary>
 [MessagePackObject(keyAsPropertyName: true)]

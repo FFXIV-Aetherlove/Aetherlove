@@ -4,11 +4,13 @@ using System.IO;
 using System.Linq;
 using AetherOS.Sdk;
 using Dalamud.Interface.Textures;
+using Dalamud.Interface.Textures.TextureWraps;
 
 namespace AetherLove.Os;
 
-/// <summary>Built-in and user-uploaded home screen wallpapers. Purely local.</summary>
-public sealed class WallpaperService
+/// <summary>Built-in and user-uploaded home screen wallpapers, plus the ones that come sealed with a
+/// purchased theme. Purely local.</summary>
+public sealed class WallpaperService(IPremiumWallpaperSource premium)
 {
     private readonly Dictionary<string, ISharedImmediateTexture> _cache = new();
     private string[]? _builtIns;
@@ -57,6 +59,30 @@ public sealed class WallpaperService
             _ => null,
         };
     }
+
+    /// <summary>The wallpaper to draw, whatever its source. A premium one lives in memory only, so it
+    /// cannot come back as a shared texture like the file-backed ones.</summary>
+    public IDalamudTextureWrap? CurrentWrap()
+    {
+        var os = UiHost.Configuration.Os;
+        if (os.WallpaperMode == WallpaperMode.Premium)
+        {
+            return premium.GetWallpaper(os.PremiumWallpaperProductId);
+        }
+        return Current()?.GetWrapOrDefault();
+    }
+
+    /// <summary>Switches to a purchased theme's wallpaper. The caller has already made sure its seal is
+    /// on this install.</summary>
+    public void SelectPremium(Guid productId)
+    {
+        var os = UiHost.Configuration.Os;
+        os.WallpaperMode = WallpaperMode.Premium;
+        os.PremiumWallpaperProductId = productId;
+        UiHost.Configuration.Save();
+    }
+
+    public IDalamudTextureWrap? PremiumWrap(Guid productId) => premium.GetWallpaper(productId);
 
     public ISharedImmediateTexture? GetBuiltInTexture(string fileName) => GetTexture(Path.Combine(MediaDir, fileName));
 

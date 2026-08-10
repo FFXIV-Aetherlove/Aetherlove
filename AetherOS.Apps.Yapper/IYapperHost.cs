@@ -28,6 +28,12 @@ public interface IYapperHost
 
     Task SetBlurNsfwAsync(bool blur, CancellationToken ct = default);
 
+    /// <summary>The avatar rings the account owns, for the picker.</summary>
+    Task<AetherLove.Shared.Store.AvatarRingDto[]> GetOwnedRingsAsync(CancellationToken ct = default);
+
+    /// <summary>Equips (or clears, on null) the Yapper avatar ring.</summary>
+    Task SetAvatarRingAsync(string? frameRef, CancellationToken ct = default);
+
     /// <summary>Pins one of the caller's own posts to their profile; null unpins.</summary>
     Task SetPinAsync(Guid? yapId, CancellationToken ct = default);
 
@@ -50,6 +56,10 @@ public interface IYapperHost
     Task<YapperUserPageDto> GetFollowersAsync(Guid profileId, DateTimeOffset? cursor, CancellationToken ct = default);
 
     Task<YapperUserPageDto> GetFollowingAsync(Guid profileId, DateTimeOffset? cursor, CancellationToken ct = default);
+
+    /// <summary>Deletes this account's Yapper profile for good. The next open finds no profile and runs
+    /// onboarding, so the account can start again with a new handle.</summary>
+    Task DeleteProfileAsync(CancellationToken ct = default);
 
     Task<YapperUserRowDto[]> GetBlockedAsync(CancellationToken ct = default);
 

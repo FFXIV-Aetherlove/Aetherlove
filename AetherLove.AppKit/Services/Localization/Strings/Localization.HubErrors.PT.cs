@@ -1,4 +1,4 @@
-namespace AetherLove.Services.Localization;
+﻿namespace AetherLove.Services.Localization;
 
 internal static class HubErrorsPt
 {
@@ -135,5 +135,37 @@ internal static class HubErrorsPt
         ["huberror.yap_invalid"] = "Não foi possível guardar o yap. Verifica os teus dados.",
         ["huberror.yap_dm_not_allowed"] = "Este usuário não pode receber suas mensagens.",
         ["huberror.yap_dm_keys_missing"] = "@{0} ainda precisa terminar a configuração. Tente mandar mensagem daqui a pouco.",
+
+        // store (added after update 2.2.3)
+        ["huberror.store_disabled"] = "A loja está fechada para manutenção.",
+        ["huberror.store_product_not_found"] = "Esse item não existe mais.",
+        ["huberror.store_product_unavailable"] = "Esse item não está à venda agora.",
+        ["huberror.store_insufficient_sparks"] = "Sparks insuficientes: custa {0} e você tem {1}.",
+        ["huberror.store_limit_reached"] = "Você já tem o máximo ({0}) deste item.",
+        ["huberror.store_quantity_invalid"] = "Essa quantidade não é permitida.",
+        ["huberror.store_conflict"] = "A loja engasgou no meio da compra. Nada foi cobrado duas vezes; é só tentar de novo.",
+        ["huberror.aetherling_disabled"] = "Neste momento não está a ouvir.",
+        ["huberror.aetherling_exists"] = "Já existe um destes.",
+        ["huberror.aetherling_none"] = "Não há aqui nada a quem dar isto.",
+        ["huberror.aetherling_insufficient"] = "Sparks a menos: quer {0} e tens {1}.",
+        ["huberror.aetherling_gated"] = "Ainda não. Primeiro tem de acontecer algo. Tenta outra vez daqui a {0} minutos.",
+        ["huberror.aetherling_complete"] = "Já não aceita mais.",
+        ["huberror.aetherling_unready"] = "Ainda não. Não está pronto para isso.",
+        ["huberror.aetherling_named"] = "Já tem o nome dele.",
+        ["huberror.aetherling_name_invalid"] = "Esse nome não serve. Tenta outro.",
+
+        // echo (added after update 2.2.3)
+        ["huberror.echo_disabled"] = "Ver em conjunto está desligado neste momento.",
+        ["huberror.echo_room_not_found"] = "Essa sessão já terminou.",
+        ["huberror.echo_room_full"] = "Esta sala está cheia ({0} pessoas).",
+        ["huberror.echo_not_member"] = "Não estás nessa sala.",
+        ["huberror.echo_not_owner"] = "Só quem criou a sala é que pode fazer isso.",
+        ["huberror.echo_host_only"] = "Neste momento é o anfitrião que controla a reprodução.",
+        ["huberror.echo_kicked"] = "Foste removido dessa sala.",
+        ["huberror.echo_playlist_full"] = "A fila está cheia ({0} vídeos).",
+        ["huberror.echo_live_room_exists"] = "Já tens uma sala a decorrer. Termina-a para abrires outra.",
+        ["huberror.echo_invalid_video"] = "Isso não parece um link do YouTube.",
+        ["huberror.echo_name_invalid"] = "Esse nome de sala não pode ser usado.",
+        ["huberror.hangout_watch_room_invalid"] = "Essa sessão já não está disponível.",
     };
 }

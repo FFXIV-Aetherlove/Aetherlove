@@ -354,10 +354,10 @@ internal static class VenueFields
     internal static void DrawReviewCard(VenueReviewDto review, ISharedImmediateTexture? avatarTex,
         float cardW, float padX) =>
         DrawReviewCard(review.Id, review.Rating, review.Text, review.CreatedAtUtc, review.Mine,
-            avatarTex, cardW, padX);
+            avatarTex, cardW, padX, review.AuthorFrameRef);
 
     internal static void DrawReviewCard(Guid id, short rating, string text, DateTimeOffset createdAtUtc,
-        bool mine, ISharedImmediateTexture? avatarTex, float cardW, float padX)
+        bool mine, ISharedImmediateTexture? avatarTex, float cardW, float padX, string? authorFrameRef = null)
     {
         var dl = ImGui.GetWindowDrawList();
         var pad = Px(padX);
@@ -400,6 +400,7 @@ internal static class VenueFields
             dl.AddCircleFilled(avatarCenter, avatarR, UiColors.AvatarFallback);
         }
         dl.AddCircle(avatarCenter, avatarR, UiColors.AvatarRing, 32, Px(1f));
+        AvatarRings.Draw(dl, avatarCenter, avatarR, authorFrameRef);
 
         for (var i = 0; i < 5; i++)
         {

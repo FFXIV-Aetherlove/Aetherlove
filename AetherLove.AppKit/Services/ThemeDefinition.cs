@@ -10,6 +10,11 @@ public sealed class ThemeDefinition
     public required string Name { get; init; }
     public required string BackgroundImageFile { get; init; }
 
+    /// <summary>A purchased theme's frame art, held in memory only (the file on disk is encrypted). When it
+    /// resolves, the phone draws it instead of <see cref="BackgroundImageFile"/>, which stays set to a
+    /// built-in so a frame still shows while the seal is opening.</summary>
+    public Func<Dalamud.Interface.Textures.TextureWraps.IDalamudTextureWrap?>? BezelTexture { get; init; }
+
     public required Vector4 Accent { get; init; }
     public required Vector4 AccentLight { get; init; }
     public required Vector4 AccentDark { get; init; }

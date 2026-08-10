@@ -186,5 +186,9 @@ internal static class CommonPt
         ["common.staff_notice_heading_many"] = "Você tem {0} avisos da equipe",
         ["common.staff_notice_body"] = "A equipe do AetherOS enviou o seguinte sobre a sua conta:",
         ["common.staff_notice_ack"] = "Entendi",
+
+        // added after update 2.2.3
+        ["common.travel_teleport_with"] = "Teleporte ({0})",
+        ["common.travel_tooltip"] = "Viajar até aqui com {0}",
     };
 }

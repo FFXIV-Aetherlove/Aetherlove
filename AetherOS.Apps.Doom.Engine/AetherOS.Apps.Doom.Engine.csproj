@@ -1,0 +1,19 @@
+<Project Sdk="Dalamud.NET.Sdk/15.0.0">
+  <!--
+    Vendored third-party code. See VENDORED.md for the upstream source and pinned commit.
+    Kept in its own project so the engine's own warnings and nullable posture never bleed into
+    AetherOS.Apps.Doom, which is ours and follows the house style.
+  -->
+  <PropertyGroup>
+    <RootNamespace>ManagedDoom</RootNamespace>
+    <AssemblyName>AetherOS.Apps.Doom.Engine</AssemblyName>
+    <Use_DalamudPackager>false</Use_DalamudPackager>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>disable</Nullable>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningLevel>0</WarningLevel>
+    <NoWarn>$(NoWarn);CS0169;CS0414;CS0649;CS8600;CS8601;CS8602;CS8603;CS8604;CS8618;CS8625;CS0618;IDE0001;IDE0090</NoWarn>
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+    <AnalysisLevel>none</AnalysisLevel>
+  </PropertyGroup>
+</Project>

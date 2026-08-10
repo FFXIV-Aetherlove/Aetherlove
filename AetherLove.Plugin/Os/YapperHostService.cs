@@ -114,6 +114,9 @@ public sealed class YapperHostService : IYapperHost
     public Task<YapperMyProfileDto> RenameHandleAsync(string handle, CancellationToken ct = default)
         => _hubClient.RenameYapperHandleAsync(handle, ct);
 
+    public Task DeleteProfileAsync(CancellationToken ct = default)
+        => _hubClient.DeleteYapperProfileAsync(ct);
+
     public Task SetAvatarAsync(AetherLove.Shared.Profile.PhotoUploadDto image, CancellationToken ct = default)
         => _hubClient.SetYapperAvatarAsync(image, ct);
 
@@ -125,6 +128,12 @@ public sealed class YapperHostService : IYapperHost
 
     public Task SetBlurNsfwAsync(bool blur, CancellationToken ct = default)
         => _hubClient.SetYapperBlurNsfwAsync(blur, ct);
+
+    public Task<AetherLove.Shared.Store.AvatarRingDto[]> GetOwnedRingsAsync(CancellationToken ct = default)
+        => _hubClient.GetMyAvatarRingsAsync(ct);
+
+    public Task SetAvatarRingAsync(string? frameRef, CancellationToken ct = default)
+        => _hubClient.SetAvatarRingAsync(AetherLove.Shared.Store.AvatarRingSurface.Yapper, frameRef, ct);
 
     public Task SetPinAsync(Guid? yapId, CancellationToken ct = default)
         => _hubClient.SetYapperPinAsync(yapId, ct);

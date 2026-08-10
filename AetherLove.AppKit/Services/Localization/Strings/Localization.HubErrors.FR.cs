@@ -1,4 +1,4 @@
-namespace AetherLove.Services.Localization;
+﻿namespace AetherLove.Services.Localization;
 
 internal static class HubErrorsFr
 {
@@ -135,5 +135,37 @@ internal static class HubErrorsFr
         ["huberror.yap_invalid"] = "Le yap n'a pas pu être enregistré. Vérifiez vos saisies.",
         ["huberror.yap_dm_not_allowed"] = "Cet utilisateur ne peut pas recevoir vos messages.",
         ["huberror.yap_dm_keys_missing"] = "@{0} doit encore terminer sa configuration. Réessayez dans un moment.",
+
+        // store (added after update 2.2.3)
+        ["huberror.store_disabled"] = "La boutique est fermée pour maintenance.",
+        ["huberror.store_product_not_found"] = "Cet article n'existe plus.",
+        ["huberror.store_product_unavailable"] = "Cet article n'est pas en vente pour le moment.",
+        ["huberror.store_insufficient_sparks"] = "Pas assez de sparks : cela coûte {0} et tu en as {1}.",
+        ["huberror.store_limit_reached"] = "Tu possèdes déjà le maximum ({0}) de cet article.",
+        ["huberror.store_quantity_invalid"] = "Cette quantité n'est pas autorisée.",
+        ["huberror.store_conflict"] = "La boutique a eu un raté. Rien n'a été débité deux fois ; réessaie simplement.",
+        ["huberror.aetherling_disabled"] = "Ça n'écoute pas pour le moment.",
+        ["huberror.aetherling_exists"] = "Il y en a déjà un.",
+        ["huberror.aetherling_none"] = "Il n'y a rien ici à qui le donner.",
+        ["huberror.aetherling_insufficient"] = "Pas assez de sparks : il en veut {0} et tu en as {1}.",
+        ["huberror.aetherling_gated"] = "Pas encore. Il faut que quelque chose arrive d'abord. Réessaie dans {0} minutes.",
+        ["huberror.aetherling_complete"] = "Il n'en prendra pas davantage.",
+        ["huberror.aetherling_unready"] = "Pas encore. Il n'est pas prêt pour ça.",
+        ["huberror.aetherling_named"] = "Il a déjà son nom.",
+        ["huberror.aetherling_name_invalid"] = "Ce nom ne passe pas. Essaie autre chose.",
+
+        // echo (added after update 2.2.3)
+        ["huberror.echo_disabled"] = "Le visionnage à plusieurs est désactivé pour le moment.",
+        ["huberror.echo_room_not_found"] = "Cette séance est déjà terminée.",
+        ["huberror.echo_room_full"] = "Ce salon est plein ({0} personnes).",
+        ["huberror.echo_not_member"] = "Tu n'es pas dans ce salon.",
+        ["huberror.echo_not_owner"] = "Seule la personne qui a lancé le salon peut faire ça.",
+        ["huberror.echo_host_only"] = "L'hôte pilote la lecture en ce moment.",
+        ["huberror.echo_kicked"] = "Tu as été retiré de ce salon.",
+        ["huberror.echo_playlist_full"] = "La file d'attente est pleine ({0} vidéos).",
+        ["huberror.echo_live_room_exists"] = "Tu as déjà un salon en cours. Ferme-le pour en ouvrir un autre.",
+        ["huberror.echo_invalid_video"] = "Ça ne ressemble pas à un lien YouTube.",
+        ["huberror.echo_name_invalid"] = "Ce nom de salon ne passe pas.",
+        ["huberror.hangout_watch_room_invalid"] = "Cette séance n'est plus disponible.",
     };
 }

@@ -334,7 +334,8 @@ public sealed partial class MessengerApp
         var isGroup = open.Kind == MessengerChatKind.Group;
         var avatarCenter = new Vector2(groupLeft + avatarD * 0.5f, centerY);
         DrawAvatar(dl, open.ChatId, open.Title,
-            isGroup ? open.Group?.Avatar : open.Contact?.PeerAvatar, isGroup, avatarCenter, Px(AvatarR));
+            isGroup ? open.Group?.Avatar : open.Contact?.PeerAvatar, isGroup, avatarCenter, Px(AvatarR),
+            isGroup ? null : open.Contact?.PeerFrameRef);
         dl.AddCircle(avatarCenter, Px(AvatarR), t.AccentWithAlpha(0.65f), 0, 1.5f);
 
         using (UiFonts.H3?.Push())
@@ -796,7 +797,8 @@ public sealed partial class MessengerApp
         var member = open.Group?.Members.FirstOrDefault(m => m.AccountId == msg.SenderAccountId);
         var avatarR = Px(13f);
         var center = new Vector2(rowLeftX + Px(10f) + avatarR + Px(2f), bubbleBottomY - avatarR);
-        DrawAvatar(dl, msg.SenderAccountId, member?.Name ?? "?", member?.Avatar, false, center, avatarR);
+        DrawAvatar(dl, msg.SenderAccountId, member?.Name ?? "?", member?.Avatar, false, center, avatarR,
+            member?.FrameRef);
 
         // Hover shows the sender's name; a click opens their member card. Save/restore the layout cursor so the
         // hit area never shifts the message row.

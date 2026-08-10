@@ -85,7 +85,8 @@ public sealed record VenueReviewDto(
     DateTimeOffset CreatedAtUtc,
     byte[]? AuthorAvatarWebp,
     bool Mine,
-    bool PendingModeration);
+    bool PendingModeration,
+    string? AuthorFrameRef = null);
 
 /// <summary>One banner slot on a venue (supporter owners can have several; shown as a carousel).</summary>
 [MessagePackObject(keyAsPropertyName: true)]

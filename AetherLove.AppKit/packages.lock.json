@@ -32,6 +32,16 @@
           "NAudio.WinMM": "2.2.1"
         }
       },
+      "NAudio.Vorbis": {
+        "type": "Direct",
+        "requested": "[1.5.0, )",
+        "resolved": "1.5.0",
+        "contentHash": "llJMmUnFf0FGf4G1FKNftxt+Vc1CvBCSul0Ugbv/RahGbpKF2p+ujSEJHybPjl9b4FjbK8O2vRFIcRGcVfAooA==",
+        "dependencies": {
+          "NAudio.Core": "2.0.0",
+          "NVorbis": "0.10.4"
+        }
+      },
       "MessagePack": {
         "type": "Transitive",
         "resolved": "3.1.8",
@@ -205,6 +215,11 @@
         "dependencies": {
           "NAudio.Core": "2.2.1"
         }
+      },
+      "NVorbis": {
+        "type": "Transitive",
+        "resolved": "0.10.4",
+        "contentHash": "WYnil3DhQHzjCY0dM9I2B3r1vWip90AOuQd25KE4NrjPQBg0tBJFluRLm5YPnO5ZLDmwrfosY8jCQGQRmWI/Pg=="
       },
       "SixLabors.ImageSharp": {
         "type": "Transitive",

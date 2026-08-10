@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -35,8 +35,8 @@ public sealed class HangoutsScreen
     private volatile bool _loadingMore;
     private volatile string? _error;
     private bool _hasMore;
-    // Pill states parallel to HangoutFields.CategoryValues / RegionValues; none selected = every hangout.
-    private readonly bool[] _filterCategories = new bool[HangoutFields.CategoryValues.Length];
+    // Pill states parallel to HangoutCategories.FilterValues / RegionValues; none selected = every hangout.
+    private readonly bool[] _filterCategories = new bool[HangoutCategories.FilterValues.Length];
     private readonly bool[] _filterRegions = new bool[RegionValues.Length];
     private bool _filterOpen;
     private float _filterPanelH;
@@ -68,7 +68,7 @@ public sealed class HangoutsScreen
         {
             if (_filterCategories[i])
             {
-                mask |= 1 << (short)HangoutFields.CategoryValues[i];
+                mask |= 1 << (short)HangoutCategories.FilterValues[i];
             }
         }
         return mask;
@@ -225,7 +225,7 @@ public sealed class HangoutsScreen
                     if (others.Length == 0 && later.Length == 0)
                     {
                         ImGui.Spacing();
-                        CenteredMutedText(Loc.T("hangout.dir_empty"));
+                        CenteredMutedText(Loc.T("hangout.dir_public_empty"));
                     }
                     if (_hasMore)
                     {
@@ -418,7 +418,7 @@ public sealed class HangoutsScreen
         if (_filterCategories.Any(c => c) || _filterRegions.Any(r => r))
         {
             ImGui.SetCursorPosX(Px(PadX));
-            var labels = HangoutFields.CategoryLabels();
+            var labels = HangoutCategories.FilterLabels();
             var parts = new List<string>();
             for (var i = 0; i < _filterCategories.Length; i++)
             {
@@ -487,6 +487,7 @@ public sealed class HangoutsScreen
             dl.AddCircleFilled(avatarCenter, avatarR, UiColors.AvatarFallback);
         }
         dl.AddCircle(avatarCenter, avatarR, ImGui.GetColorU32(accent with { W = 0.9f }), 0, Px(1.5f));
+        AvatarRings.Draw(dl, avatarCenter, avatarR, h.OwnerFrameRef);
         if (h.OwnerIsSupporter)
         {
             var badgeCenter = avatarCenter + new Vector2(avatarR * 0.74f, -avatarR * 0.74f);
@@ -520,9 +521,9 @@ public sealed class HangoutsScreen
                 new Vector2(statusPos.X - Px(9f), statusPos.Y + statusSz.Y * 0.5f), UiColors.TextMuted);
         }
 
-        IconDraw.AddCentered(dl, HangoutFields.CategoryIcon(h.Category), Px(11f),
+        IconDraw.AddCentered(dl, HangoutCategories.Icon(h.Category), Px(11f),
             new Vector2(textX + Px(6f), tl.Y + Px(37f)), ImGui.GetColorU32(accent));
-        var meta = HangoutFields.CategoryLabel(h.Category);
+        var meta = HangoutCategories.Label(h.Category);
         if (h.RsvpCount > 0)
         {
             meta += "  ·  " + Loc.T("hangout.coming_count", HangoutFields.CountLabel(h))
@@ -598,7 +599,7 @@ public sealed class HangoutsScreen
 
             ImGui.TextColored(UiColors.Subtle, Loc.T("hangout.filter_activities"));
             ImGui.Spacing();
-            VenueFields.DrawPillToggleRow("hgcat", HangoutFields.CategoryLabels(), _filterCategories, w);
+            VenueFields.DrawPillToggleRow("hgcat", HangoutCategories.FilterLabels(), _filterCategories, w);
 
             ImGui.Spacing();
             ImGui.TextColored(UiColors.Subtle, Loc.T("hangout.filter_regions"));

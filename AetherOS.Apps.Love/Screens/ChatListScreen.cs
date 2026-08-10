@@ -58,6 +58,7 @@ public partial class ChatListScreen
     private bool _selectedPeerIsSupporter;
     private NameStyle _selectedPeerNameStyle;
     private bool _selectedPeerHolidayMode;
+    private string? _selectedPeerFrameRef;
     private Guid _selectedScrollMessageId;
 
     /// <summary>The category the category view is showing; kept across chat round-trips so back returns here.</summary>
@@ -112,6 +113,7 @@ public partial class ChatListScreen
     public bool SelectedPeerIsSupporter => _selectedPeerIsSupporter;
     public NameStyle SelectedPeerNameStyle => _selectedPeerNameStyle;
     public bool SelectedPeerHolidayMode => _selectedPeerHolidayMode;
+    public string? SelectedPeerFrameRef => _selectedPeerFrameRef;
 
     /// <summary>Message to scroll to when a search result is opened by content; Empty for a normal open.</summary>
     public Guid SelectedScrollMessageId => _selectedScrollMessageId;
@@ -389,6 +391,7 @@ public partial class ChatListScreen
         _selectedPeerIsSupporter = m.PeerIsSupporter;
         _selectedPeerNameStyle = m.PeerNameStyle;
         _selectedPeerHolidayMode = m.PeerHolidayMode;
+        _selectedPeerFrameRef = m.PeerFrameRef;
         _selectedScrollMessageId = Guid.Empty;
         _openedChatFromCategory = false;
     }
@@ -1168,6 +1171,7 @@ public partial class ChatListScreen
                     _selectedPeerIsSupporter = m.PeerIsSupporter;
                     _selectedPeerNameStyle = m.PeerNameStyle;
                     _selectedPeerHolidayMode = m.PeerHolidayMode;
+                    _selectedPeerFrameRef = m.PeerFrameRef;
                     _selectedScrollMessageId = hit?.ContentMessageId ?? Guid.Empty;
                     _openedChatFromCategory = ctx == RowContext.Category;
                     _router.Navigate(LoveView.Chat);
@@ -1247,6 +1251,7 @@ public partial class ChatListScreen
             drawList.AddCircleFilled(avatarCenter, avatarRadius, UiColors.AvatarFallback);
         }
         drawList.AddCircle(avatarCenter, avatarRadius, 0xFFFFFFFF, 0, Px(2f));
+        AvatarRings.Draw(drawList, avatarCenter, avatarRadius, m.PeerFrameRef);
 
         if (m.PeerHolidayMode)
         {

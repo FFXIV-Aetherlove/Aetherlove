@@ -119,8 +119,10 @@ public static class LocationShare
         }
     }
 
+    /// <summary>The generic overload, not the boxing one: <see cref="HousingDistrict"/> is backed by
+    /// <see cref="short"/>, so a boxed <see cref="int"/> throws rather than reporting undefined.</summary>
     public static HousingDistrict DistrictOf(short district) =>
-        Enum.IsDefined(typeof(HousingDistrict), (int)district) ? (HousingDistrict)district : HousingDistrict.Unknown;
+        Enum.IsDefined((HousingDistrict)district) ? (HousingDistrict)district : HousingDistrict.Unknown;
 
     /// <summary>FFXIV world-to-map coordinate conversion (the 2-decimal in-game coords).</summary>
     private static float ToMapCoordinate(float world, ushort sizeFactor, short offset)

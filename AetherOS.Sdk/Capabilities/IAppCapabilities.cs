@@ -26,6 +26,9 @@ public interface IAppCapabilities
     /// <summary>Offer content to whichever apps accept its type (the generic share sheet).</summary>
     IShareService Share { get; }
 
+    /// <summary>Sending the player somewhere in the world, when a transport plugin is installed.</summary>
+    ITravelBridge Travel { get; }
+
     /// <summary>Persistent storage scoped to <paramref name="appId"/>: a private folder plus a JSON key-value
     /// store. Pass your own app id.</summary>
     IAppStorage Storage(string appId);

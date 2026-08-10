@@ -74,9 +74,14 @@ public sealed class NotificationDispatcher : IDisposable, Signal.INotifier
 
     private bool CombatSuppressed => _config.HideNotificationsDuringCombat && Plugin.Condition[ConditionFlag.InCombat];
 
+    /// <summary>An app taken off the home screen goes quiet everywhere, native chat lines included; the OS-side
+    /// center, widget and bell are already covered by <c>OsShell.PostNotification</c>.</summary>
+    private bool Removed(string appId) => _config.Os.RemovedApps.Contains(appId);
+
     public void NotifyChatMessage()
     {
-        if (!_config.EnableNotifications || !_config.AetherLoveNotificationsEnabled || !LoggedIn || CombatSuppressed)
+        if (!_config.EnableNotifications || !_config.AetherLoveNotificationsEnabled || !LoggedIn || CombatSuppressed
+            || Removed("aetherlove"))
         {
             return;
         }
@@ -99,7 +104,8 @@ public sealed class NotificationDispatcher : IDisposable, Signal.INotifier
 
     public void NotifyNewMatch(string otherName)
     {
-        if (!_config.EnableNotifications || !_config.AetherLoveNotificationsEnabled || !LoggedIn || CombatSuppressed)
+        if (!_config.EnableNotifications || !_config.AetherLoveNotificationsEnabled || !LoggedIn || CombatSuppressed
+            || Removed("aetherlove"))
         {
             return;
         }
@@ -159,7 +165,8 @@ public sealed class NotificationDispatcher : IDisposable, Signal.INotifier
 
     public void NotifyNews(string title)
     {
-        if (!_config.EnableNotifications || !_config.NewsNotificationsEnabled || !LoggedIn || CombatSuppressed)
+        if (!_config.EnableNotifications || !_config.NewsNotificationsEnabled || !LoggedIn || CombatSuppressed
+            || Removed("news"))
         {
             return;
         }
@@ -198,7 +205,7 @@ public sealed class NotificationDispatcher : IDisposable, Signal.INotifier
 
     public void NotifyHangoutRsvp(string rsvperName)
     {
-        if (!_config.EnableNotifications || !LoggedIn || CombatSuppressed)
+        if (!_config.EnableNotifications || !LoggedIn || CombatSuppressed || Removed("hangouts"))
         {
             return;
         }
@@ -212,7 +219,7 @@ public sealed class NotificationDispatcher : IDisposable, Signal.INotifier
 
     public void NotifyHangoutEnded(bool cancelled)
     {
-        if (!_config.EnableNotifications || !LoggedIn || CombatSuppressed)
+        if (!_config.EnableNotifications || !LoggedIn || CombatSuppressed || Removed("hangouts"))
         {
             return;
         }
@@ -226,7 +233,7 @@ public sealed class NotificationDispatcher : IDisposable, Signal.INotifier
 
     public void NotifyFriendHangout(Shared.Hangouts.HangoutSummaryDto hangout)
     {
-        if (!_config.EnableNotifications || !LoggedIn || CombatSuppressed)
+        if (!_config.EnableNotifications || !LoggedIn || CombatSuppressed || Removed("hangouts"))
         {
             return;
         }
@@ -314,7 +321,7 @@ public sealed class NotificationDispatcher : IDisposable, Signal.INotifier
 
     public void NotifyMessengerMessage()
     {
-        if (!_config.EnableNotifications || !LoggedIn || CombatSuppressed)
+        if (!_config.EnableNotifications || !LoggedIn || CombatSuppressed || Removed("messenger"))
         {
             return;
         }
@@ -327,7 +334,7 @@ public sealed class NotificationDispatcher : IDisposable, Signal.INotifier
 
     public void NotifyMessengerRequest(string fromName)
     {
-        if (!_config.EnableNotifications || !LoggedIn || CombatSuppressed)
+        if (!_config.EnableNotifications || !LoggedIn || CombatSuppressed || Removed("messenger"))
         {
             return;
         }
@@ -379,7 +386,7 @@ public sealed class NotificationDispatcher : IDisposable, Signal.INotifier
 
     public void NotifyMarketAlert(uint itemId, string text)
     {
-        if (!_config.EnableNotifications || !LoggedIn || CombatSuppressed)
+        if (!_config.EnableNotifications || !LoggedIn || CombatSuppressed || Removed("market"))
         {
             return;
         }
@@ -416,7 +423,7 @@ public sealed class NotificationDispatcher : IDisposable, Signal.INotifier
     /// notification beside it is the thing that opens the app.</summary>
     public void NotifyRealtorPhase(string text)
     {
-        if (!_config.EnableNotifications || !LoggedIn || CombatSuppressed)
+        if (!_config.EnableNotifications || !LoggedIn || CombatSuppressed || Removed("realtor"))
         {
             return;
         }
@@ -451,7 +458,7 @@ public sealed class NotificationDispatcher : IDisposable, Signal.INotifier
 
     public void PrintPulse(string text)
     {
-        if (!LoggedIn || CombatSuppressed)
+        if (!LoggedIn || CombatSuppressed || Removed("aetherlove"))
         {
             return;
         }

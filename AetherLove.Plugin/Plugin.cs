@@ -152,6 +152,14 @@ public sealed class Plugin : IDalamudPlugin
         services.AddSingleton<Services.Sparks.SparkActivityReporter>();
         services.AddSingleton<Os.IArcadeRewards, Os.ArcadeRewardsService>();
         services.AddSingleton<Os.IArcadeScores, Os.ArcadeScoresService>();
+        services.AddSingleton<Services.Echo.EchoHostLocator>();
+        services.AddSingleton<Services.Echo.EchoHostInstaller>();
+        services.AddSingleton<Services.Echo.EchoHostClient>();
+        services.AddSingleton<Services.Echo.EchoStateService>();
+        services.AddSingleton<Services.Echo.EchoSyncEngine>();
+        services.AddSingleton<Services.EchoShareContext>();
+        services.AddSingleton<Windows.EchoWindow>();
+        services.AddSingleton<AetherOS.Apps.EchoVidya.IEchoHost, Os.EchoHostService>();
         services.AddSingleton<Os.HousingLotteryWatchService>();
         services.AddSingleton<Os.RealtorPhaseWatchService>();
         services.AddSingleton<Services.Patreon.PatreonLinkFlow>();
@@ -166,6 +174,9 @@ public sealed class Plugin : IDalamudPlugin
         services.AddSingleton<MarketShareContext>();
         services.AddSingleton<OwnAvatarCache>();
         services.AddSingleton<OsAvatarCache>();
+        services.AddSingleton<AvatarRingService>();
+        services.AddSingleton<Services.Store.PremiumThemeService>();
+        services.AddSingleton<Os.IPremiumWallpaperSource, Os.PremiumWallpaperSourceService>();
         services.AddSingleton<FlairCatalog>();
 
         services.AddSingleton<SplashScreen>();
@@ -222,6 +233,24 @@ public sealed class Plugin : IDalamudPlugin
         services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Clock.ClockApp(
             () => Services.Localization.Loc.T("os.app_clock"),
             sp.GetRequiredService<Os.ClockAlarmService>()));
+        services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.EchoVidya.EchoVidyaApp(
+            () => Services.Localization.Loc.T("os.app_echo"),
+            sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>(),
+            sp.GetRequiredService<Services.Hub.AetherHubContext>(),
+            sp.GetRequiredService<Services.Echo.EchoStateService>(),
+            sp.GetRequiredService<Services.Echo.EchoHostInstaller>(),
+            sp.GetRequiredService<Services.Echo.EchoHostLocator>(),
+            sp.GetRequiredService<AetherOS.Apps.EchoVidya.IEchoHost>(),
+            () => sp.GetRequiredService<SessionBootstrapper>().LastConnection?.EchoEnabled != false));
+        services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Sudoku.SudokuApp(
+            () => Services.Localization.Loc.T("os.app_sudoku"),
+            sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>(),
+            sp.GetRequiredService<Os.IArcadeRewards>(),
+            sp.GetRequiredService<Os.IArcadeScores>()));
+        services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Doom.DoomApp(
+            () => Services.Localization.Loc.T("os.app_doom"),
+            sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>(),
+            sp.GetRequiredService<Os.IArcadeRewards>()));
         services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Snake.SnakeApp(
             () => Services.Localization.Loc.T("os.app_snake"),
             sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>(),
@@ -249,6 +278,11 @@ public sealed class Plugin : IDalamudPlugin
             sp.GetRequiredService<Os.IArcadeScores>()));
         services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.MazeMuncher.MazeMuncherApp(
             () => Services.Localization.Loc.T("os.app_muncher"),
+            sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>(),
+            sp.GetRequiredService<Os.IArcadeRewards>(),
+            sp.GetRequiredService<Os.IArcadeScores>()));
+        services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Plappy.PlappyApp(
+            () => Services.Localization.Loc.T("os.app_plappy"),
             sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>(),
             sp.GetRequiredService<Os.IArcadeRewards>(),
             sp.GetRequiredService<Os.IArcadeScores>()));
@@ -322,11 +356,40 @@ public sealed class Plugin : IDalamudPlugin
             sp.GetRequiredService<Services.Realtor.RealtorDataService>(),
             sp.GetRequiredService<Os.HousingLotteryWatchService>(),
             sp.GetRequiredService<Os.RealtorPhaseWatchService>()));
+        services.AddSingleton<AetherOS.Apps.Store.IStoreHost, Os.StoreHostService>();
+        services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Store.StoreApp(
+            () => Services.Localization.Loc.T("os.app_store"),
+            sp.GetRequiredService<AetherOS.Apps.Store.IStoreHost>(),
+            sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>()));
+        services.AddSingleton<AetherOS.Apps.Wallet.IWalletHost, Os.WalletHostService>();
+        services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Wallet.WalletApp(
+            () => Services.Localization.Loc.T("os.app_wallet"),
+            sp.GetRequiredService<AetherOS.Apps.Wallet.IWalletHost>(),
+            sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>()));
+        services.AddSingleton(sp => new AetherOS.Apps.Groove.GrooveSettings(
+            sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>().Storage("groove")));
+        services.AddSingleton<Os.GrooveHostService>();
+        services.AddSingleton<AetherOS.Apps.Groove.IGrooveHost>(sp => sp.GetRequiredService<Os.GrooveHostService>());
+        services.AddSingleton<Os.IOsMediaRemote>(sp => sp.GetRequiredService<Os.GrooveHostService>());
+        services.AddSingleton<Services.GrooveDtrService>();
+        services.AddSingleton<Services.GrooveAutoMuteService>();
+        services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Groove.GrooveApp(
+            () => Services.Localization.Loc.T("os.app_groove"),
+            sp.GetRequiredService<AetherOS.Apps.Groove.IGrooveHost>(),
+            sp.GetRequiredService<AetherOS.Apps.Groove.GrooveSettings>()));
         services.AddSingleton<Os.WayfinderHostService>();
         services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Wayfinder.WayfinderApp(
             () => Services.Localization.Loc.T("os.app_wayfinder"),
             () => sp.GetRequiredService<SessionBootstrapper>().LastConnection?.WayfinderEnabled != false,
             sp.GetRequiredService<Os.WayfinderHostService>(),
+            sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>()));
+        services.AddSingleton<Os.AetherlingHostService>();
+        services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Aetherling.AetherlingApp(
+            // The mystery ends one account at a time: the tile keeps its question marks until yours hatches.
+            () => sp.GetRequiredService<Os.AetherlingHostService>().PetName
+                  ?? Services.Localization.Loc.T("os.app_aetherling"),
+            () => sp.GetRequiredService<SessionBootstrapper>().LastConnection?.AetherlingEnabled != false,
+            sp.GetRequiredService<Os.AetherlingHostService>(),
             sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>()));
         services.AddSingleton<Os.YapperHostService>();
         services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Yapper.YapperApp(
@@ -362,6 +425,7 @@ public sealed class Plugin : IDalamudPlugin
 
         services.AddSingleton<MainPluginWindow>();
         services.AddSingleton<MiniWindow>();
+        services.AddSingleton<SkinPreviewWindow>();
         services.AddSingleton<Services.DtrBarService>();
         services.AddSingleton<ChangelogWindow>();
         services.AddSingleton<DebugWindow>();

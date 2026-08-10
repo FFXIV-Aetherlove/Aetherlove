@@ -27,4 +27,5 @@ public sealed record AetherAccountInfoDto(
     // Account-level staff notices (the OS track), newest first. Disjoint from AetherConnectionDto.Warnings /
     // .ModeratorMessages, which carry only the profile-sourced AetherLove track. Null means "none".
     WarningDto[]? StaffWarnings = null,
-    ModeratorMessageDto[]? StaffMessages = null);
+    ModeratorMessageDto[]? StaffMessages = null,
+    string? EquippedFrameRef = null);

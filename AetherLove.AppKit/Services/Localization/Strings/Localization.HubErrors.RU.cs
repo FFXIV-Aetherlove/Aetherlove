@@ -1,4 +1,4 @@
-namespace AetherLove.Services.Localization;
+﻿namespace AetherLove.Services.Localization;
 
 internal static class HubErrorsRu
 {
@@ -135,5 +135,37 @@ internal static class HubErrorsRu
         ["huberror.yap_invalid"] = "Не удалось сохранить яп. Проверьте введённые данные.",
         ["huberror.yap_dm_not_allowed"] = "Этот пользователь не может получать ваши сообщения.",
         ["huberror.yap_dm_keys_missing"] = "@{0} ещё не закончил настройку. Попробуйте написать чуть позже.",
+
+        // store (added after update 2.2.3)
+        ["huberror.store_disabled"] = "Магазин закрыт на техобслуживание.",
+        ["huberror.store_product_not_found"] = "Такого товара больше нет.",
+        ["huberror.store_product_unavailable"] = "Этот товар сейчас не продаётся.",
+        ["huberror.store_insufficient_sparks"] = "Не хватает спарков: нужно {0}, а у тебя {1}.",
+        ["huberror.store_limit_reached"] = "У тебя уже максимум ({0}) этого товара.",
+        ["huberror.store_quantity_invalid"] = "Такое количество нельзя купить.",
+        ["huberror.store_conflict"] = "Магазин споткнулся на покупке. Дважды ничего не списано, просто попробуй ещё раз.",
+        ["huberror.aetherling_disabled"] = "Сейчас оно не слушает.",
+        ["huberror.aetherling_exists"] = "Такое у тебя уже есть.",
+        ["huberror.aetherling_none"] = "Здесь некому это отдать.",
+        ["huberror.aetherling_insufficient"] = "Спарков не хватает: нужно {0}, у тебя {1}.",
+        ["huberror.aetherling_gated"] = "Ещё рано. Сначала должно кое-что случиться. Загляни через {0} минут.",
+        ["huberror.aetherling_complete"] = "Больше оно не примет.",
+        ["huberror.aetherling_unready"] = "Ещё рано. Оно к этому не готово.",
+        ["huberror.aetherling_named"] = "Имя у него уже есть.",
+        ["huberror.aetherling_name_invalid"] = "Такое имя не подойдёт. Попробуй другое.",
+
+        // echo (added after update 2.2.3)
+        ["huberror.echo_disabled"] = "Совместный просмотр сейчас отключён.",
+        ["huberror.echo_room_not_found"] = "Этот совместный просмотр уже закончился.",
+        ["huberror.echo_room_full"] = "В комнате нет мест ({0} человек).",
+        ["huberror.echo_not_member"] = "Тебя нет в этой комнате.",
+        ["huberror.echo_not_owner"] = "Это может сделать только тот, кто создал комнату.",
+        ["huberror.echo_host_only"] = "Сейчас воспроизведением управляет хост.",
+        ["huberror.echo_kicked"] = "Тебя удалили из этой комнаты.",
+        ["huberror.echo_playlist_full"] = "Очередь заполнена ({0} видео).",
+        ["huberror.echo_live_room_exists"] = "У тебя уже есть открытая комната. Закрой её, чтобы создать новую.",
+        ["huberror.echo_invalid_video"] = "Это не похоже на ссылку с YouTube.",
+        ["huberror.echo_name_invalid"] = "Такое название комнаты не подойдёт.",
+        ["huberror.hangout_watch_room_invalid"] = "Этот совместный просмотр больше недоступен.",
     };
 }

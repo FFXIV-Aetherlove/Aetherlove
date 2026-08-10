@@ -29,6 +29,7 @@ public sealed class AppCapabilities : IAppCapabilities
         System = new SystemBridgeService();
         Keyboard = new KeyboardInputService();
         Share = share;
+        Travel = new LifestreamBridge();
         _storage = storage;
     }
 
@@ -39,8 +40,16 @@ public sealed class AppCapabilities : IAppCapabilities
     public ISystemBridge System { get; }
     public IKeyboardInput Keyboard { get; }
     public IShareService Share { get; }
+    public ITravelBridge Travel { get; }
 
     public IAppStorage Storage(string appId) => _storage.For(appId);
+
+    /// <summary>Whether an app is holding exclusive keyboard capture this frame. Shell controls that fire on
+    /// release must adapt while this is live: the hidden capture field takes the active id back on the frame
+    /// after any press, so a release can never land on them, and they fire on the press instead.</summary>
+    public static bool ExclusiveInputActive => _lastExclusiveFrame >= ImGui.GetFrameCount() - 1;
+
+    private static int _lastExclusiveFrame = -1;
 
     /// <summary>Draws the shared file dialog and crop popup. The shell calls this once per frame so apps never
     /// host their own picking overlays.</summary>
@@ -109,6 +118,10 @@ public sealed class AppCapabilities : IAppCapabilities
             ImGuiKey.LeftArrow, ImGuiKey.RightArrow, ImGuiKey.UpArrow, ImGuiKey.DownArrow,
             ImGuiKey.W, ImGuiKey.A, ImGuiKey.S, ImGuiKey.D,
             ImGuiKey.Space,
+            ImGuiKey.E, ImGuiKey.LeftCtrl, ImGuiKey.LeftShift, ImGuiKey.Enter, ImGuiKey.Escape, ImGuiKey.Tab,
+            ImGuiKey.Key1, ImGuiKey.Key2, ImGuiKey.Key3, ImGuiKey.Key4, ImGuiKey.Key5, ImGuiKey.Key6,
+            ImGuiKey.Key7,
+            ImGuiKey.Y, ImGuiKey.N,
         ];
 
         private static readonly VirtualKey[] GameKeys =
@@ -116,12 +129,23 @@ public sealed class AppCapabilities : IAppCapabilities
             VirtualKey.LEFT, VirtualKey.RIGHT, VirtualKey.UP, VirtualKey.DOWN,
             VirtualKey.W, VirtualKey.A, VirtualKey.S, VirtualKey.D,
             VirtualKey.SPACE,
+            VirtualKey.E, VirtualKey.CONTROL, VirtualKey.SHIFT, VirtualKey.RETURN, VirtualKey.ESCAPE, VirtualKey.TAB,
+            VirtualKey.KEY_1, VirtualKey.KEY_2, VirtualKey.KEY_3, VirtualKey.KEY_4, VirtualKey.KEY_5,
+            VirtualKey.KEY_6, VirtualKey.KEY_7,
+            VirtualKey.Y, VirtualKey.N,
         ];
 
         private readonly bool[] _down = new bool[Map.Length];
         private readonly bool[] _edge = new bool[Map.Length];
         private string _sink = string.Empty;
         private int _frame = -1;
+        private int _exclusiveFrame = -1;
+
+        public void RequestExclusive()
+        {
+            _exclusiveFrame = ImGui.GetFrameCount();
+            _lastExclusiveFrame = _exclusiveFrame;
+        }
 
         public bool IsDown(AppKey key)
         {
@@ -177,7 +201,16 @@ public sealed class AppCapabilities : IAppCapabilities
             ImGui.PopStyleVar();
             // Never steal focus from an item the user is holding: re-focusing every frame would take the active
             // id back mid-click, and anything that fires on RELEASE (the home pill) would never fire at all.
-            if (!ImGui.IsItemActive() && !ImGui.IsAnyItemActive())
+            //
+            // An app that asked for exclusive keys is the exception, and it has to be: pressing the mouse on
+            // bare window space makes ImGui's own window-move handle the active item, which deactivates this
+            // field, and the game sees the keystrokes again for as long as the button is held. Such an app
+            // hit-tests its own controls, so there is no held widget here to protect.
+            var exclusive = _exclusiveFrame == ImGui.GetFrameCount();
+            var reclaim = exclusive
+                ? !ImGui.GetIO().WantTextInput
+                : !ImGui.IsItemActive() && !ImGui.IsAnyItemActive();
+            if (reclaim)
             {
                 ImGui.SetKeyboardFocusHere(-1);
             }

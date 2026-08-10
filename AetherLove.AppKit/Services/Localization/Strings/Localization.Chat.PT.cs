@@ -157,5 +157,14 @@ internal static class ChatPt
         ["chat.delete_message_body"] = "Eliminar esta mensagem para todos? No lugar dela fica um aviso de que a eliminaste.",
         ["chat.delete_message_confirm"] = "Eliminar",
         ["chat.deleted_by_author"] = "Esta mensagem foi eliminada pelo autor.",
+        // added after update 2.2.3 (echo)
+        ["chat.preview_echo"] = "Partilhou uma sala do Echo",
+        ["chat.echo_card_label"] = "Sala do Echo",
+        ["chat.echo_card_host"] = "Anfitrião: {0}",
+        ["chat.echo_card_members"] = "{0} a ver",
+        ["chat.echo_card_idle"] = "Ainda não está a passar nada",
+        ["chat.echo_card_view"] = "Entrar nesta sala",
+        ["chat.echo_card_loading"] = "A carregar sala...",
+        ["chat.echo_card_unavailable"] = "Esta sala já terminou",
     };
 }

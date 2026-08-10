@@ -10,8 +10,9 @@ using Dalamud.Plugin.Services;
 namespace AetherLove.Services.Sparks;
 
 /// <summary>Client-side tracker for the spark milestones only the phone can observe: distinct apps opened
-/// today and Market/Realtor use. Reports fire once per day per milestone over the hub; the SERVER owns all
-/// amounts and caps, so this class is purely a duplicate-call saver and its state can be lost harmlessly.</summary>
+/// today, Market/Realtor use, and the apps whose visit is itself the deed (Groove, Store, Wallet). Reports
+/// fire once per day per milestone over the hub; the SERVER owns all amounts and caps, so this class is
+/// purely a duplicate-call saver and its state can be lost harmlessly.</summary>
 public sealed class SparkActivityReporter(
     AetherHubContext hub, AetherSignalService signal, Configuration config, IPluginLog log)
 {
@@ -43,6 +44,18 @@ public sealed class SparkActivityReporter(
         if (appId == "yapper" && !state.YapperCheckReported)
         {
             Report(SparkAction.YapperCheckFeed, () => config.Sparks.YapperCheckReported = true);
+        }
+        if (appId == "groove" && !state.GrooveReported)
+        {
+            Report(SparkAction.GrooveActivity, () => config.Sparks.GrooveReported = true);
+        }
+        if (appId == "store" && !state.StoreVisitReported)
+        {
+            Report(SparkAction.StoreVisit, () => config.Sparks.StoreVisitReported = true);
+        }
+        if (appId == "wallet" && !state.WalletVisitReported)
+        {
+            Report(SparkAction.WalletVisit, () => config.Sparks.WalletVisitReported = true);
         }
     }
 
@@ -82,6 +95,9 @@ public sealed class SparkActivityReporter(
         state.MarketActivityReported = false;
         state.ArcadeGamesReported = 0;
         state.YapperCheckReported = false;
+        state.GrooveReported = false;
+        state.StoreVisitReported = false;
+        state.WalletVisitReported = false;
         config.Save();
     }
 

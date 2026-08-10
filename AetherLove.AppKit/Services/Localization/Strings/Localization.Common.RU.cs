@@ -178,5 +178,9 @@ internal static class CommonRu
         ["common.staff_notice_heading_many"] = "У вас есть уведомления от команды: {0}",
         ["common.staff_notice_body"] = "Команда AetherOS прислала вам вот что по вашему аккаунту:",
         ["common.staff_notice_ack"] = "Понятно",
+
+        // added after update 2.2.3
+        ["common.travel_teleport_with"] = "Телепорт ({0})",
+        ["common.travel_tooltip"] = "Отправиться сюда через {0}",
     };
 }

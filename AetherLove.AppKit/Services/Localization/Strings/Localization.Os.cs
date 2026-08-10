@@ -1,4 +1,4 @@
-namespace AetherLove.Services.Localization;
+﻿namespace AetherLove.Services.Localization;
 
 internal static class OsEn
 {
@@ -8,6 +8,8 @@ internal static class OsEn
         // App names
         ["os.app_clock"] = "Clock",
         ["os.app_snake"] = "Snake",
+        ["os.app_doom"] = "DOOM",
+        ["os.app_sudoku"] = "Sudoku",
         ["os.app_stacker"] = "Stacker",
         ["os.app_breaker"] = "Breaker",
         ["os.app_meteor"] = "Meteor Command",
@@ -67,7 +69,7 @@ internal static class OsEn
         // Home screen app launcher
         ["os.add_apps"] = "Add apps",
         ["os.add_apps_title"] = "Add apps",
-        ["os.add_apps_hint"] = "Pin other installed Dalamud plugins to your home screen.",
+        ["os.add_apps_hint"] = "Bring back an app you removed, or pin another installed Dalamud plugin.",
         ["os.add_apps_none"] = "No other plugins expose a main window.",
         ["os.add_apps_add"] = "Add",
         ["os.add_apps_added"] = "Added",
@@ -146,6 +148,7 @@ internal static class OsEn
         ["os.folder_name_hint"] = "Folder name…",
         ["os.folder_default_name"] = "Folder",
         ["os.folder_arcade"] = "Arcade",
+        ["os.folder_media"] = "Media",
         ["os.folder_edit"] = "Edit",
         ["os.folder_empty"] = "No apps yet. Drag an icon onto this folder to add it.",
         // photo filters + screenshot import
@@ -248,5 +251,118 @@ internal static class OsEn
         ["os.arcade_error"] = "Couldn't load the leaderboard.",
         ["os.arcade_you"] = "You",
         ["os.arcade_back"] = "Back",
+
+        // wallet app (added after update 2.2.1)
+        ["os.app_wallet"] = "Wallet",
+
+        // plappy birb (added after update 2.2.3)
+        ["os.app_plappy"] = "Plappy Birb",
+
+        // removable first-party apps (added after update 2.2.3)
+        ["os.add_apps_section_removed"] = "Removed apps",
+        ["os.add_apps_section_plugins"] = "Other plugins",
+
+        // groove app (added after update 2.2.3)
+        ["os.app_groove"] = "Groove",
+
+        // store (added after update 2.2.3)
+        ["os.app_store"] = "Store",
+        ["os.store_preview_caption"] = "Preview only, not yet yours",
+        ["os.store_preview_close"] = "Close the preview",
+        ["os.store_preview_loading"] = "Loading the preview…",
+        ["os.store_preview_failed"] = "Couldn't load the preview.",
+
+        // added after update 2.2.3 (echo)
+        ["os.app_echo"] = "Echo",
+        // player and transport
+        ["echo.play"] = "Play",
+        ["echo.pause"] = "Pause",
+        ["echo.mute"] = "Mute",
+        ["echo.unmute"] = "Unmute",
+        ["echo.skip"] = "Skip",
+        ["echo.skip_tip"] = "Skip this video for everyone",
+        ["echo.buffering"] = "Buffering…",
+        ["echo.solo_idle"] = "Paste a link to start watching",
+        ["echo.unavailable"] = "Unavailable",
+        ["echo.close"] = "Close",
+        // playlist
+        ["echo.add"] = "Add",
+        ["echo.add_hint"] = "Paste a YouTube link",
+        ["echo.added_by"] = "Added by {0}",
+        ["echo.added_by_unknown"] = "Added by someone who left",
+        ["echo.remove"] = "Remove",
+        ["echo.queue_empty"] = "Nothing queued yet",
+        ["echo.playlist_full"] = "The queue is full",
+        ["echo.bad_link"] = "That is not a YouTube link",
+        // room
+        ["echo.room_code"] = "Room code",
+        ["echo.copy_code"] = "Copy code",
+        ["echo.copied"] = "Copied",
+        ["echo.host_only"] = "Host only",
+        ["echo.host_only_hint"] = "Only the host can control playback",
+        ["echo.host_only_tip"] = "The host has locked the controls",
+        ["echo.kick"] = "Remove",
+        ["echo.kick_confirm"] = "Remove them from the room?",
+        ["echo.leave_room"] = "Leave room",
+        ["echo.end_room"] = "End room",
+        ["echo.end_room_confirm"] = "End the room for everyone?",
+        ["echo.you"] = "{0} (you)",
+        ["echo.tab_playlist"] = "Playlist",
+        ["echo.tab_members"] = "Members",
+        ["echo.tab_chat"] = "Chat",
+        ["echo.toggle_panel"] = "Show or hide the side panel",
+        ["echo.new_messages"] = "{0} new messages",
+        // room ended
+        ["echo.room_ended_title"] = "Room ended",
+        ["echo.room_ended_owner"] = "The host closed the room",
+        ["echo.room_ended_owner_left"] = "The host disconnected",
+        ["echo.room_ended_empty"] = "Everybody left",
+        ["echo.room_ended_moderation"] = "This room was closed by moderation",
+        ["echo.kicked_title"] = "Removed from the room",
+        ["echo.kicked_body"] = "You were removed from {0}",
+        // runtime and errors
+        ["echo.runtime_title"] = "Echo needs its player",
+        ["echo.runtime_body"] = "Video playback needs a small player component. It downloads once, and after that Echo is ready to play every time you open it.",
+        ["echo.runtime_install"] = "Download it",
+        ["echo.installing_title"] = "Getting Echo ready",
+        ["echo.install_downloading"] = "Downloading…",
+        ["echo.install_verifying"] = "Verifying…",
+        ["echo.install_extracting"] = "Extracting…",
+        ["echo.install_failed_title"] = "Download failed",
+        ["echo.reinstall"] = "Reinstall",
+        ["echo.retry"] = "Try again",
+        ["echo.host_failed_title"] = "The player stopped",
+        ["echo.host_failed_body"] = "It could not be restarted. Please try again.",
+        ["echo.protocol_title"] = "Player version mismatch",
+        ["echo.protocol_body"] = "Reinstall the Echo player to continue.",
+        ["echo.embed_blocked_title"] = "This video cannot be embedded",
+        ["echo.embed_blocked_body"] = "Its owner does not allow playback outside YouTube.",
+        ["echo.video_gone_title"] = "Video unavailable",
+        ["echo.video_gone_body"] = "It was removed or made private.",
+        ["echo.bad_id_title"] = "Bad link",
+        ["echo.bad_id_body"] = "That video id does not look right.",
+        ["echo.player_error_title"] = "Playback failed",
+        ["echo.player_error_body"] = "Something went wrong loading this video.",
+
+        // avatar rings (added after update 2.2.3)
+        ["rings.section_title"] = "Avatar ring",
+        ["rings.picker_title"] = "Avatar ring",
+        ["rings.none"] = "No ring",
+        ["rings.none_owned_title"] = "No rings yet",
+        ["rings.none_owned_body"] = "Avatar rings are decorative frames drawn around your picture, visible to everyone. Buy them with Sparks in the Store.",
+        ["rings.open_store"] = "Open the Store",
+        ["rings.preview_hint"] = "Everyone sees your ring wherever your picture shows.",
+
+        // aetherling (added after update 2.2.3)
+        ["os.app_aetherling"] = "???",
+
+        // echo playback settings (added after update 2.2.3)
+        ["echo.settings_tip"] = "Playback settings",
+        ["echo.settings_quality"] = "Video quality",
+        ["echo.quality_auto"] = "Auto",
+        ["echo.quality_720"] = "720p",
+        ["echo.quality_1080"] = "1080p",
+        ["echo.settings_captions"] = "Subtitles",
+        ["echo.settings_autoplay"] = "Play the next video automatically",
     };
 }
