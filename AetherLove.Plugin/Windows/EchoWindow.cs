@@ -608,7 +608,8 @@ public sealed partial class EchoWindow : Window, IDisposable
             return false;
         }
         var render = RenderSize();
-        _host.Start(exe, WatchPageUrl(), (int)MathF.Round(render.X), (int)MathF.Round(render.Y));
+        _host.Start(exe, WatchPageUrl(), (int)MathF.Round(render.X), (int)MathF.Round(render.Y),
+            _config.Echo.DisableHardwareAcceleration);
         _host.SetVolume(_config.Echo.Volume);
         return true;
     }

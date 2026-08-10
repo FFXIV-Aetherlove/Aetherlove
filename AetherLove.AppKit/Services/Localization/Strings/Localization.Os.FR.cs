@@ -364,5 +364,6 @@ internal static class OsFr
         ["echo.quality_1080"] = "1080p",
         ["echo.settings_captions"] = "Sous-titres",
         ["echo.settings_autoplay"] = "Lancer la vidéo suivante automatiquement",
+        ["echo.settings_software_render"] = "Rendu logiciel (corrige certaines saccades)",
     };
 }

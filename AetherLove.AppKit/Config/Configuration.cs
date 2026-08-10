@@ -56,6 +56,12 @@ public class EchoClientState
 
     /// <summary>The room owner's queue auto-advance. Only the owner's client acts on it.</summary>
     public bool AutoPlayNext { get; set; } = true;
+
+    /// <summary>Runs the browser's compositing on the CPU. Off by default because the GPU path is what makes
+    /// 1080p watchable, but some drivers handle Chromium's GPU process badly enough that the video stutters
+    /// (the same machines usually see it in Discord and in Chromium browsers too), and software rendering is
+    /// the way out. Read when the playback host is launched, so it takes a host restart to apply.</summary>
+    public bool DisableHardwareAcceleration { get; set; }
 }
 
 /// <summary>The browser's render size. <see cref="MatchStage"/> follows the stage, which is cheapest and

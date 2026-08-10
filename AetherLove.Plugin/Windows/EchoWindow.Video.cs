@@ -93,7 +93,7 @@ public sealed partial class EchoWindow
 
         var dl = ImGui.GetWindowDrawList();
         var owner = _state.Room is { } room && room.OwnerAccountId == _myAccountId;
-        var rows = owner ? 4 : 3;
+        var rows = owner ? 5 : 4;
         var panelW = MathF.Min(stageSize.X - Px(24f), Px(300f));
         var rowH = Px(30f);
         var pad = Px(12f);
@@ -146,6 +146,21 @@ public sealed partial class EchoWindow
         {
             _config.Echo.AutoPlayNext = !_config.Echo.AutoPlayNext;
             _config.Save();
+        }
+        if (owner)
+        {
+            y += rowH;
+        }
+
+        // The browser only reads this at launch, so the host is restarted; the sync engine reloads the
+        // current video and seeks back to where the room is, which is why that is not disruptive in a room.
+        if (DrawSettingToggle(t, dl, "##echoSoftwareRender", new Vector2(panelTL.X + pad, y),
+                panelW - (pad * 2f), rowH, Loc.T("echo.settings_software_render"),
+                _config.Echo.DisableHardwareAcceleration))
+        {
+            _config.Echo.DisableHardwareAcceleration = !_config.Echo.DisableHardwareAcceleration;
+            _config.Save();
+            RestartHost();
         }
 
         // Last, so every control above wins the click; anywhere else closes the panel.

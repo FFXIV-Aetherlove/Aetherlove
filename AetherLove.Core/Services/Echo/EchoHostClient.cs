@@ -52,6 +52,7 @@ public sealed class EchoHostClient : IDisposable
     private string _pageUrl = string.Empty;
     private int _width = 1;
     private int _height = 1;
+    private bool _softwareRendering;
     private float _volume = 1f;
     private bool _captions;
     private string? _lastVideoId;
@@ -80,7 +81,11 @@ public sealed class EchoHostClient : IDisposable
     /// draw thread read <see cref="LastState"/>.</summary>
     public event Action<EchoPlayerState>? StateChanged;
 
-    public void Start(string hostExePath, string watchPageUrl, int width, int height)
+    /// <summary><paramref name="softwareRendering"/> takes the browser's compositing off the GPU, for drivers
+    /// that stutter on Chromium's GPU process. It can only be chosen per launch, which is why changing the
+    /// setting restarts the host.</summary>
+    public void Start(
+        string hostExePath, string watchPageUrl, int width, int height, bool softwareRendering = false)
     {
         lock (_gate)
         {
@@ -89,6 +94,7 @@ public sealed class EchoHostClient : IDisposable
             _pageUrl = watchPageUrl;
             _width = Math.Max(1, width);
             _height = Math.Max(1, height);
+            _softwareRendering = softwareRendering;
             _lastVideoId = null;
             _lastPosition = 0;
             _restartAttempt = 0;
@@ -236,6 +242,16 @@ public sealed class EchoHostClient : IDisposable
             psi.ArgumentList.Add(_width.ToString(CultureInfo.InvariantCulture));
             psi.ArgumentList.Add("--h");
             psi.ArgumentList.Add(_height.ToString(CultureInfo.InvariantCulture));
+            if (_softwareRendering)
+            {
+                // Chromium's own switches, read by CEF straight off the process command line: it parses it
+                // itself unless CommandLineArgsDisabled is set, which the host does not set. That is why this
+                // needs no change in the host, and so works against an already-installed one. Appended LAST
+                // because the host's own parser takes the following token as a value, so anything after these
+                // would be swallowed.
+                psi.ArgumentList.Add("--disable-gpu=1");
+                psi.ArgumentList.Add("--disable-gpu-compositing=1");
+            }
 
             UiHost.Log.Information(
                 $"[Echo] Launching the playback host.\n  exe  {_exePath}\n  url  {_pageUrl}\n" +
