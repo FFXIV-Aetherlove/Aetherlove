@@ -1,0 +1,14 @@
+{
+  "name": "Botanist's Hatchet",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_hatchet.png",
+  "anchor": "handR",
+  "origin": [
+    18,
+    84
+  ],
+  "width": 86,
+  "height": 135,
+  "behind": false
+}

@@ -74,6 +74,11 @@ public sealed class EchoHostClient : IDisposable
 
     public EchoPlayerState? LastState => _lastState;
 
+    /// <summary>The current load generation. <see cref="LastState"/> keeps reporting the PREVIOUS video until
+    /// the host answers a new load, so a consumer acting on Ended or Error must check the state's own
+    /// <see cref="EchoPlayerState.Epoch"/> against this first.</summary>
+    public long Epoch => Interlocked.Read(ref _epoch);
+
     /// <summary>Set when the restart budget is spent; cleared by the next <see cref="Start"/>.</summary>
     public string? FailureReason => _failureReason;
 

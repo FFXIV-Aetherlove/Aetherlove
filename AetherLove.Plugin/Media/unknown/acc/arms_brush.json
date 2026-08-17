@@ -1,0 +1,14 @@
+{
+  "name": "Pictomancer's Brush",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_brush.png",
+  "anchor": "handR",
+  "origin": [
+    18,
+    122
+  ],
+  "width": 60,
+  "height": 166,
+  "behind": false
+}

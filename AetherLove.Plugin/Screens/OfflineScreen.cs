@@ -90,7 +90,10 @@ public sealed class OfflineScreen
         using (UiFonts.H3?.Push())
         {
             var lineH = ImGui.GetTextLineHeightWithSpacing();
-            var notice = _maintenance.Notice;
+            // The server's own reason wins over the published notice: it came from the machine that just
+            // turned this client away, so it is the newer and more specific of the two.
+            var closed = _bootstrap.ServerNotice;
+            var notice = closed.Length > 0 ? closed : _maintenance.Notice;
             var body = string.IsNullOrEmpty(notice)
                 ? Loc.T("common.offline_body")
                 : $"{Loc.T("common.offline_maintenance")} {notice}";

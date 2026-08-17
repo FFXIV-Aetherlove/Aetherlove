@@ -1,0 +1,14 @@
+{
+  "name": "Culinarian's Frypan",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_frypan.png",
+  "anchor": "handR",
+  "origin": [
+    24,
+    104
+  ],
+  "width": 80,
+  "height": 139,
+  "behind": false
+}

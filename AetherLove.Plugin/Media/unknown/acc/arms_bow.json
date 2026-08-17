@@ -1,0 +1,14 @@
+{
+  "name": "Bard's Bow",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_bow.png",
+  "anchor": "handR",
+  "origin": [
+    26,
+    82
+  ],
+  "width": 51,
+  "height": 151,
+  "behind": false
+}

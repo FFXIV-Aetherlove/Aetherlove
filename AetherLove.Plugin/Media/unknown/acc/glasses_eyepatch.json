@@ -1,0 +1,14 @@
+{
+  "name": "Eyepatch",
+  "slot": "glasses",
+  "tier": "premium",
+  "file": "glasses_eyepatch.png",
+  "anchor": "face",
+  "origin": [
+    59,
+    9
+  ],
+  "width": 117,
+  "height": 71,
+  "behind": false
+}

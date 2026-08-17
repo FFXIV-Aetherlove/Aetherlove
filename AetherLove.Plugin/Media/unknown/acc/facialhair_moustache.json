@@ -1,0 +1,14 @@
+{
+  "name": "Moustache",
+  "slot": "facialhair",
+  "tier": "premium",
+  "file": "facialhair_moustache.png",
+  "anchor": "face",
+  "origin": [
+    50,
+    -44
+  ],
+  "width": 101,
+  "height": 22,
+  "behind": false
+}

@@ -25,10 +25,35 @@ public sealed class OsShell : IOsShell
     /// new app ships; stale ids in users' <see cref="OsConfig.SeenNewApps"/> drop out harmlessly.</summary>
     internal static readonly string[] NewAppIds =
         ["levemetes", "market", "realtor", "wayfinder", "yapper", "wallet", "snake", "stacker", "breaker",
-         "meteor", "invaders", "muncher", "plappy", "doom", "sudoku", "groove", "echo", "store", "aetherling"];
+         "meteor", "invaders", "muncher", "plappy", "doom", "sudoku", "groove", "echo", "store", "aetherling",
+         "notes", "calculator", "timers", "racooner", "skyswarm", "eordle"];
 
     public bool IsNewApp(string appId) =>
         Array.IndexOf(NewAppIds, appId) >= 0 && !UiHost.Configuration.Os.SeenNewApps.Contains(appId);
+
+    /// <summary>Drops the "new" pill from these apps without opening them, for the home screen's mark-seen
+    /// rows. Ids that were never new, or are already seen, cost nothing. True when anything changed.</summary>
+    public bool MarkAppsSeen(IEnumerable<string> appIds)
+    {
+        var seen = UiHost.Configuration.Os.SeenNewApps;
+        var changed = false;
+        foreach (var appId in appIds)
+        {
+            if (Array.IndexOf(NewAppIds, appId) >= 0 && !seen.Contains(appId))
+            {
+                seen.Add(appId);
+                changed = true;
+            }
+        }
+        if (changed)
+        {
+            UiHost.Configuration.Save();
+        }
+        return changed;
+    }
+
+    /// <summary>Every app that still wears the pill, for "mark all as seen".</summary>
+    public IEnumerable<string> NewApps() => NewAppIds.Where(IsNewApp);
 
     // Apps resolve lazily: hosts they depend on may themselves need this shell.
     public OsShell(IServiceProvider services, ScreenRouter router)
@@ -160,8 +185,8 @@ public sealed class OsShell : IOsShell
         }
     }
 
-    /// <summary>Puts a removed built-in app back on the grid. An arcade game lands in a free cell and the Arcade
-    /// folder adopts it again on the next home frame.</summary>
+    /// <summary>Puts a removed built-in app back on the grid, in the first free cell. Nothing adopts it into
+    /// a folder afterwards; the player puts it where they want it.</summary>
     public void RestoreBuiltInApp(string appId)
     {
         var os = UiHost.Configuration.Os;
@@ -195,6 +220,11 @@ public sealed class OsShell : IOsShell
         }
         app.OnIntent(intent);
         OpenApp(targetAppId);
+    }
+
+    public void DeliverIntent(string targetAppId, OsIntent intent)
+    {
+        Find(targetAppId)?.OnIntent(intent);
     }
 
     public void OpenApp(string appId)

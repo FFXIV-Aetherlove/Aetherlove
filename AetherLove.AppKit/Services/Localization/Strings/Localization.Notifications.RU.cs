@@ -38,5 +38,24 @@ internal static class NotificationsRu
         ["notif.realtor_results"] = "У жилищной лотереи начался период результатов. Загляните в Риелтор и узнайте, как всё сложилось.",
         ["notif.staff_notice_title"] = "Сообщение от команды",
         ["notif.staff_notice_body"] = "Откройте Настройки, чтобы прочитать.",
+
+        // Timers (added after update 2.3.3)
+        ["notif.timers_title"] = "Таймеры",
+        ["notif.timers_daily"] = "Ежедневный сброс",
+        ["notif.timers_gc"] = "Сброс Гранд-компании",
+        ["notif.timers_weekly"] = "Еженедельный сброс",
+        ["notif.timers_fr"] = "Fashion Report открыт",
+        ["notif.timers_cactpot"] = "Розыгрыш Джамбо Кактпота",
+        ["notif.timers_ocean"] = "Океаническая рыбалка: регистрация открыта",
+        ["notif.timers_venture"] = "{0}: вентура завершена ({1})",
+        ["notif.timers_fleet"] = "{0}: рейс завершён",
+        ["notif.timers_custom"] = "«{0}» готово",
+        ["notif.timers_lead"] = "через {0} мин",
+        ["notif.timers_chat"] = "Сработало напоминание из Таймеров.",
+        ["notif.calendar_alert_title"] = "Календарь",
+        ["notif.calendar_alert_body"] = "Скоро: {0}",
+
+        // added after update 2.3.4
+        ["notif.realtor_estate"] = "{0}: без визитов домой уже {2} дн. Личный дом сносят после 45 дней отсутствия, так что остаётся примерно {1} дн.",
     };
 }

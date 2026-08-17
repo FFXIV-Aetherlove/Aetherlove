@@ -1,0 +1,14 @@
+{
+  "name": "Wizard's Hat",
+  "slot": "head",
+  "tier": "premium",
+  "file": "head_wizardhat.png",
+  "anchor": "head",
+  "origin": [
+    64,
+    109
+  ],
+  "width": 128,
+  "height": 134,
+  "behind": false
+}

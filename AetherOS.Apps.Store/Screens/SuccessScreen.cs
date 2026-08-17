@@ -59,6 +59,14 @@ internal sealed class SuccessScreen(IStoreHost host, StoreMediaCache media, Acti
 
     public void Draw(OsAppContext ctx)
     {
+        if (_feedRequested)
+        {
+            // Handing over on the draw thread, because the tap that asked for it happens inside
+            // this window's own submission.
+            _feedRequested = false;
+            ctx.Shell.SendIntent(AetherlingAppId, OsIntents.Create(OsIntents.AetherlingFeed));
+            return;
+        }
         if (_celebration is not { } celebration)
         {
             done();
@@ -195,7 +203,7 @@ internal sealed class SuccessScreen(IStoreHost host, StoreMediaCache media, Acti
             {
                 DrawEnablePill(dl, enable, row.AccentColor,
                     new Vector2(rowTl.X + rowW - pillW - Px(6f), rowTl.Y + (rowH - Px(24f)) * 0.5f),
-                    new Vector2(pillW, Px(24f)));
+                    new Vector2(pillW, Px(24f)), row.Kind);
             }
             if (rowT >= 1f)
             {
@@ -277,7 +285,8 @@ internal sealed class SuccessScreen(IStoreHost host, StoreMediaCache media, Acti
 
     /// <summary>One tap wears what was just bought. A theme switches the phone; a ring goes on every
     /// identity the account has at once, so there is nothing to choose here.</summary>
-    private void DrawEnablePill(ImDrawListPtr dl, Enableable target, uint accentColor, Vector2 tl, Vector2 size)
+    private void DrawEnablePill(
+        ImDrawListPtr dl, Enableable target, uint accentColor, Vector2 tl, Vector2 size, StoreItemKind kind)
     {
         var state = _enableStates.GetValueOrDefault(target.ProductId, EnableState.Idle);
         var interactive = state is EnableState.Idle or EnableState.Failed;
@@ -314,14 +323,26 @@ internal sealed class SuccessScreen(IStoreHost host, StoreMediaCache media, Acti
         {
             EnableState.Done => Loc.T("os.store_enabled"),
             EnableState.Failed => Loc.T("os.store_enable_failed"),
+            _ when kind == StoreItemKind.AetherlingConsumable => Loc.T("os.store_use_now"),
             _ => Loc.T("os.store_enable"),
         };
         var captionSz = ImGui.CalcTextSize(caption);
         dl.AddText(tl + (size - captionSz) * 0.5f, 0xFFFFFFFFu, caption);
     }
 
+    /// <summary>The pet app's id. A string rather than a reference: apps never reference each other.</summary>
+    private const string AetherlingAppId = "aetherling";
+
+    private bool _feedRequested;
+
     private void RunEnable(Enableable target)
     {
+        if (target.Kind == StoreItemKind.AetherlingConsumable)
+        {
+            _feedRequested = true;
+            return;
+        }
+
         _enableStates[target.ProductId] = EnableState.Busy;
         _ = Task.Run(async () =>
         {

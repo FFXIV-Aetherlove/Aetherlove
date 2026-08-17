@@ -1,0 +1,14 @@
+{
+  "name": "Angel Halo",
+  "slot": "head",
+  "tier": "premium",
+  "file": "head_halo.png",
+  "anchor": "head",
+  "origin": [
+    52,
+    88
+  ],
+  "width": 105,
+  "height": 45,
+  "behind": false
+}

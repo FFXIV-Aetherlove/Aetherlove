@@ -1,0 +1,14 @@
+{
+  "name": "Reaper's Scythe",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_scythe.png",
+  "anchor": "handR",
+  "origin": [
+    24,
+    178
+  ],
+  "width": 142,
+  "height": 240,
+  "behind": false
+}

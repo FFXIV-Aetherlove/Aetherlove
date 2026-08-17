@@ -18,6 +18,9 @@ public interface INotifier
 
     void NotifyNews(string title);
 
+    /// <summary>A line the operators sent to everyone connected, printed in the game chat as a warning.</summary>
+    void NotifyServerNotice(string text);
+
     void NotifyMessengerMessage();
 
     void NotifyMessengerRequest(string fromName);

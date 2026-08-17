@@ -20,7 +20,7 @@ public sealed partial class GrooveApp : IAetherApp, IAppSettings
 
     private const float PadX = 16f;
 
-    private enum View { Player, Settings }
+    private enum View { Player, Settings, Onboarding }
 
     private readonly Func<string> _name;
     private readonly IGrooveHost _host;
@@ -87,13 +87,20 @@ public sealed partial class GrooveApp : IAetherApp, IAppSettings
     public void OnForeground()
     {
         _entrance.Arm();
+        // Ahead of the player, every launch until it has been through once. This app reads something off
+        // the player's own computer, and it should not do that for somebody who was never told.
+        if (!_settings.OnboardingSeen)
+        {
+            _view = View.Onboarding;
+            _onboardStep = 0;
+        }
     }
 
     public void Draw(OsAppContext ctx)
     {
         _entrance.BeginFrame();
-        // Settings owns its whole surface: the back pill is its only chrome, so the app header steps aside.
-        if (_view != View.Settings)
+        // Settings and the explainer own their whole surface: no header over either.
+        if (_view is not (View.Settings or View.Onboarding))
         {
             DrawHeader(ctx);
         }
@@ -103,7 +110,11 @@ public sealed partial class GrooveApp : IAetherApp, IAppSettings
         {
             if (body)
             {
-                if (_view == View.Settings)
+                if (_view == View.Onboarding)
+                {
+                    DrawOnboarding(ctx);
+                }
+                else if (_view == View.Settings)
                 {
                     DrawSettings(ctx, null);
                 }

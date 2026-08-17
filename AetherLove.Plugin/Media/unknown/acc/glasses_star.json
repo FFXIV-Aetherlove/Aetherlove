@@ -1,0 +1,14 @@
+{
+  "name": "Star Glasses",
+  "slot": "glasses",
+  "tier": "premium",
+  "file": "glasses_star.png",
+  "anchor": "face",
+  "origin": [
+    66,
+    11
+  ],
+  "width": 133,
+  "height": 76,
+  "behind": false
+}

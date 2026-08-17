@@ -247,5 +247,8 @@ internal static class SettingsRu
         ["settings.supporter_store_perks_header"] = "В магазине",
         ["settings.supporter_perk_store_title"] = "Скидка 10% в магазине",
         ["settings.supporter_perk_store_body"] = "Спонсоры платят на 10% меньше за каждую покупку в магазине, и это вдобавок к текущим распродажам.",
+
+        // Timers (added after update 2.3.3)
+        ["dtr.timers"] = "{0} {1}",
     };
 }

@@ -6,7 +6,11 @@ namespace AetherLove.Shared.Arcade;
 /// <summary>A finished arcade run. <see cref="Metric1"/>/<see cref="Metric2"/> carry the game's primary
 /// progress numbers so the server can sanity-check the score: Snake pellets, Stacker lines cleared,
 /// Breaker level reached (+ Metric2 = 1 when the run was won), Meteor/Invaders wave reached,
-/// Muncher level reached, Plappy pillars cleared (+ Metric2 = difficulty tier reached).</summary>
+/// Muncher level reached, Plappy pillars cleared (+ Metric2 = difficulty tier reached), Sudoku grids
+/// solved (+ Metric2 = peak rung), Racooner level reached, SkySwarm stage reached (+ Metric2 = 1 when
+/// dual was achieved), Eordle words solved (+ Metric2 = total guesses used), CloudHop highest row
+/// reached (+ Metric2 = perfect landings), CrystalCatch crystals caught (+ Metric2 = best combo),
+/// HillRoll metres travelled (+ Metric2 = crystals collected).</summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record ArcadeScoreSubmissionDto(
     ArcadeGame Game,

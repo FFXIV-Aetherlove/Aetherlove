@@ -247,5 +247,8 @@ internal static class SettingsEs
         ["settings.supporter_store_perks_header"] = "En la tienda",
         ["settings.supporter_perk_store_title"] = "10% de descuento en la tienda",
         ["settings.supporter_perk_store_body"] = "Los Supporters pagan un 10% menos en cada compra de la tienda, además de cualquier rebaja activa.",
+
+        // Timers (added after update 2.3.3)
+        ["dtr.timers"] = "{0} {1}",
     };
 }

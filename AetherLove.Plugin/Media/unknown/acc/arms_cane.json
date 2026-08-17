@@ -1,0 +1,14 @@
+{
+  "name": "Blue Mage's Cane",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_cane.png",
+  "anchor": "handR",
+  "origin": [
+    17,
+    132
+  ],
+  "width": 71,
+  "height": 177,
+  "behind": false
+}

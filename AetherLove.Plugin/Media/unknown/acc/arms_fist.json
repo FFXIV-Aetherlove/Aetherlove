@@ -1,0 +1,14 @@
+{
+  "name": "Monk's Fist Weapon",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_fist.png",
+  "anchor": "handR",
+  "origin": [
+    15,
+    40
+  ],
+  "width": 68,
+  "height": 73,
+  "behind": false
+}

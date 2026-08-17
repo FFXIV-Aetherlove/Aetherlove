@@ -1520,12 +1520,13 @@ public sealed partial class MessengerApp
     {
         if (_emojiPickerForInput)
         {
+            // No focus grab: SetKeyboardFocusHere re-selects the field from the start, which throws the
+            // caret to the beginning of what the user was typing. The match chat leaves focus alone here.
             _inputText += $":{name}: ";
             if (_chatWrapWidth > 0f)
             {
                 _inputText = WrapForInput(_inputText, _chatWrapWidth);
             }
-            _reclaimInputFocus = true;
             return;
         }
         var target = _reactTargetId;

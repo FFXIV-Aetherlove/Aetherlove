@@ -1,0 +1,14 @@
+{
+  "name": "Paladin's Sword",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_sword.png",
+  "anchor": "handR",
+  "origin": [
+    20,
+    127
+  ],
+  "width": 54,
+  "height": 160,
+  "behind": false
+}

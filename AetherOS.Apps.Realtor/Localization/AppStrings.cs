@@ -78,6 +78,22 @@ public static class AppStrings
         ["os.realtor_set_stale_hint"] = "Every entry is crowdsourced through PaissaDB. Turning this on also shows houses that have not been checked in a while and might still be available. It adds the stale pill to the counts and lists stale plots in the district screens; with it off, both stay hidden.",
         ["os.realtor_set_notify"] = "Notify me when the phase changes",
         ["os.realtor_set_notify_hint"] = "Sends a phone notification when the housing lottery flips between accepting entries and publishing results. It shows up in chat when you log in and in your notifications; opening the Realtor app clears it.",
+
+        // added after update 2.3.4 (estate demolition watch)
+        ["os.realtor_estate_title"] = "Estate at risk: about {0} days left",
+        ["os.realtor_estate_detail"] = "{0}, away {1} days",
+        ["os.realtor_estate_detail_more"] = "{0}, away {1} days  ·  +{2} more",
+        ["os.realtor_menu_realty"] = "Owned realty",
+        ["os.realtor_realty_title"] = "Owned realty",
+        ["os.realtor_realty_days"] = "{0} d away",
+        ["os.realtor_realty_entered"] = "Last entered {0}",
+        ["os.realtor_realty_never"] = "Enter your house to start counting",
+        ["os.realtor_realty_empty"] = "No private estate has turned up yet. Log in on a character that owns one and it will be listed here.",
+        ["os.realtor_realty_note"] = "Counted from what this install has seen, not from the game's own timer. A private estate is demolished after {0} days without its owner entering it, and entering resets the clock.",
+        ["os.realtor_home_row"] = "Home ({0})",
+        ["os.realtor_home_teleport"] = "Teleport",
+        ["os.realtor_set_estate"] = "Warn me before a house is demolished",
+        ["os.realtor_set_estate_hint"] = "Square Enix demolishes a private estate once nobody has entered it for 45 days. The phone remembers when each of your characters last stood inside its own house and warns you well before then, in chat and in your notifications. Free Company houses and apartments are not tracked.",
     };
 
     private static readonly IReadOnlyDictionary<string, string> De = new Dictionary<string, string>
@@ -153,6 +169,22 @@ public static class AppStrings
         ["os.realtor_set_stale_hint"] = "Alle Einträge stammen aus PaissaDB und werden von Spielern gemeldet. Mit dieser Option siehst du auch Häuser, die länger nicht geprüft wurden und vielleicht noch frei sind. Sie blendet die Plakette mit veralteten Angaben bei den Zählern ein und listet veraltete Grundstücke in den Bezirken; ausgeschaltet bleibt beides verborgen.",
         ["os.realtor_set_notify"] = "Bei Phasenwechsel benachrichtigen",
         ["os.realtor_set_notify_hint"] = "Schickt eine Benachrichtigung aufs Handy, wenn die Haus-Lotterie zwischen Bewerbungsphase und Ergebnisphase wechselt. Sie erscheint beim Einloggen im Chat und in deinen Benachrichtigungen; das Öffnen der Makler-App löscht sie.",
+
+        // added after update 2.3.4 (estate demolition watch)
+        ["os.realtor_estate_title"] = "Grundstück in Gefahr: noch etwa {0} Tage",
+        ["os.realtor_estate_detail"] = "{0}, seit {1} Tagen fort",
+        ["os.realtor_estate_detail_more"] = "{0}, seit {1} Tagen fort  ·  +{2} weitere",
+        ["os.realtor_menu_realty"] = "Eigener Immobilienbesitz",
+        ["os.realtor_realty_title"] = "Eigener Immobilienbesitz",
+        ["os.realtor_realty_days"] = "{0} T fort",
+        ["os.realtor_realty_entered"] = "Zuletzt betreten am {0}",
+        ["os.realtor_realty_never"] = "Betritt dein Haus, damit die Zählung beginnt",
+        ["os.realtor_realty_empty"] = "Bisher ist kein privates Grundstück aufgetaucht. Melde dich mit einem Charakter an, der eines besitzt, dann steht es hier.",
+        ["os.realtor_realty_note"] = "Gezählt wird, was diese Installation gesehen hat, nicht der Timer des Spiels. Ein privates Grundstück wird nach {0} Tagen abgerissen, wenn niemand es betritt; ein Besuch setzt die Uhr zurück.",
+        ["os.realtor_home_row"] = "Zuhause ({0})",
+        ["os.realtor_home_teleport"] = "Hin",
+        ["os.realtor_set_estate"] = "Vor dem Abriss eines Hauses warnen",
+        ["os.realtor_set_estate_hint"] = "Square Enix reißt ein privates Grundstück ab, sobald es 45 Tage lang niemand betreten hat. Das Telefon merkt sich, wann jeder deiner Charaktere zuletzt im eigenen Haus stand, und warnt dich rechtzeitig davor: im Chat und in deinen Benachrichtigungen. Häuser von Freien Gesellschaften und Apartments werden nicht erfasst.",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Es = new Dictionary<string, string>
@@ -228,6 +260,22 @@ public static class AppStrings
         ["os.realtor_set_stale_hint"] = "Todas las entradas provienen de PaissaDB y las aportan otros jugadores. Al activar esto también verás casas que llevan tiempo sin comprobarse y que quizá sigan libres. Añade la etiqueta de datos obsoletos a los recuentos y lista esas parcelas en los distritos; si lo desactivas, ambas cosas se ocultan.",
         ["os.realtor_set_notify"] = "Avisarme al cambiar de fase",
         ["os.realtor_set_notify_hint"] = "Envía una notificación al teléfono cuando la lotería de viviendas pasa de aceptar solicitudes a publicar resultados y viceversa. Aparece en el chat al iniciar sesión y en tus notificaciones; abrir la app de Inmobiliaria la borra.",
+
+        // added after update 2.3.4 (estate demolition watch)
+        ["os.realtor_estate_title"] = "Parcela en riesgo: quedan unos {0} días",
+        ["os.realtor_estate_detail"] = "{0}, {1} días fuera",
+        ["os.realtor_estate_detail_more"] = "{0}, {1} días fuera  ·  +{2} más",
+        ["os.realtor_menu_realty"] = "Propiedades en posesión",
+        ["os.realtor_realty_title"] = "Propiedades en posesión",
+        ["os.realtor_realty_days"] = "{0} d fuera",
+        ["os.realtor_realty_entered"] = "Última entrada: {0}",
+        ["os.realtor_realty_never"] = "Entra en tu casa para empezar a contar",
+        ["os.realtor_realty_empty"] = "Todavía no ha aparecido ninguna parcela privada. Entra con un personaje que tenga una y saldrá aquí.",
+        ["os.realtor_realty_note"] = "Se cuenta lo que ha visto esta instalación, no el temporizador del juego. Una parcela privada se derriba a los {0} días sin que su dueño entre, y entrar reinicia el contador.",
+        ["os.realtor_home_row"] = "Tu casa ({0})",
+        ["os.realtor_home_teleport"] = "Ir",
+        ["os.realtor_set_estate"] = "Avisarme antes de que derriben una casa",
+        ["os.realtor_set_estate_hint"] = "Square Enix derriba una parcela privada cuando nadie entra en ella durante 45 días. El teléfono recuerda cuándo estuvo cada uno de tus personajes dentro de su propia casa y te avisa con tiempo, en el chat y en tus notificaciones. Las casas de compañía libre y los apartamentos no se vigilan.",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Fr = new Dictionary<string, string>
@@ -303,6 +351,22 @@ public static class AppStrings
         ["os.realtor_set_stale_hint"] = "Toutes les entrées proviennent de PaissaDB et sont remontées par les joueurs. En activant ceci, vous verrez aussi des maisons qui n'ont pas été vérifiées depuis un moment et qui restent peut-être libres. Cela ajoute la pastille de données obsolètes aux compteurs et liste ces parcelles dans les quartiers ; désactivé, les deux disparaissent.",
         ["os.realtor_set_notify"] = "Me prévenir au changement de phase",
         ["os.realtor_set_notify_hint"] = "Envoie une notification sur le téléphone quand la loterie immobilière passe des candidatures aux résultats, et inversement. Elle s'affiche dans le chat à la connexion et dans vos notifications ; ouvrir l'appli l'efface.",
+
+        // added after update 2.3.4 (estate demolition watch)
+        ["os.realtor_estate_title"] = "Terrain menacé : environ {0} jours restants",
+        ["os.realtor_estate_detail"] = "{0}, {1} jours d'absence",
+        ["os.realtor_estate_detail_more"] = "{0}, {1} jours d'absence  ·  +{2} autres",
+        ["os.realtor_menu_realty"] = "Biens possédés",
+        ["os.realtor_realty_title"] = "Biens possédés",
+        ["os.realtor_realty_days"] = "{0} j d'absence",
+        ["os.realtor_realty_entered"] = "Dernière entrée le {0}",
+        ["os.realtor_realty_never"] = "Entrez dans votre maison pour lancer le compteur",
+        ["os.realtor_realty_empty"] = "Aucun terrain privé n'est encore apparu. Connectez-vous avec un personnage qui en possède un et il figurera ici.",
+        ["os.realtor_realty_note"] = "Compté à partir de ce que cette installation a vu, pas du minuteur du jeu. Un terrain privé est démoli après {0} jours sans que son propriétaire y entre, et une visite remet le compteur à zéro.",
+        ["os.realtor_home_row"] = "Chez vous ({0})",
+        ["os.realtor_home_teleport"] = "Aller",
+        ["os.realtor_set_estate"] = "Me prévenir avant la démolition d’une maison",
+        ["os.realtor_set_estate_hint"] = "Square Enix démolit un terrain privé dès que personne n’y est entré pendant 45 jours. Le téléphone retient la dernière fois que chacun de vos personnages est passé chez lui et vous prévient bien avant l’échéance, dans le chat et dans vos notifications. Les maisons de compagnie libre et les appartements ne sont pas suivis.",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Pt = new Dictionary<string, string>
@@ -378,6 +442,22 @@ public static class AppStrings
         ["os.realtor_set_stale_hint"] = "Todas as entradas vêm do PaissaDB e são enviadas por jogadores. Ao ligar isto, você também vê casas que não são verificadas há um tempo e que talvez ainda estejam livres. Isso adiciona a etiqueta de dados desatualizados às contagens e lista esses lotes nos distritos; desligado, os dois ficam ocultos.",
         ["os.realtor_set_notify"] = "Avisar quando a fase mudar",
         ["os.realtor_set_notify_hint"] = "Envia uma notificação no telefone quando a loteria de casas alterna entre aceitar inscrições e divulgar resultados. Ela aparece no chat ao entrar no jogo e nas suas notificações; abrir o app limpa tudo.",
+
+        // added after update 2.3.4 (estate demolition watch)
+        ["os.realtor_estate_title"] = "Terreno em risco: faltam cerca de {0} dias",
+        ["os.realtor_estate_detail"] = "{0}, {1} dias fora",
+        ["os.realtor_estate_detail_more"] = "{0}, {1} dias fora  ·  +{2} outros",
+        ["os.realtor_menu_realty"] = "Imóveis próprios",
+        ["os.realtor_realty_title"] = "Imóveis próprios",
+        ["os.realtor_realty_days"] = "{0} d fora",
+        ["os.realtor_realty_entered"] = "Última entrada em {0}",
+        ["os.realtor_realty_never"] = "Entra na tua casa para começar a contagem",
+        ["os.realtor_realty_empty"] = "Ainda não apareceu nenhum terreno particular. Entra com um personagem que tenha um e ele aparece aqui.",
+        ["os.realtor_realty_note"] = "Conta o que esta instalação viu, não o temporizador do jogo. Um terreno particular é demolido após {0} dias sem que o dono entre, e entrar reinicia a contagem.",
+        ["os.realtor_home_row"] = "A tua casa ({0})",
+        ["os.realtor_home_teleport"] = "Ir",
+        ["os.realtor_set_estate"] = "Avisar antes de uma casa ser demolida",
+        ["os.realtor_set_estate_hint"] = "A Square Enix demole um terreno particular quando ninguém entra nele por 45 dias. O telefone guarda quando cada um dos teus personagens esteve dentro da própria casa e avisa com antecedência, no chat e nas tuas notificações. Casas de companhia livre e apartamentos não são acompanhados.",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Ru = new Dictionary<string, string>
@@ -453,6 +533,22 @@ public static class AppStrings
         ["os.realtor_set_stale_hint"] = "Все данные приходят из PaissaDB, их собирают сами игроки. С этой опцией вы увидите и те дома, которые давно никто не проверял, но которые всё ещё могут быть свободны. Она добавляет плашку с устаревшими записями к счётчикам и показывает такие участки в районах; если выключить, пропадёт и то, и другое.",
         ["os.realtor_set_notify"] = "Сообщать о смене фазы",
         ["os.realtor_set_notify_hint"] = "Пришлёт уведомление на телефон, когда жилищная лотерея переключится между приёмом заявок и объявлением результатов. Оно появится в чате при входе в игру и в списке уведомлений, а после открытия приложения исчезнет.",
+
+        // added after update 2.3.4 (estate demolition watch)
+        ["os.realtor_estate_title"] = "Дом под угрозой: осталось примерно {0} дн.",
+        ["os.realtor_estate_detail"] = "{0}, нет дома {1} дн.",
+        ["os.realtor_estate_detail_more"] = "{0}, нет дома {1} дн.  ·  ещё {2}",
+        ["os.realtor_menu_realty"] = "Своя недвижимость",
+        ["os.realtor_realty_title"] = "Своя недвижимость",
+        ["os.realtor_realty_days"] = "{0} дн. без визитов",
+        ["os.realtor_realty_entered"] = "Последний вход: {0}",
+        ["os.realtor_realty_never"] = "Зайди в свой дом, чтобы начать отсчёт",
+        ["os.realtor_realty_empty"] = "Личных домов пока не нашлось. Зайди персонажем, у которого он есть, и дом появится здесь.",
+        ["os.realtor_realty_note"] = "Считаем по тому, что видел этот компьютер, а не по игровому таймеру. Личный дом сносят через {0} дней без визита владельца, а любой заход обнуляет счётчик.",
+        ["os.realtor_home_row"] = "Твой дом ({0})",
+        ["os.realtor_home_teleport"] = "Домой",
+        ["os.realtor_set_estate"] = "Предупреждать до сноса дома",
+        ["os.realtor_set_estate_hint"] = "Square Enix сносит личный дом, если в него никто не заходил 45 дней. Телефон запоминает, когда каждый твой персонаж последний раз был у себя дома, и предупредит заранее: в чате и в уведомлениях. Дома свободных компаний и апартаменты не отслеживаются.",
     };
 
     public static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> Packs =

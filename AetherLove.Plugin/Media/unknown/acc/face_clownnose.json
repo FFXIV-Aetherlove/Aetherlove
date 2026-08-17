@@ -1,0 +1,14 @@
+{
+  "name": "Clown Nose",
+  "slot": "facialhair",
+  "tier": "premium",
+  "file": "face_clownnose.png",
+  "anchor": "face",
+  "origin": [
+    8,
+    -42
+  ],
+  "width": 17,
+  "height": 17,
+  "behind": false
+}

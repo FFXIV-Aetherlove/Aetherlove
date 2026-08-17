@@ -97,6 +97,13 @@ public sealed class WalletApp : IAetherApp
             case View.History:
                 _history.Show();
                 break;
+            case View.Earn:
+                // The page renders off the sparks tab's snapshot and never fetches, so coming back to a
+                // phone left on it has to refresh the tab underneath. Refresh rather than OnShow: the tab
+                // is not the one being looked at and re-arming its entrance would replay a reveal nobody
+                // sees.
+                _sparks.Refresh();
+                break;
         }
     }
 
@@ -157,7 +164,10 @@ public sealed class WalletApp : IAetherApp
         _shell = ctx.Shell;
         if (_view == View.Earn)
         {
-            if (!_earn.HasWallet && _sparks.Wallet is { } loaded)
+            // Whatever the sparks tab last loaded, not just the first thing it loaded: the page has no fetch
+            // of its own, so a snapshot that lands while it is open (a refetch on foreground, a task
+            // finished elsewhere) has to reach it here or the ticks stay as they were when it opened.
+            if (_sparks.Wallet is { } loaded && !ReferenceEquals(_earn.Wallet, loaded))
             {
                 _earn.SetWallet(loaded);
             }

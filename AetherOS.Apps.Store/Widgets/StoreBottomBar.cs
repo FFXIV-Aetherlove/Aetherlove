@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -24,8 +24,9 @@ internal static class StoreBottomBar
 
     /// <summary>Roots the bar never offers, matched the way the deep link matches them: on the English name,
     /// which is the only category handle the catalog DTO carries. Their products stay reachable by search and
-    /// by a deep link, so this hides the door rather than the room.</summary>
-    private static readonly string[] HiddenRoots = ["Aetherling", "Boosts"];
+    /// by a deep link, so this hides the door rather than the room. The Aetherling shelf went live with the
+    /// growth release and is no longer hidden.</summary>
+    private static readonly string[] HiddenRoots = ["Boosts"];
 
     /// <summary>What the user picked: null id means Home, otherwise a root category.</summary>
     internal readonly record struct Pick(bool Home, Guid CategoryId);
@@ -44,13 +45,7 @@ internal static class StoreBottomBar
         dl.AddRectFilled(barTl, winPos + winSize, ImGui.ColorConvertFloat4ToU32(StorePalette.Surface));
         dl.AddLine(barTl, barTl + new Vector2(winSize.X, 0f), StorePalette.BlueWithAlpha(0.22f), Px(1f));
 
-        var roots = front is null
-            ? []
-            : front.Categories
-                .Where(c => c.ParentId is null && !IsHidden(c))
-                .OrderBy(c => c.SortOrder)
-                .Take(MaxCategories)
-                .ToList();
+        var roots = Roots(front);
         var slots = roots.Count + 1;
         var slotW = winSize.X / slots;
 
@@ -71,6 +66,21 @@ internal static class StoreBottomBar
         }
         return picked;
     }
+
+    /// <summary>The roots this bar offers, in bar order. A root's swatch is its index here, so anything else
+    /// painting itself after a category asks for the index rather than counting the front's own list and
+    /// drifting the moment a root is hidden or the bar's cap changes.</summary>
+    internal static List<StoreCategoryDto> Roots(StoreFrontDto? front) => front is null
+        ? []
+        : front.Categories
+            .Where(c => c.ParentId is null && !IsHidden(c))
+            .OrderBy(c => c.SortOrder)
+            .Take(MaxCategories)
+            .ToList();
+
+    /// <summary>The swatch a root is painted with, or -1 for one the bar does not carry.</summary>
+    internal static int SwatchIndexFor(StoreFrontDto? front, Guid rootId) =>
+        Roots(front).FindIndex(c => c.Id == rootId);
 
     private static bool IsHidden(StoreCategoryDto category) =>
         HiddenRoots.Contains(category.NameEnglish, StringComparer.OrdinalIgnoreCase);
@@ -107,10 +117,18 @@ internal static class StoreBottomBar
             : StorePalette.SurfaceWithAlpha(0f) | (hovered ? 0xCCFFFFFFu : 0x8FFFFFFFu);
         IconDraw.AddCentered(dl, icon, Px(17f), center - new Vector2(0f, Px(8f)), glyphColor);
 
-        // A full bar squeezes six slots into the phone's width, so the label shrinks before it ellipsizes.
-        var fontSize = ImGui.GetFontSize() * (slotW < Px(66f) ? 0.6f : 0.68f);
+        // A full bar squeezes six slots into the phone's width, so the label gives up size before it gives
+        // up letters: a whole word at 90% beats "Aetherli…" at 100%, and cutting one shelf's name while the
+        // longer one beside it fits reads as a bug rather than as a fit.
+        var maxW = slotW - Px(4f);
+        var fontSize = ImGui.GetFontSize() * 0.7f;
         var textSz = StoreChips.MeasureAt(label, fontSize);
-        var maxW = slotW - Px(6f);
+        var floor = ImGui.GetFontSize() * 0.52f;
+        while (textSz.X > maxW && fontSize > floor)
+        {
+            fontSize = MathF.Max(floor, fontSize - (ImGui.GetFontSize() * 0.02f));
+            textSz = StoreChips.MeasureAt(label, fontSize);
+        }
         var shown = label;
         while (textSz.X > maxW && shown.Length > 2)
         {

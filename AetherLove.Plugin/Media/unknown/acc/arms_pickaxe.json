@@ -1,0 +1,14 @@
+{
+  "name": "Miner's Pickaxe",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_pickaxe.png",
+  "anchor": "handR",
+  "origin": [
+    50,
+    116
+  ],
+  "width": 136,
+  "height": 182,
+  "behind": false
+}

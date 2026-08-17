@@ -1,0 +1,14 @@
+{
+  "name": "Goldsmith's Mallet",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_mallet.png",
+  "anchor": "handR",
+  "origin": [
+    25,
+    74
+  ],
+  "width": 76,
+  "height": 115,
+  "behind": false
+}

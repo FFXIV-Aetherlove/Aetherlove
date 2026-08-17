@@ -1,0 +1,14 @@
+{
+  "name": "Demon Horns",
+  "slot": "head",
+  "tier": "premium",
+  "file": "head_demonhorns.png",
+  "anchor": "head",
+  "origin": [
+    63,
+    40
+  ],
+  "width": 125,
+  "height": 69,
+  "behind": true
+}

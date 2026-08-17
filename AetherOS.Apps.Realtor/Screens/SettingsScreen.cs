@@ -85,6 +85,13 @@ internal sealed class SettingsScreen
         {
             _settings.NotifyPhase = notify;
         }
+
+        var estate = _settings.NotifyEstate;
+        if (Toggle(ctx, "realtorEstate", Loc.T("os.realtor_set_estate"), Loc.T("os.realtor_set_estate_hint"),
+            x, width, ref estate))
+        {
+            _settings.NotifyEstate = estate;
+        }
         ImGui.Dummy(new Vector2(width, ctx.Px(14f)));
     }
 

@@ -54,6 +54,12 @@ public static class BatteryService
 
     private static bool Muted => UiHost.Configuration.Os.HideBatteryGrassPrompt;
 
+    /// <summary>While this answers true the battery refuses to reach empty, parking at one percent instead.
+    /// The host wires it to "a minigame round is in progress": the go-outside screen taking over mid-run
+    /// would cost the player the run, which turns a nudge into a punishment. The drain resumes, and empty
+    /// can arrive, the moment the round ends.</summary>
+    public static Func<bool>? HoldEmpty { get; set; }
+
     public static void Reset() => Request(Full);
 
     private static void Request(int percent)
@@ -98,6 +104,11 @@ public static class BatteryService
         var step = MathF.Min(deltaSeconds, MaxStepSeconds);
         var perSecond = 1f / (_percent <= LowPercent ? LowSecondsPerPercent : SecondsPerPercent);
         _percent = MathF.Max(floor, _percent - perSecond * step);
+
+        if (_percent < 1f && HoldEmpty?.Invoke() == true)
+        {
+            _percent = 1f;
+        }
     }
 
     /// <summary>Stamps that the user has seen the empty screen, so the opt-out appears in settings from now on.</summary>

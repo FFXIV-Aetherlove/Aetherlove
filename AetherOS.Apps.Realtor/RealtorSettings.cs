@@ -8,11 +8,13 @@ public sealed class RealtorSettings
 {
     public const string ShowStaleKey = "showStale";
     public const string NotifyPhaseKey = "notifyPhase";
+    public const string NotifyEstateKey = "notifyEstate";
 
     private readonly IAppStorage _storage;
     private bool _loaded;
     private bool _showStale = true;
     private bool _notifyPhase = true;
+    private bool _notifyEstate = true;
 
     public RealtorSettings(IAppStorage storage) => _storage = storage;
 
@@ -48,6 +50,23 @@ public sealed class RealtorSettings
         }
     }
 
+    /// <summary>Whether the phone warns that a character has not been home to its private estate in a
+    /// long time.</summary>
+    public bool NotifyEstate
+    {
+        get
+        {
+            Load();
+            return _notifyEstate;
+        }
+        set
+        {
+            Load();
+            _notifyEstate = value;
+            _storage.Set(NotifyEstateKey, value);
+        }
+    }
+
     private void Load()
     {
         if (_loaded)
@@ -57,5 +76,6 @@ public sealed class RealtorSettings
         _loaded = true;
         _showStale = _storage.Get<bool?>(ShowStaleKey) ?? true;
         _notifyPhase = _storage.Get<bool?>(NotifyPhaseKey) ?? true;
+        _notifyEstate = _storage.Get<bool?>(NotifyEstateKey) ?? true;
     }
 }

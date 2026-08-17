@@ -1,0 +1,14 @@
+{
+  "name": "Monk's Off-hand Fist",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_fist_off.png",
+  "anchor": "handL",
+  "origin": [
+    53,
+    40
+  ],
+  "width": 68,
+  "height": 73,
+  "behind": false
+}

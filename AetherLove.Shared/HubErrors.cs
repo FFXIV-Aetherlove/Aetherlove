@@ -24,6 +24,10 @@ public static class HubErrors
     public const string AccountBanned = "account_banned";
     public const string RateLimited = "rate_limited";
 
+    /// <summary>The server is up but closed to players (staff excepted). Carries the operator's own notice
+    /// as its one argument, which the client shows instead of a generic offline line.</summary>
+    public const string ServerClosed = "server_closed";
+
     public const string ProfileNotFound = "profile_not_found";
     public const string ProfileNotVisible = "profile_not_visible";
     /// <summary>The target profile sits past the account's allowance (supporter lapsed); selecting it is refused.</summary>
@@ -236,6 +240,12 @@ public static class HubErrors
     /// <summary>Covers empty, too long, and moderation-flagged alike, so the moderator cannot be probed by
     /// watching which names come back with a different answer.</summary>
     public const string AetherlingNameInvalid = "aetherling_name_invalid";
+    /// <summary>No crystal of the requested element in the account's inventory.</summary>
+    public const string AetherlingNoCrystal = "aetherling_no_crystal";
+    /// <summary>Arg 0: adult feeds allowed per day. The appetite resets at UTC midnight.</summary>
+    public const string AetherlingFull = "aetherling_full";
+    /// <summary>The look names an item the account does not own.</summary>
+    public const string AetherlingNotOwned = "aetherling_not_owned";
 
     /// <summary>Builds the wire payload. Args are serialized invariant-culture; they must not contain '|'.</summary>
     public static string Format(string code, params object?[] args)

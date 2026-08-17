@@ -1,0 +1,14 @@
+{
+  "name": "Scholar's Codex",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_grimoire.png",
+  "anchor": "handR",
+  "origin": [
+    11,
+    44
+  ],
+  "width": 63,
+  "height": 81,
+  "behind": false
+}

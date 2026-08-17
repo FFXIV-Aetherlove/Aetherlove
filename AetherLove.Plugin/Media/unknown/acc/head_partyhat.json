@@ -1,0 +1,14 @@
+{
+  "name": "Party Hat",
+  "slot": "head",
+  "tier": "seasonal",
+  "file": "head_partyhat.png",
+  "anchor": "head",
+  "origin": [
+    33,
+    91
+  ],
+  "width": 67,
+  "height": 99,
+  "behind": false
+}

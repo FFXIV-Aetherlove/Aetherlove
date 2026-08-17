@@ -34,7 +34,7 @@ internal sealed class OnboardingScreen(Action done)
         var t = (float)(ImGui.GetTime() - _shown);
         var fade = ctx.ReduceMotion ? 1f : Look.EaseOut(t / 0.5f);
 
-        dl.AddRectFilled(origin, origin + size, Look.U32(Look.Void));
+        Look.Backdrop(dl, ctx.Theme, origin, size);
         Look.Halo(dl, origin + new Vector2(size.X * 0.5f, size.Y * 0.42f), size.X * 0.75f, Look.Crystal, 0.10f * fade);
 
         var pipY = origin.Y + Px(26f);

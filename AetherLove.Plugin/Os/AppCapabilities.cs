@@ -20,8 +20,9 @@ public sealed class AppCapabilities : IAppCapabilities
     private readonly AppStorageService _storage;
 
     public AppCapabilities(SelfieCaptureOverlay selfie, ImageRequirementsModal imageReqModal, ShareService share,
-        AppStorageService storage)
+        AppStorageService storage, AudioService audio)
     {
+        Audio = audio;
         Camera = new CameraService(selfie);
         _images = new ImagePickerService(imageReqModal);
         Textures = new TextureCacheService();
@@ -39,6 +40,7 @@ public sealed class AppCapabilities : IAppCapabilities
     public IImageEffects Effects { get; }
     public ISystemBridge System { get; }
     public IKeyboardInput Keyboard { get; }
+    public IAudioPlayer Audio { get; }
     public IShareService Share { get; }
     public ITravelBridge Travel { get; }
 

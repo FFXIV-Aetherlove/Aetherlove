@@ -10,21 +10,12 @@ using Dalamud.Interface;
 
 namespace AetherOS.Apps.Calendar;
 
-/// <summary>A simple month calendar: the user's venue RSVPs (from the host feed) plus local personal
-/// events kept in app storage. Venue rows deep-link into the Places app.</summary>
+/// <summary>A simple month calendar: the user's venue RSVPs (from the host feed) plus personal events kept
+/// in the plugin-side store, so their reminders can fire while the app is closed. Venue rows deep-link into
+/// the Places app.</summary>
 public sealed class CalendarApp : IAetherApp
 {
-    private sealed class OwnEvent
-    {
-        public string Id { get; set; } = "";
-        public string Title { get; set; } = "";
-        public string Note { get; set; } = "";
-        public DateTime StartUtc { get; set; }
-    }
-
-    private sealed record DayEntry(DateTime Local, string Title, string Sub, bool IsVenue, Guid VenueId, string EventId);
-
-    private const string EventsKey = "events";
+    private sealed record DayEntry(DateTime Local, string Title, string Sub, bool IsVenue, Guid VenueId, string EventId, int? Remind);
 
     private static readonly Vector4 TileTopColor = new(0.96f, 0.45f, 0.40f, 1f);
     private static readonly Vector4 TileBottomColor = new(0.58f, 0.16f, 0.28f, 1f);
@@ -41,31 +32,35 @@ public sealed class CalendarApp : IAetherApp
 
     private static readonly string[] HourItems = Enumerable.Range(0, 24).Select(h => h.ToString("00")).ToArray();
     private static readonly string[] MinuteItems = Enumerable.Range(0, 12).Select(m => (m * 5).ToString("00")).ToArray();
+    private static readonly int?[] RemindChoices = [null, 0, 5, 15, 30, 60];
 
     private readonly Func<string> name;
     private readonly ICalendarHost host;
-    private readonly IAppCapabilities caps;
+    private readonly ICalendarStore store;
 
     private DateTime shownMonth = new(DateTime.Now.Year, DateTime.Now.Month, 1);
     private DateTime selectedDay = DateTime.Now.Date;
     // Phone-language culture, refreshed each Draw; the widget items property has no context of its own.
     private CultureInfo culture = CultureInfo.CurrentCulture;
-    private List<OwnEvent>? events;
+    private IReadOnlyList<CalendarEvent> events = [];
+    private int storeVersion = -1;
     private IReadOnlyList<VenueVisit> visits = [];
+    private DateTime lastVisitFetchUtc;
     private bool addOpen;
+    private string? editId;
     private string addTitle = "";
     private string addNote = "";
     private int addHour = 20;
     private int addMinute = 0;
+    private int addRemindIndex;
     private bool focusPending;
     private string? confirmDeleteId;
-    private readonly List<OwnEvent> pendingAdds = new();
 
-    public CalendarApp(Func<string> name, ICalendarHost host, IAppCapabilities caps)
+    public CalendarApp(Func<string> name, ICalendarHost host, IAppCapabilities caps, ICalendarStore store)
     {
         this.name = name;
         this.host = host;
-        this.caps = caps;
+        this.store = store;
     }
 
     public string Id => "calendar";
@@ -99,17 +94,27 @@ public sealed class CalendarApp : IAetherApp
         });
     }
 
-    private DateTime lastVisitFetchUtc;
+    private IReadOnlyList<CalendarEvent> Events
+    {
+        get
+        {
+            if (this.storeVersion != this.store.Version)
+            {
+                this.storeVersion = this.store.Version;
+                this.events = this.store.Events;
+            }
+            return this.events;
+        }
+    }
 
     /// <summary>The soonest three upcoming entries (own events + venue RSVPs) for the home widgets page.</summary>
     public IReadOnlyList<OsWidgetItem> WidgetItems
     {
         get
         {
-            this.events ??= this.caps.Storage(this.Id).Get<List<OwnEvent>>(EventsKey) ?? new List<OwnEvent>();
             this.MaybeRefreshVisits();
             var cutoff = DateTime.UtcNow.AddHours(-1);
-            return this.events
+            return this.Events
                 .Select(e => (e.StartUtc, e.Title))
                 .Concat(this.visits.Select(v => (v.StartUtc, Title: v.VenueName)))
                 .Where(e => e.StartUtc >= cutoff)
@@ -139,20 +144,20 @@ public sealed class CalendarApp : IAetherApp
     {
         if (intent.Type == ShareIntent.Type && ShareIntent.TryUnwrap(intent, out var shared))
         {
-            QueueSharedAdd(shared);
+            this.AddSharedEvent(shared);
             return;
         }
         if (intent.Type != OsIntents.CalendarAdd
-            || !OsIntents.TryGetCalendarAdd(intent, out var title, out var note, out var startUnix))
+            || !OsIntents.TryGetCalendarAdd(intent, out var title, out var note, out var startUnix, out var remindMinutes))
         {
             return;
         }
-        QueueAdd(title, note, DateTimeOffset.FromUnixTimeSeconds(startUnix).UtcDateTime);
+        this.AddEvent(title, note, DateTimeOffset.FromUnixTimeSeconds(startUnix).UtcDateTime, remindMinutes);
     }
 
-    /// <summary>A calendar-event share landing on this app becomes a local event at that date and time;
+    /// <summary>A calendar-event share landing on this app becomes a stored event at that date and time;
     /// the Extras JSON carries kind + start, the same shape the chat targets consume.</summary>
-    private void QueueSharedAdd(ShareItem item)
+    private void AddSharedEvent(ShareItem item)
     {
         if (item.Type != ShareTypes.CalendarEvent || item.Title.Length == 0)
         {
@@ -162,22 +167,16 @@ public sealed class CalendarApp : IAetherApp
         {
             using var doc = JsonDocument.Parse(item.Extras);
             var startUtc = DateTimeOffset.FromUnixTimeSeconds(doc.RootElement.GetProperty("start").GetInt64()).UtcDateTime;
-            QueueAdd(item.Title, item.Subtitle, startUtc);
+            this.AddEvent(item.Title, item.Subtitle, startUtc, null);
         }
         catch (Exception)
         {
         }
     }
 
-    private void QueueAdd(string title, string note, DateTime startUtc)
+    private void AddEvent(string title, string note, DateTime startUtc, int? remindMinutesBefore)
     {
-        this.pendingAdds.Add(new OwnEvent
-        {
-            Id = Guid.NewGuid().ToString("N"),
-            Title = title,
-            Note = note,
-            StartUtc = startUtc,
-        });
+        this.store.Add(title, note, startUtc, remindMinutesBefore);
         var local = AsLocal(startUtc);
         this.selectedDay = local.Date;
         this.shownMonth = new DateTime(local.Year, local.Month, 1);
@@ -186,20 +185,6 @@ public sealed class CalendarApp : IAetherApp
     public void Draw(OsAppContext ctx)
     {
         this.culture = ctx.Culture;
-        var storage = ctx.Capabilities.Storage(this.Id);
-        this.events ??= storage.Get<List<OwnEvent>>(EventsKey) ?? new List<OwnEvent>();
-        if (this.pendingAdds.Count > 0)
-        {
-            foreach (var add in this.pendingAdds)
-            {
-                if (!this.events.Any(e => e.Title == add.Title && e.StartUtc == add.StartUtc))
-                {
-                    this.events.Add(add);
-                }
-            }
-            this.pendingAdds.Clear();
-            storage.Set(EventsKey, this.events);
-        }
 
         var overlay = this.addOpen || this.confirmDeleteId != null;
         var flags = overlay ? ImGuiWindowFlags.NoScrollWithMouse : ImGuiWindowFlags.None;
@@ -219,7 +204,7 @@ public sealed class CalendarApp : IAetherApp
 
         this.DrawHeader(ctx, x, width);
         this.DrawMonthGrid(ctx, x, width);
-        this.DrawDayAgenda(ctx, x, width, storage);
+        this.DrawDayAgenda(ctx, x, width);
 
         ImGui.Dummy(new Vector2(0f, ctx.Px(14f)));
         if (overlay)
@@ -238,11 +223,11 @@ public sealed class CalendarApp : IAetherApp
                 ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse);
             if (this.addOpen)
             {
-                this.DrawAddOverlay(ctx, storage);
+                this.DrawAddOverlay(ctx);
             }
             else if (this.confirmDeleteId != null)
             {
-                this.DrawDeleteConfirm(ctx, storage);
+                this.DrawDeleteConfirm(ctx);
             }
             ImGui.EndChild();
         }
@@ -282,7 +267,12 @@ public sealed class CalendarApp : IAetherApp
             this.shownMonth = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
             this.selectedDay = DateTime.Now.Date;
         }
-        var todayFill = ImGui.IsItemHovered() ? HoverFill : PanelFill;
+        var todayHovered = ImGui.IsItemHovered();
+        if (todayHovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+        var todayFill = todayHovered ? HoverFill : PanelFill;
         dl.AddRectFilled(todayTL, todayTL + new Vector2(todayW, ctx.Px(24f)), U32(todayFill), ctx.Px(12f));
         dl.AddText(todayTL + new Vector2(ctx.Px(9f), (ctx.Px(24f) - todaySz.Y) * 0.5f), U32(MutedText), todayLabel);
 
@@ -329,6 +319,10 @@ public sealed class CalendarApp : IAetherApp
                 this.selectedDay = date;
             }
             var hovered = ImGui.IsItemHovered();
+            if (hovered)
+            {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            }
 
             var radius = ctx.Px(13f);
             if (date == this.selectedDay)
@@ -371,7 +365,7 @@ public sealed class CalendarApp : IAetherApp
     private Dictionary<DateTime, (bool Own, bool Venue)> BuildDayMarks()
     {
         var marks = new Dictionary<DateTime, (bool Own, bool Venue)>();
-        foreach (var e in this.events!)
+        foreach (var e in this.Events)
         {
             var day = AsLocal(e.StartUtc).Date;
             marks[day] = (true, marks.TryGetValue(day, out var m) && m.Venue);
@@ -384,7 +378,7 @@ public sealed class CalendarApp : IAetherApp
         return marks;
     }
 
-    private void DrawDayAgenda(OsAppContext ctx, float x, float width, IAppStorage storage)
+    private void DrawDayAgenda(OsAppContext ctx, float x, float width)
     {
         var dl = ImGui.GetWindowDrawList();
         var rowTL = ImGui.GetCursorScreenPos();
@@ -399,10 +393,12 @@ public sealed class CalendarApp : IAetherApp
         if (RoundIconButton("##calAdd", FontAwesomeIcon.Plus, new Vector2(x + width - addR, rowTL.Y + rowH * 0.5f), addR, ctx.Px(11f), accentFill: ctx.Theme.Accent))
         {
             this.addOpen = true;
+            this.editId = null;
             this.addTitle = "";
             this.addNote = "";
             this.addHour = 20;
             this.addMinute = 0;
+            this.addRemindIndex = 0;
             this.focusPending = true;
         }
         ImGui.SetCursorScreenPos(rowTL);
@@ -427,12 +423,12 @@ public sealed class CalendarApp : IAetherApp
     private List<DayEntry> EntriesFor(DateTime day)
     {
         var list = new List<DayEntry>();
-        foreach (var e in this.events!)
+        foreach (var e in this.Events)
         {
             var local = AsLocal(e.StartUtc);
             if (local.Date == day)
             {
-                list.Add(new DayEntry(local, e.Title, e.Note, false, Guid.Empty, e.Id));
+                list.Add(new DayEntry(local, e.Title, e.Note, false, Guid.Empty, e.Id, e.RemindMinutesBefore));
             }
         }
         foreach (var v in this.visits)
@@ -440,7 +436,7 @@ public sealed class CalendarApp : IAetherApp
             var local = AsLocal(v.StartUtc);
             if (local.Date == day)
             {
-                list.Add(new DayEntry(local, v.VenueName, "", true, v.VenueId, ""));
+                list.Add(new DayEntry(local, v.VenueName, "", true, v.VenueId, "", null));
             }
         }
         return list.OrderBy(e => e.Local).ToList();
@@ -469,8 +465,9 @@ public sealed class CalendarApp : IAetherApp
         AddIconCentered(dl, entry.IsVenue ? FontAwesomeIcon.MapMarkerAlt : FontAwesomeIcon.Circle,
             ctx.Px(entry.IsVenue ? 11f : 6f), new Vector2(iconX + ctx.Px(6f), tl.Y + ctx.Px(hasSub ? 15f : 19f)), U32(accent));
 
+        var trailInset = entry.IsVenue ? 34f : entry.Remind is null ? 60f : 80f;
         var textX = iconX + ctx.Px(18f);
-        var textMaxX = br.X - ctx.Px(entry.IsVenue ? 34f : 60f);
+        var textMaxX = br.X - ctx.Px(trailInset);
         dl.PushClipRect(new Vector2(textX, tl.Y), new Vector2(textMaxX, br.Y), true);
         dl.AddText(new Vector2(textX, tl.Y + ctx.Px(hasSub ? 8f : 11f)), U32(WhiteText), entry.Title);
         if (hasSub)
@@ -479,8 +476,19 @@ public sealed class CalendarApp : IAetherApp
         }
         dl.PopClipRect();
 
-        // Trailing icon buttons go first: with overlapping items the first-submitted one wins clicks.
         var cy = tl.Y + rowH * 0.5f;
+        if (entry.Remind is { } remind)
+        {
+            var bellC = new Vector2(br.X - ctx.Px(70f), cy);
+            AddIconCentered(dl, FontAwesomeIcon.Bell, ctx.Px(10f), bellC, U32(ctx.Theme.AccentLight));
+            var half = new Vector2(ctx.Px(8f), ctx.Px(8f));
+            if (!this.addOpen && this.confirmDeleteId == null && InRect(ImGui.GetMousePos(), bellC - half, bellC + half))
+            {
+                ImGui.SetTooltip(string.Format(this.culture, ctx.Localize("os.cal_remind_tip"), this.RemindLabel(ctx, remind)));
+            }
+        }
+
+        // Trailing icon buttons go first: with overlapping items the first-submitted one wins clicks.
         var shareC = new Vector2(br.X - ctx.Px(entry.IsVenue ? 20f : 46f), cy);
         if (RoundIconButton($"##calShare{rowKey}", FontAwesomeIcon.Share, shareC, ctx.Px(12f), ctx.Px(9f)))
         {
@@ -495,20 +503,37 @@ public sealed class CalendarApp : IAetherApp
 
         ImGui.SetCursorScreenPos(tl);
         var clicked = ImGui.InvisibleButton($"##calEntry{rowKey}", new Vector2(width, rowH));
-        if (entry.IsVenue)
+        if (ImGui.IsItemHovered())
         {
-            if (ImGui.IsItemHovered())
-            {
-                dl.AddRect(tl, br, U32(ctx.Theme.Accent), ctx.Px(10f), ImDrawFlags.RoundCornersAll, ctx.Px(1.2f));
-            }
-            if (clicked)
+            dl.AddRect(tl, br, U32(ctx.Theme.Accent), ctx.Px(10f), ImDrawFlags.RoundCornersAll, ctx.Px(1.2f));
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+        if (clicked)
+        {
+            if (entry.IsVenue)
             {
                 ctx.Shell.SendIntent("places", OsIntents.Create(OsIntents.OpenVenue, entry.VenueId));
+            }
+            else
+            {
+                this.OpenEditor(entry);
             }
         }
 
         ImGui.SetCursorScreenPos(tl);
         ImGui.Dummy(new Vector2(width, rowH + ctx.Px(6f)));
+    }
+
+    private void OpenEditor(DayEntry entry)
+    {
+        this.addOpen = true;
+        this.editId = entry.EventId;
+        this.addTitle = entry.Title;
+        this.addNote = entry.Sub;
+        this.addHour = entry.Local.Hour;
+        this.addMinute = entry.Local.Minute;
+        this.addRemindIndex = RemindIndexFor(entry.Remind);
+        this.focusPending = true;
     }
 
     /// <summary>Offers the entry to the share sheet. The Extras JSON carries kind + start; chat targets
@@ -535,7 +560,7 @@ public sealed class CalendarApp : IAetherApp
             });
     }
 
-    private void DrawAddOverlay(OsAppContext ctx, IAppStorage storage)
+    private void DrawAddOverlay(OsAppContext ctx)
     {
         var winPos = ImGui.GetWindowPos();
         var winSize = ImGui.GetWindowSize();
@@ -548,13 +573,13 @@ public sealed class CalendarApp : IAetherApp
         var btnH = ctx.Px(34f);
         var panelW = MathF.Min(winSize.X - ctx.Px(40f), ctx.Px(280f));
         var innerW = panelW - padIn * 2f;
-        var panelH = padIn + lineH + ctx.Px(8f) + inputH + ctx.Px(10f) + inputH + ctx.Px(10f) + inputH + ctx.Px(14f) + btnH + padIn;
+        var panelH = padIn + lineH + ctx.Px(8f) + inputH + ctx.Px(10f) + inputH + ctx.Px(10f) + inputH + ctx.Px(10f) + inputH + ctx.Px(14f) + btnH + padIn;
         var panelTL = winPos + (winSize - new Vector2(panelW, panelH)) * 0.5f;
         var panelBR = panelTL + new Vector2(panelW, panelH);
 
         dl.AddRectFilled(panelTL, panelBR, U32(PanelBg), ctx.Px(16f));
         dl.AddRect(panelTL, panelBR, U32(PanelBorder), ctx.Px(16f), ImDrawFlags.RoundCornersAll, 1f);
-        dl.AddText(panelTL + new Vector2(padIn, padIn), U32(MutedText), ctx.Localize("os.cal_add"));
+        dl.AddText(panelTL + new Vector2(padIn, padIn), U32(MutedText), ctx.Localize(this.editId is null ? "os.cal_add" : "os.cal_edit"));
 
         var y = panelTL.Y + padIn + lineH + ctx.Px(8f);
         ImGui.SetCursorScreenPos(new Vector2(panelTL.X + padIn, y));
@@ -589,6 +614,25 @@ public sealed class CalendarApp : IAetherApp
         {
             this.addMinute = minuteIndex * 5;
         }
+        y += inputH + ctx.Px(10f);
+
+        ImGui.SetCursorScreenPos(new Vector2(panelTL.X + padIn, y + (inputH - lineH) * 0.5f));
+        ImGui.PushStyleColor(ImGuiCol.Text, MutedText);
+        ImGui.TextUnformatted(ctx.Localize("os.cal_remind"));
+        ImGui.PopStyleColor();
+        var remindItems = new string[RemindChoices.Length];
+        for (var i = 0; i < RemindChoices.Length; i++)
+        {
+            remindItems[i] = this.RemindLabel(ctx, RemindChoices[i]);
+        }
+        var remindW = ctx.Px(150f);
+        ImGui.SetCursorScreenPos(new Vector2(panelBR.X - padIn - remindW, y));
+        ImGui.SetNextItemWidth(remindW);
+        ImGui.Combo("##calRemind", ref this.addRemindIndex, remindItems, remindItems.Length);
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
         PopInputStyle();
 
         var btnW = (innerW - ctx.Px(8f)) * 0.5f;
@@ -601,14 +645,23 @@ public sealed class CalendarApp : IAetherApp
             && this.addTitle.Trim().Length > 0)
         {
             var local = this.selectedDay.Date.AddHours(this.addHour).AddMinutes(this.addMinute);
-            this.events!.Add(new OwnEvent
+            var startUtc = DateTime.SpecifyKind(local, DateTimeKind.Local).ToUniversalTime();
+            var remind = RemindChoices[this.addRemindIndex];
+            if (this.editId is { } id)
             {
-                Id = Guid.NewGuid().ToString("N"),
-                Title = this.addTitle.Trim(),
-                Note = this.addNote.Trim(),
-                StartUtc = DateTime.SpecifyKind(local, DateTimeKind.Local).ToUniversalTime(),
-            });
-            storage.Set(EventsKey, this.events);
+                this.store.Update(new CalendarEvent
+                {
+                    Id = id,
+                    Title = this.addTitle.Trim(),
+                    Note = this.addNote.Trim(),
+                    StartUtc = startUtc,
+                    RemindMinutesBefore = remind,
+                });
+            }
+            else
+            {
+                this.store.Add(this.addTitle.Trim(), this.addNote.Trim(), startUtc, remind);
+            }
             this.addOpen = false;
         }
 
@@ -620,7 +673,7 @@ public sealed class CalendarApp : IAetherApp
         }
     }
 
-    private void DrawDeleteConfirm(OsAppContext ctx, IAppStorage storage)
+    private void DrawDeleteConfirm(OsAppContext ctx)
     {
         var winPos = ImGui.GetWindowPos();
         var winSize = ImGui.GetWindowSize();
@@ -650,10 +703,10 @@ public sealed class CalendarApp : IAetherApp
         {
             this.confirmDeleteId = null;
         }
-        if (PanelButton(ctx, "##calDelOk", ctx.Localize("common.ok"), new Vector2(panelTL.X + padIn + btnW + ctx.Px(8f), btnY), new Vector2(btnW, btnH), DangerFill))
+        if (PanelButton(ctx, "##calDelOk", ctx.Localize("common.ok"), new Vector2(panelTL.X + padIn + btnW + ctx.Px(8f), btnY), new Vector2(btnW, btnH), DangerFill)
+            && this.confirmDeleteId is { } deleteId)
         {
-            this.events!.RemoveAll(e => e.Id == this.confirmDeleteId);
-            storage.Set(EventsKey, this.events);
+            this.store.Remove(deleteId);
             this.confirmDeleteId = null;
         }
 
@@ -663,6 +716,37 @@ public sealed class CalendarApp : IAetherApp
         {
             this.confirmDeleteId = null;
         }
+    }
+
+    private string RemindLabel(OsAppContext ctx, int? minutes)
+    {
+        if (minutes is null)
+        {
+            return ctx.Localize("os.cal_remind_off");
+        }
+        if (minutes.Value == 0)
+        {
+            return ctx.Localize("os.cal_remind_at");
+        }
+        return string.Format(this.culture, ctx.Localize("os.cal_remind_before"), minutes.Value);
+    }
+
+    // Intent-fed lead times may miss the fixed choices; snap to the nearest instead of dropping to Off.
+    private static int RemindIndexFor(int? minutes)
+    {
+        if (minutes is null)
+        {
+            return 0;
+        }
+        var best = 1;
+        for (var i = 2; i < RemindChoices.Length; i++)
+        {
+            if (Math.Abs(RemindChoices[i]!.Value - minutes.Value) < Math.Abs(RemindChoices[best]!.Value - minutes.Value))
+            {
+                best = i;
+            }
+        }
+        return best;
     }
 
     private static DateTime AsLocal(DateTime utc) => DateTime.SpecifyKind(utc, DateTimeKind.Utc).ToLocalTime();
@@ -688,6 +772,10 @@ public sealed class CalendarApp : IAetherApp
         ImGui.SetCursorScreenPos(center - new Vector2(radius, radius));
         var clicked = ImGui.InvisibleButton(id, new Vector2(radius * 2f, radius * 2f));
         var hovered = ImGui.IsItemHovered();
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
         var dl = ImGui.GetWindowDrawList();
         var fill = accentFill is { } accent
             ? (hovered ? accent with { W = 0.85f } : accent)
@@ -702,6 +790,10 @@ public sealed class CalendarApp : IAetherApp
         ImGui.SetCursorScreenPos(tl);
         var clicked = ImGui.InvisibleButton(id, size);
         var hovered = ImGui.IsItemHovered();
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
         var dl = ImGui.GetWindowDrawList();
         var col = hovered
             ? new Vector4(fill.X + (1f - fill.X) * 0.12f, fill.Y + (1f - fill.Y) * 0.12f, fill.Z + (1f - fill.Z) * 0.12f, MathF.Min(1f, fill.W + 0.08f))

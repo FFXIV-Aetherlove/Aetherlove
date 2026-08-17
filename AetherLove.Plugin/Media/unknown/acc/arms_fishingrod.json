@@ -1,0 +1,14 @@
+{
+  "name": "Fisher's Fishing Rod",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_fishingrod.png",
+  "anchor": "handR",
+  "origin": [
+    15,
+    190
+  ],
+  "width": 82,
+  "height": 229,
+  "behind": false
+}

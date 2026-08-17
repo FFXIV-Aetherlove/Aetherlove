@@ -120,7 +120,7 @@ internal static class CollectionCard
         var artTl = new Vector2(tl.X + Px(16f), tl.Y + (Px(RowH) - art) * 0.5f);
         if (visual?.Tex?.GetWrapOrDefault() is { } wrap)
         {
-            var (uv0, uv1) = OsDrawShared.CoverUv(wrap.Width, wrap.Height, art, art);
+            var (uv0, uv1) = StoreArtCrop.PetThumbnailUv(product.ItemKind, wrap.Width, wrap.Height, art, art);
             dl.AddImageRounded(wrap.Handle, artTl, artTl + new Vector2(art, art), uv0, uv1, 0xFFFFFFFFu, Px(9f));
         }
         else if (!BundleArt.Draw(dl, media, product, artTl, new Vector2(art, art), Px(9f)))

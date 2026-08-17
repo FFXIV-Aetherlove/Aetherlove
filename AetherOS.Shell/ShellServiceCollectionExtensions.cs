@@ -15,6 +15,7 @@ public static class ShellServiceCollectionExtensions
         services.AddSingleton<OsShell>();
         services.AddSingleton<IOsShell>(sp => sp.GetRequiredService<OsShell>());
         services.AddSingleton<OsTour>();
+        services.AddSingleton<NewAppOffer>();
         services.AddSingleton<WallpaperService>();
         services.AddSingleton<NotificationShade>();
         services.AddSingleton<StatusBar>();

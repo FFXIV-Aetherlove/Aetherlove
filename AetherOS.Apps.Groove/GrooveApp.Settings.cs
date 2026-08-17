@@ -41,40 +41,40 @@ public sealed partial class GrooveApp
 
     private void DrawSettingsBody(OsAppContext ctx, float x, float width)
     {
-        AppSettingsUi.SectionLabel(ctx, x, Loc.T("os.groove_set_section_surfaces"));
+        var padX = x - ImGui.GetWindowPos().X;
 
-        var widget = _settings.ShowWidget;
-        if (AppSettingsUi.SettingToggle(ctx, "grooveWidget", Loc.T("os.groove_set_widget"),
-                Loc.T("os.groove_set_widget_hint"), x, width, ref widget))
-        {
-            _settings.ShowWidget = widget;
-        }
+        DrawSectionHeader(Loc.T("os.groove_set_section_surfaces"), padX);
+        DrawSurfaceToggle(ctx, padX, width, "##grooveMini", Loc.T("os.groove_set_mini"),
+            Loc.T("os.groove_set_mini_hint"), _settings.ShowMiniControls, v => _settings.ShowMiniControls = v);
+        DrawSurfaceToggle(ctx, padX, width, "##grooveDtr", Loc.T("os.groove_set_dtr"),
+            Loc.T("os.groove_set_dtr_hint"), _settings.ShowDtr, v => _settings.ShowDtr = v);
+        DrawSurfaceToggle(ctx, padX, width, "##grooveShade", Loc.T("os.groove_set_shade"),
+            Loc.T("os.groove_set_shade_hint"), _settings.ShowShadeTile, v => _settings.ShowShadeTile = v);
+        DrawSurfaceToggle(ctx, padX, width, "##grooveWidget", Loc.T("os.groove_set_widget"),
+            Loc.T("os.groove_set_widget_hint"), _settings.ShowWidget, v => _settings.ShowWidget = v);
 
-        var shade = _settings.ShowShadeTile;
-        if (AppSettingsUi.SettingToggle(ctx, "grooveShade", Loc.T("os.groove_set_shade"),
-                Loc.T("os.groove_set_shade_hint"), x, width, ref shade))
-        {
-            _settings.ShowShadeTile = shade;
-        }
-
-        var dtr = _settings.ShowDtr;
-        if (AppSettingsUi.SettingToggle(ctx, "grooveDtr", Loc.T("os.groove_set_dtr"),
-                Loc.T("os.groove_set_dtr_hint"), x, width, ref dtr))
-        {
-            _settings.ShowDtr = dtr;
-        }
-
-        ImGui.Dummy(new Vector2(width, ctx.Px(6f)));
-        AppSettingsUi.SectionLabel(ctx, x, Loc.T("os.groove_set_section_audio"));
-
-        var autoMute = _settings.AutoMuteBgm;
-        if (AppSettingsUi.SettingToggle(ctx, "grooveAutoMute", Loc.T("os.groove_set_automute"),
-                Loc.T("os.groove_set_automute_hint"), x, width, ref autoMute))
-        {
-            _settings.AutoMuteBgm = autoMute;
-        }
+        ImGui.Dummy(new Vector2(width, ctx.Px(8f)));
+        DrawSectionHeader(Loc.T("os.groove_set_section_audio"), padX);
+        DrawSurfaceToggle(ctx, padX, width, "##grooveAutoMute", Loc.T("os.groove_set_automute"),
+            Loc.T("os.groove_set_automute_hint"), _settings.AutoMuteBgm, v => _settings.AutoMuteBgm = v);
 
         ImGui.Dummy(new Vector2(width, ctx.Px(14f)));
+    }
+
+    /// <summary>A switch row over its explanation, the shape the Yapper settings pages use.</summary>
+    private static void DrawSurfaceToggle(OsAppContext ctx, float padX, float width, string id, string label,
+        string hint, bool value, Action<bool> apply)
+    {
+        ImGui.SetCursorPosX(Px(padX));
+        if (DrawToggleSwitch(id, label, value))
+        {
+            apply(!value);
+        }
+        ImGui.SetCursorPosX(Px(padX));
+        ImGui.PushTextWrapPos(Px(padX) + width);
+        ImGui.TextColored(UiColors.Hint, hint);
+        ImGui.PopTextWrapPos();
+        ImGui.Dummy(new Vector2(width, ctx.Px(8f)));
     }
 
     private void BackToPlayer() => _view = View.Player;

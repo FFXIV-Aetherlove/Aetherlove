@@ -14,6 +14,27 @@ public sealed class CoreAssets
 
     /// <summary>What comes out of it. Named for as little as the folder above it is.</summary>
     public const string HatchlingFolder = "1";
+
+    /// <summary>The two later young forms and the grown shape, numbered like the first.</summary>
+    public const string Hatchling2Folder = "2";
+    public const string Hatchling3Folder = "3";
+    public const string AdultFolder = "4";
+
+    /// <summary>The wearables and the palette file, beside the sheet folders.</summary>
+    public const string AccessoryFolder = "acc";
+    public const string PaletteFile = "palettes.json";
+
+    /// <summary>The food art, one PNG per element key.</summary>
+    public const string CrystalFolder = "crystals";
+
+    /// <summary>Path to an element's crystal art, or null when the tree is missing. The caller
+    /// hands it to the texture cache, which answers null for anything unreadable, so a missing
+    /// file costs the icon and nothing else.</summary>
+    public static string? CrystalPath(string elementKey) =>
+        ResolveRoot() is { } root && elementKey.Length > 0
+            ? Path.Combine(root, CrystalFolder, $"{elementKey}.png")
+            : null;
+
     private const string ManifestFile = "manifest.json";
     private const string BesideAssemblyRoot = "Media";
     private const string BesideAssemblyLeaf = "unknown";
@@ -62,6 +83,29 @@ public sealed class CoreAssets
                 }
 
                 return new CoreAssets(directory, AtlasManifest.Load(manifestPath));
+            }
+            catch (Exception)
+            {
+                // Try the next root.
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>The first root that holds the asset tree, resolved the same way <see cref="Load"/>
+    /// probes, for callers after loose files (the palette JSON, accessory defs) rather than a
+    /// sheet set. Null when no root exists.</summary>
+    public static string? ResolveRoot()
+    {
+        foreach (var root in CandidateRoots())
+        {
+            try
+            {
+                if (Directory.Exists(root))
+                {
+                    return root;
+                }
             }
             catch (Exception)
             {

@@ -3,6 +3,7 @@ using System.IO;
 using System.Numerics;
 using AetherLove.Config;
 using AetherLove.Services;
+using AetherLove.Services.Localization;
 using AetherLove.UI;
 using AetherLove.Widgets;
 using Dalamud.Bindings.ImGui;
@@ -118,9 +119,9 @@ public sealed class MiniWindow : Window, IDisposable
         Size = MiniScale.Px(85f * (ThemeService.Current.WindowWidth / UiScale.Design.X), 153f);
         ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Vector2.Zero);
         // Pin out Dalamud's global font scale so the mini phone stays its fixed size.
-        var io = ImGui.GetIO();
-        _savedFontGlobalScale = io.FontGlobalScale;
-        io.FontGlobalScale = 1f;
+        FontDiagnostics.Sample("MiniWindow.PreDraw/before-pin");
+        _savedFontGlobalScale = FontScalePin.Pin();
+        FontDiagnostics.Sample("MiniWindow.PreDraw/after-pin");
     }
 
     /// <summary>Builds what the full-size phone will need while the bubble is still up. A font handle is only
@@ -203,7 +204,7 @@ public sealed class MiniWindow : Window, IDisposable
         var logoTL = pos + new Vector2((size.X - LogoSize) * 0.5f, LogoTopMargin);
         var logoBR = logoTL + new Vector2(LogoSize, LogoSize);
         var transportHovered = false;
-        if (_media.HasSession)
+        if (_media.MiniVisible)
         {
             transportHovered = DrawMediaBar(dl, logoTL, new Vector2(LogoSize, LogoSize));
         }
@@ -222,7 +223,7 @@ public sealed class MiniWindow : Window, IDisposable
                               && mousePos.Y >= logoTL.Y && mousePos.Y <= logoBR.Y;
             if (logoHovered)
             {
-                ImGui.SetTooltip("Open AetherLove");
+                ImGui.SetTooltip(Loc.T("os.mini_open"));
             }
         }
 
@@ -255,7 +256,7 @@ public sealed class MiniWindow : Window, IDisposable
 
         if (iconHovered)
         {
-            ImGui.SetTooltip("Close AetherLove");
+            ImGui.SetTooltip(Loc.T("os.mini_power"));
         }
 
         var iconCol = iconHovered ? 0xFFFF6060u : 0xFFAAAAAAu;
@@ -310,7 +311,9 @@ public sealed class MiniWindow : Window, IDisposable
 
     public override void PostDraw()
     {
-        ImGui.GetIO().FontGlobalScale = _savedFontGlobalScale;
+        FontDiagnostics.Sample("MiniWindow.PostDraw/before-restore");
+        FontScalePin.Restore(_savedFontGlobalScale);
+        FontDiagnostics.Sample("MiniWindow.PostDraw/after-restore");
         ImGui.PopStyleVar();
     }
 

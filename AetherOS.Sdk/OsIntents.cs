@@ -56,6 +56,10 @@ public static class OsIntents
     /// The app cannot notice on its own, because the thing it would ask about no longer exists.</summary>
     public const string AetherlingReset = "aetherling.reset";
 
+    /// <summary>Open the pet with its basket out, ready to feed. Fired by the store the moment crystals are
+    /// bought, so the thing you just bought is one tap from the mouth it was bought for.</summary>
+    public const string AetherlingFeed = "aetherling.feed";
+
     /// <summary>Join an Echo watch room from a tapped share card (payload keys "id" and "code", plus the
     /// usual optional "returnApp"). Both are carried because the room id addresses the room and the code
     /// authorises the join, exactly as the share token pairs them.</summary>
@@ -199,17 +203,23 @@ public static class OsIntents
         }
     }
 
-    public static OsIntent CreateCalendarAdd(string title, string note, long startUnixSeconds) => new()
+    public static OsIntent CreateCalendarAdd(string title, string note, long startUnixSeconds,
+        int? remindMinutes = null) => new()
     {
         Type = CalendarAdd,
-        PayloadJson = JsonSerializer.Serialize(new CalendarAddPayload(title, note, startUnixSeconds)),
+        PayloadJson = JsonSerializer.Serialize(new CalendarAddPayload(title, note, startUnixSeconds, remindMinutes)),
     };
 
     public static bool TryGetCalendarAdd(OsIntent intent, out string title, out string note, out long startUnixSeconds)
+        => TryGetCalendarAdd(intent, out title, out note, out startUnixSeconds, out _);
+
+    public static bool TryGetCalendarAdd(OsIntent intent, out string title, out string note, out long startUnixSeconds,
+        out int? remindMinutes)
     {
         title = "";
         note = "";
         startUnixSeconds = 0;
+        remindMinutes = null;
         if (string.IsNullOrEmpty(intent.PayloadJson))
         {
             return false;
@@ -224,6 +234,7 @@ public static class OsIntents
             title = payload.title;
             note = payload.note ?? "";
             startUnixSeconds = payload.start;
+            remindMinutes = payload.remind;
             return true;
         }
         catch (JsonException)
@@ -399,5 +410,5 @@ public static class OsIntents
 
     private sealed record CameraShotPayload(string path, float cropX, float cropY, float cropW, float cropH);
 
-    private sealed record CalendarAddPayload(string title, string note, long start);
+    private sealed record CalendarAddPayload(string title, string note, long start, int? remind = null);
 }

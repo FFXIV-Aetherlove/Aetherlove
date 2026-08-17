@@ -1,0 +1,14 @@
+{
+  "name": "Evercold Shaved Ice",
+  "slot": "arms",
+  "tier": "seasonal",
+  "file": "arms_shavedice.png",
+  "anchor": "handL",
+  "origin": [
+    54,
+    88
+  ],
+  "width": 67,
+  "height": 113,
+  "behind": false
+}

@@ -1,0 +1,14 @@
+{
+  "name": "Straw Sun Hat",
+  "slot": "head",
+  "tier": "seasonal",
+  "file": "head_strawhat.png",
+  "anchor": "head",
+  "origin": [
+    78,
+    81
+  ],
+  "width": 157,
+  "height": 116,
+  "behind": false
+}

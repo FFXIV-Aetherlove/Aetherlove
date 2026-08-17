@@ -1,0 +1,14 @@
+{
+  "name": "Beach Nook",
+  "slot": "nook",
+  "tier": "seasonal",
+  "file": "nook_beach.png",
+  "anchor": "body",
+  "origin": [
+    126,
+    113
+  ],
+  "width": 250,
+  "height": 192,
+  "behind": true
+}

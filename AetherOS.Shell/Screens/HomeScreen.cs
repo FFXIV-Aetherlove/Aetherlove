@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -14,11 +14,17 @@ using Dalamud.Interface.Utility.Raii;
 
 namespace AetherLove.Screens;
 
-/// <summary>The AetherOS home screen: wallpaper, widget page, paged app grid, dock, and icon rearranging.</summary>
+/// <summary>The AetherOS home screen: wallpaper, widget page, paged app grid, dock, and icon rearranging.
+///
+/// <para>There is no edit mode. Icons drag whenever the cursor moves far enough while held, and everything
+/// that is not "move it" is a right-click: on a tile for its own actions, on empty space for adding things.
+/// The long-press that used to arm a wiggle mode was a touch idiom with no hover affordance, so nobody found
+/// it and it fired on any hesitant click.</para></summary>
 public sealed class HomeScreen
 {
     private readonly OsShell _shell;
     private readonly WallpaperService _wallpapers;
+    private readonly Os.NewAppOffer _newApps;
 
     private static HomeGridPreset Preset => UiHost.Configuration.Os.HomeGrid;
 
@@ -50,35 +56,71 @@ public sealed class HomeScreen
     private const float DockH = 76f;
     private const int MaxDock = 4;
     private const int StarCount = 26;
-    private const float LongPressSeconds = 0.45f;
 
     private float _page;
+    private float _widgetScroll;
+    private float _widgetOverflow;
+    private float _widgetBandTop;
+    private float _widgetBandBottom;
     private int _targetPage;
     private bool _draggingPages;
     private float _pageDragStartX;
     private float _pageAtDragStart;
 
-    private bool _editMode;
     private string? _pressId;
     private Vector2 _pressPos;
-    private float _pressT;
     private string? _dragId;
 
+    /// <summary>How far the cursor travels before a press becomes a drag rather than a tap. Wide enough that
+    /// a twitchy click still opens the app, narrow enough that a deliberate move picks the icon up at once.</summary>
+    private static float DragThreshold => Px(7f);
+
     private readonly Dictionary<string, (Vector2 TL, Vector2 BR)> _tileRects = new();
+    private readonly List<(Vector2 TL, Vector2 BR, bool Occupied)> _gridSlots = [];
     private readonly Dictionary<string, Vector2> _animCenters = new();
     private readonly Dictionary<string, float> _removing = new();
     private readonly Dictionary<string, float> _pulse = new();
     private string? _removePromptId;
 
+    /// <summary>The folder whose delete is being confirmed.</summary>
+    private string? _folderDeleteId;
+
+    /// <summary>The name box for a folder being made from the home menu, and its one-shot focus.</summary>
+    private bool _newFolderPrompt;
+    private bool _newFolderFocus;
+
+    /// <summary>Whether the cursor is over any tile this frame, so the background knows not to answer a
+    /// right-click that belongs to a tile.</summary>
+    private bool _tileHovered;
+
+    /// <summary>The grid cell the home menu was opened over, so anything it creates lands where the player
+    /// was pointing rather than in the first free cell somewhere else entirely.</summary>
+    private (int Page, int Slot)? _menuCell;
+
+    /// <summary>Whether the app awaiting the remove confirm is sitting in the open folder rather than on the
+    /// grid, which decides whether the removal can play the tile's shrink or has to be immediate.</summary>
+    private bool _removePromptInFolder;
+
+    /// <summary>A folder made this session and still empty. The empty-folder sweep spares it, or a folder
+    /// created from the menu would be deleted on the very next frame, before anything could be put in it.</summary>
+    private string? _freshFolderId;
+
     private string? _openFolderId;
-    private bool _folderEditMode;
+
+    /// <summary>Dragging inside the open folder: the app being carried, where the press began, the slot
+    /// rects it is measured against, and the panel it has to leave to be taken out.</summary>
+    private string? _folderPressId;
+    private Vector2 _folderPressPos;
+    private string? _folderDragId;
+    private int _folderDropIndex = -1;
+    private readonly List<(Vector2 TL, Vector2 BR)> _folderSlotRects = new();
+    private (Vector2 TL, Vector2 BR) _folderPanelRect;
     private string? _hoverFolderId;
 
     /// <summary>A trailing page conjured by dragging to the right edge. Drawn and counted, but only written to
     /// config once an icon actually lands on it.</summary>
     private bool _ghostPage;
 
-    private string? _folderEjectId;
     private readonly Dictionary<string, float> _folderEjecting = new();
     private string _newFolderName = "";
 
@@ -89,11 +131,24 @@ public sealed class HomeScreen
     private static OsFolder? FindFolder(string? id) =>
         id == null ? null : UiHost.Configuration.Os.Folders.FirstOrDefault(f => f.Id == id);
 
-    public HomeScreen(OsShell shell, WallpaperService wallpapers)
+    public HomeScreen(OsShell shell, WallpaperService wallpapers, Os.NewAppOffer newApps)
     {
         _shell = shell;
         _wallpapers = wallpapers;
+        _newApps = newApps;
     }
+
+    /// <summary>Every tile the last frame drew, grid and dock together. The guided tour picks its examples
+    /// out of this rather than naming apps: the grid belongs to the player and nothing is guaranteed to be
+    /// on it, least of all on a phone being set up for the first time.</summary>
+    public IReadOnlyCollection<string> DrawnTiles => _tileRects.Keys;
+
+    /// <summary>Every cell of the page being looked at, in screen space, and whether something is standing
+    /// in it. The tour needs an honest empty cell to point at when it demonstrates the background menu.</summary>
+    public IReadOnlyList<(Vector2 TL, Vector2 BR, bool Occupied)> GridSlots => _gridSlots;
+
+    /// <summary>The dock bar's rect as last drawn, or null before the first frame.</summary>
+    public (Vector2 TL, Vector2 BR)? DockRect => _lastDockRect;
 
     public bool TryGetTileRect(string appId, out Vector2 tl, out Vector2 br)
     {
@@ -119,33 +174,19 @@ public sealed class HomeScreen
             return false;
         }
         _openFolderId = null;
-        _folderEditMode = false;
-        return true;
+                return true;
     }
 
-    /// <summary>Opens the given folder's overlay; unknown ids are ignored. The Arcade folder always
-    /// exists (EnsureArcade re-creates it every home frame), so its id is accepted unconditionally.</summary>
+    /// <summary>Opens the given folder's overlay; unknown ids are ignored. Arcade is checked like any other
+    /// now: it is deleted when it empties and only comes back when there is a game to put in it.</summary>
     public void OpenFolder(string folderId)
     {
-        if (FindFolder(folderId) == null && folderId != OsFolders.ArcadeId)
+        if (FindFolder(folderId) == null)
         {
             return;
         }
         _openFolderId = folderId;
-        _folderEditMode = false;
-    }
-
-    public void SetEditMode(bool on)
-    {
-        _editMode = on;
-        if (!on)
-        {
-            _dragId = null;
-            _pressId = null;
-            _ghostPage = false;
-            _edgeHoldT = 0f;
-        }
-    }
+            }
 
     public void SetAddAppsOpen(bool open)
     {
@@ -153,17 +194,9 @@ public sealed class HomeScreen
         if (open)
         {
             _restoredApps.Clear();
+            // The sheet can add several things at once, so a single remembered cell means nothing here.
+            _menuCell = null;
         }
-    }
-
-    private Vector2 _donePillTL;
-    private Vector2 _donePillBR;
-
-    public bool TryGetDonePillRect(out Vector2 tl, out Vector2 br)
-    {
-        tl = _donePillTL;
-        br = _donePillBR;
-        return _editMode && br.X > tl.X;
     }
 
     public void Draw()
@@ -174,6 +207,13 @@ public sealed class HomeScreen
         var time = (float)ImGui.GetTime();
         var dt = ImGui.GetIO().DeltaTime;
 
+        // A folder can be closed from anywhere (the pill, a deep link, a gate); its drag must not outlive it.
+        if (_openFolderId == null)
+        {
+            _folderDragId = null;
+            _folderPressId = null;
+        }
+
         DrawWallpaper(dl, origin, avail, time);
 
         if (_addAppsOpen)
@@ -183,10 +223,26 @@ public sealed class HomeScreen
             return;
         }
 
-        if (_folderEjectId != null && _openFolderId != null)
+        // Both prompts go above the folder overlay: either can be raised from a tile on the folder page, and
+        // drawn after it they would never appear at all.
+        if (_folderDeleteId != null)
         {
             dl.AddRectFilled(origin, origin + avail, OsDraw.Black(0.60f));
-            DrawFolderEjectPrompt(origin, avail);
+            DrawFolderDeletePrompt(origin, avail);
+            return;
+        }
+
+        if (_removePromptId != null)
+        {
+            dl.AddRectFilled(origin, origin + avail, OsDraw.Black(0.60f));
+            DrawRemovePrompt(origin, avail);
+            return;
+        }
+
+        if (_newFolderPrompt)
+        {
+            dl.AddRectFilled(origin, origin + avail, OsDraw.Black(0.60f));
+            DrawNewFolderPrompt(origin, avail);
             return;
         }
 
@@ -197,12 +253,6 @@ public sealed class HomeScreen
             return;
         }
 
-        if (_removePromptId != null)
-        {
-            dl.AddRectFilled(origin, origin + avail, OsDraw.Black(0.60f));
-            DrawRemovePrompt(origin, avail);
-            return;
-        }
 
         var layout = CurrentLayout(avail);
         NormalizePages(layout);
@@ -219,27 +269,24 @@ public sealed class HomeScreen
 
         dl.PushClipRect(origin, origin + avail, true);
 
+        _tileHovered = false;
         DrawWidgetsPage(dl, origin, avail, XOffset(-1, avail.X));
         DrawGridPages(dl, origin, avail, layout, pageCount, time, dt);
         DrawPageDots(dl, origin, avail, pageCount);
         DrawDock(dl, origin, avail, layout.Dock, time, dt);
-        if (_editMode)
-        {
-            DrawDonePill(dl, origin, avail);
-        }
         DrawDraggedTile(dl);
         DrawWordmark(dl, origin, avail);
 
         dl.PopClipRect();
 
-        HandlePageSwipe(origin, avail);
+        HandlePageSwipe(origin, avail, layout);
         UpdateDragState(origin, avail, layout);
     }
 
     private float XOffset(int pageIndex, float width) => (pageIndex - _page) * width;
 
     /// <summary>Pages to render: the real ones, the edge-drag ghost, and one trailing page when the last real
-    /// page has no room for the add tile.</summary>
+    /// page is full, so there is always somewhere to drag an icon to.</summary>
     private int PageCount(HomeLayout layout)
     {
         var count = Math.Max(1, layout.Pages.Count);
@@ -338,10 +385,31 @@ public sealed class HomeScreen
             Repack(os, rows, cols);
         }
 
-        // Both seeds have to run before the append below, or a newly shipped app would be placed loose on the
-        // grid first and the Media seed would read that as the user having already arranged it.
-        var seeded = Os.OsFolders.EnsureArcade(os);
-        seeded |= Os.OsFolders.EnsureMedia(os);
+        // The offer is computed before the seeds run, or a seeded folder would adopt an app nobody has been
+        // asked about yet and it would never be offered at all.
+        _newApps.Refresh();
+
+        // Emptied folders go first: a folder the seeds are about to look at must not still be holding a tile
+        // it has nothing to put behind.
+        if (_freshFolderId != null && FindFolder(_freshFolderId) is not { AppIds.Count: 0 })
+        {
+            _freshFolderId = null;
+        }
+        var seeded = Os.OsFolders.PruneEmpty(os, _freshFolderId);
+        if (seeded && _openFolderId != null && FindFolder(_openFolderId) == null)
+        {
+            _openFolderId = null;
+                    }
+
+        // Every seed has to run before the append below, or a newly shipped app would be placed loose on the
+        // grid first and the seed would read that as the user having already arranged it. They wait while an
+        // offer is open, because a seed's whole decision is one-shot and the answer is not in yet.
+        if (!_newApps.Active)
+        {
+            seeded |= Os.OsFolders.EnsureMedia(os);
+            seeded |= Os.OsFolders.EnsureUtilities(os);
+            seeded |= Os.OsFolders.NameArcade(os);
+        }
         if (seeded)
         {
             UiHost.Configuration.Save();
@@ -370,10 +438,11 @@ public sealed class HomeScreen
                 }
             }
         }
+        // An app only lands once the player has said yes to it; until then it is held back from the grid.
         var appended = false;
         foreach (var id in shown)
         {
-            if (!placed.Contains(id) && layout.PlaceInFirstFree(id))
+            if (!placed.Contains(id) && !_newApps.IsPending(id) && layout.PlaceInFirstFree(id))
             {
                 appended = true;
             }
@@ -407,6 +476,9 @@ public sealed class HomeScreen
         converted.Dock.AddRange(os.DockIds.Take(MaxDock));
         converted.SaveTo(os);
         os.IconOrder.Clear();
+        // A phone being laid out for the first time has answered for every app there is: the seed places what
+        // it places and the rest arrive as they always did. Only an app that shows up AFTER this is offered.
+        _newApps.MarkAllOffered();
         UiHost.Configuration.Save();
     }
 
@@ -486,6 +558,9 @@ public sealed class HomeScreen
     /// <summary>The folder occupying a hovered cell, or null. Resolved against the cell the cursor is in rather
     /// than the tile's drawn rect: the rect is inset well inside its cell and is still easing towards its
     /// resting place, so the two disagree for the frames that matter and the drop never registers.</summary>
+    /// <summary>What the dragged icon would land ON, when landing on it means something other than taking
+    /// its slot: an existing folder to join, or another app to become a folder with. Null the rest of the
+    /// time, which is when the drop is an ordinary reorder and the run shuffles aside.</summary>
     private string? FolderInSlot(HomeLayout layout, DropSpot target)
     {
         if (_dragId == null || IsFolderId(_dragId) || !target.IsValid)
@@ -495,9 +570,20 @@ public sealed class HomeScreen
         var occupant = target.InDock
             ? (target.Slot >= 0 && target.Slot < layout.Dock.Count ? layout.Dock[target.Slot] : null)
             : layout.At(target.Page, target.Slot);
-        // The Games folder refuses drops: it has no edit mode, so anything dropped in could never come out.
-        return occupant != null && occupant != _dragId && IsFolderId(occupant)
-            && !Os.OsFolders.IsBuiltIn(occupant) ? occupant : null;
+        if (occupant == null || occupant == _dragId)
+        {
+            return null;
+        }
+        // Squarely on the tile, not merely in its cell. Every reorder passes over occupied cells on its way,
+        // so treating a cell hit as a merge would make ordinary rearranging impossible; the middle of a tile
+        // means "onto this", the rest of the cell still means "here, shuffle along".
+        if (!target.InDock && !OverTileCentre(layout, target))
+        {
+            return null;
+        }
+        // An app dropped onto another app makes a folder of the two. Only in the grid: the dock is a row of
+        // favourites, and a fifth landing there should push, not swallow one of them.
+        return IsFolderId(occupant) || (!target.InDock && _shownIds.Contains(occupant)) ? occupant : null;
     }
 
     private DropSpot DropTarget(HomeLayout layout)
@@ -587,15 +673,7 @@ public sealed class HomeScreen
 
         _lastSlotW = slotW;
         _tileRects.Clear();
-
-        // The add tile sits in the last page's first free cell. It is hidden mid-drag so it never competes with
-        // the cell the user is aiming at, least of all on a freshly conjured page where it would sit on slot 0.
-        var addPage = pageCount - 1;
-        var addSlot = -1;
-        if (_dragId == null)
-        {
-            addSlot = addPage < layout.Pages.Count ? Array.IndexOf(layout.Pages[addPage], null) : 0;
-        }
+        _gridSlots.Clear();
 
         // The drop origin is stamped for the page the user is on even while it is scrolled off screen, so a
         // multi-page traverse mid-drag never leaves a stale target behind.
@@ -622,17 +700,19 @@ public sealed class HomeScreen
                 var cells = layout.Pages[page];
                 for (int slot = 0; slot < cells.Length; slot++)
                 {
+                    if (page == current)
+                    {
+                        var centre = SlotCenter(xOff, slot);
+                        var reach = new Vector2(Px(TileSize) * 0.5f, Px(TileSize) * 0.5f);
+                        _gridSlots.Add((centre - reach, centre + reach, cells[slot] != null));
+                    }
+
                     // A cell held by a switched-off app stays reserved but draws nothing.
                     if (cells[slot] is { } id && _shownIds.Contains(id))
                     {
                         DrawAppSlot(dl, id, SlotCenter(xOff, slot), slotW, time, dt, showLabel: true);
                     }
                 }
-            }
-
-            if (page == addPage && addSlot >= 0)
-            {
-                DrawAddTile(dl, SlotCenter(xOff, addSlot), slotW, dt);
             }
         }
     }
@@ -727,26 +807,10 @@ public sealed class HomeScreen
             removingT = rt;
         }
 
-        if (_editMode && !AccessibilityService.ReduceMotion)
-        {
-            var phase = Hash01(appId.GetHashCode() & 0xFFFF) * MathF.Tau;
-            center += new Vector2(MathF.Sin(time * 9f + phase) * Px(1.4f), MathF.Cos(time * 8f + phase) * Px(1.2f));
-        }
-
         var half = Px(TileSize) * 0.5f;
         var tl = center - new Vector2(half, half);
         var br = center + new Vector2(half, half);
         _tileRects[appId] = (tl, br);
-
-        var removable = removingT < 0f && _editMode && _dragId == null && !Os.OsFolders.IsBuiltIn(appId);
-        var removePressed = false;
-        var removeC = tl + Px(2f, 2f);
-        if (removable)
-        {
-            ImGui.SetCursorScreenPos(removeC - Px(11f, 11f));
-            removePressed = ImGui.InvisibleButton($"##rm_{appId}", Px(22f, 22f));
-            SharedUiHelpers.HandOnHover();
-        }
 
         var hovered = false;
         var held = false;
@@ -757,20 +821,25 @@ public sealed class HomeScreen
             HandleTileInput(appId, app, tl, br);
             hovered = ImGui.IsItemHovered();
             held = ImGui.IsItemActive();
-            if (hovered && !_editMode)
+            _tileHovered |= hovered;
+            if (_dragId == null)
+            {
+                DrawTileContextMenu(appId, inFolder: false);
+            }
+            if (hovered)
             {
                 SharedUiHelpers.HandOnHover();
             }
         }
 
         // Dock tiles carry no label; a hovered one names itself in a pill above the bar.
-        if (!showLabel && hovered && !_editMode && _dragId == null)
+        if (!showLabel && hovered && _dragId == null)
         {
             DrawDockHoverName(dl, app?.Name ?? folder!.Name, tl.Y, center.X);
         }
 
         var scale = 1f;
-        if (!AccessibilityService.ReduceMotion && !_editMode)
+        if (!AccessibilityService.ReduceMotion)
         {
             if (held)
             {
@@ -821,7 +890,7 @@ public sealed class HomeScreen
             OsDraw.AppTile(dl, app!, stl, sbr, tileAlpha);
         }
 
-        if ((hovered && !_editMode && !AccessibilityService.ReduceMotion) || _hoverFolderId == appId)
+        if ((hovered && !AccessibilityService.ReduceMotion) || _hoverFolderId == appId)
         {
             dl.AddRect(stl - new Vector2(2f, 2f), sbr + new Vector2(2f, 2f), ThemeService.Current.AccentU32,
                 shalf * 0.56f + 2f, ImDrawFlags.RoundCornersAll, Px(1.6f));
@@ -848,30 +917,42 @@ public sealed class HomeScreen
             var label = folder != null ? Os.OsFolders.DisplayName(folder) : app!.Name;
             var clipped = OsDraw.CenteredText(dl, label, center.X, br.Y + Px(7f),
                 OsDraw.White(0.95f * tileAlpha), LabelScale, slotW - Px(6f));
-            if (clipped && hovered && !_editMode && _dragId == null)
+            if (clipped && hovered && _dragId == null)
             {
                 ImGui.SetTooltip(label);
             }
         }
 
-        if (removable)
+    }
+
+    /// <summary>Asks before taking an app off the home screen, unless the player has ticked the box that says
+    /// stop asking. <paramref name="inFolder"/> means the tile is on the folder page rather than the grid, so
+    /// there is no tile out there to shrink and the removal has to be immediate.</summary>
+    private void RequestRemove(string appId, bool inFolder)
+    {
+        if (UiHost.Configuration.Os.SkipRemoveAppConfirm)
         {
-            dl.AddCircleFilled(removeC, Px(9f), ImGui.ColorConvertFloat4ToU32(new Vector4(0.22f, 0.22f, 0.26f, 0.98f)), 20);
-            dl.AddCircle(removeC, Px(9f), OsDraw.White(0.5f), 20, Px(1f));
-            IconDraw.AddCentered(dl, FontAwesomeIcon.Times, Px(9f), removeC, OsDraw.White(0.9f));
-            if (removePressed)
-            {
-                // Deleting a folder just spills its apps back onto the grid, so it needs no confirm.
-                if (folder != null || UiHost.Configuration.Os.SkipRemoveAppConfirm)
-                {
-                    StartRemove(appId);
-                }
-                else
-                {
-                    _removePromptId = appId;
-                }
-            }
+            CommitRequestedRemove(appId, inFolder);
+            return;
         }
+        _removePromptId = appId;
+        _removePromptInFolder = inFolder;
+    }
+
+    private void CommitRequestedRemove(string appId, bool inFolder)
+    {
+        if (!inFolder)
+        {
+            StartRemove(appId);
+            return;
+        }
+        RemoveApp(appId);
+        // Emptying the folder from inside it: the overlay returns before the sweep that deletes the folder
+        // ever runs, so it would sit here open on nothing until it was closed by hand.
+        if (FindFolder(_openFolderId) is not { AppIds.Count: > 0 })
+        {
+            _openFolderId = null;
+                    }
     }
 
     private void StartRemove(string appId)
@@ -890,16 +971,22 @@ public sealed class HomeScreen
     {
         if (IsFolderId(appId))
         {
-            RemoveFolder(appId);
+            RemoveFolder(appId, removeApps: false);
+            return;
         }
-        else if (appId.StartsWith(Os.ExternalApp.IdPrefix, StringComparison.Ordinal))
+        RemoveApp(appId);
+    }
+
+    /// <summary>Takes one app off the home screen, whichever kind it is: an external plugin is unpinned, a
+    /// built-in is hidden and silenced until it is added back.</summary>
+    private void RemoveApp(string appId)
+    {
+        if (appId.StartsWith(Os.ExternalApp.IdPrefix, StringComparison.Ordinal))
         {
             _shell.RemoveExternalApp(appId);
+            return;
         }
-        else
-        {
-            _shell.RemoveBuiltInApp(appId);
-        }
+        _shell.RemoveBuiltInApp(appId);
     }
 
     private static void DrawOfflineMarker(ImDrawListPtr dl, Vector2 center)
@@ -922,21 +1009,30 @@ public sealed class HomeScreen
         return sum;
     }
 
-    private void RemoveFolder(string folderId)
+    /// <summary>Deletes a folder. <paramref name="removeApps"/> takes everything inside off the home screen
+    /// with it; otherwise the contents spill back onto the grid, into the folder's own cell first and then
+    /// into whatever is free after it. Arcade is deletable like any other now, and stays deleted: adoption
+    /// only claims games that are not already placed.</summary>
+    private void RemoveFolder(string folderId, bool removeApps)
     {
         var os = UiHost.Configuration.Os;
-        if (Os.OsFolders.IsBuiltIn(folderId)
-            || os.Folders.FirstOrDefault(f => f.Id == folderId) is not { } folder)
+        if (os.Folders.FirstOrDefault(f => f.Id == folderId) is not { } folder)
         {
             return;
         }
-        // The contents spill back into the folder's own cell first, then into whatever is free after it.
+
+        var contents = new List<string>(folder.AppIds);
+        folder.AppIds.Clear();
         HomeLayout.Edit(os, layout =>
         {
             var cell = layout.TryFind(folderId, out var page, out var slot) ? (page, slot) : ((int, int)?)null;
             layout.Remove(folderId);
             layout.Dock.Remove(folderId);
-            foreach (var appId in folder.AppIds)
+            if (removeApps)
+            {
+                return;
+            }
+            foreach (var appId in contents)
             {
                 if (cell is { } spot && layout.At(spot.Item1, spot.Item2) == null)
                 {
@@ -948,10 +1044,18 @@ public sealed class HomeScreen
         });
         os.Folders.Remove(folder);
         UiHost.Configuration.Save();
+
+        if (removeApps)
+        {
+            foreach (var appId in contents)
+            {
+                RemoveApp(appId);
+            }
+        }
         if (_openFolderId == folderId)
         {
             _openFolderId = null;
-        }
+                    }
     }
 
     private void DrawFolderTile(ImDrawListPtr dl, OsFolder folder, Vector2 tl, Vector2 br, float alpha)
@@ -959,14 +1063,6 @@ public sealed class HomeScreen
         var size = br.X - tl.X;
         var rounding = size * 0.28f;
 
-        if (Os.OsFolders.TileIcon(folder) is { } art)
-        {
-            dl.AddImageRounded(art, tl, br, Vector2.Zero, Vector2.One, OsDraw.White(alpha), rounding,
-                ImDrawFlags.RoundCornersAll);
-            dl.AddRect(tl + new Vector2(1f, 1f), br - new Vector2(1f, 1f), OsDraw.White(0.20f * alpha), rounding,
-                ImDrawFlags.RoundCornersAll, 1f);
-            return;
-        }
 
         dl.AddRectFilled(tl, br, OsDraw.White(0.13f * alpha), rounding);
         dl.AddRect(tl + new Vector2(1f, 1f), br - new Vector2(1f, 1f), OsDraw.White(0.22f * alpha), rounding,
@@ -1056,8 +1152,8 @@ public sealed class HomeScreen
         }
         else if (confirm)
         {
-            StartRemove(app.Id);
             _removePromptId = null;
+            CommitRequestedRemove(app.Id, _removePromptInFolder);
         }
 
         ImGui.SetCursorScreenPos(origin);
@@ -1078,33 +1174,22 @@ public sealed class HomeScreen
         {
             _pressId = id;
             _pressPos = ImGui.GetMousePos();
-            _pressT = 0f;
         }
 
-        if (_pressId == id && ImGui.IsItemActive())
+        if (_pressId == id && ImGui.IsItemActive()
+            && _dragId == null && (ImGui.GetMousePos() - _pressPos).Length() > DragThreshold)
         {
-            _pressT += ImGui.GetIO().DeltaTime;
-            var moved = (ImGui.GetMousePos() - _pressPos).Length();
-            if (!_editMode && _pressT >= LongPressSeconds && moved < Px(6f))
-            {
-                _editMode = true;
-            }
-            if (_editMode && moved > Px(5f) && _dragId == null)
-            {
-                _dragId = id;
-            }
+            _dragId = id;
         }
 
         if (ImGui.IsItemDeactivated() && _pressId == id)
         {
-            var moved = (ImGui.GetMousePos() - _pressPos).Length();
-            if (!_editMode && _dragId == null && _pressT < LongPressSeconds && moved < Px(6f))
+            if (_dragId == null && (ImGui.GetMousePos() - _pressPos).Length() <= DragThreshold)
             {
                 if (app == null)
                 {
                     _openFolderId = id;
-                    _folderEditMode = false;
-                }
+                                    }
                 else if (id.StartsWith(Os.ExternalApp.IdPrefix, StringComparison.Ordinal))
                 {
                     if (!AccessibilityService.ReduceMotion)
@@ -1155,6 +1240,10 @@ public sealed class HomeScreen
             layout.Remove(_dragId);
             layout.Dock.Remove(_dragId);
         }
+        else if (_hoverFolderId is { } partner && !IsFolderId(_dragId) && !IsFolderId(partner))
+        {
+            MergeIntoNewFolder(os, layout, partner, _dragId);
+        }
         layout.SaveTo(os);
         UiHost.Configuration.Save();
 
@@ -1163,6 +1252,49 @@ public sealed class HomeScreen
         _hoverFolderId = null;
         _ghostPage = false;
         _edgeHoldT = 0f;
+    }
+
+    /// <summary>Two apps become a folder where the one being dropped ON already sat, so the pair stays put
+    /// and nothing else on the page moves. The order is target then dragged, which is the order they were
+    /// on screen; the name is the plain default, since asking for one mid-drag interrupts the gesture and
+    /// the folder's own page has an always-editable field for it.</summary>
+    private static void MergeIntoNewFolder(OsConfig os, HomeLayout layout, string target, string dragged)
+    {
+        if (!layout.TryFind(target, out var page, out var slot))
+        {
+            return;
+        }
+        var folder = new OsFolder
+        {
+            Id = FolderIdPrefix + Guid.NewGuid().ToString("N"),
+            Name = Loc.T("os.folder_default_name"),
+        };
+        folder.AppIds.Add(target);
+        folder.AppIds.Add(dragged);
+        os.Folders.Add(folder);
+
+        layout.Remove(target);
+        layout.Remove(dragged);
+        layout.Dock.Remove(dragged);
+        layout.DropAt(page, slot, folder.Id);
+    }
+
+    /// <summary>Whether the cursor is on the tile itself rather than out at the edges of its cell. The
+    /// window is generous enough to be easy to hit on purpose and small enough to be hard to hit by
+    /// accident while carrying an icon past.</summary>
+    private bool OverTileCentre(HomeLayout layout, DropSpot target)
+    {
+        if (!_lastGridOrigin.HasValue || target.Page < 0 || target.Slot < 0)
+        {
+            return false;
+        }
+        var columns = Math.Max(1, layout.Columns);
+        var centre = new Vector2(
+            _lastGridOrigin.Value.X + (_lastSlotW * ((target.Slot % columns) + 0.5f)),
+            _lastGridOrigin.Value.Y + (Px(SlotH) * (target.Slot / columns)) + (Px(TileSize) * 0.5f));
+        var reach = Px(TileSize) * 0.5f;
+        var mouse = ImGui.GetMousePos();
+        return MathF.Abs(mouse.X - centre.X) < reach && MathF.Abs(mouse.Y - centre.Y) < reach;
     }
 
     private float _edgeHoldT;
@@ -1214,27 +1346,6 @@ public sealed class HomeScreen
         }
     }
 
-    private void DrawDonePill(ImDrawListPtr dl, Vector2 origin, Vector2 avail)
-    {
-        var label = Loc.T("os.edit_done");
-        var sz = ImGui.CalcTextSize(label);
-        var pad = Px(12f, 6f);
-        var tl = new Vector2(origin.X + avail.X - sz.X - pad.X * 2f - Px(14f), origin.Y + Px(14f));
-        var br = tl + sz + pad * 2f;
-        _donePillTL = tl;
-        _donePillBR = br;
-
-        ImGui.SetCursorScreenPos(tl);
-        if (ImGui.InvisibleButton("##editDone", br - tl))
-        {
-            _editMode = false;
-            _dragId = null;
-        }
-        var hovered = ImGui.IsItemHovered();
-        dl.AddRectFilled(tl, br, hovered ? ThemeService.Current.AccentU32 : OsDraw.White(0.16f), (br.Y - tl.Y) * 0.5f);
-        dl.AddText(tl + pad, OsDraw.White(0.96f), label);
-    }
-
     private void DrawPageDots(ImDrawListPtr dl, Vector2 origin, Vector2 avail, int pageCount)
     {
         var total = pageCount + 1;
@@ -1265,16 +1376,20 @@ public sealed class HomeScreen
         }
     }
 
-    private void HandlePageSwipe(Vector2 origin, Vector2 avail)
+    private void HandlePageSwipe(Vector2 origin, Vector2 avail, HomeLayout layout)
     {
         ImGui.SetCursorScreenPos(origin);
         ImGui.InvisibleButton("##homeBg", new Vector2(avail.X, avail.Y - Px(DockH) - Px(16f)),
             ImGuiButtonFlags.MouseButtonLeft | ImGuiButtonFlags.MouseButtonRight);
 
-        // Right-click on empty home space (submitted after the tiles, so a tile wins its own area) opens the
-        // home context menu. Suppressed in edit mode, which has its own Done pill.
-        if (!_editMode && _dragId == null && ImGui.IsItemClicked(ImGuiMouseButton.Right))
+        // Right-click on empty home space opens the home context menu. Suppressed in edit mode, which has its
+        // own Done pill, and suppressed over a tile: this fires on the press while a tile's own menu opens on
+        // the release, so without the check the home menu flashed up first and was replaced a frame later.
+        if (_dragId == null && !_tileHovered && ImGui.IsItemClicked(ImGuiMouseButton.Right))
         {
+            // Remembered here rather than read when the menu is used: by then the popup owns the cursor.
+            var spot = DropTarget(layout);
+            _menuCell = spot is { InDock: false, Page: >= 0, Slot: >= 0 } ? (spot.Page, spot.Slot) : null;
             ImGui.OpenPopup("##homeCtx");
         }
         DrawHomeContextMenu();
@@ -1302,6 +1417,169 @@ public sealed class HomeScreen
         }
     }
 
+    /// <summary>The right-click menu on a tile: the one place removing something is a single deliberate act
+    /// rather than a mode to enter first. A folder offers its own delete (which asks about its contents), and
+    /// an app opened from inside a folder can be taken out of it or off the home screen entirely, which used
+    /// to mean doing it twice: once to spill it onto the grid and again to remove it from there.
+    ///
+    /// <para>Called immediately after the tile's own button, and opened and drawn in that one place on
+    /// purpose: a popup id opened in one ImGui scope cannot be begun in another, and the folder page draws
+    /// inside a child window with an id stack of its own.</para></summary>
+    private void DrawTileContextMenu(string id, bool inFolder)
+    {
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Px(8f, 8f));
+        ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, Px(6f, 6f));
+        ImGui.PushStyleColor(ImGuiCol.PopupBg, new Vector4(0.10f, 0.09f, 0.12f, 0.98f));
+        ImGui.PushStyleColor(ImGuiCol.Border, ThemeService.Current.AccentWithAlpha(0.35f));
+        if (ImGui.BeginPopupContextItem($"##tileCtx_{id}"))
+        {
+            // The pill normally clears by opening the app, which is a chore for a folder of them.
+            if (NewInside(id).Count > 0
+                && SharedUiHelpers.DrawIconMenuItem(FontAwesomeIcon.Check, Loc.T("os.tile_menu_mark_seen")))
+            {
+                _shell.MarkAppsSeen(NewInside(id));
+                ImGui.CloseCurrentPopup();
+            }
+
+            if (IsFolderId(id))
+            {
+                if (SharedUiHelpers.DrawIconMenuItem(FontAwesomeIcon.FolderMinus, Loc.T("os.tile_menu_remove_folder")))
+                {
+                    _folderDeleteId = id;
+                    ImGui.CloseCurrentPopup();
+                }
+            }
+            else
+            {
+                if (inFolder && SharedUiHelpers.DrawIconMenuItem(
+                    FontAwesomeIcon.FolderOpen, Loc.T("os.tile_menu_take_out")))
+                {
+                    if (FindFolder(_openFolderId) is { } folder && folder.AppIds.Contains(id))
+                    {
+                        if (AccessibilityService.ReduceMotion)
+                        {
+                            CommitFolderRemoval(folder, id);
+                        }
+                        else
+                        {
+                            _folderEjecting[id] = 0f;
+                        }
+                    }
+                    ImGui.CloseCurrentPopup();
+                }
+                DrawMoveToFolderMenu(id);
+                if (SharedUiHelpers.DrawIconMenuItem(FontAwesomeIcon.TrashAlt, Loc.T("os.tile_menu_remove_app")))
+                {
+                    RequestRemove(id, inFolder);
+                    ImGui.CloseCurrentPopup();
+                }
+            }
+            ImGui.EndPopup();
+        }
+        ImGui.PopStyleColor(2);
+        ImGui.PopStyleVar(2);
+    }
+
+    /// <summary>The "move to folder" flyout on an app tile: every folder there is, minus the one the app
+    /// already sits in. Absent entirely when that leaves nothing, since an empty flyout only teaches that the
+    /// row does nothing.
+    ///
+    /// <para>The row's own label is blank padding measured against
+    /// <see cref="SharedUiHelpers.DrawIconMenuItem"/>'s layout, with the icon and text drawn by hand at that
+    /// helper's offsets, so a real ImGui submenu still lines up with the hand-rolled rows around it.</para>
+    /// </summary>
+    private void DrawMoveToFolderMenu(string appId)
+    {
+        var current = FolderContaining(appId);
+        var folders = UiHost.Configuration.Os.Folders.Where(f => f != current).ToList();
+        if (folders.Count == 0)
+        {
+            return;
+        }
+
+        var dl = ImGui.GetWindowDrawList();
+        var style = ImGui.GetStyle();
+        var label = Loc.T("os.tile_menu_move_to_folder");
+        var labelSz = ImGui.CalcTextSize(label);
+        var spaceW = MathF.Max(1f, ImGui.CalcTextSize(" ").X);
+        var padCount = (int)MathF.Ceiling(MathF.Max(0f, Px(38f) - style.FramePadding.X + labelSz.X) / spaceW);
+        var itemPos = ImGui.GetCursorScreenPos();
+        ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing,
+            new Vector2(style.ItemSpacing.X, style.FramePadding.Y * 2f));
+        var open = ImGui.BeginMenu($"{new string(' ', padCount)}##mvfolder");
+        ImGui.PopStyleVar();
+
+        var fontSize = ImGui.GetFontSize();
+        ImGui.PushFont(UiHost.PluginInterface.UiBuilder.FontIcon);
+        var icon = FontAwesomeIcon.FolderOpen.ToIconString();
+        var iconSz = ImGui.CalcTextSize(icon);
+        dl.AddText(ImGui.GetFont(), fontSize,
+            new Vector2(itemPos.X + Px(10f) + (Px(20f) - iconSz.X) * 0.5f,
+                        itemPos.Y + (labelSz.Y - iconSz.Y) * 0.5f),
+            0xFFEEEEEE, icon);
+        ImGui.PopFont();
+        dl.AddText(new Vector2(itemPos.X + Px(38f), itemPos.Y), 0xFFEEEEEE, label);
+        if (!open)
+        {
+            return;
+        }
+
+        var subDl = ImGui.GetWindowDrawList();
+        var inset = Px(30f);
+        var rowW = folders.Max(f => inset + ImGui.CalcTextSize(Os.OsFolders.DisplayName(f)).X + Px(12f));
+        foreach (var folder in folders)
+        {
+            var pos = ImGui.GetCursorScreenPos();
+            var rowH = ImGui.GetFrameHeight();
+            if (ImGui.Selectable($"##mvf_{folder.Id}", false, ImGuiSelectableFlags.None,
+                new Vector2(rowW, rowH)))
+            {
+                MoveIntoFolder(appId, folder);
+                ImGui.CloseCurrentPopup();
+            }
+            if (ImGui.IsItemHovered())
+            {
+                SharedUiHelpers.HandOnHover();
+            }
+            IconDraw.AddCentered(subDl, FontAwesomeIcon.Folder, fontSize,
+                new Vector2(pos.X + Px(14f), pos.Y + rowH * 0.5f), 0xFFEEEEEE);
+            var name = Os.OsFolders.DisplayName(folder);
+            var nameSz = ImGui.CalcTextSize(name);
+            subDl.AddText(new Vector2(pos.X + inset, pos.Y + (rowH - nameSz.Y) * 0.5f), 0xFFEEEEEE, name);
+        }
+        ImGui.EndMenu();
+    }
+
+    private static OsFolder? FolderContaining(string appId) =>
+        UiHost.Configuration.Os.Folders.FirstOrDefault(f => f.AppIds.Contains(appId));
+
+    /// <summary>Files an app into a folder from wherever it is: another folder, a home cell, or the dock.</summary>
+    private void MoveIntoFolder(string appId, OsFolder target)
+    {
+        if (target.AppIds.Contains(appId))
+        {
+            return;
+        }
+        if (FolderContaining(appId) is { } source)
+        {
+            source.AppIds.Remove(appId);
+            if (source.AppIds.Count == 0 && _openFolderId == source.Id)
+            {
+                _openFolderId = null;
+            }
+        }
+        HomeLayout.RemoveFromConfig(UiHost.Configuration.Os, appId);
+        target.AppIds.Add(appId);
+        UiHost.Configuration.Save();
+    }
+
+    /// <summary>Whatever still wears the "new" pill behind this tile: the app itself, or everything inside
+    /// the folder.</summary>
+    private List<string> NewInside(string id) =>
+        FindFolder(id) is { } folder
+            ? folder.AppIds.Where(_shell.IsNewApp).ToList()
+            : _shell.IsNewApp(id) ? [id] : [];
+
     /// <summary>The home right-click menu: enter icon-arrange (wiggle) mode, or jump to the Settings wallpaper
     /// and home-screen page.</summary>
     private void DrawHomeContextMenu()
@@ -1312,9 +1590,23 @@ public sealed class HomeScreen
         ImGui.PushStyleColor(ImGuiCol.Border, ThemeService.Current.AccentWithAlpha(0.35f));
         if (ImGui.BeginPopup("##homeCtx"))
         {
-            if (SharedUiHelpers.DrawIconMenuItem(FontAwesomeIcon.ArrowsAlt, Loc.T("os.home_menu_adjust")))
+            if (SharedUiHelpers.DrawIconMenuItem(FontAwesomeIcon.Plus, Loc.T("os.home_menu_add_app")))
             {
-                SetEditMode(true);
+                SetAddAppsOpen(true);
+                _addAppsSearch = "";
+                ImGui.CloseCurrentPopup();
+            }
+            if (SharedUiHelpers.DrawIconMenuItem(FontAwesomeIcon.FolderPlus, Loc.T("os.home_menu_add_folder")))
+            {
+                _newFolderName = "";
+                _newFolderPrompt = true;
+                _newFolderFocus = true;
+                ImGui.CloseCurrentPopup();
+            }
+            if (_shell.NewApps().Any()
+                && SharedUiHelpers.DrawIconMenuItem(FontAwesomeIcon.CheckDouble, Loc.T("os.home_menu_mark_seen")))
+            {
+                _shell.MarkAppsSeen(_shell.NewApps().ToList());
                 ImGui.CloseCurrentPopup();
             }
             if (SharedUiHelpers.DrawIconMenuItem(FontAwesomeIcon.Image, Loc.T("os.home_menu_wallpaper")))
@@ -1361,7 +1653,29 @@ public sealed class HomeScreen
         var o = origin + new Vector2(xOff, 0f);
         var padX = Px(20f);
         var w = avail.X - padX * 2f;
-        var y = o.Y + Px(34f);
+        var top = o.Y + Px(34f);
+
+        // The page has grown past the screen: every app that supplies widget items adds a card, and there is
+        // no natural end to that list. Clipped to the band above the dock and scrolled by hand rather than
+        // hosted in a child window, because a child would capture drags over the whole page and the
+        // horizontal swipe between pages is the only way off this one.
+        var bottom = origin.Y + avail.Y - Px(DockH) - Px(20f);
+        var onThisPage = MathF.Abs(xOff) < Px(2f);
+        if (onThisPage && !_draggingPages && _openFolderId == null
+            && ImGui.IsWindowHovered(ImGuiHoveredFlags.ChildWindows)
+            && ImGui.GetIO().MouseWheel is var wheel and not 0f)
+        {
+            _widgetScroll -= wheel * Px(48f);
+        }
+        _widgetScroll = Math.Clamp(_widgetScroll, 0f, MathF.Max(0f, _widgetOverflow));
+
+        // A draw-list clip hides pixels and nothing else, so a card scrolled off the top would still be
+        // holding an invisible button over the greeting. The cards check this band before submitting one.
+        _widgetBandTop = origin.Y;
+        _widgetBandBottom = bottom;
+
+        dl.PushClipRect(new Vector2(origin.X, origin.Y), new Vector2(origin.X + avail.X, bottom), true);
+        var y = top - _widgetScroll;
 
         using (UiFonts.H2?.Push())
         {
@@ -1387,6 +1701,35 @@ public sealed class HomeScreen
                 y = DrawAppWidget(dl, o.X + padX, y, w, app, items);
             }
         }
+
+        dl.PopClipRect();
+
+        // Measured from what was actually drawn, so a card appearing or an app switching its widget off
+        // changes the reach on the same frame rather than the next one.
+        if (onThisPage)
+        {
+            _widgetOverflow = MathF.Max(0f, (y + _widgetScroll) - bottom + Px(12f));
+            DrawWidgetScrollHint(dl, origin, avail, bottom);
+        }
+    }
+
+    /// <summary>A slim track down the right edge while the page has more than fits. The page is one long
+    /// column with no other affordance, so without it there is nothing to say the list continues.</summary>
+    private void DrawWidgetScrollHint(ImDrawListPtr dl, Vector2 origin, Vector2 avail, float bottom)
+    {
+        if (_widgetOverflow <= 0f)
+        {
+            return;
+        }
+        var top = origin.Y + Px(34f);
+        var height = bottom - top;
+        var visible = height / (height + _widgetOverflow);
+        var thumb = MathF.Max(Px(28f), height * visible);
+        var travel = height - thumb;
+        var at = top + (travel * Math.Clamp(_widgetScroll / _widgetOverflow, 0f, 1f));
+        var x = origin.X + avail.X - Px(6f);
+        dl.AddRectFilled(new Vector2(x, top), new Vector2(x + Px(2.5f), bottom), OsDraw.White(0.06f), Px(1.25f));
+        dl.AddRectFilled(new Vector2(x, at), new Vector2(x + Px(2.5f), at + thumb), OsDraw.White(0.30f), Px(1.25f));
     }
 
     /// <summary>A generic app-provided widget card: the app's mini tile + name as header, one line per item,
@@ -1402,6 +1745,13 @@ public sealed class HomeScreen
         var br = new Vector2(x + w, y + h);
 
         GlassCard(dl, tl, br);
+
+        // Scrolled out of the band: drawn (and clipped away) but never submitted, or it keeps a button over
+        // whatever is really on screen there.
+        if (br.Y <= _widgetBandTop || tl.Y >= _widgetBandBottom)
+        {
+            return y + h + Px(12f);
+        }
 
         // Action buttons claim their clicks first; the card's open target is submitted after them.
         if (actions.Count > 0)
@@ -1562,35 +1912,6 @@ public sealed class HomeScreen
     private readonly HashSet<string> _restoredApps = new(StringComparer.Ordinal);
     private string _addAppsSearch = "";
 
-    private const string AddTileKey = "__addtile__";
-
-    private void DrawAddTile(ImDrawListPtr dl, Vector2 slotCenter, float slotW, float dt)
-    {
-        if (!_animCenters.TryGetValue(AddTileKey, out var center))
-        {
-            center = slotCenter;
-        }
-        center += (slotCenter - center) * Math.Min(1f, dt * 14f);
-        _animCenters[AddTileKey] = center;
-
-        var half = Px(TileSize) * 0.5f;
-        var tl = center - new Vector2(half, half);
-        var br = center + new Vector2(half, half);
-        ImGui.SetCursorScreenPos(tl);
-        if (ImGui.InvisibleButton("##addApps", br - tl))
-        {
-            SetAddAppsOpen(true);
-            _addAppsSearch = "";
-        }
-        var hovered = ImGui.IsItemHovered();
-        SharedUiHelpers.HandOnHover();
-        var rounding = half * 0.56f;
-        dl.AddRectFilled(tl, br, OsDraw.White(hovered ? 0.16f : 0.10f), rounding);
-        dl.AddRect(tl, br, OsDraw.White(hovered ? 0.55f : 0.30f), rounding, ImDrawFlags.RoundCornersAll, Px(1.2f));
-        IconDraw.AddCentered(dl, FontAwesomeIcon.Plus, half * 0.8f, center, OsDraw.White(0.8f));
-        OsDraw.CenteredText(dl, Loc.T("os.add_apps"), center.X, br.Y + Px(7f), OsDraw.White(0.75f), LabelScale);
-    }
-
     private void DrawAddAppsOverlay(Vector2 origin, Vector2 avail)
     {
         var dl = ImGui.GetWindowDrawList();
@@ -1688,10 +2009,19 @@ public sealed class HomeScreen
         }
         var folder = new OsFolder { Id = FolderIdPrefix + Guid.NewGuid().ToString("N"), Name = name };
         os.Folders.Add(folder);
-        HomeLayout.PlaceInConfig(os, folder.Id);
+        if (_menuCell is { } cell)
+        {
+            HomeLayout.PlaceInConfigAt(os, folder.Id, cell.Page, cell.Slot);
+        }
+        else
+        {
+            HomeLayout.PlaceInConfig(os, folder.Id);
+        }
         UiHost.Configuration.Save();
         _newFolderName = "";
         _addAppsOpen = false;
+        _freshFolderId = folder.Id;
+        _menuCell = null;
     }
 
     private void DrawFolderOverlay(Vector2 origin, Vector2 avail)
@@ -1707,60 +2037,33 @@ public sealed class HomeScreen
         var panelW = avail.X - Px(36f);
         var panelTL = origin + new Vector2((avail.X - panelW) * 0.5f, avail.Y * 0.18f);
         var panelBR = panelTL + new Vector2(panelW, avail.Y * 0.56f);
+        _folderPanelRect = (panelTL, panelBR);
 
         dl.AddRectFilled(panelTL, panelBR, ImGui.ColorConvertFloat4ToU32(new Vector4(0.07f, 0.07f, 0.10f, 0.98f)), Px(18f));
         dl.AddRect(panelTL, panelBR, OsDraw.White(0.12f), Px(18f), ImDrawFlags.RoundCornersAll, Px(1f));
 
-        var builtIn = Os.OsFolders.IsBuiltIn(folder.Id);
-
-        // The built-in folder cannot be renamed, so its edit mode keeps the plain title and offers only removal.
-        if (_folderEditMode && !builtIn)
+        // Always editable: renaming used to need a mode, and the mode is gone.
+        ImGui.SetCursorScreenPos(panelTL + Px(14f, 12f));
+        ImGui.SetNextItemWidth(panelW - Px(64f));
+        ImGui.PushStyleColor(ImGuiCol.FrameBg, new Vector4(1f, 1f, 1f, 0.06f));
+        ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(9f));
+        var name = folder.Name;
+        if (ImGui.InputText("##folderName", ref name, 24))
         {
-            ImGui.SetCursorScreenPos(panelTL + Px(14f, 12f));
-            ImGui.SetNextItemWidth(panelW - Px(130f));
-            ImGui.PushStyleColor(ImGuiCol.FrameBg, new Vector4(1f, 1f, 1f, 0.08f));
-            ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(9f));
-            var name = folder.Name;
-            if (ImGui.InputText("##folderName", ref name, 24))
-            {
-                folder.Name = name;
-                UiHost.Configuration.Save();
-            }
-            ImGui.PopStyleVar();
-            ImGui.PopStyleColor();
+            folder.Name = name;
+            UiHost.Configuration.Save();
         }
-        else
-        {
-            using (UiFonts.H3?.Push())
-            {
-                dl.AddText(panelTL + Px(16f, 14f), OsDraw.White(0.95f), Os.OsFolders.DisplayName(folder));
-            }
-        }
+        ImGui.PopStyleVar();
+        ImGui.PopStyleColor();
 
         var closeC = new Vector2(panelBR.X - Px(20f), panelTL.Y + Px(20f));
         ImGui.SetCursorScreenPos(closeC - Px(11f, 11f));
         if (ImGui.InvisibleButton("##folderClose", Px(22f, 22f)))
         {
             _openFolderId = null;
-            _folderEditMode = false;
             return;
         }
         IconDraw.AddCentered(dl, FontAwesomeIcon.Times, Px(12f), closeC, OsDraw.White(0.7f));
-
-        var editLabel = Loc.T(_folderEditMode ? "os.edit_done" : "os.folder_edit");
-        var editSz = ImGui.CalcTextSize(editLabel);
-        var editTL = new Vector2(closeC.X - Px(11f) - editSz.X - Px(24f), panelTL.Y + Px(11f));
-        var editBR = editTL + editSz + Px(16f, 9f);
-        ImGui.SetCursorScreenPos(editTL);
-        if (ImGui.InvisibleButton("##folderEdit", editBR - editTL))
-        {
-            _folderEditMode = !_folderEditMode;
-        }
-        SharedUiHelpers.HandOnHover();
-        dl.AddRectFilled(editTL, editBR,
-            ImGui.IsItemHovered() || _folderEditMode ? ThemeService.Current.AccentU32 : OsDraw.White(0.14f),
-            (editBR.Y - editTL.Y) * 0.5f);
-        dl.AddText(editTL + Px(8f, 4f), OsDraw.White(0.96f), editLabel);
 
         var top = panelTL.Y + Px(52f);
         var apps = new List<IAetherApp>();
@@ -1798,36 +2101,35 @@ public sealed class HomeScreen
             if (!inPanel)
             {
                 _openFolderId = null;
-                _folderEditMode = false;
-            }
+                            }
         }
 
     }
 
-    /// <summary>Confirm for taking an app out of the open folder; a full sub-mode like the remove prompt,
-    /// because anything drawn in the folder's child window would render above (and steal input from) an
-    /// in-place overlay. A user folder ejects the app back onto the grid; the built-in one removes it outright,
-    /// since an ejected arcade app would just be adopted again on the next frame.</summary>
-    private void DrawFolderEjectPrompt(Vector2 origin, Vector2 avail)
+    /// <summary>Takes one app out of a folder and puts it on the grid. Arcade is no longer a special case:
+    /// its adoption now leaves placed games alone, so an ejected one stays out instead of being pulled back
+    /// on the next frame, which is what used to make this have to remove the app outright.</summary>
+    /// <summary>Deleting a folder asks the one question that matters: does everything inside go too. Keeping
+    /// them spills them onto the grid; removing them takes them off the home screen with the folder, which is
+    /// the errand that used to need one removal per app plus one for the folder.</summary>
+    private void DrawFolderDeletePrompt(Vector2 origin, Vector2 avail)
     {
-        var folder = FindFolder(_openFolderId);
-        var app = _folderEjectId == null ? null : _shell.Find(_folderEjectId);
-        if (folder == null || app == null || !folder.AppIds.Contains(app.Id))
+        if (_folderDeleteId is not { } folderId || FindFolder(folderId) is not { } folder)
         {
-            _folderEjectId = null;
+            _folderDeleteId = null;
             return;
         }
 
         var dl = ImGui.GetWindowDrawList();
         var panelW = avail.X - Px(56f);
-        var panelTL = origin + new Vector2((avail.X - panelW) * 0.5f, avail.Y * 0.32f);
+        var panelTL = origin + new Vector2((avail.X - panelW) * 0.5f, avail.Y * 0.30f);
         var pad = Px(16f);
-        var innerW = panelW - pad * 2f;
+        var innerW = panelW - (pad * 2f);
 
-        var removes = Os.OsFolders.IsBuiltIn(folder.Id);
-        var bodyText = Loc.T(removes ? "os.remove_app_body" : "os.folder_eject_body", app.Name);
+        var bodyText = Loc.T("os.folder_delete_body", Os.OsFolders.DisplayName(folder), folder.AppIds.Count);
         var bodyH = ImGui.CalcTextSize(bodyText, false, innerW).Y;
-        var panelH = Px(58f) + bodyH + Px(54f);
+        var btnH = Px(30f);
+        var panelH = Px(58f) + bodyH + Px(16f) + (btnH * 2f) + Px(20f);
         var panelBR = panelTL + new Vector2(panelW, panelH);
 
         dl.AddRectFilled(panelTL, panelBR, ImGui.ColorConvertFloat4ToU32(new Vector4(0.09f, 0.09f, 0.12f, 0.98f)), Px(16f));
@@ -1835,58 +2137,118 @@ public sealed class HomeScreen
 
         using (UiFonts.H3?.Push())
         {
-            dl.AddText(panelTL + new Vector2(pad, Px(14f)), OsDraw.White(0.95f),
-                Loc.T(removes ? "os.remove_app_title" : "os.folder_eject_title"));
+            dl.AddText(panelTL + new Vector2(pad, Px(14f)), OsDraw.White(0.95f), Loc.T("os.folder_delete_title"));
         }
         dl.AddText(ImGui.GetFont(), ImGui.GetFontSize(), panelTL + new Vector2(pad, Px(44f)),
             OsDraw.White(0.78f), bodyText, innerW);
 
+        var y = panelTL.Y + Px(52f) + bodyH + Px(12f);
+        if (PromptButton("##fdelRemove", new Vector2(panelTL.X + pad, y), innerW, btnH,
+            Loc.T("os.folder_delete_remove"), primary: true))
+        {
+            _folderDeleteId = null;
+            RemoveFolder(folderId, removeApps: true);
+            return;
+        }
+
+        y += btnH + Px(6f);
+        var half = (innerW - Px(8f)) * 0.5f;
+        if (PromptButton("##fdelKeep", new Vector2(panelTL.X + pad, y), half, btnH,
+            Loc.T("os.folder_delete_keep"), primary: false))
+        {
+            _folderDeleteId = null;
+            RemoveFolder(folderId, removeApps: false);
+            return;
+        }
+        if (PromptButton("##fdelCancel", new Vector2(panelTL.X + pad + half + Px(8f), y), half, btnH,
+            Loc.T("common.cancel"), primary: false))
+        {
+            _folderDeleteId = null;
+        }
+    }
+
+    /// <summary>Names the folder before making it. Enter is the same as Create, and an empty box takes the
+    /// default name rather than refusing, so the fast path is two keystrokes.</summary>
+    private void DrawNewFolderPrompt(Vector2 origin, Vector2 avail)
+    {
+        var dl = ImGui.GetWindowDrawList();
+        var panelW = avail.X - Px(56f);
+        var panelTL = origin + new Vector2((avail.X - panelW) * 0.5f, avail.Y * 0.30f);
+        var pad = Px(16f);
+        var innerW = panelW - (pad * 2f);
         var btnH = Px(30f);
-        var btnY = panelBR.Y - btnH - Px(12f);
-        var btnW = (innerW - Px(8f)) * 0.5f;
+        var panelH = Px(52f) + ImGui.GetFrameHeight() + Px(14f) + btnH + Px(14f);
+        var panelBR = panelTL + new Vector2(panelW, panelH);
 
-        ImGui.SetCursorScreenPos(new Vector2(panelTL.X + pad, btnY));
-        var cancel = ImGui.InvisibleButton("##fejCancel", new Vector2(btnW, btnH));
-        var cancelHovered = ImGui.IsItemHovered();
-        dl.AddRectFilled(new Vector2(panelTL.X + pad, btnY), new Vector2(panelTL.X + pad + btnW, btnY + btnH),
-            OsDraw.White(cancelHovered ? 0.20f : 0.12f), Px(9f));
-        OsDraw.CenteredText(dl, Loc.T("common.cancel"), panelTL.X + pad + btnW * 0.5f, btnY + Px(6f), OsDraw.White(0.92f));
+        dl.AddRectFilled(panelTL, panelBR, ImGui.ColorConvertFloat4ToU32(new Vector4(0.09f, 0.09f, 0.12f, 0.98f)), Px(16f));
+        dl.AddRect(panelTL, panelBR, OsDraw.White(0.14f), Px(16f), ImDrawFlags.RoundCornersAll, Px(1f));
 
-        var okX = panelTL.X + pad + btnW + Px(8f);
-        ImGui.SetCursorScreenPos(new Vector2(okX, btnY));
-        var confirm = ImGui.InvisibleButton("##fejConfirm", new Vector2(btnW, btnH));
-        var confirmHovered = ImGui.IsItemHovered();
-        dl.AddRectFilled(new Vector2(okX, btnY), new Vector2(okX + btnW, btnY + btnH),
-            confirmHovered ? ImGui.ColorConvertFloat4ToU32(ThemeService.Current.AccentLight) : ThemeService.Current.AccentU32, Px(9f));
-        OsDraw.CenteredText(dl, Loc.T("os.remove_app_confirm"), okX + btnW * 0.5f, btnY + Px(6f), OsDraw.White(0.97f));
+        using (UiFonts.H3?.Push())
+        {
+            dl.AddText(panelTL + new Vector2(pad, Px(14f)), OsDraw.White(0.95f), Loc.T("os.new_folder"));
+        }
+
+        ImGui.SetCursorScreenPos(panelTL + new Vector2(pad, Px(46f)));
+        ImGui.SetNextItemWidth(innerW);
+        ImGui.PushStyleColor(ImGuiCol.FrameBg, new Vector4(1f, 1f, 1f, 0.08f));
+        ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(9f));
+        if (_newFolderFocus)
+        {
+            _newFolderFocus = false;
+            ImGui.SetKeyboardFocusHere();
+        }
+        var submitted = ImGui.InputTextWithHint("##newFolderPromptName", Loc.T("os.folder_name_hint"),
+            ref _newFolderName, 24, ImGuiInputTextFlags.EnterReturnsTrue);
+        ImGui.PopStyleVar();
+        ImGui.PopStyleColor();
+
+        var btnY = panelBR.Y - btnH - Px(14f);
+        var half = (innerW - Px(8f)) * 0.5f;
+        var cancel = PromptButton("##nfCancel", new Vector2(panelTL.X + pad, btnY), half, btnH,
+            Loc.T("common.cancel"), primary: false);
+        var create = PromptButton("##nfCreate", new Vector2(panelTL.X + pad + half + Px(8f), btnY), half, btnH,
+            Loc.T("os.folder_create"), primary: true);
 
         if (cancel)
         {
-            _folderEjectId = null;
+            _newFolderPrompt = false;
+            _newFolderName = "";
+            return;
         }
-        else if (confirm)
+        if (create || submitted)
         {
-            _folderEjectId = null;
-            if (AccessibilityService.ReduceMotion)
-            {
-                CommitFolderRemoval(folder, app.Id);
-            }
-            else
-            {
-                _folderEjecting[app.Id] = 0f;
-            }
+            _newFolderPrompt = false;
+            CreateFolder();
         }
+    }
+
+    /// <summary>One button of a prompt panel: an invisible hit box with its own plate drawn under it.</summary>
+    private static bool PromptButton(string id, Vector2 tl, float width, float height, string label, bool primary)
+    {
+        var dl = ImGui.GetWindowDrawList();
+        ImGui.SetCursorScreenPos(tl);
+        var pressed = ImGui.InvisibleButton(id, new Vector2(width, height));
+        var hovered = ImGui.IsItemHovered();
+        if (hovered)
+        {
+            SharedUiHelpers.HandOnHover();
+        }
+        var fill = primary
+            ? (hovered ? ImGui.ColorConvertFloat4ToU32(ThemeService.Current.AccentLight) : ThemeService.Current.AccentU32)
+            : OsDraw.White(hovered ? 0.20f : 0.12f);
+        dl.AddRectFilled(tl, tl + new Vector2(width, height), fill, Px(9f));
+        OsDraw.CenteredText(dl, label, tl.X + (width * 0.5f), tl.Y + Px(6f), OsDraw.White(primary ? 0.97f : 0.92f));
+        return pressed;
     }
 
     private void CommitFolderRemoval(OsFolder folder, string appId)
     {
-        if (Os.OsFolders.IsBuiltIn(folder.Id))
-        {
-            _shell.RemoveBuiltInApp(appId);
-            return;
-        }
         folder.AppIds.Remove(appId);
         HomeLayout.PlaceInConfig(UiHost.Configuration.Os, appId);
+        if (folder.AppIds.Count == 0)
+        {
+            _openFolderId = null;
+        }
         UiHost.Configuration.Save();
     }
 
@@ -1899,14 +2261,35 @@ public sealed class HomeScreen
         var tile = MathF.Min(Px(62f), slotW - Px(10f));
         var rowH = tile + Px(30f);
 
-        var dt = ImGui.GetIO().DeltaTime;
-        for (var i = 0; i < apps.Count; i++)
+        // The order to draw: the carried app moved to wherever it is hovering. Measured against last frame's
+        // rects, which is a frame behind and invisible at any hand speed.
+        var order = apps;
+        if (_folderDragId != null && apps.FindIndex(a => a.Id == _folderDragId) is var from and >= 0)
         {
-            var app = apps[i];
-            // Px(12) headroom keeps the edit-mode minus badge inside the child's clip rect.
+            _folderDropIndex = FolderSlotUnderMouse(apps.Count);
+            if (_folderDropIndex >= 0 && _folderDropIndex != from)
+            {
+                order = new List<IAetherApp>(apps);
+                var moved = order[from];
+                order.RemoveAt(from);
+                order.Insert(Math.Clamp(_folderDropIndex, 0, order.Count), moved);
+            }
+        }
+
+        _folderSlotRects.Clear();
+        var dt = ImGui.GetIO().DeltaTime;
+        for (var i = 0; i < order.Count; i++)
+        {
+            var app = order[i];
+            // Px(12) headroom keeps the top row's badges inside the child's clip rect.
             ImGui.SetCursorPos(new Vector2((i % Cols) * slotW + (slotW - tile) * 0.5f, (i / Cols) * rowH + Px(12f)));
             var tl = ImGui.GetCursorScreenPos();
             var br = tl + new Vector2(tile, tile);
+            _folderSlotRects.Add((tl, br));
+
+            // The carried tile leaves a hole and is drawn at the cursor instead. Its button still goes in
+            // below: dropping the item ImGui holds the active id for would end the drag a frame later.
+            var carried = app.Id == _folderDragId;
 
             var ejectT = -1f;
             if (_folderEjecting.TryGetValue(app.Id, out var et))
@@ -1928,6 +2311,13 @@ public sealed class HomeScreen
             {
                 clicked = ImGui.InvisibleButton($"##fapp_{app.Id}", new Vector2(tile, tile));
                 hovered = ImGui.IsItemHovered();
+                HandleFolderTileInput(app.Id);
+                DrawTileContextMenu(app.Id, inFolder: true);
+            }
+
+            if (carried)
+            {
+                continue;
             }
 
             var offlineApp = app.RequiresConnection && !_shell.Connected;
@@ -1943,6 +2333,16 @@ public sealed class HomeScreen
                 sbr = tileCenter + new Vector2(shalf, shalf);
             }
             OsDraw.AppTile(cdl, app, stl, sbr, alpha);
+
+            // Before the badges, exactly as the grid draws it: the ring is a halo around the tile and the
+            // "new" pill overhangs the same corner, so a ring submitted afterwards is drawn straight
+            // through the pill.
+            if (hovered && !AccessibilityService.ReduceMotion)
+            {
+                cdl.AddRect(tl - Px(2f, 2f), br + Px(2f, 2f), ThemeService.Current.AccentU32,
+                    tile * 0.28f + Px(2f), ImDrawFlags.RoundCornersAll, Px(1.6f));
+            }
+
             var badge = _shell.BadgeFor(app);
             if (badge > 0 && ejectT < 0f)
             {
@@ -1963,34 +2363,115 @@ public sealed class HomeScreen
             {
                 ImGui.SetTooltip(app.Name);
             }
-            if (hovered && !_folderEditMode && !AccessibilityService.ReduceMotion)
-            {
-                cdl.AddRect(tl - Px(2f, 2f), br + Px(2f, 2f), ThemeService.Current.AccentU32,
-                    tile * 0.28f + Px(2f), ImDrawFlags.RoundCornersAll, Px(1.6f));
-            }
-
-            if (_folderEditMode && ejectT < 0f)
-            {
-                var rmC = tl + Px(2f, 2f);
-                ImGui.SetCursorScreenPos(rmC - Px(10f, 10f));
-                if (ImGui.InvisibleButton($"##feject_{app.Id}", Px(20f, 20f)))
-                {
-                    _folderEjectId = app.Id;
-                }
-                SharedUiHelpers.HandOnHover();
-                cdl.AddCircleFilled(rmC, Px(9f), ImGui.ColorConvertFloat4ToU32(new Vector4(0.22f, 0.22f, 0.26f, 0.98f)), 20);
-                cdl.AddCircle(rmC, Px(9f), OsDraw.White(0.5f), 20, Px(1f));
-                IconDraw.AddCentered(cdl, FontAwesomeIcon.Minus, Px(9f), rmC, OsDraw.White(0.9f));
-            }
-            else if (clicked)
+            if (clicked && _folderDragId == null)
             {
                 _openFolderId = null;
                 _shell.OpenApp(app.Id);
             }
         }
 
-        ImGui.SetCursorPos(new Vector2(0f, MathF.Ceiling(apps.Count / (float)Cols) * rowH + Px(14f)));
+        DrawCarriedFolderTile(tile);
+        UpdateFolderDrag(folder, order);
+
+        ImGui.SetCursorPos(new Vector2(0f, MathF.Ceiling(order.Count / (float)Cols) * rowH + Px(14f)));
         ImGui.Dummy(new Vector2(1f, 1f));
+    }
+
+    /// <summary>Picks a tile up once the cursor has travelled far enough, the same threshold the home grid
+    /// uses, so a tap still opens the app.</summary>
+    private void HandleFolderTileInput(string appId)
+    {
+        if (ImGui.IsItemActivated())
+        {
+            _folderPressId = appId;
+            _folderPressPos = ImGui.GetMousePos();
+        }
+        if (_folderPressId == appId && ImGui.IsItemActive() && _folderDragId == null
+            && (ImGui.GetMousePos() - _folderPressPos).Length() > DragThreshold)
+        {
+            _folderDragId = appId;
+        }
+        if (ImGui.IsItemDeactivated() && _folderPressId == appId)
+        {
+            _folderPressId = null;
+        }
+    }
+
+    /// <summary>The slot the cursor is over, or the last one when it is past the end of the grid. -1 while
+    /// the cursor is outside the panel, which is what makes dropping there mean "take it out".</summary>
+    private int FolderSlotUnderMouse(int count)
+    {
+        var mouse = ImGui.GetMousePos();
+        var (panelTL, panelBR) = _folderPanelRect;
+        if (mouse.X < panelTL.X || mouse.X > panelBR.X || mouse.Y < panelTL.Y || mouse.Y > panelBR.Y)
+        {
+            return -1;
+        }
+
+        var best = -1;
+        var bestDistance = float.MaxValue;
+        for (var i = 0; i < _folderSlotRects.Count && i < count; i++)
+        {
+            var (tl, br) = _folderSlotRects[i];
+            var centre = (tl + br) * 0.5f;
+            var distance = (mouse - centre).LengthSquared();
+            if (distance < bestDistance)
+            {
+                bestDistance = distance;
+                best = i;
+            }
+        }
+        return best;
+    }
+
+    /// <summary>The carried tile, on the foreground list because the folder page is a child window and
+    /// anything drawn on the page's own list would slide under the tiles it is being dragged over.</summary>
+    private void DrawCarriedFolderTile(float tile)
+    {
+        if (_folderDragId == null || _shell.Find(_folderDragId) is not { } app)
+        {
+            return;
+        }
+        var half = tile * 0.5f;
+        var centre = ImGui.GetMousePos();
+        var dl = ImGui.GetForegroundDrawList();
+        dl.AddRectFilled(centre - new Vector2(half - 2f, half - 5f), centre + new Vector2(half + 2f, half + 5f),
+            OsDraw.Black(0.35f), half * 0.6f);
+        OsDraw.AppTile(dl, app, centre - new Vector2(half, half), centre + new Vector2(half, half), 0.92f);
+    }
+
+    /// <summary>Ends a folder drag: dropped on the page it commits the new order, dropped off it the app
+    /// leaves the folder for the first free cell on the home screen.</summary>
+    private void UpdateFolderDrag(OsFolder folder, List<IAetherApp> order)
+    {
+        if (_folderDragId == null || ImGui.IsMouseDown(ImGuiMouseButton.Left))
+        {
+            return;
+        }
+
+        var dragged = _folderDragId;
+        _folderDragId = null;
+        _folderPressId = null;
+        var outside = _folderDropIndex < 0;
+        _folderDropIndex = -1;
+
+        if (outside)
+        {
+            if (AccessibilityService.ReduceMotion)
+            {
+                CommitFolderRemoval(folder, dragged);
+            }
+            else
+            {
+                _folderEjecting[dragged] = 0f;
+            }
+            return;
+        }
+
+        // The drawn order IS the answer; anything else would re-derive a result already on screen.
+        folder.AppIds.Clear();
+        folder.AppIds.AddRange(order.Select(a => a.Id));
+        UiHost.Configuration.Save();
     }
 
     /// <summary>The apps the user removed, which is what the sheet offers first: getting one of your own apps back

@@ -113,6 +113,8 @@ public class SparkClientState
 
     public bool WalletVisitReported { get; set; }
 
+    public bool AetherlingGameReported { get; set; }
+
     /// <summary>Arcade rounds already reported today. Unlike the milestones this one counts rather than
     /// flags, because the action is worth several grants a day.</summary>
     public int ArcadeGamesReported { get; set; }

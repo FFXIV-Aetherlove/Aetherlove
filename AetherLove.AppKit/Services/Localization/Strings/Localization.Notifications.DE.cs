@@ -38,5 +38,24 @@ internal static class NotificationsDe
         ["notif.realtor_results"] = "Die Haus-Lotterie ist in der Ergebnisphase. Wie es für dich ausgegangen ist, siehst du in der Makler-App.",
         ["notif.staff_notice_title"] = "Nachricht vom Team",
         ["notif.staff_notice_body"] = "Öffne die Einstellungen, um sie zu lesen.",
+
+        // Timers (added after update 2.3.3)
+        ["notif.timers_title"] = "Timer",
+        ["notif.timers_daily"] = "Täglicher Reset",
+        ["notif.timers_gc"] = "Reset der Staatlichen Gesellschaft",
+        ["notif.timers_weekly"] = "Wöchentlicher Reset",
+        ["notif.timers_fr"] = "Fashion Report ist offen",
+        ["notif.timers_cactpot"] = "Jumbo-Cactpot-Ziehung",
+        ["notif.timers_ocean"] = "Ozeanfischen: Anmeldung offen",
+        ["notif.timers_venture"] = "{0} hat die Unternehmung abgeschlossen: {1}",
+        ["notif.timers_fleet"] = "{0} ist von der Reise zurück",
+        ["notif.timers_custom"] = "\"{0}\" ist fertig",
+        ["notif.timers_lead"] = "in {0} Min.",
+        ["notif.timers_chat"] = "Eine Timer-Erinnerung ist fällig.",
+        ["notif.calendar_alert_title"] = "Kalender",
+        ["notif.calendar_alert_body"] = "Steht an: {0}",
+
+        // added after update 2.3.4
+        ["notif.realtor_estate"] = "{0}: seit {2} Tagen nicht mehr zu Hause. Ein privates Grundstück wird nach 45 Tagen Abwesenheit abgerissen, es bleiben also noch etwa {1} Tage.",
     };
 }

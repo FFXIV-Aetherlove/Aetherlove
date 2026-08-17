@@ -1,0 +1,14 @@
+{
+  "name": "Viper's Off-hand Twinblade",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_twinblade_off.png",
+  "anchor": "handL",
+  "origin": [
+    19,
+    84
+  ],
+  "width": 30,
+  "height": 102,
+  "behind": false
+}

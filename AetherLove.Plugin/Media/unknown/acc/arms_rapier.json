@@ -1,0 +1,14 @@
+{
+  "name": "Red Mage's Rapier",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_rapier.png",
+  "anchor": "handR",
+  "origin": [
+    14,
+    105
+  ],
+  "width": 42,
+  "height": 129,
+  "behind": false
+}

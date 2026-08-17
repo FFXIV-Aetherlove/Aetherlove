@@ -1,0 +1,14 @@
+{
+  "name": "Red Mage's Focus",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_focus.png",
+  "anchor": "handL",
+  "origin": [
+    34,
+    104
+  ],
+  "width": 55,
+  "height": 75,
+  "behind": false
+}

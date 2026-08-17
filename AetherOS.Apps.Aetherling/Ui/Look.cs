@@ -3,12 +3,14 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Text;
 using AetherLove.UI;
+using AetherOS.Sdk;
 using Dalamud.Bindings.ImGui;
 
 namespace AetherOS.Apps.Aetherling.Ui;
 
-/// <summary>The one place the app's colours and easings live. Everything here is dark on purpose: this app
-/// never adopts the phone theme, because it is not supposed to look like it belongs.</summary>
+/// <summary>The one place the app's colours and easings live. Everything here is dark on purpose: the app
+/// is a night sky whatever the phone is wearing. The theme reaches it only as a tint in the ground
+/// (<see cref="Backdrop"/>), which is enough to belong without lighting the room.</summary>
 internal static class Look
 {
     public static readonly Vector4 Void = new(0.016f, 0.020f, 0.035f, 1f);
@@ -17,11 +19,32 @@ internal static class Look
     public static readonly Vector4 Spark = new(0.98f, 0.82f, 0.36f, 1f);
     public static readonly Vector4 Whisper = new(0.72f, 0.78f, 0.86f, 0.55f);
 
+    /// <summary>Reading text. <see cref="Whisper"/> is a half-transparent aside and turns to mush the
+    /// moment a paragraph is written in it, which is what happened to the grown-up's welcome.</summary>
+    public static readonly Vector4 Body = new(0.88f, 0.92f, 0.97f, 1f);
+
     public static uint U32(Vector4 c) => DrawFx.U32(c);
 
     public static uint U32(Vector4 c, float alpha) => DrawFx.U32(c with { W = c.W * alpha });
 
     public static float EaseOut(float t) => 1f - MathF.Pow(1f - Math.Clamp(t, 0f, 1f), 3f);
+
+    /// <summary>The app's ground, wearing a trace of whatever theme the phone is in: a vertical fall from
+    /// an accent-tinted night to an almost-black, with one soft bloom up top. The tint stays this weak on
+    /// purpose, because everything drawn on it (the crystal, the creature, its own light) is what the page
+    /// is for, and a lit background eats all of it.</summary>
+    public static void Backdrop(ImDrawListPtr dl, OsTheme theme, Vector2 origin, Vector2 size)
+    {
+        var top = U32(Tint(theme.Accent, 0.17f));
+        var bottom = U32(Tint(theme.SecondaryEnd, 0.07f));
+        dl.AddRectFilledMultiColor(origin, origin + size, top, top, bottom, bottom);
+        Halo(dl, new Vector2(origin.X + (size.X * 0.5f), origin.Y + (size.Y * 0.16f)),
+            size.X * 0.95f, theme.Accent, 0.05f, 6);
+    }
+
+    /// <summary>The night with a colour mixed into it, always fully opaque.</summary>
+    private static Vector4 Tint(Vector4 colour, float amount) =>
+        Vector4.Lerp(Void, colour with { W = 1f }, amount) with { W = 1f };
 
     public static float EaseInOut(float t)
     {
@@ -233,9 +256,31 @@ internal static class Look
         return rows.Count;
     }
 
+    /// <summary>Left-aligned and wrapped, for list rows where a centred block would fight the bullet
+    /// beside it. Returns the rows drawn.</summary>
+    public static int LeftWrapped(
+        ImDrawListPtr dl, string text, float x, float y, float maxWidth, uint colour, float scale)
+    {
+        var size = ImGui.GetFontSize() * scale;
+        var lineStep = LineStep(scale);
+        var rows = WrapLines(text, maxWidth, scale);
+        for (var row = 0; row < rows.Count; row++)
+        {
+            dl.AddText(ImGui.GetFont(), size, new Vector2(x, y + (row * lineStep)), colour, rows[row]);
+        }
+        return rows.Count;
+    }
+
     /// <summary>How tall the same call would draw, for anything that has to size a box around it first.</summary>
     public static float WrappedHeight(string text, float maxWidth, float scale) =>
         WrapLines(text, maxWidth, scale).Count * LineStep(scale);
+
+    /// <summary>The INK's height: the last line's leading is not drawn, so a block measured with
+    /// <see cref="WrappedHeight"/> is a quarter of a line taller than what lands on screen. Centring
+    /// anything against that (a bullet's chip, say) hangs it visibly low.</summary>
+    public static float BlockHeight(string text, float maxWidth, float scale) =>
+        ((WrapLines(text, maxWidth, scale).Count - 1) * LineStep(scale))
+        + (ImGui.GetTextLineHeight() * scale);
 
     public static float LineStep(float scale) => ImGui.GetTextLineHeight() * scale * 1.25f;
 

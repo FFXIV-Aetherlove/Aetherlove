@@ -1,0 +1,14 @@
+{
+  "name": "Snorkel & Goggles",
+  "slot": "glasses",
+  "tier": "seasonal",
+  "file": "glasses_snorkel.png",
+  "anchor": "face",
+  "origin": [
+    75,
+    49
+  ],
+  "width": 144,
+  "height": 126,
+  "behind": false
+}

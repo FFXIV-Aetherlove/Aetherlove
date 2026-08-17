@@ -39,7 +39,7 @@ internal sealed class PetIntroScreen(PetRuntime pet, Action<bool, int> done)
         var fade = ctx.ReduceMotion ? 1f : Look.EaseOut((float)(ImGui.GetTime() - _shown) / 0.45f);
         var centreX = origin.X + (size.X * 0.5f);
 
-        dl.AddRectFilled(origin, origin + size, Look.U32(Look.Void));
+        Look.Backdrop(dl, ctx.Theme, origin, size);
         Look.Halo(dl, new Vector2(centreX, origin.Y + (size.Y * 0.52f)), size.X * 0.7f, Look.Crystal,
             0.12f * fade);
 

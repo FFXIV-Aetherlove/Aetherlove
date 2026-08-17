@@ -11,7 +11,27 @@ public sealed record SparkCatalogEntryDto(
     int Amount,
     SparkPool Pool,
     int? MaxPerDay,
-    int? MaxPointsPerWeek);
+    int? MaxPointsPerWeek,
+
+    /// <summary>Times this account has been paid for the action since UTC midnight, which is the same
+    /// boundary the daily cap is counted against. Compared with <paramref name="MaxPerDay"/> it is what
+    /// lets the page say a thing is done rather than only what it is worth.</summary>
+    int UsedToday = 0,
+
+    /// <summary>Sparks this action has paid this spark week, for the entries capped by points rather than
+    /// by a count. Trailing with a default so an older server's catalog still deserializes.</summary>
+    int EarnedThisWeek = 0)
+{
+    /// <summary>Nothing more is coming from this action right now: either the day's count is used up or the
+    /// week's points are. Both together, because a page that ticks one and not the other is telling half a
+    /// truth about the same question, which is "can I still earn this".</summary>
+    public bool Exhausted =>
+        (MaxPerDay is { } perDay && UsedToday >= perDay)
+        || (MaxPointsPerWeek is { } perWeek && EarnedThisWeek >= perWeek);
+
+    /// <summary>The week's points ran out, so this one does not come back at the next daily reset.</summary>
+    public bool WeekSpent => MaxPointsPerWeek is { } perWeek && EarnedThisWeek >= perWeek;
+}
 
 /// <summary>The Wallet app's wallet snapshot: balance, lifetimes, this week's per-pool counters, the
 /// effective caps, and the earning catalog. Weekly counters are already normalized to the current spark

@@ -1,0 +1,14 @@
+{
+  "name": "Beard",
+  "slot": "facialhair",
+  "tier": "premium",
+  "file": "facialhair_beard.png",
+  "anchor": "face",
+  "origin": [
+    55,
+    -45
+  ],
+  "width": 110,
+  "height": 54,
+  "behind": false
+}

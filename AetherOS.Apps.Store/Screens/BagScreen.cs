@@ -487,22 +487,29 @@ internal sealed class BagScreen(
     /// wearable child, and the scene gives each its own row.</summary>
     private static IReadOnlyList<SuccessScreen.Enableable> Enableables(StoreProductDto product)
     {
-        if (Wearable(product.ItemKind))
+        if (Wearable(product.ItemKind) && Actionable(product.ItemKind, product.ItemRef))
         {
             return [new SuccessScreen.Enableable(
                 product.Id, product.ItemKind, product.ItemRef, StoreLoc.Name(product), product.HasImage,
                 product.ImageVersion)];
         }
         return product.BundleItems
-            .Where(i => Wearable(i.ItemKind))
+            .Where(i => Wearable(i.ItemKind) && Actionable(i.ItemKind, i.ItemRef))
             .Select(i => new SuccessScreen.Enableable(
                 i.ChildProductId, i.ItemKind, i.ItemRef, StoreLoc.Name(i), true, i.ImageVersion))
             .DistinctBy(e => e.ProductId)
             .ToArray();
     }
 
+    /// <summary>A consumable only earns a button when there is somewhere for it to go; crystals feed
+    /// the pet, a name tag does nothing yet.</summary>
+    private static bool Actionable(StoreItemKind kind, string itemRef) =>
+        kind != StoreItemKind.AetherlingConsumable || itemRef.StartsWith("crystal-", StringComparison.Ordinal);
+
+    /// <summary>Kinds the success scene can act on: the two that equip themselves, plus the pet's
+    /// food, whose action is to walk you to the mouth it was bought for.</summary>
     private static bool Wearable(StoreItemKind kind) =>
-        kind is StoreItemKind.ThemePack or StoreItemKind.AvatarFrame;
+        kind is StoreItemKind.ThemePack or StoreItemKind.AvatarFrame or StoreItemKind.AetherlingConsumable;
 
     private string LineErrorText()
     {

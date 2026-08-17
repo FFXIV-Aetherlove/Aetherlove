@@ -1,0 +1,14 @@
+{
+  "name": "Botanist's Scythe",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_grasshook.png",
+  "anchor": "handR",
+  "origin": [
+    17,
+    107
+  ],
+  "width": 73,
+  "height": 154,
+  "behind": false
+}

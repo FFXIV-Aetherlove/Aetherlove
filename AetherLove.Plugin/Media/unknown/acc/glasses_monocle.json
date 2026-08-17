@@ -1,0 +1,14 @@
+{
+  "name": "Monocle",
+  "slot": "glasses",
+  "tier": "premium",
+  "file": "glasses_monocle.png",
+  "anchor": "face",
+  "origin": [
+    60,
+    -3
+  ],
+  "width": 61,
+  "height": 78,
+  "behind": false
+}

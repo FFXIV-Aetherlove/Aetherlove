@@ -1,0 +1,14 @@
+{
+  "name": "Machinist's Firearm",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_firearm.png",
+  "anchor": "handR",
+  "origin": [
+    23,
+    33
+  ],
+  "width": 106,
+  "height": 83,
+  "behind": false
+}

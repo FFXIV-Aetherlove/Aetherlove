@@ -1,0 +1,14 @@
+{
+  "name": "Moonfire Hachimaki",
+  "slot": "head",
+  "tier": "seasonal",
+  "file": "head_hachimaki.png",
+  "anchor": "head",
+  "origin": [
+    66,
+    -13
+  ],
+  "width": 165,
+  "height": 63,
+  "behind": false
+}

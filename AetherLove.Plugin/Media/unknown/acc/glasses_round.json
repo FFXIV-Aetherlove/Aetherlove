@@ -1,0 +1,14 @@
+{
+  "name": "Round Glasses",
+  "slot": "glasses",
+  "tier": "premium",
+  "file": "glasses_round.png",
+  "anchor": "face",
+  "origin": [
+    63,
+    1
+  ],
+  "width": 126,
+  "height": 62,
+  "behind": false
+}

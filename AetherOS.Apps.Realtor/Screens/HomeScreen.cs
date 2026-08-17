@@ -24,10 +24,13 @@ internal sealed class HomeScreen
 {
     private const float PadX = 16f;
 
+    private static readonly Dictionary<uint, string> _zoneNames = [];
+
     private readonly RealtorDataService _data;
     private readonly RealtorFilters _filters;
     private readonly LotteryClock _clock;
     private readonly RealtorSettings _settings;
+    private readonly IEstateWatch _estates;
     private readonly Action _openSettings = null!;
     private PaissaWorldDetail? _observed;
     private const string MenuPopupId = "##realtorMenuPopup";
@@ -36,6 +39,7 @@ internal sealed class HomeScreen
     private readonly Action _openWorldPick;
     private readonly Action<int, string, PaissaDistrict> _openDistrict;
     private readonly Action _openTour;
+    private readonly Action _openRealty;
     private readonly EntranceAnimation _entrance = new();
 
     private string _worldName = "";
@@ -46,17 +50,20 @@ internal sealed class HomeScreen
     private int _generation;
 
     public HomeScreen(RealtorDataService data, RealtorFilters filters, LotteryClock clock, RealtorSettings settings,
-        Action openWorldPick,
-        Action<int, string, PaissaDistrict> openDistrict, Action openTour, Action openSettings)
+        IEstateWatch estates, Action openWorldPick,
+        Action<int, string, PaissaDistrict> openDistrict, Action openTour, Action openSettings,
+        Action openRealty)
     {
         _data = data;
         _filters = filters;
         _clock = clock;
         _settings = settings;
+        _estates = estates;
         _openWorldPick = openWorldPick;
         _openDistrict = openDistrict;
         _openTour = openTour;
         _openSettings = openSettings;
+        _openRealty = openRealty;
     }
 
     public string WorldName => _worldName;
@@ -177,6 +184,10 @@ internal sealed class HomeScreen
                     DrawCenteredHint(Loc.T("os.realtor_offline"), bodyW);
                     DrawRetry(bodyW);
                 }
+                // Your own house is read from the game, not from PaissaDB, so it is still worth showing
+                // while the open-plot data is missing.
+                ImGui.Dummy(new Vector2(0f, Px(14f)));
+                DrawHomeRow(bodyW);
                 return;
             }
 
@@ -204,6 +215,7 @@ internal sealed class HomeScreen
             {
                 DrawDistrictRow(district, bodyW);
             }
+            DrawHomeRow(bodyW);
 
             ImGui.Dummy(new Vector2(0f, Px(14f)));
         });
@@ -226,12 +238,26 @@ internal sealed class HomeScreen
         if (ImGui.BeginPopup(MenuPopupId))
         {
             var contribute = Loc.T("os.realtor_menu_contribute");
-            var w = MathF.Max(Px(150f), ImGui.CalcTextSize(contribute).X + Px(56f));
+            // Widest label wins: sized off one row, a longer translation of any other row clips.
+            var w = Px(150f);
+            foreach (var label in new[]
+            {
+                contribute, Loc.T("os.realtor_menu_realty"), Loc.T("os.realtor_menu_settings"),
+                Loc.T("os.realtor_menu_tour"),
+            })
+            {
+                w = MathF.Max(w, ImGui.CalcTextSize(label).X + Px(56f));
+            }
             var rowH = ImGui.GetTextLineHeight() + Px(12f);
             if (AppHeader.MenuRow(FontAwesomeIcon.HandsHelping, contribute, w, rowH))
             {
                 _showContribute = true;
                 ImGui.CloseCurrentPopup();
+            }
+            if (AppHeader.MenuRow(FontAwesomeIcon.Key, Loc.T("os.realtor_menu_realty"), w, rowH))
+            {
+                ImGui.CloseCurrentPopup();
+                _openRealty();
             }
             if (AppHeader.MenuRow(FontAwesomeIcon.Cog, Loc.T("os.realtor_menu_settings"), w, rowH))
             {
@@ -559,6 +585,93 @@ internal sealed class HomeScreen
         {
             _openDistrict(_worldId, _worldName, district);
         }
+    }
+
+    /// <summary>The logged-in character's own estate, sat below the districts in the same card. It is read
+    /// from the game rather than from PaissaDB, so it ignores the filters above it and survives the data
+    /// being unavailable.</summary>
+    private void DrawHomeRow(float winW)
+    {
+        if (_estates.Current is not { TerritoryTypeId: not 0 } home)
+        {
+            return;
+        }
+
+        var t = ThemeService.Current;
+        var color = RealtorUi.DistrictColor((int)home.TerritoryTypeId);
+        var cardW = winW - (Px(PadX) * 2f);
+        var cardH = Px(58f);
+
+        ImGui.SetCursorPosX(Px(PadX));
+        var tl = ImGui.GetCursorScreenPos();
+        ImGui.Dummy(new Vector2(cardW, cardH));
+        var dl = ImGui.GetWindowDrawList();
+        dl.AddRectFilled(tl, tl + new Vector2(cardW, cardH),
+            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.06f)), Px(14f));
+
+        var circle = Px(36f);
+        var circleTl = new Vector2(tl.X + Px(11f), tl.Y + (cardH - circle) * 0.5f);
+        dl.AddCircleFilled(circleTl + new Vector2(circle * 0.5f, circle * 0.5f), circle * 0.5f,
+            ImGui.GetColorU32(color with { W = 0.22f }));
+        var iconPx = circle * 0.52f;
+        var iconSz = IconDraw.Measure(FontAwesomeIcon.Home, iconPx);
+        IconDraw.Add(dl, FontAwesomeIcon.Home, iconPx,
+            circleTl + new Vector2((circle - iconSz.X) * 0.5f, (circle - iconSz.Y) * 0.5f),
+            ImGui.GetColorU32(color));
+
+        // The button is submitted before the label so it keeps its own clicks; the row itself is not a
+        // target, since there is nothing else to open.
+        var right = tl.X + cardW - Px(14f);
+        if (_estates.CanTeleportHome)
+        {
+            var label = Loc.T("os.realtor_home_teleport");
+            var labelSz = ImGui.CalcTextSize(label);
+            var btnW = labelSz.X + Px(24f);
+            var btnH = labelSz.Y + Px(10f);
+            var btnTl = new Vector2(right - btnW, tl.Y + (cardH - btnH) * 0.5f);
+            ImGui.SetCursorScreenPos(btnTl);
+            var clicked = ImGui.InvisibleButton("##realtorHomeTeleport", new Vector2(btnW, btnH));
+            HandOnHover();
+            var hovered = ImGui.IsItemHovered();
+            dl.AddRectFilled(btnTl, btnTl + new Vector2(btnW, btnH),
+                ImGui.GetColorU32(t.Accent with { W = hovered ? 0.75f : 0.55f }), btnH * 0.5f);
+            dl.AddText(btnTl + new Vector2(Px(12f), Px(5f)), ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 1f)),
+                label);
+            right = btnTl.X - Px(8f);
+            if (clicked)
+            {
+                _estates.TeleportHome();
+            }
+        }
+
+        var textX = circleTl.X + circle + Px(11f);
+        var name = Loc.T("os.realtor_home_row", ZoneName(home.TerritoryTypeId));
+        dl.AddText(new Vector2(textX, tl.Y + (cardH - ImGui.GetTextLineHeight()) * 0.5f),
+            ImGui.GetColorU32(UiColors.Body), TruncateToWidth(name, right - textX - Px(8f)));
+
+        ImGui.Dummy(new Vector2(0f, Px(6f)));
+    }
+
+    /// <summary>The residential zone's own name in the player's client language, so it matches the district
+    /// rows above without depending on PaissaDB having answered.</summary>
+    private static string ZoneName(uint territoryTypeId)
+    {
+        if (_zoneNames.TryGetValue(territoryTypeId, out var cached))
+        {
+            return cached;
+        }
+        var name = string.Empty;
+        try
+        {
+            name = UiHost.DataManager.GetExcelSheet<Lumina.Excel.Sheets.TerritoryType>()
+                .GetRowOrDefault(territoryTypeId)?.PlaceName.ValueNullable?.Name.ExtractText() ?? string.Empty;
+        }
+        catch (Exception ex)
+        {
+            UiHost.Log.Debug($"[Realtor] Zone name lookup failed: {ex.Message}");
+        }
+        _zoneNames[territoryTypeId] = name;
+        return name;
     }
 
     private void DrawRetry(float winW)

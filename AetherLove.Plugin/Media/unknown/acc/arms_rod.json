@@ -1,0 +1,14 @@
+{
+  "name": "Black Mage's Rod",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_rod.png",
+  "anchor": "handR",
+  "origin": [
+    18,
+    120
+  ],
+  "width": 68,
+  "height": 166,
+  "behind": false
+}

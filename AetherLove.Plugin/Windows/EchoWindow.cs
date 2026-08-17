@@ -48,9 +48,13 @@ public sealed partial class EchoWindow : Window, IDisposable
 
     private const float HeaderH = 34f;
     private const float SidebarW = 320f;
-    private const float SidebarCollapseW = 860f;
     private const float MinStageW = 220f;
     private const float PanelGap = 8f;
+
+    /// <summary>Below this the sidebar takes the window to itself, because the stage no longer fits beside it.
+    /// Derived rather than picked: a threshold above what the two panels actually need hides the video on a
+    /// window the user is still allowed to have, and the video is the reason the window exists.</summary>
+    private const float SidebarCollapseW = MinStageW + PanelGap + SidebarW;
     private const float PanelRounding = 10f;
     private const float StageRounding = 8f;
     private const float BorderThickness = 2f;
@@ -230,14 +234,16 @@ public sealed partial class EchoWindow : Window, IDisposable
         ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, Px(WindowRounding));
         // Dalamud's global font scale would double-scale a UI already sized in Px; pinned last so no fallible
         // PreDraw code runs between the pin and PostDraw's restore.
-        var io = ImGui.GetIO();
-        _savedFontGlobalScale = io.FontGlobalScale;
-        io.FontGlobalScale = 1f;
+        FontDiagnostics.Sample("EchoWindow.PreDraw/before-pin");
+        _savedFontGlobalScale = FontScalePin.Pin();
+        FontDiagnostics.Sample("EchoWindow.PreDraw/after-pin");
     }
 
     public override void PostDraw()
     {
-        ImGui.GetIO().FontGlobalScale = _savedFontGlobalScale;
+        FontDiagnostics.Sample("EchoWindow.PostDraw/before-restore");
+        FontScalePin.Restore(_savedFontGlobalScale);
+        FontDiagnostics.Sample("EchoWindow.PostDraw/after-restore");
         ImGui.PopStyleVar(2);
     }
 
@@ -487,9 +493,12 @@ public sealed partial class EchoWindow : Window, IDisposable
             PlayerErrorBadId => new StageNotice(FontAwesomeIcon.Unlink, UiColors.Amber,
                 Loc.T("echo.bad_id_title"), Loc.T("echo.bad_id_body"),
                 SkipLabel(), SkipCurrent),
+            // An unnamed error is this machine's problem, not the video's: the three cases above are
+            // properties of the video and fail the same way for everyone, but a transient decode or network
+            // fault is local. Retry our own player instead of yanking the room off a video it is watching.
             _ => new StageNotice(FontAwesomeIcon.ExclamationTriangle, UiColors.Amber,
                 Loc.T("echo.player_error_title"), Loc.T("echo.player_error_body"),
-                SkipLabel(), SkipCurrent),
+                Loc.T("echo.retry"), RestartHost),
         };
     }
 

@@ -205,6 +205,106 @@ public sealed class CoreDraw
             drawList, at, new Vector2(r * widen, r * 0.8f), new Vector4(1f, 1f, 1f, coreAlpha * bodyAlpha));
     }
 
+    /// <summary>Draws one worn accessory riding its per-cell anchor pin, so it follows hops and
+    /// squashes with the body. Authored in 256-space: the sprite scales with display size and the
+    /// slot's fit multiplier, never with the sheet's cell resolution. Head and face items squash
+    /// with the pose; everything else stays rigid.</summary>
+    public void DrawAccessory(
+        ImDrawListPtr drawList,
+        ITextureCache textures,
+        string imagePath,
+        AccessoryDef def,
+        Vector2 bottomCentre,
+        float displaySize,
+        int cellIndex,
+        Vector2 scale,
+        Vector2 offset,
+        bool flipX,
+        float alpha = 1f)
+    {
+        if (textures.Get(imagePath) is not { } handle)
+        {
+            return;
+        }
+
+        var manifest = _assets.Manifest;
+        var ds = displaySize / manifest.Cell;
+
+        // A still piece is furniture rather than clothing: it drops the body's whole animation, the hop and
+        // bob (offset), the squash (scale) and the drift of the anchor itself across the frames, and reads
+        // its place off the resting pose. Keeping the flip is deliberate, so a piece the creature turns
+        // around inside still turns with it.
+        var still = def.StaysStill;
+        var poseScale = still ? Vector2.One : scale;
+        var poseOffset = still ? Vector2.Zero : offset;
+        var poseCell = still ? manifest.RestCell ?? cellIndex : cellIndex;
+
+        var local = flipX ? poseOffset with { X = -poseOffset.X } : poseOffset;
+        var anchorBase = bottomCentre + (local * (displaySize / 256f));
+
+        var anchor = manifest.AnchorForCell(def.Anchor, poseCell);
+        if (flipX)
+        {
+            anchor.X = manifest.Cell - anchor.X;
+        }
+        var screenAnchor = LocalToScreen(manifest, anchor, poseScale, anchorBase, ds);
+
+        var accessoryScale = (displaySize / 256f) * manifest.SlotScaleFor(def.Slot);
+        var quadScale = def.Anchor is "head" or "face"
+            ? new Vector2(accessoryScale) * poseScale
+            : new Vector2(accessoryScale);
+
+        var origin = def.OriginPoint;
+        if (flipX)
+        {
+            origin.X = def.Width - origin.X;
+        }
+        var min = screenAnchor - (origin * quadScale);
+        var max = min + (new Vector2(def.Width, def.Height) * quadScale);
+        // Half a texel in from each edge: the sampler wraps, so sampling exactly at 0 or 1 bleeds the
+        // opposite edge back in as a phantom line along an accessory that reaches its own border.
+        var inset = new Vector2(0.5f / MathF.Max(1, def.Width), 0.5f / MathF.Max(1, def.Height));
+        var uv0 = new Vector2(flipX ? 1f - inset.X : inset.X, inset.Y);
+        var uv1 = new Vector2(flipX ? inset.X : 1f - inset.X, 1f - inset.Y);
+        drawList.AddImage(
+            handle, min, max, uv0, uv1, ImGui.ColorConvertFloat4ToU32(new Vector4(1f, 1f, 1f, alpha)));
+    }
+
+    /// <summary>Inks the dynamic mouth at the manifest's mouth anchor. A sheet that declares no
+    /// mouth anchor kept its baked face and this is a no-op.</summary>
+    public void DrawMouth(
+        ImDrawListPtr drawList,
+        Vector2 bottomCentre,
+        float displaySize,
+        int cellIndex,
+        Vector2 scale,
+        Vector2 offset,
+        bool flipX,
+        in MouthShape shape,
+        float alpha = 1f)
+    {
+        var manifest = _assets.Manifest;
+        if (!manifest.HasDynamicMouth)
+        {
+            return;
+        }
+
+        var ds = displaySize / manifest.Cell;
+        var local = flipX ? offset with { X = -offset.X } : offset;
+        var anchorBase = bottomCentre + (local * (displaySize / 256f));
+
+        var anchor = manifest.AnchorForCell("mouth", cellIndex);
+        if (flipX)
+        {
+            anchor.X = manifest.Cell - anchor.X;
+        }
+        var screenAnchor = LocalToScreen(manifest, anchor, scale, anchorBase, ds);
+
+        var ink = manifest.LineColor.Length > 0 ? Palette.ParseHex(manifest.LineColor) : Vector4.Zero;
+        MouthDraw.Draw(
+            drawList, screenAnchor, displaySize / 256f, scale, flipX, shape, manifest.MouthScale, ink, alpha);
+    }
+
     /// <summary>A soft-edged ellipse built from concentric filled rings.</summary>
     private static void AddSoftEllipse(
         ImDrawListPtr drawList, Vector2 centre, Vector2 radii, Vector4 colour, int rings = 5)

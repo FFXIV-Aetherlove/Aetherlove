@@ -1,0 +1,14 @@
+{
+  "name": "Weaver's Needle",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_needle.png",
+  "anchor": "handR",
+  "origin": [
+    41,
+    145
+  ],
+  "width": 80,
+  "height": 187,
+  "behind": false
+}

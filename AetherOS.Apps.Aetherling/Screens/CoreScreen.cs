@@ -159,6 +159,27 @@ internal sealed class CoreScreen(IAetherlingHost host, Action<float> tempo)
         _ => 1.00f,
     };
 
+    /// <summary>The same loop, carried past the hatch: a growing creature keeps the crystal's music and
+    /// each form takes it a step higher, picking up above Kindling where the ceremony left it. Derived from
+    /// the growth counters the worn form comes from, so the tempo and the body change together.
+    ///
+    /// <para>The adult has none of it. The music belongs to the becoming, and a grown pet's page is quiet
+    /// on purpose.</para></summary>
+    public static float? GrowthSpeedFor(AetherlingDto core)
+    {
+        if (core.HatchedAtUtc is null || core.Adult is not null)
+        {
+            return null;
+        }
+        var perStage = Math.Max((short)1, core.Growth?.FeedsPerStage ?? 3);
+        var fed = core.Growth?.GrowthFed ?? 0;
+        if (fed >= perStage * 2)
+        {
+            return 1.52f;
+        }
+        return fed >= perStage ? 1.44f : 1.36f;
+    }
+
     public void Draw(OsAppContext ctx)
     {
         EnsureLoaded();
@@ -173,7 +194,7 @@ internal sealed class CoreScreen(IAetherlingHost host, Action<float> tempo)
         _reduceMotion = ctx.ReduceMotion;
         DrainPending(now);
 
-        dl.AddRectFilled(origin, origin + size, Look.U32(Look.Void));
+        Look.Backdrop(dl, ctx.Theme, origin, size);
 
         if (_ceremony is null || _draw is null || _assets is null)
         {

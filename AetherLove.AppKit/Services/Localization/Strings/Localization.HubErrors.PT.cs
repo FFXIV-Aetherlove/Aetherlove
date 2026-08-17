@@ -10,6 +10,7 @@ internal static class HubErrorsPt
         ["huberror.unauthenticated"] = "Tua sessão não é mais válida. Faz login novamente.",
         ["huberror.banned"] = "Este perfil do AetherLove está banido.",
         ["huberror.account_banned"] = "A Tua conta foi banida.",
+        ["huberror.server_closed"] = "O servidor está fechado no momento. {0}",
         ["huberror.rate_limited"] = "Estás a faz isso com muita frequência. Tenta novamente mais tarde.",
         ["huberror.profile_not_found"] = "Perfil não encontrado.",
         ["huberror.profile_not_visible"] = "Este perfil não está disponível.",
@@ -167,5 +168,10 @@ internal static class HubErrorsPt
         ["huberror.echo_invalid_video"] = "Isso não parece um link do YouTube.",
         ["huberror.echo_name_invalid"] = "Esse nome de sala não pode ser usado.",
         ["huberror.hangout_watch_room_invalid"] = "Essa sessão já não está disponível.",
+
+        // aetherling growth (added after update 2.3.4)
+        ["huberror.aetherling_no_crystal"] = "Não há nenhum cristal desse tipo para lhe dar.",
+        ["huberror.aetherling_full"] = "Está bem cheio. Amanhã volta a ter fome.",
+        ["huberror.aetherling_not_owned"] = "Não tem isso para vestir.",
     };
 }

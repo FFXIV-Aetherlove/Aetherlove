@@ -1,0 +1,103 @@
+{
+  "_comment": "Palettes follow the prototype's colour grounding. Tiers here are the client's availability rule: Dawn is the free base everyone owns; every other palette needs an ownership row (store purchase or the adulting scratch card). The store is the source of sellability.",
+  "palettes": [
+    {
+      "name": "Dawn",
+      "tier": "free",
+      "body": "#9FE0EE",
+      "accent": "#FFDF9E",
+      "eye": "#2F6B7A"
+    },
+    {
+      "name": "Ember",
+      "tier": "premium",
+      "body": "#E8734A",
+      "accent": "#FFD98E",
+      "eye": "#5A2E1F"
+    },
+    {
+      "name": "Meadow",
+      "tier": "premium",
+      "body": "#9ED87F",
+      "accent": "#FFF3B0",
+      "eye": "#3A5A2E"
+    },
+    {
+      "name": "Lagoon",
+      "tier": "premium",
+      "body": "#6FB8D8",
+      "accent": "#CFEFF7",
+      "eye": "#1F4A63"
+    },
+    {
+      "name": "Dune",
+      "tier": "premium",
+      "body": "#D8A85E",
+      "accent": "#FFE7B0",
+      "eye": "#4A3218"
+    },
+    {
+      "name": "Frost",
+      "tier": "premium",
+      "body": "#BFD9E8",
+      "accent": "#FFFFFF",
+      "eye": "#35566B"
+    },
+    {
+      "name": "Rose",
+      "tier": "premium",
+      "body": "#E9A0B8",
+      "accent": "#FFE0EA",
+      "eye": "#6B2F45"
+    },
+    {
+      "name": "Harvest",
+      "tier": "premium",
+      "body": "#D2762F",
+      "accent": "#FFC77A",
+      "eye": "#4A2413"
+    },
+    {
+      "name": "Sunset",
+      "tier": "premium",
+      "body": "#F5906B",
+      "accent": "#FFE0A8",
+      "eye": "#46264E"
+    },
+    {
+      "name": "Void",
+      "tier": "premium",
+      "body": "#8A6CD8",
+      "accent": "#C9A9FF",
+      "eye": "#2D2440"
+    },
+    {
+      "name": "Levin",
+      "tier": "premium",
+      "body": "#B9A6F0",
+      "accent": "#FFE96A",
+      "eye": "#2E2A5C"
+    },
+    {
+      "name": "Aurora",
+      "tier": "premium",
+      "body": "#7FE3C4",
+      "accent": "#C9B8FF",
+      "eye": "#1E3A4A"
+    },
+    {
+      "name": "Mist",
+      "tier": "premium",
+      "body": "#B4E4F0",
+      "accent": "#E8FBFF",
+      "eye": "#3E7C8C"
+    },
+    {
+      "name": "Gloam",
+      "tier": "premium",
+      "body": "#9A93B5",
+      "accent": "#D6CFEA",
+      "eye": "#2B2838"
+    }
+  ]
+}

@@ -273,4 +273,21 @@ public sealed class HomeLayout
             layout.PlaceInFirstFree(id);
         }
     });
+
+    /// <summary>Puts an id in the named cell, or in the first empty one when that cell is gone or taken.
+    /// The asked-for cell is where the player's cursor was, so it is worth honouring exactly.</summary>
+    public static void PlaceInConfigAt(OsConfig os, string id, int page, int slot) => Edit(os, layout =>
+    {
+        if (layout.TryFind(id, out _, out _) || layout.Dock.Contains(id))
+        {
+            return;
+        }
+        if (page >= 0 && page < layout.Pages.Count && slot >= 0 && slot < layout.Pages[page].Length
+            && layout.Pages[page][slot] == null)
+        {
+            layout.Pages[page][slot] = id;
+            return;
+        }
+        layout.PlaceInFirstFree(id);
+    });
 }

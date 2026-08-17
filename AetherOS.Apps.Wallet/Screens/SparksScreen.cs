@@ -370,6 +370,14 @@ internal sealed class SparksScreen
         SparkAction.YapperCheckFeed => FontAwesomeIcon.Rss,
         SparkAction.WayfinderFindFirst or SparkAction.WayfinderFindSecond or SparkAction.WayfinderFind =>
             FontAwesomeIcon.Compass,
+        SparkAction.GrooveActivity => FontAwesomeIcon.Music,
+        SparkAction.EchoHosted => FontAwesomeIcon.Tv,
+        SparkAction.EchoJoined => FontAwesomeIcon.UserFriends,
+        SparkAction.StoreVisit => FontAwesomeIcon.ShoppingBag,
+        SparkAction.WalletVisit => FontAwesomeIcon.Wallet,
+        // Only ever reached once the pet is grown: the wallet withholds this row entirely before that, so
+        // the icon is safe to be the creature's own rather than a question mark.
+        SparkAction.AetherlingGame => FontAwesomeIcon.Gamepad,
         SparkAction.AdminAdjust => FontAwesomeIcon.Wrench,
         _ => FontAwesomeIcon.Question,
     };
@@ -393,7 +401,10 @@ internal sealed class SparksScreen
         SparkAction.EchoJoined => Loc.T("os.wallet_action_echo_join"),
         SparkAction.StoreVisit => Loc.T("os.wallet_action_store_visit"),
         SparkAction.WalletVisit => Loc.T("os.wallet_action_wallet_visit"),
-        SparkAction.AetherlingAdopt or SparkAction.AetherlingAttune => Loc.T("os.wallet_action_unknown_thing"),
+        // The whole Aetherling family keeps the question marks: the wallet renders for accounts that have
+        // never hatched anything, and the mystery rule forbids naming the pet there.
+        SparkAction.AetherlingAdopt or SparkAction.AetherlingAttune or SparkAction.AetherlingGame =>
+            Loc.T("os.wallet_action_unknown_thing"),
         SparkAction.AdminAdjust => Loc.T("os.wallet_action_admin_adjust"),
         _ => Loc.T("os.wallet_action_unknown"),
     };

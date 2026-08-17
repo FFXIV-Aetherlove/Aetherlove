@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
@@ -139,11 +139,16 @@ public sealed class SessionBootstrapper : IDisposable
         }
     }
 
+    /// <summary>What the server said when it turned this client away, or empty. Shown by the offline
+    /// screen in place of its own wording, and cleared the moment a connection succeeds.</summary>
+    public string ServerNotice { get; private set; } = string.Empty;
+
     public async Task RefreshConnectionInfoAsync(CancellationToken ct = default)
     {
         try
         {
             var status = await _hub.GetConnectionInfoAsync(ct).ConfigureAwait(false);
+            ServerNotice = string.Empty;
             _lastConnection = status;
             _notifications.NewMatches = status.NewMatchCount;
             await SyncHangoutsAsync(status, ct).ConfigureAwait(false);
@@ -154,6 +159,14 @@ public sealed class SessionBootstrapper : IDisposable
             await _signal.DisconnectAsync().ConfigureAwait(false);
             Settle(SessionBootstrapResult.OutdatedClient, null);
             _router.Navigate(Screen.Outdated);
+        }
+        catch (ServerClosedException closed)
+        {
+            _log.Information("[SessionBootstrapper] Server closed to players mid-session: {Notice}", closed.Notice);
+            ServerNotice = closed.Notice;
+            await _signal.DisconnectAsync().ConfigureAwait(false);
+            Settle(SessionBootstrapResult.ServerUnreachable, null);
+            _router.Navigate(Screen.Offline);
         }
         catch (Exception ex)
         {
@@ -591,6 +604,7 @@ public sealed class SessionBootstrapper : IDisposable
                 }
             }
 
+            ServerNotice = string.Empty;
             _lastConnection = status;
             _notifications.NewMatches = status.NewMatchCount;
             AdoptActiveProfile(status.ProfileId);
@@ -658,6 +672,15 @@ public sealed class SessionBootstrapper : IDisposable
             _log.Warning("[SessionBootstrapper] Server rejected plugin API version; client is outdated.");
             await _signal.DisconnectAsync().ConfigureAwait(false);
             return Settle(SessionBootstrapResult.OutdatedClient, null);
+        }
+        catch (ServerClosedException closed)
+        {
+            // The server answered, so this is not an outage: it is closed on purpose and said why. Tokens
+            // and keys stay; the offline screen carries the operator's notice and keeps retrying.
+            _log.Information("[SessionBootstrapper] Server is closed to players: {Notice}", closed.Notice);
+            ServerNotice = closed.Notice;
+            await _signal.DisconnectAsync().ConfigureAwait(false);
+            return Settle(SessionBootstrapResult.ServerUnreachable, null);
         }
         catch (Exception ex)
         {

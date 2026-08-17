@@ -1,0 +1,14 @@
+{
+  "name": "Astrologian's Banner",
+  "slot": "banner",
+  "tier": "premium",
+  "file": "banner_ast.png",
+  "anchor": "body",
+  "origin": [
+    102,
+    108
+  ],
+  "width": 73,
+  "height": 135,
+  "behind": true
+}

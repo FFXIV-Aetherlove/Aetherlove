@@ -6,23 +6,12 @@ namespace AetherLove.Shared.Store;
 /// instead (palette names like "gloam", accessory slugs like "angel-halo", arms as "arm-&lt;job&gt;",
 /// crystals as "crystal-&lt;element&gt;", shells by their skin folder key), so its future sync can map
 /// (Kind, Ref) onto its ownership lists without translation. Refs are lowercase kebab-case, stable
-/// forever once a product has shipped under them.</summary>
+/// forever once a product has shipped under them.
+/// <para>Avatar frames, theme packs and powerups deliberately have no refs here: the placeholder ones
+/// this file used to name were sample data, and the real items are authored in the admin panel. Nothing
+/// in the code needs to know their refs, because the ring and theme paths resolve whatever the account
+/// owns rather than a named product.</para></summary>
 public static class StoreItemRefs
 {
-    public const string FrameSakura = "frame-sakura";
-    public const string FrameGold = "frame-gold";
-    public const string FrameNeon = "frame-neon";
-    public const string FrameMoogle = "frame-moogle";
-
-    public const string ThemeMidnight = "theme-midnight";
-    public const string ThemeSolar = "theme-solar";
-    public const string ThemeSakura = "theme-sakura";
-
-    public const string PowerupVenueBoost = "powerup-venue-boost";
-    public const string PowerupYapBoost = "powerup-yap-boost";
-    public const string PowerupSparkCapBoost = "powerup-spark-cap-boost";
-    public const string PowerupProfileBoost = "powerup-profile-boost";
-
-    public const string BundleStarter = "bundle-starter";
     public const string BundleAetherlingCare = "bundle-aetherling-care";
 }

@@ -1,0 +1,14 @@
+{
+  "name": "Watermelon Wedge",
+  "slot": "arms",
+  "tier": "seasonal",
+  "file": "arms_melon.png",
+  "anchor": "handL",
+  "origin": [
+    61,
+    74
+  ],
+  "width": 72,
+  "height": 100,
+  "behind": false
+}

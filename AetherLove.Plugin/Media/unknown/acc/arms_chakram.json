@@ -1,0 +1,14 @@
+{
+  "name": "Dancer's Chakram",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_chakram.png",
+  "anchor": "handR",
+  "origin": [
+    8,
+    59
+  ],
+  "width": 79,
+  "height": 77,
+  "behind": false
+}

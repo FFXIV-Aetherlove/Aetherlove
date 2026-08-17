@@ -1,0 +1,14 @@
+{
+  "name": "Reaper's Banner",
+  "slot": "banner",
+  "tier": "premium",
+  "file": "banner_rpr.png",
+  "anchor": "body",
+  "origin": [
+    102,
+    108
+  ],
+  "width": 73,
+  "height": 135,
+  "behind": true
+}

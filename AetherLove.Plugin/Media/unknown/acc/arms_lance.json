@@ -1,0 +1,14 @@
+{
+  "name": "Dragoon's Lance",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_lance.png",
+  "anchor": "handR",
+  "origin": [
+    21,
+    184
+  ],
+  "width": 74,
+  "height": 253,
+  "behind": false
+}

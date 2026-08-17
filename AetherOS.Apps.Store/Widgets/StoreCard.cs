@@ -57,7 +57,9 @@ internal static class StoreCard
             var imgTl = product.ItemKind == StoreItemKind.ThemePack
                 ? tl with { Y = tl.Y + artH * 0.30f }
                 : tl;
-            var (uv0, uv1) = StoreArtCrop.Uv(
+            // A worn-pet render is composed for a big card, so on a rail card or a grid tile the creature is
+            // a speck in a lot of transparent room: the same zoom the category tiles use gives it the tile.
+            var (uv0, uv1) = StoreArtCrop.PetCardUv(
                 product.ItemKind, wrap.Width, wrap.Height, size.X, artBr.Y - imgTl.Y);
             dl.AddImageRounded(tex, imgTl, artBr, uv0, uv1, 0xFFFFFFFFu, rounding,
                 imgTl == tl ? ImDrawFlags.RoundCornersTop : ImDrawFlags.RoundCornersNone);

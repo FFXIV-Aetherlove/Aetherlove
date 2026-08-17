@@ -9,9 +9,12 @@ public interface IOsMediaRemote
     /// <summary>False hides the tile entirely: surface toggled off, no session, or backend not ready.</summary>
     bool TileVisible { get; }
 
-    /// <summary>A readable session exists, regardless of whether the shade tile is switched on. Surfaces
-    /// outside the shade (the minimised phone) key on this instead, so the shade toggle stays the shade's.</summary>
+    /// <summary>A readable session exists, regardless of which surfaces are switched on.</summary>
     bool HasSession { get; }
+
+    /// <summary>False hides the transport on the minimised phone, which then keeps its logo. Separate from
+    /// the shade's own gate so each surface can be switched off on its own.</summary>
+    bool MiniVisible { get; }
 
     string Title { get; }
 

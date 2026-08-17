@@ -40,6 +40,10 @@ public interface IOsShell
     /// <summary>Delivers the intent to the target app and opens it.</summary>
     void SendIntent(string targetAppId, OsIntent intent);
 
+    /// <summary>Delivers the intent WITHOUT opening the target, so a background hand-off (add a calendar
+    /// entry from another app) never yanks the user off their current screen.</summary>
+    void DeliverIntent(string targetAppId, OsIntent intent) => SendIntent(targetAppId, intent);
+
     /// <summary>Replays the guided OS tour from the home screen. Default no-op for hosts without one.</summary>
     void StartTour()
     {

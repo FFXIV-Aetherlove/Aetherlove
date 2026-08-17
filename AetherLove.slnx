@@ -17,6 +17,9 @@
   <Project Path="AetherOS.Apps.Breaker/AetherOS.Apps.Breaker.csproj">
     <Platform Project="x64" />
   </Project>
+  <Project Path="AetherOS.Apps.Calculator/AetherOS.Apps.Calculator.csproj">
+    <Platform Project="x64" />
+  </Project>
   <Project Path="AetherOS.Apps.Calendar/AetherOS.Apps.Calendar.csproj">
     <Platform Project="x64" />
   </Project>
@@ -33,6 +36,9 @@
     <Platform Project="x64" />
   </Project>
   <Project Path="AetherOS.Apps.EchoVidya/AetherOS.Apps.EchoVidya.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="AetherOS.Apps.Eordle/AetherOS.Apps.Eordle.csproj">
     <Platform Project="x64" />
   </Project>
   <Project Path="AetherOS.Apps.Feedback/AetherOS.Apps.Feedback.csproj">
@@ -65,6 +71,9 @@
   <Project Path="AetherOS.Apps.News/AetherOS.Apps.News.csproj">
     <Platform Project="x64" />
   </Project>
+  <Project Path="AetherOS.Apps.Notes/AetherOS.Apps.Notes.csproj">
+    <Platform Project="x64" />
+  </Project>
   <Project Path="AetherOS.Apps.Photos/AetherOS.Apps.Photos.csproj">
     <Platform Project="x64" />
   </Project>
@@ -74,10 +83,16 @@
   <Project Path="AetherOS.Apps.Plappy/AetherOS.Apps.Plappy.csproj">
     <Platform Project="x64" />
   </Project>
+  <Project Path="AetherOS.Apps.Racooner/AetherOS.Apps.Racooner.csproj">
+    <Platform Project="x64" />
+  </Project>
   <Project Path="AetherOS.Apps.Realtor/AetherOS.Apps.Realtor.csproj">
     <Platform Project="x64" />
   </Project>
   <Project Path="AetherOS.Apps.Settings/AetherOS.Apps.Settings.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="AetherOS.Apps.SkySwarm/AetherOS.Apps.SkySwarm.csproj">
     <Platform Project="x64" />
   </Project>
   <Project Path="AetherOS.Apps.Snake/AetherOS.Apps.Snake.csproj">
@@ -90,6 +105,9 @@
     <Platform Project="x64" />
   </Project>
   <Project Path="AetherOS.Apps.Sudoku/AetherOS.Apps.Sudoku.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="AetherOS.Apps.Timers/AetherOS.Apps.Timers.csproj">
     <Platform Project="x64" />
   </Project>
   <Project Path="AetherOS.Apps.VoidInvaders/AetherOS.Apps.VoidInvaders.csproj">

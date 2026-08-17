@@ -26,6 +26,13 @@ public sealed class NotificationDispatcher : IDisposable, Signal.INotifier
     private const uint MarketLinkCommandId = 10;
     private const ushort LinkColor = 539;
 
+    /// <summary>The game's own warning yellow, for the one line here that costs a house if it is missed.</summary>
+    private const ushort WarningColor = 540;
+
+    /// <summary>The game's orange, used for anything the operators announce: loud enough to catch the eye
+    /// mid-duty, distinct from the yellow beside it.</summary>
+    private const ushort AlertColor = 518;
+
     private readonly IChatGui _chat;
     private readonly Configuration _config;
     // Lazy-resolved: MainPluginWindow depends transitively on this service, so a ctor dependency would close a DI cycle.
@@ -441,6 +448,33 @@ public sealed class NotificationDispatcher : IDisposable, Signal.INotifier
         }
     }
 
+    /// <summary>A character has not been home to its private estate in long enough to matter. Printed in
+    /// yellow: this one costs the player a house if it is missed, unlike the phase line beside it.</summary>
+    public void NotifyEstateRisk(string text)
+    {
+        if (!_config.EnableNotifications || !LoggedIn || CombatSuppressed || Removed("realtor"))
+        {
+            return;
+        }
+        try
+        {
+            _chat.Print(new SeStringBuilder()
+                .AddText("[AetherOS] ")
+                .AddUiForeground(WarningColor)
+                .AddText(text)
+                .AddUiForegroundOff()
+                .BuiltString);
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Warning(ex, "[NotificationDispatcher] Estate warning print failed.");
+        }
+        if (_config.EnableNotificationSounds)
+        {
+            NotificationSoundPlayer.Play(_config.NotificationSoundChoice);
+        }
+    }
+
     private void OpenMarketItem()
     {
         try
@@ -453,6 +487,36 @@ public sealed class NotificationDispatcher : IDisposable, Signal.INotifier
         catch (Exception ex)
         {
             Plugin.Log.Warning(ex, "[NotificationDispatcher] OpenMarketItem failed.");
+        }
+    }
+
+    /// <summary>A line the operators sent to everyone connected. Deliberately not gated on the notification
+    /// toggles, combat suppression or a removed app: this is how the people running the service say "we are
+    /// about to take it away", and a player who muted their match alerts still needs to hear it. It is
+    /// silenced only when the phone is powered off, which is the one state where the player has opted out of
+    /// AetherLove entirely.</summary>
+    public void NotifyServerNotice(string text)
+    {
+        if (!LoggedIn)
+        {
+            return;
+        }
+        try
+        {
+            _chat.Print(new SeStringBuilder()
+                .AddUiForeground(AlertColor)
+                .AddText("[AetherLove] ")
+                .AddText(text)
+                .AddUiForegroundOff()
+                .BuiltString);
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Warning(ex, "[NotificationDispatcher] Server notice print failed.");
+        }
+        if (_config.EnableNotificationSounds)
+        {
+            NotificationSoundPlayer.Play(_config.NotificationSoundChoice);
         }
     }
 

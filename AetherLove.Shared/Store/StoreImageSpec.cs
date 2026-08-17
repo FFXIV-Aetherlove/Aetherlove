@@ -34,8 +34,15 @@ public static class StoreImageSpec
     public static bool IsPhoneSkin(StoreItemKind kind) => kind == StoreItemKind.ThemePack;
 
     /// <summary>True when the product's picture carries meaningful transparency and must be stored as
-    /// PNG (avatar rings: transparent centre, ring band outside).</summary>
-    public static bool KeepsAlpha(StoreItemKind kind) => kind == StoreItemKind.AvatarFrame;
+    /// PNG (avatar rings: transparent centre, ring band outside; Aetherling wearables and food: art cut
+    /// out against a transparent surround, which the card's own gradient shows through).
+    /// <para>Only rings are additionally required to be see-through in the MIDDLE; everything else here
+    /// is a solid object on a clear background.</para></summary>
+    public static bool KeepsAlpha(StoreItemKind kind) =>
+        kind is StoreItemKind.AvatarFrame
+            or StoreItemKind.AetherlingAccessory
+            or StoreItemKind.AetherlingArms
+            or StoreItemKind.AetherlingConsumable;
 
     public static (int MaxWidth, int? MaxHeight, int Quality) For(StoreItemKind kind) =>
         IsPhoneSkin(kind)

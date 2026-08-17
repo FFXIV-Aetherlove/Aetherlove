@@ -1,0 +1,14 @@
+{
+  "name": "Ninja's Dagger",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_dagger.png",
+  "anchor": "handR",
+  "origin": [
+    9,
+    27
+  ],
+  "width": 34,
+  "height": 106,
+  "behind": false
+}

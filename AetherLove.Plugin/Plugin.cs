@@ -162,6 +162,7 @@ public sealed class Plugin : IDalamudPlugin
         services.AddSingleton<AetherOS.Apps.EchoVidya.IEchoHost, Os.EchoHostService>();
         services.AddSingleton<Os.HousingLotteryWatchService>();
         services.AddSingleton<Os.RealtorPhaseWatchService>();
+        services.AddSingleton<Os.EstateWatchService>();
         services.AddSingleton<Services.Patreon.PatreonLinkFlow>();
         services.AddSingleton<SessionBootstrapper>();
         services.AddSingleton<Services.Auth.AccountUnlockService>();
@@ -191,6 +192,7 @@ public sealed class Plugin : IDalamudPlugin
         services.AddSingleton<OutdatedScreen>();
 
         services.AddSingleton<Os.AppStorageService>();
+        services.AddSingleton<Os.AudioService>();
         services.AddSingleton<Os.AppCapabilities>();
         services.AddSingleton<AetherOS.Sdk.IAppCapabilities>(sp => sp.GetRequiredService<Os.AppCapabilities>());
         services.AddSingleton<Os.ISocialBridge, Os.SocialBridgeService>();
@@ -233,6 +235,19 @@ public sealed class Plugin : IDalamudPlugin
         services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Clock.ClockApp(
             () => Services.Localization.Loc.T("os.app_clock"),
             sp.GetRequiredService<Os.ClockAlarmService>()));
+        services.AddSingleton<Os.CalendarStoreService>();
+        services.AddSingleton<AetherOS.Apps.Calendar.ICalendarStore>(sp => sp.GetRequiredService<Os.CalendarStoreService>());
+        services.AddSingleton<Os.TimerScheduleService>();
+        services.AddSingleton<AetherOS.Apps.Timers.ITimersHost>(sp => sp.GetRequiredService<Os.TimerScheduleService>());
+        services.AddSingleton<Os.RetainerFleetService>();
+        services.AddSingleton<AetherOS.Apps.Timers.ITimersRetainers>(sp => sp.GetRequiredService<Os.RetainerFleetService>());
+        services.AddSingleton<Services.TimersDtrService>();
+        services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Timers.TimersApp(
+            () => Services.Localization.Loc.T("os.app_timers"),
+            sp.GetRequiredService<AetherOS.Apps.Timers.ITimersHost>(),
+            sp.GetRequiredService<AetherOS.Apps.Timers.ITimersRetainers>(),
+            sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>(),
+            sp.GetRequiredService<AetherOS.Sdk.IOsShell>()));
         services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.EchoVidya.EchoVidyaApp(
             () => Services.Localization.Loc.T("os.app_echo"),
             sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>(),
@@ -244,6 +259,21 @@ public sealed class Plugin : IDalamudPlugin
             () => sp.GetRequiredService<SessionBootstrapper>().LastConnection?.EchoEnabled != false));
         services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Sudoku.SudokuApp(
             () => Services.Localization.Loc.T("os.app_sudoku"),
+            sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>(),
+            sp.GetRequiredService<Os.IArcadeRewards>(),
+            sp.GetRequiredService<Os.IArcadeScores>()));
+        services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Racooner.RacoonerApp(
+            () => Services.Localization.Loc.T("os.app_racooner"),
+            sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>(),
+            sp.GetRequiredService<Os.IArcadeRewards>(),
+            sp.GetRequiredService<Os.IArcadeScores>()));
+        services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.SkySwarm.SkySwarmApp(
+            () => Services.Localization.Loc.T("os.app_skyswarm"),
+            sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>(),
+            sp.GetRequiredService<Os.IArcadeRewards>(),
+            sp.GetRequiredService<Os.IArcadeScores>()));
+        services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Eordle.EordleApp(
+            () => Services.Localization.Loc.T("os.app_eordle"),
             sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>(),
             sp.GetRequiredService<Os.IArcadeRewards>(),
             sp.GetRequiredService<Os.IArcadeScores>()));
@@ -355,6 +385,7 @@ public sealed class Plugin : IDalamudPlugin
             sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>(),
             sp.GetRequiredService<Services.Realtor.RealtorDataService>(),
             sp.GetRequiredService<Os.HousingLotteryWatchService>(),
+            sp.GetRequiredService<Os.EstateWatchService>(),
             sp.GetRequiredService<Os.RealtorPhaseWatchService>()));
         services.AddSingleton<AetherOS.Apps.Store.IStoreHost, Os.StoreHostService>();
         services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Store.StoreApp(
@@ -390,7 +421,8 @@ public sealed class Plugin : IDalamudPlugin
                   ?? Services.Localization.Loc.T("os.app_aetherling"),
             () => sp.GetRequiredService<SessionBootstrapper>().LastConnection?.AetherlingEnabled != false,
             sp.GetRequiredService<Os.AetherlingHostService>(),
-            sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>()));
+            sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>(),
+            sp.GetRequiredService<AetherLove.Os.IArcadeScores>()));
         services.AddSingleton<Os.YapperHostService>();
         services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Yapper.YapperApp(
             () => Services.Localization.Loc.T("os.app_yapper"),
@@ -419,6 +451,13 @@ public sealed class Plugin : IDalamudPlugin
         services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Calendar.CalendarApp(
             () => Services.Localization.Loc.T("os.app_calendar"),
             sp.GetRequiredService<Os.CalendarHostService>(),
+            sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>(),
+            sp.GetRequiredService<AetherOS.Apps.Calendar.ICalendarStore>()));
+        services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Notes.NotesApp(
+            () => Services.Localization.Loc.T("os.app_notes"),
+            sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>()));
+        services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Calculator.CalculatorApp(
+            () => Services.Localization.Loc.T("os.app_calculator"),
             sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>()));
         services.AddSingleton<Os.IOsAccountInfo, Os.OsAccountInfo>();
         services.AddAetherOsShell();
@@ -429,6 +468,7 @@ public sealed class Plugin : IDalamudPlugin
         services.AddSingleton<Services.DtrBarService>();
         services.AddSingleton<ChangelogWindow>();
         services.AddSingleton<DebugWindow>();
+        services.AddSingleton<AetherlingDebugWindow>();
 
         services.AddSingleton<AetherLoveBootstrap>();
         services.AddHostedService(sp => sp.GetRequiredService<AetherLoveBootstrap>());

@@ -106,7 +106,12 @@ public sealed class EchoSyncEngine
             return;
         }
 
-        if (_finishedEntryId != entry.Id && (host.Ended || host.Error is not null))
+        // Only the report for the load we are actually waiting on can end this entry. LastState keeps
+        // describing the PREVIOUS video until the host answers, so without this an Ended left over from the
+        // video that just finished immediately ends its successor too, and the room walks the whole playlist
+        // a frame at a time.
+        var current = host.Epoch == _host.Epoch;
+        if (current && _finishedEntryId != entry.Id && (host.Ended || host.Error is not null))
         {
             _finishedEntryId = entry.Id;
             EntryFinished?.Invoke(entry.Id, host.Error is not null);

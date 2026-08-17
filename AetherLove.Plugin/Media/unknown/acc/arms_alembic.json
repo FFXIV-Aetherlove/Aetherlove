@@ -1,0 +1,14 @@
+{
+  "name": "Alchemist's Alembic",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_alembic.png",
+  "anchor": "handR",
+  "origin": [
+    25,
+    112
+  ],
+  "width": 113,
+  "height": 134,
+  "behind": false
+}

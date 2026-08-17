@@ -1,0 +1,14 @@
+{
+  "name": "Paddling Pool",
+  "slot": "nook",
+  "tier": "seasonal",
+  "file": "nook_pool.png",
+  "anchor": "body",
+  "origin": [
+    98,
+    -20
+  ],
+  "width": 197,
+  "height": 102,
+  "behind": true
+}

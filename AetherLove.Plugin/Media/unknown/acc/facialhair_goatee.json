@@ -1,0 +1,14 @@
+{
+  "name": "Goatee",
+  "slot": "facialhair",
+  "tier": "premium",
+  "file": "facialhair_goatee.png",
+  "anchor": "face",
+  "origin": [
+    15,
+    -77
+  ],
+  "width": 31,
+  "height": 18,
+  "behind": false
+}

@@ -548,6 +548,18 @@ public sealed class AetherSignalService : IAsyncDisposable
             }
         });
 
+        // Staff shouting at everyone at once. No profile routing and no phone-open gate: it is announced to
+        // the human, in the game's own chat, whether or not the phone is out.
+        hub.On<string>("ServerNotice", text =>
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return;
+            }
+            _log.Information($"[AetherSignalService] ServerNotice: {text}");
+            _notifier.NotifyServerNotice(text);
+        });
+
         hub.On<NewsTestPushDto>("NewsTestPush", payload =>
         {
             if (!IsForActive(payload.ForProfileId))

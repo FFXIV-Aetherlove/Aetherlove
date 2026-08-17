@@ -1,0 +1,14 @@
+{
+  "name": "Astrologian's Star Globe",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_globe.png",
+  "anchor": "handR",
+  "origin": [
+    24,
+    144
+  ],
+  "width": 107,
+  "height": 107,
+  "behind": false
+}

@@ -1,0 +1,14 @@
+{
+  "name": "Paladin's Shield",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_shield.png",
+  "anchor": "handL",
+  "origin": [
+    46,
+    50
+  ],
+  "width": 78,
+  "height": 102,
+  "behind": false
+}

@@ -43,6 +43,7 @@ internal sealed class BrowseScreen(
     private bool _filterSheetOpen;
     private bool _sortSheetOpen;
     private string? _pendingCategoryKey;
+    private DateTime _pendingCategoryAt = DateTime.MinValue;
 
     /// <summary>The root the bottom bar should light up, so the bar and the grid never disagree.</summary>
     public Guid? RootCategoryId => _rootId;
@@ -68,6 +69,15 @@ internal sealed class BrowseScreen(
     {
         Open(new Seed(null, null, searchSeed, StoreSort.Featured));
         _pendingCategoryKey = categoryKey;
+
+        // The link names a shelf by key and only the tree turns that into an id, so the tree it resolves
+        // against has to be NEWER than the link. A store opened for the first time has no tree at all, and
+        // one whose tree was fetched before this caller could see the shelf has a tree that never carried
+        // it; deciding against either lands the user on a search for "acc-glasses" and no results, which is
+        // what the first hop out of the wardrobe used to do every time.
+        _pendingCategoryAt = DateTime.UtcNow;
+        state.MarkFrontStale();
+        state.RefreshFront();
     }
 
     public void OnShow()
@@ -93,6 +103,8 @@ internal sealed class BrowseScreen(
         }
         state.Browse(CurrentFilter());
 
+        DrawCategoryTrail(winW);
+        DrawSubcategories(winW);
         DrawGrid(ctx, winW);
         if (_filterSheetOpen)
         {
@@ -114,25 +126,55 @@ internal sealed class BrowseScreen(
 
     private void ResolvePendingCategory()
     {
-        if (_pendingCategoryKey is not { } key || state.Front is not { } front)
+        if (_pendingCategoryKey is not { } key || state.Front is not { } front
+            || state.LastFrontFetchUtc <= _pendingCategoryAt)
         {
             return;
         }
         _pendingCategoryKey = null;
-        // Category keys aren't on the DTO; match by English name slug, which the seeded keys mirror.
+        // The category's own slug first, so a link can name a shelf a moderator has renamed or one whose
+        // name is too generic to match on ("Head"); the English name is the fallback for older links.
         var hit = front.Categories.FirstOrDefault(c =>
-            c.NameEnglish.Replace(" ", "-").Equals(key, StringComparison.OrdinalIgnoreCase)
-            || c.NameEnglish.Equals(key, StringComparison.OrdinalIgnoreCase));
+                c.Key is { Length: > 0 } slug && slug.Equals(key, StringComparison.OrdinalIgnoreCase))
+            ?? front.Categories.FirstOrDefault(c =>
+                c.NameEnglish.Replace(" ", "-").Equals(key, StringComparison.OrdinalIgnoreCase)
+                || c.NameEnglish.Equals(key, StringComparison.OrdinalIgnoreCase));
+        // Still nothing: a shelf key names its parent in front of the dash ("acc-nook"), so land on that
+        // parent rather than nowhere. This is what a client newer than the server it talks to gets, since
+        // `Key` rides the category DTO and an older server sends none.
+        if (hit is null && key.LastIndexOf('-') > 0)
+        {
+            var stem = key[..key.LastIndexOf('-')];
+            hit = front.Categories.FirstOrDefault(c =>
+                (c.Key is { Length: > 0 } slug && slug.Equals(stem, StringComparison.OrdinalIgnoreCase))
+                || c.NameEnglish.StartsWith(stem, StringComparison.OrdinalIgnoreCase));
+        }
         if (hit is not null)
         {
             _categoryId = hit.Id;
-            _rootId = hit.ParentId ?? hit.Id;
+            _rootId = RootOf(front, hit).Id;
         }
         else
         {
             // No such category: keep the seed as a search instead, so "crystals/fire" still lands well.
             _appliedSearch = _search = key;
         }
+    }
+
+    /// <summary>The top of a category's chain, which is what the bottom bar lights up. A shelf two levels
+    /// down (the accessories' equipment sockets) belongs to the root above its parent, not to its parent.</summary>
+    private static StoreCategoryDto RootOf(StoreFrontDto front, StoreCategoryDto category)
+    {
+        var walk = category;
+        for (var guard = 0; guard < 8 && walk.ParentId is { } parent; guard++)
+        {
+            if (front.Categories.FirstOrDefault(c => c.Id == parent) is not { } up)
+            {
+                break;
+            }
+            walk = up;
+        }
+        return walk;
     }
 
     private void DrawSearchField(float winW)
@@ -363,6 +405,306 @@ internal sealed class BrowseScreen(
         }
         _ = ctx;
     }
+
+    /// <summary>The way back up out of a shelf that lives inside another one. The bottom bar only reaches
+    /// the roots, so without this an equipment slot is somewhere you can get into and not out of.</summary>
+    private void DrawCategoryTrail(float winW)
+    {
+        if (_categoryId is not { } current
+            || state.Front is not { } front
+            || front.Categories.FirstOrDefault(c => c.Id == current) is not { ParentId: { } parentId }
+            || front.Categories.FirstOrDefault(c => c.Id == parentId) is not { } parent)
+        {
+            return;
+        }
+
+        // The way out of a shelf wears the colour of the wing it is in, the same swatch the bottom bar lights
+        // that wing with, so the page and the bar agree about where the user is standing. Drawn at the
+        // header pill's own size rather than as a small grey chip: it is the main way back out of here.
+        var accent = StoreBottomBar.SwatchIndexFor(front, RootOf(front, front.Categories.First(c => c.Id == current)).Id)
+            is var swatch && swatch >= 0
+            ? StorePalette.SwatchAccent(swatch)
+            : StorePalette.BlueLight;
+
+        var label = StoreLoc.Name(parent);
+        var fontSize = ImGui.GetFontSize() * 0.92f;
+        var height = Px(34f);
+        var width = StoreChips.MeasureAt(label, fontSize).X + Px(48f);
+        var tl = new Vector2(ImGui.GetWindowPos().X + Px(PadX), ImGui.GetCursorScreenPos().Y);
+
+        ImGui.SetCursorScreenPos(tl);
+        var pressed = ImGui.InvisibleButton("##storeUp", new Vector2(width, height));
+        var hovered = ImGui.IsItemHovered();
+        if (hovered)
+        {
+            HandOnHover();
+        }
+
+        var dl = ImGui.GetWindowDrawList();
+        var br = tl + new Vector2(width, height);
+        dl.AddRectFilled(tl, br,
+            ImGui.ColorConvertFloat4ToU32(accent with { W = hovered ? 0.30f : 0.18f }), height * 0.5f);
+        dl.AddRect(tl, br, ImGui.ColorConvertFloat4ToU32(accent with { W = hovered ? 0.95f : 0.6f }),
+            height * 0.5f, ImDrawFlags.RoundCornersAll, Px(1.4f));
+        IconDraw.AddCentered(dl, FontAwesomeIcon.ChevronLeft, Px(12f),
+            new Vector2(tl.X + Px(18f), tl.Y + (height * 0.5f)), ImGui.ColorConvertFloat4ToU32(accent));
+        dl.AddText(ImGui.GetFont(), fontSize,
+            new Vector2(tl.X + Px(31f), tl.Y + (height * 0.5f) - (fontSize * 0.5f)),
+            ImGui.ColorConvertFloat4ToU32(accent), label);
+
+        ImGui.Dummy(new Vector2(0f, height + Px(8f)));
+        if (pressed)
+        {
+            _categoryId = parentId;
+            _entrance.Arm();
+        }
+        _ = winW;
+    }
+
+    /// <summary>The shelves inside the one being browsed, one card each, above the grid. It follows the
+    /// current category rather than only the root, so a shelf that has shelves of its own (the accessories
+    /// and their equipment slots) opens onto them the same way. A search, a tag or a sale filter hides them:
+    /// those are the player narrowing things down, and a door back out would be fighting that.
+    ///
+    /// <para>The picture is dealt from the products already on screen (a category query returns its
+    /// descendants), so the card costs no fetch and can never show art the shelf no longer carries.</para></summary>
+    private void DrawSubcategories(float winW)
+    {
+        if (_categoryId is not { } current
+            || _appliedSearch.Length > 0
+            || _tag is not null
+            || _onSaleOnly
+            || state.Front is not { } front)
+        {
+            return;
+        }
+
+        var children = front.Categories
+            .Where(c => c.ParentId == current)
+            .OrderBy(c => c.SortOrder)
+            .ThenBy(c => c.NameEnglish)
+            .ToList();
+        if (children.Count == 0)
+        {
+            return;
+        }
+
+        var pad = Px(PadX);
+        var gap = Px(10f);
+        var cardW = winW - (pad * 2f);
+        var cardH = Px(92f);
+        var dl = ImGui.GetWindowDrawList();
+        var top = ImGui.GetCursorScreenPos().Y;
+        var startY = ImGui.GetCursorPosY();
+
+        for (var i = 0; i < children.Count; i++)
+        {
+            var child = children[i];
+            var tl = new Vector2(ImGui.GetWindowPos().X + pad, top + (i * (cardH + gap)));
+            if (DrawSubcategoryCard(dl, front, child, tl, new Vector2(cardW, cardH), i))
+            {
+                _categoryId = child.Id;
+                _entrance.Arm();
+            }
+        }
+
+        // Set, never Dummy: every card submits its own button, so the cursor has already walked the whole
+        // stack and adding its height again left a shelf's worth of blank page above the grid.
+        ImGui.SetCursorPosY(startY + (children.Count * (cardH + gap)) + Px(6f));
+    }
+
+    /// <summary>One shelf, full width: one of its own products on the left, its name and count beside
+    /// them, and a chevron that leans in on hover. The body is a gradient in the category's own accent
+    /// rather than the flat plate every other list uses, because these four cards ARE the page a root
+    /// lands on and they should look like a way in rather than a table of contents.</summary>
+    private bool DrawSubcategoryCard(
+        ImDrawListPtr dl, StoreFrontDto front, StoreCategoryDto category, Vector2 tl, Vector2 size, int index)
+    {
+        ImGui.SetCursorScreenPos(tl);
+        var pressed = ImGui.InvisibleButton($"##storeSub{category.Id:N}", size);
+        var hovered = ImGui.IsItemHovered();
+        var held = ImGui.IsItemActive();
+        if (hovered)
+        {
+            HandOnHover();
+        }
+
+        var (gradTop, gradBottom, accent) = StoreFx.CardColors(category.AccentColor);
+        var radius = Px(16f);
+        var br = tl + size;
+        var lift = held ? Px(1f) : 0f;
+        tl.Y += lift;
+
+        // The card's own shadow, so a full-width row still reads as a raised thing.
+        dl.AddRectFilled(tl + new Vector2(Px(2f), Px(4f)), br + new Vector2(Px(2f), Px(4f)),
+            OsDrawShared.Black(hovered ? 0.35f : 0.22f), radius);
+        OsDrawShared.RoundedGradient(dl, tl, br, radius, gradTop, gradBottom);
+
+        dl.PushClipRect(tl, br, true);
+
+        // A wide bloom of the accent behind the art, and a soft sheen crossing the body.
+        var artSide = size.Y * 1.2f;
+        var artCentre = new Vector2(tl.X + (artSide * 0.5f), tl.Y + (size.Y * 0.5f));
+        for (var ring = 5; ring >= 1; ring--)
+        {
+            dl.AddCircleFilled(artCentre, artSide * 0.30f * ring / 2f,
+                ImGui.ColorConvertFloat4ToU32(accent with { W = 0.045f }), 28);
+        }
+        var sheenX = tl.X + (size.X * 0.52f);
+        var band = size.X * 0.34f;
+        var clear = OsDrawShared.White(0f);
+        var glint = OsDrawShared.White(hovered ? 0.10f : 0.055f);
+        dl.AddRectFilledMultiColor(new Vector2(sheenX - band, tl.Y), new Vector2(sheenX, br.Y),
+            clear, glint, glint, clear);
+        dl.AddRectFilledMultiColor(new Vector2(sheenX, tl.Y), new Vector2(sheenX + band, br.Y),
+            glint, clear, clear, glint);
+
+        var art = new Vector2(artSide, size.Y);
+        if (!DrawSubcategoryArt(dl, front, category, tl, art))
+        {
+            IconDraw.AddCentered(dl, StoreBottomBar.Glyph(category.Icon, index), Px(26f),
+                artCentre, ImGui.ColorConvertFloat4ToU32(accent with { W = 0.85f }));
+        }
+
+        // The hairline the art ends on, fading out at both ends so it never looks like a table cell.
+        var edgeX = tl.X + artSide - Px(2f);
+        dl.AddRectFilledMultiColor(
+            new Vector2(edgeX, tl.Y + Px(10f)), new Vector2(edgeX + Px(1f), tl.Y + (size.Y * 0.5f)),
+            clear, clear, OsDrawShared.White(0.16f), OsDrawShared.White(0.16f));
+        dl.AddRectFilledMultiColor(
+            new Vector2(edgeX, tl.Y + (size.Y * 0.5f)), new Vector2(edgeX + Px(1f), br.Y - Px(10f)),
+            OsDrawShared.White(0.16f), OsDrawShared.White(0.16f), clear, clear);
+
+        dl.PopClipRect();
+
+        // A specular line along the top, inset so it stops before the rounded corners.
+        dl.AddLine(new Vector2(tl.X + radius, tl.Y + Px(1f)), new Vector2(br.X - radius, tl.Y + Px(1f)),
+            OsDrawShared.White(hovered ? 0.22f : 0.13f), Px(1f));
+        dl.AddRect(tl, br, ImGui.ColorConvertFloat4ToU32(accent with { W = hovered ? 0.7f : 0.32f }),
+            radius, ImDrawFlags.RoundCornersAll, Px(1.2f));
+
+        var chevronX = br.X - Px(18f) + (hovered ? Px(3f) : 0f);
+        IconDraw.AddCentered(dl, FontAwesomeIcon.ChevronRight, Px(13f),
+            new Vector2(chevronX, tl.Y + (size.Y * 0.5f)), OsDrawShared.White(hovered ? 0.85f : 0.4f));
+
+        var textX = tl.X + artSide + Px(10f);
+        var textW = br.X - Px(34f) - textX;
+        var name = StoreLoc.Name(category);
+        var nameSize = ImGui.GetFontSize() * 1.02f;
+        var shown = name;
+        while (StoreChips.MeasureAt(shown, nameSize).X > textW && shown.Length > 2)
+        {
+            shown = shown[..^2] + "…";
+        }
+        var nameH = StoreChips.MeasureAt(shown, nameSize).Y;
+        dl.AddText(ImGui.GetFont(), nameSize,
+            new Vector2(textX, tl.Y + (size.Y * 0.5f) - nameH - Px(3f)), OsDrawShared.White(0.97f), shown);
+
+        // The count as a chip rather than a line of grey: it is the one fact the card carries.
+        var count = string.Format(Loc.T("os.store_category_count"), category.ProductCount);
+        var countSize = ImGui.GetFontSize() * 0.74f;
+        var countExtent = StoreChips.MeasureAt(count, countSize);
+        var chipTl = new Vector2(textX, tl.Y + (size.Y * 0.5f) + Px(5f));
+        var chipBr = chipTl + countExtent + new Vector2(Px(16f), Px(6f));
+        dl.AddRectFilled(chipTl, chipBr, ImGui.ColorConvertFloat4ToU32(accent with { W = 0.22f }),
+            (chipBr.Y - chipTl.Y) * 0.5f);
+        dl.AddText(ImGui.GetFont(), countSize, chipTl + new Vector2(Px(8f), Px(3f)),
+            OsDrawShared.White(0.88f), count);
+        return pressed;
+    }
+
+    /// <summary>One product off the shelf, as a single card. A fan of three said nothing a shelf of five
+    /// hats does not say better with one hat, and at this size the overlap read as a smudge.</summary>
+    private bool DrawSubcategoryArt(
+        ImDrawListPtr dl, StoreFrontDto front, StoreCategoryDto category, Vector2 tl, Vector2 size)
+    {
+        Dalamud.Interface.Textures.TextureWraps.IDalamudTextureWrap? wrap = null;
+        var kind = StoreItemKind.Unknown;
+        foreach (var product in PreviewProducts(front, category))
+        {
+            if (media.Get(product.Id, product.ImageVersion)?.Tex?.GetWrapOrDefault() is { } found)
+            {
+                wrap = found;
+                kind = product.ItemKind;
+                break;
+            }
+        }
+        if (wrap is null)
+        {
+            return false;
+        }
+
+        var side = size.Y * 0.78f;
+        var half = new Vector2(side * 0.5f, side * 0.5f);
+        var centre = tl + (size * 0.5f);
+        var cardTl = centre - half;
+        var cardBr = centre + half;
+        var rounding = Px(8f);
+
+        dl.AddRectFilled(cardTl + new Vector2(Px(1.5f), Px(2f)), cardBr + new Vector2(Px(1.5f), Px(2f)),
+            OsDrawShared.Black(0.45f), rounding);
+        var (uv0, uv1) = StoreArtCrop.PetThumbnailUv(kind, wrap.Width, wrap.Height, side, side);
+        dl.AddImageRounded(wrap.Handle, cardTl, cardBr, uv0, uv1, OsDrawShared.White(1f), rounding,
+            ImDrawFlags.RoundCornersAll);
+        dl.AddRect(cardTl, cardBr, OsDrawShared.White(0.28f), rounding, ImDrawFlags.RoundCornersAll, Px(1.2f));
+        return true;
+    }
+
+    /// <summary>What to put on a shelf's card: the shelf's own fetched sample, falling back to whatever of
+    /// its products the current page happens to hold while that is still in flight.</summary>
+    /// <summary>The one product a shelf would rather be represented by, where the featured order picks
+    /// something that reads poorly at thumbnail size. Keyed by the shelf, not by position, so it survives a
+    /// moderator reordering the shelf; an entry naming a product this server does not have simply falls
+    /// through to the normal order.</summary>
+    /// <summary>The shelf a preference is fetched FROM, and the product wanted out of it. The two differ
+    /// for a parent: a category query returns its whole subtree, Accessories is over sixty items and the
+    /// server caps a page at sixty, so asking Accessories for the ribbon is a lottery it can lose. Asking
+    /// the nine-item head shelf for it cannot.</summary>
+    private readonly record struct PreviewPick(string FromKey, string ItemRef);
+
+    private static readonly Dictionary<string, PreviewPick> PreferredPreview = new(StringComparer.Ordinal)
+    {
+        ["accessories"] = new("acc-head", "ribbon-bow"),
+        ["acc-head"] = new("acc-head", "ribbon-bow"),
+        ["acc-nook"] = new("acc-nook", "paddling-pool"),
+        ["acc-hands"] = new("acc-hands", "arm-melon"),
+        ["palettes"] = new("palettes", "rose"),
+    };
+
+    private IEnumerable<StoreProductDto> PreviewProducts(StoreFrontDto front, StoreCategoryDto category)
+    {
+        if (category.Key is { Length: > 0 } key
+            && PreferredPreview.TryGetValue(key, out var pick)
+            && front.Categories.FirstOrDefault(c => c.Key == pick.FromKey) is { } source
+            && state.PreviewFor(source.Id, wholeShelf: true) is { Count: > 0 } shelf
+            && shelf.FirstOrDefault(p => p.ItemRef == pick.ItemRef) is { } wanted)
+        {
+            return [wanted];
+        }
+
+        var sample = state.PreviewFor(category.Id);
+        if (sample.Count > 0)
+        {
+            return sample;
+        }
+
+        // A shelf whose own query came back empty borrows a picture from its subtree.
+        var inside = new HashSet<Guid> { category.Id };
+        var grew = true;
+        while (grew)
+        {
+            grew = false;
+            foreach (var candidate in front.Categories)
+            {
+                if (candidate.ParentId is { } parent && inside.Contains(parent) && inside.Add(candidate.Id))
+                {
+                    grew = true;
+                }
+            }
+        }
+        return state.BrowseItems.Where(p => inside.Contains(p.CategoryId));
+    }
+
 
     private void DrawGrid(OsAppContext ctx, float winW)
     {

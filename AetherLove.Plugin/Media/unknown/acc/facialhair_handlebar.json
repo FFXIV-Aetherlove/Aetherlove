@@ -1,0 +1,14 @@
+{
+  "name": "Handlebar Moustache",
+  "slot": "facialhair",
+  "tier": "premium",
+  "file": "facialhair_handlebar.png",
+  "anchor": "face",
+  "origin": [
+    54,
+    -41
+  ],
+  "width": 109,
+  "height": 22,
+  "behind": false
+}

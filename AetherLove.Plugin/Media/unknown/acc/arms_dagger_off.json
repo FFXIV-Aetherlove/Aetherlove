@@ -1,0 +1,14 @@
+{
+  "name": "Ninja's Off-hand Dagger",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_dagger_off.png",
+  "anchor": "handL",
+  "origin": [
+    25,
+    27
+  ],
+  "width": 34,
+  "height": 106,
+  "behind": false
+}

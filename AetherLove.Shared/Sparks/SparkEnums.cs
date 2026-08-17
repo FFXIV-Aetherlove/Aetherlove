@@ -93,4 +93,7 @@ public enum SparkAction : short
     /// <summary>Offered sparks to an Aethercore, moving it one stage up. RefId is derived from the
     /// account and the stage being left, so a stage can only ever be paid for once.</summary>
     AetherlingAttune = 21,
+
+    /// <summary>Finished a round of one of the companion's own minigames today; client-reported.</summary>
+    AetherlingGame = 22,
 }

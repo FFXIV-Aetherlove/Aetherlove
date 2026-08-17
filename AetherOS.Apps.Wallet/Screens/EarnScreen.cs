@@ -34,7 +34,8 @@ internal sealed class EarnScreen
 
     public FontAwesomeIcon BackIconOverride { get; set; } = FontAwesomeIcon.Bolt;
 
-    public bool HasWallet => _wallet is not null;
+    /// <summary>The snapshot on show, so the host can tell a landed refetch from the one already drawn.</summary>
+    public SparkWalletDto? Wallet => _wallet;
 
     public void Show(SparkWalletDto? wallet)
     {
@@ -100,6 +101,16 @@ internal sealed class EarnScreen
             ImGui.TextColored(UiColors.Body, Loc.T(headingKey));
         }
         DrawParagraph(Loc.T(helpKey), winW, UiColors.Hint);
+
+        // The daily pool is the one that comes back tomorrow, so it is the only one where a countdown to
+        // midnight means anything. The weekly reset already has its own line down in the ceilings block.
+        if (pool == SparkPool.Routine)
+        {
+            var untilMidnight = NextUtcMidnight() - DateTimeOffset.UtcNow;
+            ImGui.SetCursorPosX(Px(PadX));
+            ImGui.TextColored(ThemeService.Current.AccentLight,
+                Loc.T("os.wallet_earn_daily_reset", SparksScreen.FormatCountdown(untilMidnight)));
+        }
         ImGui.Dummy(new Vector2(0f, Px(4f)));
 
         foreach (var entry in entries)
@@ -107,6 +118,11 @@ internal sealed class EarnScreen
             DrawEarnRow(ctx, entry, winW);
         }
     }
+
+    /// <summary>When the per-day counts start again. UTC midnight, because that is the boundary the server
+    /// counts a day's grants against; anything local would promise a reset that does not happen.</summary>
+    private static DateTimeOffset NextUtcMidnight() =>
+        new(DateTimeOffset.UtcNow.UtcDateTime.Date.AddDays(1), TimeSpan.Zero);
 
     private static void DrawEarnRow(OsAppContext ctx, SparkCatalogEntryDto entry, float winW)
     {
@@ -116,13 +132,26 @@ internal sealed class EarnScreen
         var cardH = Px(52f);
         ImGui.SetCursorPosX(Px(PadX));
         var tl = ImGui.GetCursorScreenPos();
-        dl.AddRectFilled(tl, tl + new Vector2(cardW, cardH), OsDrawShared.White(0.05f), Px(14f));
+        var done = entry.Exhausted;
+
+        // The row is a hover target and nothing else: the tick needs somewhere to explain itself, and a
+        // page of read-only facts should not start opening things when it is clicked.
+        ImGui.SetCursorScreenPos(tl);
+        ImGui.InvisibleButton($"##earn{(short)entry.Action}", new Vector2(cardW, cardH));
+        if (done && ImGui.IsItemHovered())
+        {
+            ImGui.SetTooltip(Loc.T(entry.WeekSpent ? "os.wallet_earn_done_week" : "os.wallet_earn_done_today"));
+        }
+
+        dl.AddRectFilled(tl, tl + new Vector2(cardW, cardH), OsDrawShared.White(done ? 0.03f : 0.05f), Px(14f));
 
         var chipR = Px(16f);
         var chipC = new Vector2(tl.X + Px(12f) + chipR, tl.Y + cardH * 0.5f);
-        dl.AddCircleFilled(chipC, chipR, ImGui.GetColorU32(t.Accent with { W = 0.16f }));
-        IconDraw.AddCentered(dl, SparksScreen.ActionIcon(entry.Action), Px(14f), chipC,
-            ImGui.GetColorU32(t.AccentLight));
+        var tick = UiColors.Success;
+        dl.AddCircleFilled(chipC, chipR,
+            ImGui.GetColorU32(done ? tick with { W = 0.18f } : t.Accent with { W = 0.16f }));
+        IconDraw.AddCentered(dl, done ? FontAwesomeIcon.Check : SparksScreen.ActionIcon(entry.Action),
+            Px(14f), chipC, ImGui.GetColorU32(done ? tick : t.AccentLight));
 
         var amount = Loc.T("os.wallet_earn_amount", entry.Amount);
         using (UiFonts.H3?.Push())
@@ -130,16 +159,34 @@ internal sealed class EarnScreen
             var amountSz = ImGui.CalcTextSize(amount);
             dl.AddText(ImGui.GetFont(), ImGui.GetFontSize(),
                 new Vector2(tl.X + cardW - amountSz.X - Px(14f), tl.Y + (cardH - amountSz.Y) * 0.5f),
-                ImGui.GetColorU32(t.AccentLight), amount);
+                ImGui.GetColorU32(done ? UiColors.Hint : t.AccentLight), amount);
         }
 
         var textX = chipC.X + chipR + Px(12f);
-        dl.AddText(new Vector2(textX, tl.Y + Px(8f)), ImGui.GetColorU32(UiColors.Body),
-            SparksScreen.ActionLabel(entry.Action));
+        dl.AddText(new Vector2(textX, tl.Y + Px(8f)),
+            ImGui.GetColorU32(done ? UiColors.Hint : UiColors.Body), EarnLabel(ctx, entry.Action));
         dl.AddText(new Vector2(textX, tl.Y + Px(10f) + ImGui.GetTextLineHeight()),
             ImGui.GetColorU32(UiColors.Hint), FrequencyLine(entry));
 
+        ImGui.SetCursorScreenPos(tl);
         ImGui.Dummy(new Vector2(0f, cardH + Px(6f)));
+    }
+
+    /// <summary>The row's title. Everything reads from the shared ledger table except the companion's own
+    /// row, which the ledger has to keep as question marks (it renders for accounts that never hatched
+    /// anything) and this page does not: the wallet only ever receives that entry once the pet is grown, so
+    /// here it can say what it is and use the creature's name, taken from the app registry's own tile
+    /// name rather than by reaching into another app.</summary>
+    private static string EarnLabel(OsAppContext ctx, SparkAction action)
+    {
+        if (action != SparkAction.AetherlingGame)
+        {
+            return SparksScreen.ActionLabel(action);
+        }
+        var name = ctx.Shell.Apps.FirstOrDefault(a => a.Id == "aetherling")?.Name;
+        return string.IsNullOrWhiteSpace(name) || name == "???"
+            ? Loc.T("os.wallet_action_aetherling_game_plain")
+            : Loc.T("os.wallet_action_aetherling_game", name);
     }
 
     /// <summary>The ceiling block: the two weekly numbers, spelled out, plus the reset time. This is the

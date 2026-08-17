@@ -102,6 +102,43 @@ internal sealed class StoreState(IStoreHost host)
 
     private const int BrowsePageSize = 24;
 
+    /// <summary>How many products a shelf card fetches for its face. It only ever draws one; the spares are
+    /// there so a shelf whose first product has no art yet still shows something.</summary>
+    private const int PreviewSize = 8;
+
+    /// <summary>What a shelf is fetched with when the browse screen is hunting for one named product in it.
+    /// A handful of featured products is a lottery the named one usually loses, so it asks for the shelf
+    /// whole; the server's own page cap is the ceiling, which is why the preferences are pointed at leaf
+    /// shelves rather than at a parent whose subtree can exceed it.</summary>
+    private const int PreferredPreviewSize = 60;
+
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, List<StoreProductDto>> _previews = new();
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, byte> _previewsInFlight = new();
+
+    /// <summary>A few products from one shelf, for its card's picture. Fetched per shelf rather than taken
+    /// from the browse list: that list is paged, so a shelf whose products sit past the first page had
+    /// nothing to show and fell back to a bare glyph. One tiny call per shelf, cached for the session.</summary>
+    public IReadOnlyList<StoreProductDto> PreviewFor(Guid categoryId, bool wholeShelf = false)
+    {
+        if (_previews.TryGetValue(categoryId, out var cached))
+        {
+            return cached;
+        }
+        if (_previewsInFlight.TryAdd(categoryId, 0))
+        {
+            var take = wholeShelf ? PreferredPreviewSize : PreviewSize;
+            _ = Task.Run(async () =>
+            {
+                var page = await host.GetStoreProductsAsync(new StoreProductQueryDto(
+                    categoryId, null, null, null, null, false, 0, take, StoreSort.Featured))
+                    .ConfigureAwait(false);
+                _previews[categoryId] = page?.Items.ToList() ?? [];
+                Changed?.Invoke();
+            });
+        }
+        return [];
+    }
+
     /// <summary>Starts a fresh browse when the filter changed, else keeps the current list.</summary>
     public void Browse(BrowseFilter filter)
     {

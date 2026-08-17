@@ -1,0 +1,14 @@
+{
+  "name": "Dark Knight's Greatsword",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_greatsword.png",
+  "anchor": "handR",
+  "origin": [
+    19,
+    199
+  ],
+  "width": 83,
+  "height": 226,
+  "behind": false
+}

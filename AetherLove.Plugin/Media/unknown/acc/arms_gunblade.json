@@ -1,0 +1,14 @@
+{
+  "name": "Gunbreaker's Gunblade",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_gunblade.png",
+  "anchor": "handR",
+  "origin": [
+    8,
+    160
+  ],
+  "width": 60,
+  "height": 175,
+  "behind": false
+}

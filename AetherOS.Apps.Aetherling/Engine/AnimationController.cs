@@ -40,6 +40,7 @@ public sealed class AnimationController
 
     private readonly Random _rng;
     private readonly ClipPlayer _clip;
+    private readonly AtlasManifest _manifest;
 
     private float _sinceInteraction;
     private float _blinkIn;
@@ -52,6 +53,7 @@ public sealed class AnimationController
     public AnimationController(AtlasManifest manifest, Random? rng = null)
     {
         _rng = rng ?? new Random();
+        _manifest = manifest;
         _clip = new ClipPlayer(manifest, "idle");
         _blinkIn = NextBlink();
         _variantIn = NextVariant();
@@ -65,6 +67,9 @@ public sealed class AnimationController
 
     /// <summary>It is asleep, so the caller can say so rather than making the player guess.</summary>
     public bool Napping => _napping;
+
+    /// <summary>The clip on screen right now, which is what the mouth's resting shape follows.</summary>
+    public string CurrentAnimation => _clip.ClipName;
 
     /// <summary>Plays the hop frames without moving the sprite anywhere. The arrival carries it down from
     /// where the crystal broke under its own arithmetic, and two hop offsets fighting over one sprite reads
@@ -116,7 +121,8 @@ public sealed class AnimationController
         }
 
         _blinkIn -= dt;
-        if (_blinkIn <= 0f && _clip.ClipName == "idle")
+        // Wide-open blink frames flashing through a half-shut face read as waking up, not blinking.
+        if (_blinkIn <= 0f && _clip.ClipName == "idle" && DrowsyState() is null)
         {
             _blinkIn = NextBlink();
             _clip.Play("blink");
@@ -137,6 +143,40 @@ public sealed class AnimationController
         }
     }
 
+    /// <summary>How close it is to its nap, as a lid state: the last stretch before the inactivity nap
+    /// wears drowsy, then heavy, so it visibly gets sleepy rather than dropping off a cliff. Null while
+    /// it is properly awake, or already napping where the nap cells close their own eyes.</summary>
+    private string? DrowsyState()
+    {
+        if (_napping || _clip.ClipName != "idle")
+        {
+            return null;
+        }
+        var untilNap = NapAfterSeconds - _sinceInteraction;
+        return untilNap <= 60f ? "heavy" : untilNap <= 150f ? "drowsy" : null;
+    }
+
+    /// <summary>Swaps the drawn cell for a rest-registered eye cell, compensating the running clip's baked
+    /// breath. The breath preserves area and the head anchor measures it at twice the silhouette's squash,
+    /// so the square root of the anchors' ratio puts the body back where the clip had it; without it the
+    /// swap jumps the silhouette a twentieth of a cell mid-breath.</summary>
+    private void SubstituteEyeCell(int cell, ref PetPose pose)
+    {
+        if (pose.CellIndex == cell)
+        {
+            return;
+        }
+        var running = _manifest.Cell - _manifest.AnchorForCell("head", pose.CellIndex).Y;
+        var substituted = _manifest.Cell - _manifest.AnchorForCell("head", cell).Y;
+        if (running > 0f && substituted > 0f)
+        {
+            var squash = MathF.Sqrt(running / substituted);
+            pose.Scale.X /= squash;
+            pose.Scale.Y *= squash;
+        }
+        pose.CellIndex = cell;
+    }
+
     public PetPose GetPose()
     {
         var pose = new PetPose
@@ -146,6 +186,12 @@ public sealed class AnimationController
             Offset = Vector2.Zero,
             FlipX = false,
         };
+        // Before the reduce-motion return on purpose: a lidded eye is a state, not a movement.
+        if (DrowsyState() is { } drowsy && _manifest.EyeCellFor(drowsy) is { } drowsyCell)
+        {
+            SubstituteEyeCell(drowsyCell, ref pose);
+        }
+
         if (ReduceMotion)
         {
             return pose;

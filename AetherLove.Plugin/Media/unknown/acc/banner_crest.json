@@ -1,0 +1,14 @@
+{
+  "name": "Loyal Crest",
+  "slot": "banner",
+  "tier": "premium",
+  "file": "banner_crest.png",
+  "anchor": "body",
+  "origin": [
+    102,
+    108
+  ],
+  "width": 73,
+  "height": 135,
+  "behind": true
+}

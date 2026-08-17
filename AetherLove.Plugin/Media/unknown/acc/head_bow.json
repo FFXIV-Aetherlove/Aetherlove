@@ -1,0 +1,14 @@
+{
+  "name": "Ribbon Bow",
+  "slot": "head",
+  "tier": "premium",
+  "file": "head_bow.png",
+  "anchor": "head",
+  "origin": [
+    42,
+    37
+  ],
+  "width": 83,
+  "height": 40,
+  "behind": false
+}

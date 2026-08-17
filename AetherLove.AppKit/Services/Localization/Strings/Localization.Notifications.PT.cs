@@ -38,5 +38,24 @@ internal static class NotificationsPt
         ["notif.realtor_results"] = "A loteria de casas entrou no período de resultados. Confira como você se saiu no app Imobiliária.",
         ["notif.staff_notice_title"] = "Mensagem da equipe",
         ["notif.staff_notice_body"] = "Abra as Configurações para ler.",
+
+        // Timers (added after update 2.3.3)
+        ["notif.timers_title"] = "Timers",
+        ["notif.timers_daily"] = "Reset diário",
+        ["notif.timers_gc"] = "Reset da Grand Company",
+        ["notif.timers_weekly"] = "Reset semanal",
+        ["notif.timers_fr"] = "Fashion Report aberto",
+        ["notif.timers_cactpot"] = "Sorteio do Jumbo Cactpot",
+        ["notif.timers_ocean"] = "Ocean Fishing: inscrições abertas",
+        ["notif.timers_venture"] = "{0} terminou a venture: {1}",
+        ["notif.timers_fleet"] = "{0} voltou da viagem",
+        ["notif.timers_custom"] = "\"{0}\" acabou",
+        ["notif.timers_lead"] = "em {0} min",
+        ["notif.timers_chat"] = "Um lembrete do Timers disparou.",
+        ["notif.calendar_alert_title"] = "Calendário",
+        ["notif.calendar_alert_body"] = "Em breve: {0}",
+
+        // added after update 2.3.4
+        ["notif.realtor_estate"] = "{0}: {2} dias sem passar em casa. Um terreno particular é demolido após 45 dias de ausência, portanto restam cerca de {1} dias.",
     };
 }

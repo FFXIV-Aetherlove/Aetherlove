@@ -70,4 +70,60 @@ public sealed partial class AetherHubContext
             throw rl;
         }
     }
+
+    public async Task<AetherlingDto> FeedAetherlingAsync(short element, string? job, CancellationToken ct = default)
+    {
+        try
+        {
+            return await (await ConnAsync(ct))
+                .InvokeAsync<AetherlingDto>("FeedAetherlingAsync", element, job, ct)
+                .ConfigureAwait(false);
+        }
+        catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl)
+        {
+            throw rl;
+        }
+    }
+
+    public async Task<AetherlingDto> RevealAetherlingCardAsync(short slot, CancellationToken ct = default)
+    {
+        try
+        {
+            return await (await ConnAsync(ct))
+                .InvokeAsync<AetherlingDto>("RevealAetherlingCardAsync", slot, ct)
+                .ConfigureAwait(false);
+        }
+        catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl)
+        {
+            throw rl;
+        }
+    }
+
+    public async Task<AetherlingDto> CompleteAetherlingOnboardingAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            return await (await ConnAsync(ct))
+                .InvokeAsync<AetherlingDto>("CompleteAetherlingOnboardingAsync", ct)
+                .ConfigureAwait(false);
+        }
+        catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl)
+        {
+            throw rl;
+        }
+    }
+
+    public async Task<AetherlingDto> SetAetherlingLookAsync(AetherlingLookDto look, CancellationToken ct = default)
+    {
+        try
+        {
+            return await (await ConnAsync(ct))
+                .InvokeAsync<AetherlingDto>("SetAetherlingLookAsync", look, ct)
+                .ConfigureAwait(false);
+        }
+        catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl)
+        {
+            throw rl;
+        }
+    }
 }

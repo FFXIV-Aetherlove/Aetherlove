@@ -1,0 +1,14 @@
+{
+  "name": "Planted Surfboard",
+  "slot": "nook",
+  "tier": "seasonal",
+  "file": "nook_surfboard.png",
+  "anchor": "body",
+  "origin": [
+    -34,
+    107
+  ],
+  "width": 93,
+  "height": 186,
+  "behind": true
+}

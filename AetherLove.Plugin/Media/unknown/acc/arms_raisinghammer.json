@@ -1,0 +1,14 @@
+{
+  "name": "Armorer's Raising Hammer",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_raisinghammer.png",
+  "anchor": "handR",
+  "origin": [
+    18,
+    105
+  ],
+  "width": 78,
+  "height": 155,
+  "behind": false
+}

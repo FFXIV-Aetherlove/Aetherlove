@@ -1,0 +1,14 @@
+{
+  "name": "Cushion",
+  "slot": "nook",
+  "tier": "premium",
+  "file": "nook_cushion.png",
+  "anchor": "body",
+  "origin": [
+    106,
+    -30
+  ],
+  "width": 212,
+  "height": 96,
+  "behind": true
+}

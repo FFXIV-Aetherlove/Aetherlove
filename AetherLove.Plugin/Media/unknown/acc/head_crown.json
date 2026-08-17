@@ -1,0 +1,14 @@
+{
+  "name": "Little Crown",
+  "slot": "head",
+  "tier": "premium",
+  "file": "head_crown.png",
+  "anchor": "head",
+  "origin": [
+    45,
+    55
+  ],
+  "width": 90,
+  "height": 57,
+  "behind": false
+}

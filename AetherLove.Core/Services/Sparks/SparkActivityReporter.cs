@@ -81,6 +81,16 @@ public sealed class SparkActivityReporter(
         Report(SparkAction.ArcadeGame, () => config.Sparks.ArcadeGamesReported++);
     }
 
+    /// <summary>One finished round of a companion minigame; once a day is all the server pays.</summary>
+    public void NoteAetherlingGameFinished()
+    {
+        RollDay();
+        if (!config.Sparks.AetherlingGameReported)
+        {
+            Report(SparkAction.AetherlingGame, () => config.Sparks.AetherlingGameReported = true);
+        }
+    }
+
     private void RollDay()
     {
         var today = DateTime.UtcNow.ToString("yyyy-MM-dd");
@@ -98,6 +108,7 @@ public sealed class SparkActivityReporter(
         state.GrooveReported = false;
         state.StoreVisitReported = false;
         state.WalletVisitReported = false;
+        state.AetherlingGameReported = false;
         config.Save();
     }
 

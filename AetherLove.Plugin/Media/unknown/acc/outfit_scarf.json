@@ -1,0 +1,14 @@
+{
+  "name": "Cosy Scarf",
+  "slot": "outfit",
+  "tier": "premium",
+  "file": "outfit_scarf.png",
+  "anchor": "body",
+  "origin": [
+    67,
+    -42
+  ],
+  "width": 134,
+  "height": 88,
+  "behind": false
+}

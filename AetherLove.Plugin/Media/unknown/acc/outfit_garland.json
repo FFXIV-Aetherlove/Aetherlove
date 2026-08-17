@@ -1,0 +1,14 @@
+{
+  "name": "Flower Garland",
+  "slot": "outfit",
+  "tier": "seasonal",
+  "file": "outfit_garland.png",
+  "anchor": "body",
+  "origin": [
+    65,
+    -43
+  ],
+  "width": 129,
+  "height": 25,
+  "behind": false
+}

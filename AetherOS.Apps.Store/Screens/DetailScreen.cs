@@ -364,7 +364,9 @@ internal sealed class DetailScreen(
     /// beyond the one-time Yapper avatar lookup.</summary>
     private void DrawRingTryOn(OsAppContext ctx, float winW, StoreProductDto product)
     {
-        if (StoreImageSpec.KeepsAlpha(product.ItemKind) is false || !product.HasImage)
+        // Rings only. It used to ask KeepsAlpha, which was the same question until the Aetherling kinds
+        // started keeping their alpha too, and then a feeding crystal was being tried on as jewellery.
+        if (product.ItemKind != StoreItemKind.AvatarFrame || !product.HasImage)
         {
             return;
         }

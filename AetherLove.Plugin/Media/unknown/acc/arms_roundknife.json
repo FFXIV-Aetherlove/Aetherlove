@@ -1,0 +1,14 @@
+{
+  "name": "Leatherworker's Round Knife",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_roundknife.png",
+  "anchor": "handR",
+  "origin": [
+    48,
+    12
+  ],
+  "width": 83,
+  "height": 79,
+  "behind": false
+}

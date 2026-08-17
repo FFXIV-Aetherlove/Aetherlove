@@ -20,7 +20,8 @@ public sealed record StoreCategoryDto(
     uint AccentColor,
     int ProductCount,
     string? Icon = null,
-    int ImageVersion = 0);
+    int ImageVersion = 0,
+    string? Key = null);
 
 /// <summary>One constituent of a bundle product, with enough denormalized identity to render the
 /// contents list without a second fetch.</summary>

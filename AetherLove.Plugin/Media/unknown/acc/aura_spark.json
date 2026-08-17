@@ -1,0 +1,14 @@
+{
+  "name": "Aether Trail",
+  "slot": "head",
+  "tier": "premium",
+  "file": "aura_spark.png",
+  "anchor": "head",
+  "origin": [
+    20,
+    157
+  ],
+  "width": 57,
+  "height": 73,
+  "behind": true
+}

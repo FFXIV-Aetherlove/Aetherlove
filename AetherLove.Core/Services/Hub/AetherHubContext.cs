@@ -149,6 +149,7 @@ public sealed partial class AetherHubContext
             return await (await ConnAsync(ct)).InvokeAsync<AetherConnectionDto>("GetConnectionInfoAsync", ct).ConfigureAwait(false);
         }
         catch (HubException ex) when (OutdatedClientException.TryParse(ex) is { } outdated) { throw outdated; }
+        catch (HubException ex) when (ServerClosedException.TryParse(ex) is { } closed) { throw closed; }
     }
 
     /// <summary>Account-level snapshot (identity, role, supporter, OS-onboarded/passphrase state, profile count)

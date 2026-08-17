@@ -559,6 +559,14 @@
           "AetherOS.Sdk": "[1.0.0, )"
         }
       },
+      "aetheros.apps.calculator": {
+        "type": "Project",
+        "dependencies": {
+          "AetherLove.AppKit": "[1.0.0, )",
+          "AetherLove.Shared": "[1.0.0, )",
+          "AetherOS.Sdk": "[1.0.0, )"
+        }
+      },
       "aetheros.apps.calendar": {
         "type": "Project",
         "dependencies": {
@@ -595,6 +603,14 @@
         "dependencies": {
           "AetherLove.AppKit": "[1.0.0, )",
           "AetherLove.Core": "[1.0.0, )",
+          "AetherLove.Shared": "[1.0.0, )",
+          "AetherOS.Sdk": "[1.0.0, )"
+        }
+      },
+      "aetheros.apps.eordle": {
+        "type": "Project",
+        "dependencies": {
+          "AetherLove.AppKit": "[1.0.0, )",
           "AetherLove.Shared": "[1.0.0, )",
           "AetherOS.Sdk": "[1.0.0, )"
         }
@@ -682,6 +698,14 @@
           "AetherOS.Sdk": "[1.0.0, )"
         }
       },
+      "aetheros.apps.notes": {
+        "type": "Project",
+        "dependencies": {
+          "AetherLove.AppKit": "[1.0.0, )",
+          "AetherLove.Shared": "[1.0.0, )",
+          "AetherOS.Sdk": "[1.0.0, )"
+        }
+      },
       "aetheros.apps.photos": {
         "type": "Project",
         "dependencies": {
@@ -704,6 +728,14 @@
           "AetherOS.Sdk": "[1.0.0, )"
         }
       },
+      "aetheros.apps.racooner": {
+        "type": "Project",
+        "dependencies": {
+          "AetherLove.AppKit": "[1.0.0, )",
+          "AetherLove.Shared": "[1.0.0, )",
+          "AetherOS.Sdk": "[1.0.0, )"
+        }
+      },
       "aetheros.apps.realtor": {
         "type": "Project",
         "dependencies": {
@@ -714,6 +746,14 @@
         }
       },
       "aetheros.apps.settings": {
+        "type": "Project",
+        "dependencies": {
+          "AetherLove.AppKit": "[1.0.0, )",
+          "AetherLove.Shared": "[1.0.0, )",
+          "AetherOS.Sdk": "[1.0.0, )"
+        }
+      },
+      "aetheros.apps.skyswarm": {
         "type": "Project",
         "dependencies": {
           "AetherLove.AppKit": "[1.0.0, )",
@@ -746,6 +786,14 @@
         }
       },
       "aetheros.apps.sudoku": {
+        "type": "Project",
+        "dependencies": {
+          "AetherLove.AppKit": "[1.0.0, )",
+          "AetherLove.Shared": "[1.0.0, )",
+          "AetherOS.Sdk": "[1.0.0, )"
+        }
+      },
+      "aetheros.apps.timers": {
         "type": "Project",
         "dependencies": {
           "AetherLove.AppKit": "[1.0.0, )",

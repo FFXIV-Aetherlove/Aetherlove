@@ -94,6 +94,60 @@ internal static class PetPageUi
         return height + Px(8f);
     }
 
+    /// <summary>A settings row carrying a 0..1 level instead of a switch. Returns true on the frames the
+    /// value moved; <paramref name="committed"/> is the frame the drag ended, which is when a caller should
+    /// save or preview.</summary>
+    public static bool Slider(
+        ImDrawListPtr dl, Vector2 origin, Vector2 size, float y, string label, ref float value,
+        out bool committed)
+    {
+        var pad = Px(18f);
+        var height = Px(38f);
+        var tl = new Vector2(origin.X + pad, y);
+        var width = size.X - (pad * 2f);
+        var trackW = MathF.Min(Px(120f), width * 0.42f);
+        var trackX = tl.X + width - Px(12f) - trackW;
+        var trackY = y + (height * 0.5f);
+
+        ImGui.SetCursorScreenPos(new Vector2(trackX - Px(8f), y));
+        ImGui.InvisibleButton($"##aetherlingSlider{label}", new Vector2(trackW + Px(16f), height));
+        var active = ImGui.IsItemActive();
+        var hovered = ImGui.IsItemHovered() || active;
+        committed = ImGui.IsItemDeactivated();
+        if (hovered)
+        {
+            HandOnHover();
+        }
+
+        var changed = false;
+        if (active)
+        {
+            var next = Math.Clamp((ImGui.GetIO().MousePos.X - trackX) / trackW, 0f, 1f);
+            changed = MathF.Abs(next - value) > 0.001f;
+            value = next;
+        }
+
+        dl.AddRectFilled(tl, tl + new Vector2(width, height),
+            Look.U32(Look.Crystal with { W = hovered ? 0.12f : 0.05f }), Px(10f));
+        dl.AddText(new Vector2(tl.X + Px(12f), y + (height * 0.5f) - (ImGui.GetTextLineHeight() * 0.5f)),
+            Look.U32(Look.CrystalPale, 0.92f), label);
+
+        var thickness = Px(4f);
+        dl.AddRectFilled(new Vector2(trackX, trackY - (thickness * 0.5f)),
+            new Vector2(trackX + trackW, trackY + (thickness * 0.5f)),
+            Look.U32(Look.Whisper, 0.25f), thickness * 0.5f);
+        var fill = trackW * Math.Clamp(value, 0f, 1f);
+        if (fill > 0f)
+        {
+            dl.AddRectFilled(new Vector2(trackX, trackY - (thickness * 0.5f)),
+                new Vector2(trackX + fill, trackY + (thickness * 0.5f)),
+                Look.U32(Look.Crystal, 0.9f), thickness * 0.5f);
+        }
+        dl.AddCircleFilled(new Vector2(trackX + fill, trackY), Px(hovered ? 7f : 6f),
+            Look.U32(Look.CrystalPale, 0.95f), 16);
+        return changed;
+    }
+
     /// <summary>A settings row. A null <paramref name="on"/> is an action rather than a state, so it draws a
     /// chevron where the switch would be.</summary>
     public static bool Toggle(

@@ -35,6 +35,7 @@ public sealed class AetherLoveBootstrap : IHostedService
     private readonly MiniWindow _miniWindow;
     private readonly ChangelogWindow _changelogWindow;
     private readonly DebugWindow _debugWindow;
+    private readonly AetherlingDebugWindow _aetherlingDebugWindow;
     private readonly EchoWindow _echoWindow;
     private readonly SkinPreviewWindow _skinPreviewWindow;
     private readonly Os.AetherlingHostService _aetherlingHost;
@@ -48,6 +49,9 @@ public sealed class AetherLoveBootstrap : IHostedService
     private readonly MarketAlertService _marketAlerts;
     private readonly Os.MarketContextMenuService _marketContextMenu;
     private readonly Os.ClockAlarmService _clockAlarms;
+    private readonly Os.TimerScheduleService _timerSchedule;
+    private readonly Os.RetainerFleetService _retainerFleet;
+    private readonly Services.TimersDtrService _timersDtr;
     private readonly TomestoneEmoteService _tomestoneEmote;
     private readonly ScreenCaptureService _capture;
     private readonly Services.Hangouts.HangoutStateService _hangoutState;
@@ -81,6 +85,7 @@ public sealed class AetherLoveBootstrap : IHostedService
         MiniWindow miniWindow,
         ChangelogWindow changelogWindow,
         DebugWindow debugWindow,
+        AetherlingDebugWindow aetherlingDebugWindow,
         EchoWindow echoWindow,
         SkinPreviewWindow skinPreviewWindow,
         ScreenRouter router,
@@ -91,6 +96,9 @@ public sealed class AetherLoveBootstrap : IHostedService
         MarketAlertService marketAlerts,
         Os.MarketContextMenuService marketContextMenu,
         Os.ClockAlarmService clockAlarms,
+        Os.TimerScheduleService timerSchedule,
+        Os.RetainerFleetService retainerFleet,
+        Services.TimersDtrService timersDtr,
         TomestoneEmoteService tomestoneEmote,
         ScreenCaptureService capture,
         Widgets.SelfieCaptureOverlay selfieOverlay,
@@ -122,6 +130,7 @@ public sealed class AetherLoveBootstrap : IHostedService
         _miniWindow = miniWindow;
         _changelogWindow = changelogWindow;
         _debugWindow = debugWindow;
+        _aetherlingDebugWindow = aetherlingDebugWindow;
         _echoWindow = echoWindow;
         _skinPreviewWindow = skinPreviewWindow;
         _aetherlingHost = aetherlingHost;
@@ -147,6 +156,9 @@ public sealed class AetherLoveBootstrap : IHostedService
         _chatCache = chatCache;
         _messenger = messenger;
         _realtorPhase = realtorPhase;
+        _timerSchedule = timerSchedule;
+        _retainerFleet = retainerFleet;
+        _timersDtr = timersDtr;
     }
 
     private readonly Os.OsShell _osShell;
@@ -171,6 +183,7 @@ public sealed class AetherLoveBootstrap : IHostedService
         _windowSystem.AddWindow(_miniWindow);
         _windowSystem.AddWindow(_changelogWindow);
         _windowSystem.AddWindow(_debugWindow);
+        _windowSystem.AddWindow(_aetherlingDebugWindow);
         _windowSystem.AddWindow(_echoWindow);
         _windowSystem.AddWindow(_skinPreviewWindow);
         _windowSystem.AddWindow(_modalHost);
@@ -207,10 +220,13 @@ public sealed class AetherLoveBootstrap : IHostedService
         _pulse.Start();
         _marketAlerts.Start();
         _clockAlarms.Start();
+        _timerSchedule.Start();
+        _retainerFleet.Start();
         _tomestoneEmote.Start(() => _mainWindow.IsOpen && _mainWindow.IsPhoneFocused);
         _capture.Initialize();
         _dtrBar.Initialize();
         _grooveDtr.Initialize();
+        _timersDtr.Initialize();
         _grooveAutoMute.Initialize();
         Widgets.SelfieCaptureOverlay.PurgeTempFiles();
 
@@ -278,11 +294,14 @@ public sealed class AetherLoveBootstrap : IHostedService
 
         _pulse.Stop();
         _clockAlarms.Stop();
+        _timerSchedule.Stop();
+        _retainerFleet.Stop();
         _tomestoneEmote.Stop();
         _capture.Dispose();
         _realtorPhase.Dispose();
         _dtrBar.Shutdown();
         _grooveDtr.Shutdown();
+        _timersDtr.Shutdown();
         _grooveAutoMute.Shutdown();
         Widgets.SelfieCaptureOverlay.PurgeTempFiles();
 
@@ -296,6 +315,10 @@ public sealed class AetherLoveBootstrap : IHostedService
         await _signal.DisposeAsync().ConfigureAwait(false);
     }
 
+    /// <summary>Frames a single /aetherlove fontdiag captures. Enough to see the phone settle rather than
+    /// one atypical frame, few enough to paste into a report.</summary>
+    private const int FontDiagCaptureFrames = 30;
+
     private bool _fontScaleLeakLogged;
     private bool _appsResolved;
 
@@ -307,7 +330,9 @@ public sealed class AetherLoveBootstrap : IHostedService
         var savedScale = io.FontGlobalScale;
         try
         {
+            UI.FontDiagnostics.Sample("Handler/entry");
             _windowSystem.Draw();
+            UI.FontDiagnostics.Sample("Handler/after-window-system");
 
             // Apps are resolved lazily, and the Aetherling app hands over its floating creature from its
             // constructor, so without this it would only appear once the phone had been opened at least once.
@@ -319,8 +344,10 @@ public sealed class AetherLoveBootstrap : IHostedService
 
             // Outside the window system on purpose: the floating creature opens its own window, sized and
             // placed by the app, and a wrapper window would only be an invisible rectangle around it. It
-            // goes away with the phone: a switched-off phone leaves nothing of AetherOS on screen.
-            var phoneOn = _mainWindow.IsOpen || _miniWindow.IsOpen;
+            // goes away with the phone: a switched-off phone leaves nothing of AetherOS on screen, and it
+            // follows the phone's own visibility rule of never being on screen while logged out, which
+            // covers the title screen and the gap in the middle of a character switch.
+            var phoneOn = (_mainWindow.IsOpen || _miniWindow.IsOpen) && _clientState.IsLoggedIn;
             if (phoneOn && _aetherlingHost.Overlay is { Visible: true } overlay)
             {
                 overlay.Draw();
@@ -343,7 +370,11 @@ public sealed class AetherLoveBootstrap : IHostedService
         }
         finally
         {
-            io.FontGlobalScale = savedScale;
+            UI.FontScalePin.Restore(savedScale);
+            UI.FontDiagnostics.Sample("Handler/after-guard-restore");
+            // Last thing in the frame that is ours, so this measures precisely what the next plugin gets.
+            UI.FontDiagnostics.ProbeDownstream();
+            UI.FontDiagnostics.EndFrame();
         }
     }
 
@@ -537,9 +568,24 @@ public sealed class AetherLoveBootstrap : IHostedService
             _debugWindow.IsOpen = true;
             return;
         }
+        if (sub.Equals("fontdiag", StringComparison.OrdinalIgnoreCase))
+        {
+            UI.FontDiagnostics.CaptureFrames(FontDiagCaptureFrames);
+            return;
+        }
+        if (sub.Equals("fontdiag verbose", StringComparison.OrdinalIgnoreCase))
+        {
+            UI.FontDiagnostics.Toggle();
+            return;
+        }
         if (sub.Equals("clearcache", StringComparison.OrdinalIgnoreCase))
         {
             StartClearCache();
+            return;
+        }
+        if (sub.Equals("debuglumi", StringComparison.OrdinalIgnoreCase))
+        {
+            _aetherlingDebugWindow.IsOpen = true;
             return;
         }
         if (sub.Equals("hatchling reset", StringComparison.OrdinalIgnoreCase))

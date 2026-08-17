@@ -38,5 +38,24 @@ internal static class NotificationsFr
         ["notif.realtor_results"] = "La loterie immobilière est passée à la période des résultats. Voyez où vous en êtes dans l'appli Immobilier.",
         ["notif.staff_notice_title"] = "Message de l'équipe",
         ["notif.staff_notice_body"] = "Ouvrez les Réglages pour le lire.",
+
+        // Timers (added after update 2.3.3)
+        ["notif.timers_title"] = "Minuteurs",
+        ["notif.timers_daily"] = "Réinitialisation quotidienne",
+        ["notif.timers_gc"] = "Réinitialisation de la Grande Compagnie",
+        ["notif.timers_weekly"] = "Réinitialisation hebdomadaire",
+        ["notif.timers_fr"] = "Fashion Report est ouvert",
+        ["notif.timers_cactpot"] = "Tirage du Jumbo Cactpot",
+        ["notif.timers_ocean"] = "Pêche en haute mer : inscriptions ouvertes",
+        ["notif.timers_venture"] = "{0} a terminé sa mission : {1}",
+        ["notif.timers_fleet"] = "{0} est revenu de son expédition",
+        ["notif.timers_custom"] = "« {0} » est écoulé",
+        ["notif.timers_lead"] = "dans {0} min",
+        ["notif.timers_chat"] = "Un rappel des Minuteurs vient de sonner.",
+        ["notif.calendar_alert_title"] = "Calendrier",
+        ["notif.calendar_alert_body"] = "À venir : {0}",
+
+        // added after update 2.3.4
+        ["notif.realtor_estate"] = "{0} : {2} jours sans passer à la maison. Un terrain privé est démoli après 45 jours d’absence, il reste donc environ {1} jours.",
     };
 }

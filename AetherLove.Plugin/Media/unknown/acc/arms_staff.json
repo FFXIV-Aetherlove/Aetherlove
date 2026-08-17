@@ -1,0 +1,14 @@
+{
+  "name": "White Mage's Staff",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_staff.png",
+  "anchor": "handR",
+  "origin": [
+    22,
+    121
+  ],
+  "width": 80,
+  "height": 179,
+  "behind": false
+}

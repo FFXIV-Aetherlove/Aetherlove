@@ -31,6 +31,11 @@ internal static class RealtorUi
         PopScrollbarStyle();
     }
 
+    /// <summary>Row and banner tints for an estate nobody has been home to. Shared so the warning on the
+    /// home screen and the row in the owned-realty list are recognisably the same thing.</summary>
+    public static readonly Vector4 RiskAmber = new(0.95f, 0.66f, 0.24f, 1f);
+    public static readonly Vector4 RiskRed = new(0.94f, 0.35f, 0.33f, 1f);
+
     private const int Mist = 339;
     private const int LavenderBeds = 340;
     private const int Goblet = 341;

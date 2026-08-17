@@ -2,6 +2,7 @@ using System;
 using System.Numerics;
 using AetherLove.Services.Realtor;
 using AetherLove.Services.Localization;
+using AetherLove.UI;
 using AetherOS.Sdk;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -13,10 +14,11 @@ namespace AetherOS.Apps.Realtor;
 /// AetherLove server.</summary>
 public sealed class RealtorApp : IAetherApp, IAppSettings
 {
-    private enum View { Home, District, WorldPick, Tour, Settings }
+    private enum View { Home, District, WorldPick, Tour, Settings, Realty }
 
     private readonly Func<string> _name;
     private readonly IHousingLotteryWatch _lottery;
+    private readonly IEstateWatch _estates;
     private readonly IRealtorAlerts _alerts;
     private readonly RealtorSettings _settings;
     private readonly SettingsScreen _settingsScreen;
@@ -26,15 +28,17 @@ public sealed class RealtorApp : IAetherApp, IAppSettings
     private readonly DistrictScreen _district;
     private readonly WorldPickScreen _worldPick;
     private readonly TourScreen _tour;
+    private readonly OwnedRealtyScreen _realty;
     private View _view = View.Home;
     private bool _tourSeen;
     private bool _tourSeenLoaded;
 
     public RealtorApp(Func<string> name, IAppCapabilities caps, RealtorDataService data, IHousingLotteryWatch lottery,
-        IRealtorAlerts alerts)
+        IEstateWatch estates, IRealtorAlerts alerts)
     {
         _name = name;
         _lottery = lottery;
+        _estates = estates;
         _alerts = alerts;
         _storage = caps.Storage("realtor");
         var filters = new RealtorFilters(_storage);
@@ -42,10 +46,12 @@ public sealed class RealtorApp : IAetherApp, IAppSettings
         _settingsScreen = new SettingsScreen(_settings);
         var clock = new LotteryClock(_storage);
         _clock = clock;
-        _home = new HomeScreen(data, filters, clock, _settings, OpenWorldPick, OpenDistrict, OpenTour, () => _view = View.Settings);
+        _home = new HomeScreen(data, filters, clock, _settings, estates, OpenWorldPick, OpenDistrict, OpenTour,
+            () => _view = View.Settings, OpenRealty);
         _district = new DistrictScreen(data, filters, clock, _settings, BackToHome);
         _worldPick = new WorldPickScreen(data, BackToHome, PickWorld);
         _tour = new TourScreen(FinishTour);
+        _realty = new OwnedRealtyScreen(estates, BackToHome);
     }
 
     private bool ShouldAutoRunTour()
@@ -76,7 +82,7 @@ public sealed class RealtorApp : IAetherApp, IAppSettings
     public FontAwesomeIcon Icon => FontAwesomeIcon.Home;
     public Vector4 TileTop => new(0.86f, 0.51f, 0.26f, 1f);
     public Vector4 TileBottom => new(0.52f, 0.22f, 0.10f, 1f);
-    public int Badge => 0;
+    public int Badge => _estates.AtRiskCount;
     public bool HasSurface => true;
 
     public System.Collections.Generic.IReadOnlyDictionary<string, System.Collections.Generic.IReadOnlyDictionary<string, string>> Strings => Localization.AppStrings.Packs;
@@ -88,6 +94,7 @@ public sealed class RealtorApp : IAetherApp, IAppSettings
     public void OnForeground()
     {
         _alerts.ClearNotifications();
+        _estates.DismissWarnings();
         switch (_view)
         {
             case View.Home:
@@ -110,9 +117,11 @@ public sealed class RealtorApp : IAetherApp, IAppSettings
             _tour.OnShow();
         }
 
-        // Above every screen, but not over the tour or settings, which own their whole region.
-        if (_view is not (View.Tour or View.Settings))
+        // Above every screen, but not over the tour or settings, which own their whole region. The estate
+        // warning goes first: a lottery entry is an opportunity, a demolition is a loss.
+        if (_view is not (View.Tour or View.Settings or View.Realty))
         {
+            DrawEstateBanner(ctx);
             DrawLotteryBanner(ctx);
         }
 
@@ -133,6 +142,9 @@ public sealed class RealtorApp : IAetherApp, IAppSettings
             case View.Settings:
                 DrawSettings(ctx, BackToHome);
                 break;
+            case View.Realty:
+                _realty.Draw(ctx);
+                break;
             default:
                 _view = View.Home;
                 _home.OnShow(_storage.Get<string>("world"));
@@ -146,6 +158,63 @@ public sealed class RealtorApp : IAetherApp, IAppSettings
     }
 
     public void DrawSettings(OsAppContext ctx, Action? onBack) => _settingsScreen.Draw(ctx, onBack);
+
+    /// <summary>A character that has not been home to its own private estate in long enough that the game is
+    /// warning about it. Built as the same card the district and realty rows use rather than a coloured slab,
+    /// so it reads as part of the app; the tint and the icon carry the alarm on their own.</summary>
+    private void DrawEstateBanner(OsAppContext ctx)
+    {
+        var now = DateTime.UtcNow;
+        var estates = _estates.Estates;
+        if (EstateRisk.Worst(estates, now) is not { } worst)
+        {
+            return;
+        }
+
+        var daysAway = EstateRisk.DaysAway(worst, now);
+        var others = EstateRisk.AtRiskCount(estates, now) - 1;
+        var tint = RealtorUi.RiskRed;
+
+        var who = worst.World.Length > 0 ? $"{worst.Character} ({worst.World})" : worst.Character;
+        var title = Loc.T("os.realtor_estate_title", EstateRisk.DaysLeft(daysAway));
+        var detail = others > 0
+            ? Loc.T("os.realtor_estate_detail_more", who, daysAway, others)
+            : Loc.T("os.realtor_estate_detail", who, daysAway);
+
+        var winW = ImGui.GetWindowSize().X;
+        var padX = ctx.Px(16f);
+        var cardW = winW - (padX * 2f);
+        var cardH = ctx.Px(58f);
+        ImGui.SetCursorPosX(padX);
+        var tl = ImGui.GetCursorScreenPos();
+        ImGui.Dummy(new Vector2(cardW, cardH));
+
+        var dl = ImGui.GetWindowDrawList();
+        dl.AddRectFilled(tl, tl + new Vector2(cardW, cardH),
+            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.06f)), ctx.Px(14f));
+        dl.AddRect(tl, tl + new Vector2(cardW, cardH), ImGui.GetColorU32(tint with { W = 0.5f }),
+            ctx.Px(14f), ImDrawFlags.None, ctx.Px(1.2f));
+
+        var circle = ctx.Px(36f);
+        var circleTl = new Vector2(tl.X + ctx.Px(11f), tl.Y + (cardH - circle) * 0.5f);
+        dl.AddCircleFilled(circleTl + new Vector2(circle * 0.5f, circle * 0.5f), circle * 0.5f,
+            ImGui.GetColorU32(tint with { W = 0.22f }));
+        var iconPx = circle * 0.48f;
+        var iconSz = IconDraw.Measure(FontAwesomeIcon.ExclamationTriangle, iconPx);
+        IconDraw.Add(dl, FontAwesomeIcon.ExclamationTriangle, iconPx,
+            circleTl + new Vector2((circle - iconSz.X) * 0.5f, (circle - iconSz.Y) * 0.5f),
+            ImGui.GetColorU32(tint));
+
+        var textX = circleTl.X + circle + ctx.Px(11f);
+        var limit = tl.X + cardW - textX - ctx.Px(12f);
+        var lineH = ImGui.GetTextLineHeight();
+        dl.AddText(new Vector2(textX, tl.Y + (cardH * 0.5f) - lineH - ctx.Px(1f)),
+            ImGui.GetColorU32(tint), TruncateToWidth(title, limit));
+        dl.AddText(new Vector2(textX, tl.Y + (cardH * 0.5f) + ctx.Px(2f)),
+            ImGui.GetColorU32(UiColors.Hint), TruncateToWidth(detail, limit));
+
+        ImGui.Dummy(new Vector2(0f, ctx.Px(8f)));
+    }
 
     /// <summary>The player's own lottery entry, shouted at the top of every screen while entries are still
     /// open. Deliberately loud: missing the window is the whole failure mode this guards against.</summary>
@@ -175,6 +244,12 @@ public sealed class RealtorApp : IAetherApp, IAppSettings
             Loc.T("os.realtor_bid_detail", entry.Plot, entry.Ward, entry.District, entry.Number));
 
         ImGui.Dummy(new Vector2(0f, bannerH + ctx.Px(10f)));
+    }
+
+    private void OpenRealty()
+    {
+        _view = View.Realty;
+        _realty.OnShow();
     }
 
     private void OpenWorldPick()

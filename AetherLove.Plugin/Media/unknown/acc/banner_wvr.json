@@ -1,0 +1,14 @@
+{
+  "name": "Weaver's Banner",
+  "slot": "banner",
+  "tier": "premium",
+  "file": "banner_wvr.png",
+  "anchor": "body",
+  "origin": [
+    102,
+    108
+  ],
+  "width": 73,
+  "height": 135,
+  "behind": true
+}

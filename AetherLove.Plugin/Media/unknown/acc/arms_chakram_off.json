@@ -1,0 +1,14 @@
+{
+  "name": "Dancer's Off-hand Chakram",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_chakram_off.png",
+  "anchor": "handL",
+  "origin": [
+    72,
+    59
+  ],
+  "width": 79,
+  "height": 77,
+  "behind": false
+}

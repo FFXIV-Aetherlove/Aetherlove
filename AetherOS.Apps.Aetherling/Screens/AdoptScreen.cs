@@ -93,7 +93,7 @@ internal sealed class AdoptScreen(IAetherlingHost host)
             _errorUntil = time + 5.0;
         }
 
-        dl.AddRectFilled(origin, origin + size, Look.U32(Look.Void));
+        Look.Backdrop(dl, ctx.Theme, origin, size);
         Look.Motes(dl, origin, size, 34, Look.CrystalPale, 0.55f * fade, time, ctx.ReduceMotion);
 
         var centre = origin + new Vector2(size.X * 0.5f, size.Y * 0.42f);

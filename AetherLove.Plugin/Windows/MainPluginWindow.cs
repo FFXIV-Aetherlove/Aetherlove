@@ -74,6 +74,7 @@ public class MainPluginWindow : Window, IDisposable
         Os.AppCapabilities capabilities,
         Os.ShareSheet osShareSheet,
         Os.OsTour osTour,
+        Os.NewAppOffer newAppOffer,
         Services.Sparks.SparkActivityReporter sparkActivity,
         SkinPreviewWindow skinPreview
     ) : base("AetherLove##MainWindow",
@@ -110,6 +111,7 @@ public class MainPluginWindow : Window, IDisposable
         _capabilities = capabilities;
         _osShareSheet = osShareSheet;
         _osTour = osTour;
+        _newAppOffer = newAppOffer;
         _sparkActivity = sparkActivity;
         _skinPreview = skinPreview;
     }
@@ -121,6 +123,7 @@ public class MainPluginWindow : Window, IDisposable
     private readonly Os.AppCapabilities _capabilities;
     private readonly Os.ShareSheet _osShareSheet;
     private readonly Os.OsTour _osTour;
+    private readonly Os.NewAppOffer _newAppOffer;
 
     public void SetMiniWindow(MiniWindow mini) => _miniWindow = mini;
 
@@ -350,6 +353,26 @@ public class MainPluginWindow : Window, IDisposable
         _osShell.SendIntent("clock", AetherOS.Sdk.OsIntents.Create(AetherOS.Sdk.OsIntents.OpenClockTimers));
     }
 
+    public void OpenToTimers()
+    {
+        if (_miniWindow != null)
+        {
+            _miniWindow.IsOpen = false;
+        }
+        IsOpen = true;
+        _osShell.OpenApp("timers");
+    }
+
+    public void OpenToCalendar()
+    {
+        if (_miniWindow != null)
+        {
+            _miniWindow.IsOpen = false;
+        }
+        IsOpen = true;
+        _osShell.OpenApp("calendar");
+    }
+
     public void Dispose()
     {
         _splashScreen.Dispose();
@@ -435,9 +458,9 @@ public class MainPluginWindow : Window, IDisposable
         // Dalamud's global font scale would multiply every glyph on top of the phone's own scaling and
         // overflow the fixed window; pin it to 1 for our draw and restore in PostDraw. Pinned last so no
         // fallible PreDraw code runs between pin and restore.
-        var io = ImGui.GetIO();
-        _savedFontGlobalScale = io.FontGlobalScale;
-        io.FontGlobalScale = 1f;
+        FontDiagnostics.Sample("MainWindow.PreDraw/before-pin");
+        _savedFontGlobalScale = FontScalePin.Pin();
+        FontDiagnostics.Sample("MainWindow.PreDraw/after-pin");
     }
 
     private static float BezelLeft => ThemeService.Current.BezelLeft;
@@ -586,7 +609,9 @@ public class MainPluginWindow : Window, IDisposable
 
     public override void PostDraw()
     {
-        ImGui.GetIO().FontGlobalScale = _savedFontGlobalScale;
+        FontDiagnostics.Sample("MainWindow.PostDraw/before-restore");
+        FontScalePin.Restore(_savedFontGlobalScale);
+        FontDiagnostics.Sample("MainWindow.PostDraw/after-restore");
         ImGui.PopStyleVar();
         EmojiFavoriteFx.Draw();
     }
@@ -796,8 +821,10 @@ public class MainPluginWindow : Window, IDisposable
 
     private void DrawOsOverlays()
     {
+        var offering = _newAppOffer.Active && _router.Current is Screen.Home && !_osTour.Active
+            && !Os.OsBootIntro.Active && !Os.OsTransitions.Active;
         if (!Os.OsTransitions.Active && !_osShade.Visible && !Os.OsBootIntro.Active && !_osShareSheet.Visible
-            && !_osTour.Active)
+            && !_osTour.Active && !offering)
         {
             return;
         }
@@ -827,6 +854,10 @@ public class MainPluginWindow : Window, IDisposable
             dl.PopClipRect();
             // Unclipped on purpose: the tour highlights bezel elements (home button, status strip).
             _osTour.Draw(winPos, winSize);
+            if (offering)
+            {
+                _newAppOffer.Draw(contentTL, contentBR);
+            }
         }
         ImGui.EndChild();
     }

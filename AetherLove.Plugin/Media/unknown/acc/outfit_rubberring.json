@@ -1,0 +1,14 @@
+{
+  "name": "Rubber Ring",
+  "slot": "outfit",
+  "tier": "seasonal",
+  "file": "outfit_rubberring.png",
+  "anchor": "body",
+  "origin": [
+    84,
+    -46
+  ],
+  "width": 169,
+  "height": 42,
+  "behind": false
+}

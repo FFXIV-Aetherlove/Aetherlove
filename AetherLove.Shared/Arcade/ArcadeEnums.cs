@@ -1,6 +1,8 @@
 namespace AetherLove.Shared.Arcade;
 
-/// <summary>The arcade games with server-tracked scores. Append-only: values are stored in the database.</summary>
+/// <summary>The games with server-tracked scores. Append-only: values are stored in the database.
+/// Despite the name this is the score domain, not the arcade cabinet: the Aetherling pet games from 11
+/// onward share the tables and leaderboards without being arcade apps.</summary>
 public enum ArcadeGame : short
 {
     Snake = 0,
@@ -11,6 +13,12 @@ public enum ArcadeGame : short
     Muncher = 5,
     Plappy = 6,
     Sudoku = 7,
+    Racooner = 8,
+    SkySwarm = 9,
+    Eordle = 10,
+    CloudHop = 11,
+    CrystalCatch = 12,
+    HillRoll = 13,
 }
 
 /// <summary>Which leaderboard window to fetch.</summary>

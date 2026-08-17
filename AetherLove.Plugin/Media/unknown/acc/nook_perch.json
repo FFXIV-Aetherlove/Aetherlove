@@ -1,0 +1,14 @@
+{
+  "name": "Aetheryte Perch",
+  "slot": "nook",
+  "tier": "premium",
+  "file": "nook_perch.png",
+  "anchor": "body",
+  "origin": [
+    115,
+    -30
+  ],
+  "width": 231,
+  "height": 120,
+  "behind": true
+}

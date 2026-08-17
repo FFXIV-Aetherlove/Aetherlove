@@ -38,5 +38,24 @@ internal static class NotificationsEn
         ["notif.realtor_results"] = "The housing lottery has moved to its results period. Check the Realtor app to see where you stand.",
         ["notif.staff_notice_title"] = "Message from staff",
         ["notif.staff_notice_body"] = "Open Settings to read it.",
+
+        // Timers (added after update 2.3.3)
+        ["notif.timers_title"] = "Timers",
+        ["notif.timers_daily"] = "Daily reset",
+        ["notif.timers_gc"] = "Grand Company reset",
+        ["notif.timers_weekly"] = "Weekly reset",
+        ["notif.timers_fr"] = "Fashion Report is open",
+        ["notif.timers_cactpot"] = "Jumbo Cactpot drawing",
+        ["notif.timers_ocean"] = "Ocean Fishing registration is open",
+        ["notif.timers_venture"] = "{0} finished the venture: {1}",
+        ["notif.timers_fleet"] = "{0} has returned from its voyage",
+        ["notif.timers_custom"] = "\"{0}\" is up",
+        ["notif.timers_lead"] = "in {0} min",
+        ["notif.timers_chat"] = "A Timers reminder went off.",
+        ["notif.calendar_alert_title"] = "Calendar",
+        ["notif.calendar_alert_body"] = "Coming up: {0}",
+
+        // added after update 2.3.4
+        ["notif.realtor_estate"] = "{0}: {2} days without going home. A private estate is demolished after 45 days away, so that leaves about {1}.",
     };
 }

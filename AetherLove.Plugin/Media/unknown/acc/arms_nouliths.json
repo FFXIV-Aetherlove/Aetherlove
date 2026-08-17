@@ -1,0 +1,14 @@
+{
+  "name": "Sage's Nouliths",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_nouliths.png",
+  "anchor": "handR",
+  "origin": [
+    16,
+    122
+  ],
+  "width": 70,
+  "height": 113,
+  "behind": true
+}

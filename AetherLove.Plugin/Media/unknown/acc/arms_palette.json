@@ -1,0 +1,14 @@
+{
+  "name": "Pictomancer's Palette",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_palette.png",
+  "anchor": "handL",
+  "origin": [
+    83,
+    34
+  ],
+  "width": 100,
+  "height": 78,
+  "behind": false
+}

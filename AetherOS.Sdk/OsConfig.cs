@@ -100,16 +100,22 @@ public class OsConfig
     /// <summary>Apps whose home-tile "new" badge has been dismissed by opening them once.</summary>
     public List<string> SeenNewApps { get; set; } = new();
 
+    /// <summary>Apps the player has already answered for, whether they took them or not. An app that has
+    /// never been placed and is not in here is one an update has just brought along, which is what the
+    /// new-app offer asks about; answering, either way, puts it here for good.</summary>
+    public List<string> OfferedApps { get; set; } = new();
+
     /// <summary>The Media folder seed has been considered. It is a one-shot decision rather than a repeated
     /// check, so a folder the user deleted never returns and a user who already had one of its apps is never
     /// reorganised later.</summary>
     public bool MediaFolderSeeded { get; set; }
 
+    /// <summary>The Utilities folder seed has been considered. Same one-shot posture as
+    /// <see cref="MediaFolderSeeded"/>.</summary>
+    public bool UtilitiesFolderSeeded { get; set; }
+
     /// <summary>The guided OS tour ran (or was skipped); it auto-starts once on the first Home landing.</summary>
     public bool TourSeen { get; set; }
-
-    /// <summary>The one-time "Welcome to AetherLove 2.0" splash (shown before the guided tour) was dismissed.</summary>
-    public bool Welcome20Seen { get; set; }
 
     /// <summary>The battery has run flat at least once. Gates the opt-out below, so nobody is offered a way to
     /// hide a joke they have not seen yet.</summary>

@@ -63,14 +63,22 @@ internal sealed class FloatingPet(IAetherlingHost host, PetRuntime pet) : IAethe
     /// <summary>Raised by the right-click menu's statistics row.</summary>
     public event Action? StatusRequested;
 
-    public bool Visible => Enabled && host.Snapshot is { HatchedAtUtc: not null };
+    /// <summary>Kept in for a moment: set while a ceremony or the grown-up's welcome owns the phone, so
+    /// the same creature is not standing on the game screen while it is busy being celebrated inside.</summary>
+    public bool Hidden { get; set; }
+
+    public bool Visible => Enabled && !Hidden && host.Snapshot is { HatchedAtUtc: not null };
 
     /// <summary>Puts it back in the middle of the screen, for anyone who has lost it off an edge.</summary>
     public void Recentre() => _recentre = true;
 
     public void Draw()
     {
-        pet.EnsureLoaded(host.AssetRoot);
+        // The same form AND the same look the phone page asks for. Both are the runtime's, not a page's:
+        // dressing it from the pet page alone meant the creature out here wore the default blue until the
+        // app had been opened at least once.
+        pet.EnsureLoaded(host.AssetRoot, Engine.PetState.FormFolder(host.Snapshot));
+        pet.ApplyLook(host.Snapshot);
         if (!pet.Ready)
         {
             return;
@@ -82,7 +90,15 @@ internal sealed class FloatingPet(IAetherlingHost host, PetRuntime pet) : IAethe
         var scale = SizeScales[Math.Clamp(SizeIndex, 0, SizeScales.Length - 1)];
         var size = PetSize * scale * ImGuiHelpers.GlobalScale;
         var margin = MathF.Max(10f, size * MarginFraction);
-        var canvas = new Vector2(size + (margin * 2f), size + (margin * 2f));
+
+        // The worn look can reach past the creature's own square (a lance, a nook), so the
+        // canvas folds the footprint in. Input stays silhouette-gated, so a bigger canvas
+        // never blocks more of the game.
+        var footprint = pet.AccessoryFootprint();
+        var sidePad = MathF.Max(margin, (size * MathF.Max(footprint.X, footprint.Z)) + 10f);
+        var headroom = margin + (size * footprint.Y);
+        var footPad = MathF.Max(margin, size * footprint.W);
+        var canvas = new Vector2(size + (sidePad * 2f), headroom + size + footPad);
 
         var viewport = ImGui.GetMainViewport();
         if (_recentre || _position is null)
@@ -103,7 +119,7 @@ internal sealed class FloatingPet(IAetherlingHost host, PetRuntime pet) : IAethe
             && mouse.Y >= feet.Y - hitbox.Y && mouse.Y <= feet.Y;
         var interactive = overPet || _dragging || _holding || ImGui.IsPopupOpen(MenuId);
 
-        var windowTl = feet - new Vector2(canvas.X * 0.5f, margin + size);
+        var windowTl = feet - new Vector2(canvas.X * 0.5f, headroom + size);
         ImGui.SetNextWindowPos(windowTl, ImGuiCond.Always);
         ImGui.SetNextWindowSize(canvas, ImGuiCond.Always);
         const ImGuiWindowFlags BaseFlags = ImGuiWindowFlags.NoDecoration
@@ -128,7 +144,7 @@ internal sealed class FloatingPet(IAetherlingHost host, PetRuntime pet) : IAethe
         }
 
         var topLeft = ImGui.GetCursorScreenPos();
-        var bottomCentre = topLeft + new Vector2(canvas.X * 0.5f, margin + size);
+        var bottomCentre = topLeft + new Vector2(canvas.X * 0.5f, headroom + size);
 
         ImGui.SetCursorScreenPos(bottomCentre - new Vector2(hitbox.X * 0.5f, hitbox.Y));
         ImGui.InvisibleButton("##aetherlingFloatingHit", hitbox);
@@ -158,6 +174,7 @@ internal sealed class FloatingPet(IAetherlingHost host, PetRuntime pet) : IAethe
             else if (!_dragging)
             {
                 pet.Boop();
+                host.PlayChirp();
             }
             _dragging = false;
         }

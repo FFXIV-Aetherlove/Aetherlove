@@ -1,0 +1,14 @@
+{
+  "name": "Blacksmith's Cross-pein Hammer",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_crosspein.png",
+  "anchor": "handR",
+  "origin": [
+    19,
+    96
+  ],
+  "width": 78,
+  "height": 143,
+  "behind": false
+}

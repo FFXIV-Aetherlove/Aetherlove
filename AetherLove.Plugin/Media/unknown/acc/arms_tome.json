@@ -1,0 +1,14 @@
+{
+  "name": "Summoner's Grimoire",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_tome.png",
+  "anchor": "handR",
+  "origin": [
+    15,
+    68
+  ],
+  "width": 74,
+  "height": 63,
+  "behind": false
+}

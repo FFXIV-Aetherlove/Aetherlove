@@ -1,9 +1,12 @@
-using System;
+﻿using System;
 using AetherLove.Config;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game.Character;
+using FFXIVClientStructs.FFXIV.Client.System.String;
+using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
+using FFXIVClientStructs.FFXIV.Client.UI.Shell;
 using Lumina.Excel.Sheets;
 
 namespace AetherLove.Services;
@@ -12,6 +15,12 @@ namespace AetherLove.Services;
 public sealed unsafe class TomestoneEmoteService : IDisposable
 {
     private const string TomestoneCommand = "/tomescroll";
+
+    /// <summary>The motion-only form, which plays the pose without printing "You begin reading..." to the
+    /// log. The agent call cannot express it: `motion` is a text-command modifier the shell parses, and
+    /// nothing on `AgentEmote.ExecuteEmote` or `PlayEmoteOption` carries it, so the emote goes through the
+    /// shell instead. The string is a constant here and never built from anything a user typed.</summary>
+    private const string TomestoneMotionCommand = TomestoneCommand + " motion";
     private const long StartThrottleMs = 1500;
 
     private readonly Configuration _config;
@@ -85,9 +94,24 @@ public sealed unsafe class TomestoneEmoteService : IDisposable
             _lastStartAttemptMs = now;
 
             var agent = AgentEmote.Instance();
-            if (agent != null && agent->CanUseEmote(_emoteId))
+            if (agent == null || !agent->CanUseEmote(_emoteId))
             {
-                agent->ExecuteEmote(_emoteId, null, false, false);
+                return;
+            }
+            var shell = RaptureShellModule.Instance();
+            var ui = UIModule.Instance();
+            if (shell == null || ui == null)
+            {
+                return;
+            }
+            var command = Utf8String.FromString(TomestoneMotionCommand);
+            try
+            {
+                shell->ExecuteCommandInner(command, ui);
+            }
+            finally
+            {
+                command->Dtor(true);
             }
         }
         catch (Exception ex)

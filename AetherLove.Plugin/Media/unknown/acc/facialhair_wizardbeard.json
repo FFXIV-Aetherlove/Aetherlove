@@ -1,0 +1,14 @@
+{
+  "name": "Wizard's Beard",
+  "slot": "facialhair",
+  "tier": "premium",
+  "file": "facialhair_wizardbeard.png",
+  "anchor": "face",
+  "origin": [
+    55,
+    -45
+  ],
+  "width": 110,
+  "height": 61,
+  "behind": false
+}

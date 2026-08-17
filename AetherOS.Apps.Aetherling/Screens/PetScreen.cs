@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,8 +15,9 @@ using Dalamud.Interface;
 namespace AetherOS.Apps.Aetherling.Screens;
 
 /// <summary>Where it lives once it is out. One fitted page, never a scroller: a header, the stage it sits on,
-/// and a line telling you how it seems. Feeding, dressing and growing are not built; this is the room.</summary>
-internal sealed class PetScreen(IAetherlingHost host, PetRuntime pet)
+/// a line telling you how it seems, and the mode pill that decides what a touch means. Feeding and petting
+/// live in the Modes partial; growing is the feed ladder the server runs.</summary>
+internal sealed partial class PetScreen(IAetherlingHost host, PetRuntime pet)
 {
     private const string MenuId = "##aetherlingPetMenu";
 
@@ -37,6 +38,10 @@ internal sealed class PetScreen(IAetherlingHost host, PetRuntime pet)
     private AetherlingDto? _core;
     private double _lastFrameTime;
     private float _settle = 1f;
+
+    /// <summary>Where the mood marker is, eased toward the mood itself. Negative until the first frame,
+    /// so a page opened on a beaming pet starts beaming rather than sliding there from asleep.</summary>
+    private float _moodGlide = -1f;
     private float _arrive = 1f;
     private int _arriveHop = -1;
 
@@ -61,32 +66,47 @@ internal sealed class PetScreen(IAetherlingHost host, PetRuntime pet)
 
     public event Action? SettingsRequested;
 
+    public event Action? WardrobeRequested;
+
+    public event Action? GamesRequested;
+
     public void OnShow(AetherlingDto? core, bool justBorn)
     {
         _lastFrameTime = ImGui.GetTime();
-        _core = core;
+        AdoptCore(core);
         _settle = justBorn ? 0f : 1f;
         _arrive = justBorn ? 0f : 1f;
         _arriveHop = -1;
         _error = null;
         _namingConfirmLeave = false;
+        RefreshInventory();
         if (justBorn)
         {
             pet.Celebrate();
         }
     }
 
-    public void Apply(AetherlingDto? core)
+    public void Apply(AetherlingDto? core) => AdoptCore(core);
+
+    /// <summary>Stores a snapshot and re-samples the clock offset against it. The offset has to be
+    /// taken at the MOMENT the reply lands: computed fresh every frame it would always resolve back
+    /// to the stamp inside the snapshot, which is frozen, and every countdown drawn from it would
+    /// sit perfectly still.</summary>
+    private void AdoptCore(AetherlingDto? core)
     {
-        if (core is not null)
+        if (core is null)
         {
-            _core = core;
+            return;
         }
+        _core = core;
+        _serverOffset = core.ServerNowUtc - DateTimeOffset.UtcNow;
     }
 
     public void Draw(OsAppContext ctx)
     {
-        pet.EnsureLoaded(host.AssetRoot);
+        // The runtime ignores this while a ceremony is holding the old body, so every surface can
+        // simply ask for the form the snapshot names.
+        pet.EnsureLoaded(host.AssetRoot, PetState.FormFolder(_core));
 
         var dl = ImGui.GetWindowDrawList();
         var origin = ImGui.GetWindowPos();
@@ -96,8 +116,11 @@ internal sealed class PetScreen(IAetherlingHost host, PetRuntime pet)
         _lastFrameTime = now;
 
         DrainPending();
+        DrainInventory();
+        DrainFeeding(ctx, dt);
+        pet.ApplyLook(_core);
 
-        dl.AddRectFilled(origin, origin + size, Look.U32(Look.Void));
+        Look.Backdrop(dl, ctx.Theme, origin, size);
         if (_core is not { } core)
         {
             return;
@@ -136,7 +159,7 @@ internal sealed class PetScreen(IAetherlingHost host, PetRuntime pet)
             string.Format(ctx.Localize("os.aetherling_kindled_on"), born));
 
         var stageTop = headerY + Px(70f);
-        var stageBottom = origin.Y + size.Y - Px(58f);
+        var stageBottom = origin.Y + size.Y - Px(58f) - ModesReserved(core);
         var stage = new Vector2(size.X - (pad * 2f), MathF.Max(Px(150f), stageBottom - stageTop));
         var stageTl = new Vector2(origin.X + pad, stageTop);
 
@@ -148,17 +171,47 @@ internal sealed class PetScreen(IAetherlingHost host, PetRuntime pet)
         DrawMenu(ctx, headerY + Px(14f), size.X, name);
         DrawStage(ctx, dl, stageTl, stage, origin, size, core);
 
-        var hint = ctx.Localize("os.aetherling_tap_hint");
+        var hint = _feedToastLeft > 0f && _feedToast is { Length: > 0 }
+            ? _feedToast
+            : ctx.Localize("os.aetherling_tap_hint");
         Look.Centred(dl, hint, origin.X + (size.X * 0.5f), stageTl.Y + stage.Y + Px(12f),
             Look.U32(Look.Whisper, 0.7f * _settle), 0.9f);
+
+        if (ModesAvailable(core))
+        {
+            DrawModes(ctx, dl, origin, size, core);
+            TickPetting(ctx, dt, stageTl, stage);
+            TickCarriedAndFlying(ctx, dt, stageTl, stage);
+        }
 
         if (!core.NameChosen && !_namingOpen && _settle >= 1f)
         {
             DrawNameChip(ctx, dl, origin, size, core);
         }
+        else if (!_namingOpen && !Ticket.Visible && UnclaimedTicketSlot() is { } waiting && _settle >= 1f)
+        {
+            DrawTicketChip(ctx, dl, origin, size, core, waiting);
+        }
         if (_namingOpen)
         {
             DrawNamingCard(ctx, dl, origin, size);
+        }
+
+        // Last, so it covers the page it took over. When it finishes and the pet has just grown up,
+        // the app takes the hand-off into the adult welcome.
+        if (Evolution.Playing
+            && !Evolution.Draw(ctx, dl, origin, size, dt, core.PetName ?? AetherlingLimits.DefaultName)
+            && _adultingHandOff)
+        {
+            _adultingHandOff = false;
+            AdultingFinished?.Invoke();
+        }
+
+        // After the ceremony, in its own layer: a gift handed over while a growing-up is on screen would
+        // be handed to nobody.
+        if (Ticket.Visible && !Evolution.Playing)
+        {
+            Ticket.Draw(ctx, origin, size, dt);
         }
     }
 
@@ -202,32 +255,45 @@ internal sealed class PetScreen(IAetherlingHost host, PetRuntime pet)
     private void DrawMenu(OsAppContext ctx, float centreY, float width, string name)
     {
         var menuTl = AppHeader.DrawMenuButton(width, 18f, MenuId, badge: !IntroSeen, centerY: centreY);
-        if (!AppHeader.BeginMenuPopup(menuTl, MenuId))
-        {
-            return;
-        }
 
-        var about = string.Format(ctx.Localize("os.aetherling_menu_about"), name);
-        var settings = string.Format(ctx.Localize("os.aetherling_menu_settings"), name);
-        var tour = ctx.Localize("os.aetherling_menu_tour");
-        var w = AppHeader.MenuWidth(about, settings, tour);
-        var rowH = AppHeader.MenuRowHeight();
-        if (AppHeader.MenuRow(FontAwesomeIcon.Heart, about, w, rowH))
+        // BeginMenuPopup pushes its styles BEFORE it opens anything, so EndMenuPopup has to run whether or
+        // not the popup is up. Returning early on false leaked two colours and four style vars every frame
+        // the menu was closed, which is a plugin-wide fault: the stacks are the whole frame's, so it landed
+        // on whoever drew next.
+        var open = AppHeader.BeginMenuPopup(menuTl, MenuId);
+        if (open)
         {
-            AboutRequested?.Invoke();
-            ImGui.CloseCurrentPopup();
+            var about = string.Format(ctx.Localize("os.aetherling_menu_about"), name);
+            var wardrobe = ctx.Localize("os.aetherling_menu_wardrobe");
+            var settings = string.Format(ctx.Localize("os.aetherling_menu_settings"), name);
+            var tour = ctx.Localize("os.aetherling_menu_tour");
+            var showWardrobe = _core?.Adult is not null;
+            var w = showWardrobe
+                ? AppHeader.MenuWidth(about, wardrobe, settings, tour)
+                : AppHeader.MenuWidth(about, settings, tour);
+            var rowH = AppHeader.MenuRowHeight();
+            if (AppHeader.MenuRow(FontAwesomeIcon.Heart, about, w, rowH))
+            {
+                AboutRequested?.Invoke();
+                ImGui.CloseCurrentPopup();
+            }
+            if (showWardrobe && AppHeader.MenuRow(FontAwesomeIcon.HatWizard, wardrobe, w, rowH))
+            {
+                WardrobeRequested?.Invoke();
+                ImGui.CloseCurrentPopup();
+            }
+            if (AppHeader.MenuRow(FontAwesomeIcon.Cog, settings, w, rowH))
+            {
+                SettingsRequested?.Invoke();
+                ImGui.CloseCurrentPopup();
+            }
+            if (AppHeader.MenuRow(FontAwesomeIcon.Route, tour, w, rowH))
+            {
+                IntroRequested?.Invoke();
+                ImGui.CloseCurrentPopup();
+            }
         }
-        if (AppHeader.MenuRow(FontAwesomeIcon.Cog, settings, w, rowH))
-        {
-            SettingsRequested?.Invoke();
-            ImGui.CloseCurrentPopup();
-        }
-        if (AppHeader.MenuRow(FontAwesomeIcon.Route, tour, w, rowH))
-        {
-            IntroRequested?.Invoke();
-            ImGui.CloseCurrentPopup();
-        }
-        AppHeader.EndMenuPopup(true);
+        AppHeader.EndMenuPopup(open);
     }
 
     /// <summary>The card it sits on. The whole card is the target, because aiming at a small creature that
@@ -247,7 +313,7 @@ internal sealed class PetScreen(IAetherlingHost host, PetRuntime pet)
         dl.AddRectFilled(tl, br, 0x14FFFFFFu, Px(18f));
         dl.AddRect(tl, br, 0x1AFFFFFFu, Px(18f), ImDrawFlags.RoundCornersAll, Px(1f));
 
-        if (!_namingOpen && _arrive >= 1f)
+        if (!_namingOpen && !Ticket.Visible && _arrive >= 1f)
         {
             ImGui.SetCursorScreenPos(tl);
             if (ImGui.InvisibleButton("##aetherlingStage", size))
@@ -265,11 +331,15 @@ internal sealed class PetScreen(IAetherlingHost host, PetRuntime pet)
         Look.Motes(dl, tl, size, 22, Look.Crystal, 0.30f, now, ctx.ReduceMotion);
         if (_arrive >= 1f)
         {
-            DrawMoodTitle(ctx, dl, centreX, tl.Y + Px(24f), size.X - Px(36f), core, now);
+            DrawMoodBanner(ctx, dl, centreX, tl.Y + Px(18f), size.X - Px(36f), core, now);
         }
 
-        var bottom = new Vector2(centreX, br.Y - Px(20f));
-        var petSize = MathF.Min(size.X * 0.74f, size.Y - Px(20f));
+        // What it is wearing decides where it stands. A hat needs headroom and a nook needs floor, so the
+        // creature is sized and lifted against its own worn extent rather than a constant that was measured
+        // on a bare pet and clips the tall hats off the top of the card.
+        var footprint = pet.AccessoryFootprint();
+        var petSize = MathF.Min(size.X * 0.74f, (size.Y - Px(24f)) / (1f + footprint.Y + footprint.W));
+        var bottom = new Vector2(centreX, br.Y - Px(20f) - (petSize * footprint.W));
         if (pet.Ready)
         {
             var pose = pet.Pose;
@@ -302,26 +372,133 @@ internal sealed class PetScreen(IAetherlingHost host, PetRuntime pet)
         dl.PopClipRect();
     }
 
-    /// <summary>How it seems, as the page's own title. It used to appear only on hover, which meant the one
-    /// line of life on the page was the one line nobody saw.</summary>
-    private void DrawMoodTitle(
+    /// <summary>One colour per mood, asleep to beaming, read as a ramp rather than six swatches: the bar
+    /// draws the whole scale at once, so the steps between them have to blend into each other.</summary>
+    private static readonly Vector4[] MoodRamp =
+    [
+        new(0.42f, 0.36f, 0.74f, 1f),
+        new(0.36f, 0.53f, 0.88f, 1f),
+        new(0.31f, 0.79f, 0.82f, 1f),
+        new(0.47f, 0.86f, 0.62f, 1f),
+        new(0.98f, 0.83f, 0.44f, 1f),
+        new(1.00f, 0.60f, 0.68f, 1f),
+    ];
+
+    /// <summary>The ramp sampled anywhere along the bar, 0 at the left end and 1 at the right.</summary>
+    private static Vector4 MoodColour(float t)
+    {
+        var at = Math.Clamp(t, 0f, 1f) * (MoodRamp.Length - 1);
+        var i = Math.Min((int)at, MoodRamp.Length - 2);
+        return Vector4.Lerp(MoodRamp[i], MoodRamp[i + 1], at - i);
+    }
+
+    /// <summary>How it seems, as the page's own header: the whole mood scale as one rainbow capsule, asleep
+    /// at the left and beaming at the right, with a marker gliding to where it is now. The sentence stays,
+    /// under it and quieter, because the bar says where and only the words say what.
+    ///
+    /// <para>The marker moves and nothing else does. There is no fill, because a bar that fills is a bar
+    /// that can be seen to empty, and the mood has a floor precisely so nobody is ever losing at owning a
+    /// pet (<see cref="Engine.MoodTracker"/>).</para></summary>
+    private void DrawMoodBanner(
         OsAppContext ctx, ImDrawListPtr dl, float centreX, float y, float maxWidth, AetherlingDto core, double now)
     {
+        var target = pet.MoodProgress;
+        var dt = Math.Clamp(ImGui.GetIO().DeltaTime, 0f, 1f / 30f);
+        _moodGlide = _moodGlide < 0f || ctx.ReduceMotion
+            ? target
+            : _moodGlide + ((target - _moodGlide) * (1f - MathF.Exp(-dt * 5.5f)));
+
+        var breath = ctx.ReduceMotion ? 0.5f : Look.Breathe(now, 5.0f);
+        var width = maxWidth * 0.88f;
+        var height = Px(15f);
+        var left = centreX - (width * 0.5f);
+        var right = centreX + (width * 0.5f);
+        var radius = height * 0.5f;
+        var midY = y + radius;
+        var here = MoodColour(_moodGlide);
+
+        // The bloom the bar sits in, in the colour of the mood it is reporting, so the whole header warms
+        // and cools with the creature rather than only the marker.
+        Look.Halo(dl, new Vector2(centreX, midY), width * 0.52f, here, 0.13f + (0.05f * breath));
+
+        // The capsule: a strip per step between the round caps, each one a horizontal blend of its own two
+        // ends. The caps take the colour at their own centre, so at this radius no seam is visible.
+        const int Steps = 56;
+        var innerL = left + radius;
+        var innerR = right - radius;
+        var span = innerR - innerL;
+        var capT = radius / width;
+        dl.AddCircleFilled(new Vector2(innerL, midY), radius, Look.U32(MoodColour(capT)), 26);
+        dl.AddCircleFilled(new Vector2(innerR, midY), radius, Look.U32(MoodColour(1f - capT)), 26);
+        for (var i = 0; i < Steps; i++)
+        {
+            var t0 = i / (float)Steps;
+            var t1 = (i + 1) / (float)Steps;
+            var c0 = Look.U32(MoodColour(capT + ((1f - (2f * capT)) * t0)));
+            var c1 = Look.U32(MoodColour(capT + ((1f - (2f * capT)) * t1)));
+            dl.AddRectFilledMultiColor(
+                new Vector2(innerL + (span * t0), y),
+                new Vector2(innerL + (span * t1) + 1f, y + height),
+                c0, c1, c1, c0);
+        }
+
+        // Glass: a highlight along the top third and a hairline all the way round, which is what stops a
+        // flat gradient reading as a painted rectangle.
+        dl.AddRectFilled(
+            new Vector2(innerL - (radius * 0.4f), y + (height * 0.16f)),
+            new Vector2(innerR + (radius * 0.4f), y + (height * 0.44f)),
+            Look.U32(new Vector4(1f, 1f, 1f, 0.16f)), height * 0.16f);
+        dl.AddRect(new Vector2(left, y), new Vector2(right, y + height),
+            Look.U32(new Vector4(1f, 1f, 1f, 0.24f)), radius, ImDrawFlags.RoundCornersAll, Px(1.1f));
+
+        // A sheen crossing once every ten seconds. Two triangular-alpha halves rather than a loop of
+        // slices, clipped to the bar; the clip is rectangular and the capsule is not, so the band fades out
+        // over the last radius at each end instead of painting into the round caps.
+        if (!ctx.ReduceMotion)
+        {
+            const float SweepEverySeconds = 10f;
+            const float SweepSeconds = 1.15f;
+            var phase = (float)(now % SweepEverySeconds);
+            if (phase < SweepSeconds)
+            {
+                var t = phase / SweepSeconds;
+                var travelled = t * t * (3f - (2f * t));
+                var band = height * 2.4f;
+                var sweepX = innerL + (span * travelled);
+                var edge = Math.Clamp(
+                    MathF.Min(sweepX - innerL, innerR - sweepX) / MathF.Max(1f, radius * 2f), 0f, 1f);
+                var peak = Look.U32(new Vector4(1f, 1f, 1f, 0.5f * edge));
+                var clear = Look.U32(new Vector4(1f, 1f, 1f, 0f));
+                dl.PushClipRect(new Vector2(left, y), new Vector2(right, y + height), true);
+                dl.AddRectFilledMultiColor(
+                    new Vector2(sweepX - band, y), new Vector2(sweepX, y + height), clear, peak, peak, clear);
+                dl.AddRectFilledMultiColor(
+                    new Vector2(sweepX, y), new Vector2(sweepX + band, y + height), peak, clear, clear, peak);
+                dl.PopClipRect();
+            }
+        }
+
+        // The marker: a lit bead of the mood's own colour, ringed so it stays legible over every part of
+        // the ramp it can stand on.
+        var knobX = innerL + (span * _moodGlide);
+        var knobR = height * 0.62f;
+        Look.Halo(dl, new Vector2(knobX, midY), knobR * 3.2f, here, 0.42f + (0.18f * breath));
+        dl.AddCircleFilled(new Vector2(knobX, midY), knobR, Look.U32(new Vector4(1f, 1f, 1f, 0.94f)), 30);
+        dl.AddCircleFilled(new Vector2(knobX, midY), knobR - Px(2.6f), Look.U32(here), 30);
+
         var line = string.Format(
             ctx.Localize("os.aetherling_feeling"),
             core.PetName ?? AetherlingLimits.DefaultName,
             ctx.Localize($"os.aetherling_feel_{(int)pet.Mood}"));
 
-        // Down a size at a time until it fits on one line: a glow around a wrapped block reads as a smudge.
-        var scale = 1.25f;
-        while (scale > 0.85f && ImGui.CalcTextSize(line).X * scale > maxWidth)
+        // Down a size at a time until it fits on one line: a subtitle that wraps is not a subtitle.
+        var scale = 0.92f;
+        while (scale > 0.7f && ImGui.CalcTextSize(line).X * scale > maxWidth)
         {
-            scale -= 0.05f;
+            scale -= 0.04f;
         }
-
-        var breath = ctx.ReduceMotion ? 0.5f : Look.Breathe(now, 5.0f);
-        Look.GlowText(dl, line, centreX, y, Look.U32(Look.CrystalPale, 0.92f + (0.08f * breath)), scale,
-            Look.Crystal, 0.55f + (0.45f * breath));
+        Look.Centred(dl, line, centreX, y + height + Px(9f),
+            Look.U32(Look.Whisper, 1.15f + (0.15f * breath)), scale);
     }
 
     /// <summary>Where it is on its way down, and how big. The ceremony leaves it standing where the crystal
@@ -365,7 +542,11 @@ internal sealed class PetScreen(IAetherlingHost host, PetRuntime pet)
 
     private static float Lerp(float a, float b, float t) => a + ((b - a) * t);
 
-    private void Boop() => pet.Boop();
+    private void Boop()
+    {
+        pet.Boop();
+        host.PlayChirp();
+    }
 
     /// <summary>The quiet way back to the card for anyone who put it off, and the reason skipping is safe.</summary>
     private void DrawNameChip(
@@ -390,6 +571,37 @@ internal sealed class PetScreen(IAetherlingHost host, PetRuntime pet)
         if (pressed)
         {
             OpenNaming(core);
+        }
+    }
+
+    /// <summary>A ticket that was dealt but never scratched, brought back within reach. It has to
+    /// resurface: the prize lands at the reveal, so a ticket left alone is a flourish the owner earned
+    /// and does not have.</summary>
+    private void DrawTicketChip(
+        OsAppContext ctx, ImDrawListPtr dl, Vector2 origin, Vector2 size, AetherlingDto core, short slot)
+    {
+        var label = ctx.Localize("os.aetherling_ticket_chip");
+        var height = Px(30f);
+        var width = ImGui.CalcTextSize(label).X + Px(42f);
+        var tl = new Vector2(origin.X + ((size.X - width) * 0.5f), origin.Y + size.Y - height - Px(16f));
+        var pulse = ctx.ReduceMotion ? 0.5f : Look.Breathe(ImGui.GetTime(), 2.4f);
+
+        ImGui.SetCursorScreenPos(tl);
+        var pressed = ImGui.InvisibleButton("##aetherlingTicketChip", new Vector2(width, height));
+        var hovered = ImGui.IsItemHovered();
+        if (hovered)
+        {
+            HandOnHover();
+        }
+        dl.AddRectFilled(tl, tl + new Vector2(width, height),
+            Look.U32(Look.Spark with { W = (hovered ? 0.28f : 0.16f) + (0.08f * pulse) }), height * 0.5f);
+        IconDraw.AddCentered(dl, FontAwesomeIcon.Gift, Px(12f),
+            new Vector2(tl.X + Px(16f), tl.Y + (height * 0.5f)), Look.U32(Look.Spark, 0.95f));
+        Look.Centred(dl, label, tl.X + (width * 0.5f) + Px(8f),
+            tl.Y + ((height - ImGui.GetTextLineHeight()) * 0.5f), Look.U32(Look.CrystalPale, 0.92f));
+        if (pressed)
+        {
+            Ticket.Open(core, slot);
         }
     }
 
@@ -546,7 +758,7 @@ internal sealed class PetScreen(IAetherlingHost host, PetRuntime pet)
         if (Interlocked.Exchange(ref _pendingNamed, null) is { } named)
         {
             _busy = false;
-            _core = named;
+            AdoptCore(named);
             _namingOpen = false;
             _namingConfirmLeave = false;
             pet.Celebrate();

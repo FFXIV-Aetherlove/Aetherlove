@@ -1,0 +1,14 @@
+{
+  "name": "Samurai's Katana",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_katana.png",
+  "anchor": "handR",
+  "origin": [
+    14,
+    123
+  ],
+  "width": 54,
+  "height": 155,
+  "behind": false
+}

@@ -1,0 +1,14 @@
+{
+  "name": "Warrior's Axe",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_axe.png",
+  "anchor": "handR",
+  "origin": [
+    23,
+    142
+  ],
+  "width": 116,
+  "height": 206,
+  "behind": false
+}

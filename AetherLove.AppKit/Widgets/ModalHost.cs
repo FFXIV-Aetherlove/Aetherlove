@@ -79,22 +79,26 @@ public sealed class ModalHost : Window
         PositionCondition = ImGuiCond.Always;
         SizeCondition = ImGuiCond.Always;
 
-        // Focus once on open; refocusing every frame steals focus from text fields inside the modal.
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Vector2.Zero);
+
+        FontDiagnostics.Sample("ModalHost.PreDraw/before-pin");
+        _savedFontGlobalScale = FontScalePin.Pin();
+        FontDiagnostics.Sample("ModalHost.PreDraw/after-pin");
+
+        // Focus once on open; refocusing every frame steals focus from text fields inside the modal. After
+        // the pin, which opens a window of its own and would swallow the request.
         if (_justOpened)
         {
             ImGui.SetNextWindowFocus();
             _justOpened = false;
         }
-
-        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Vector2.Zero);
-
-        _savedFontGlobalScale = io.FontGlobalScale;
-        io.FontGlobalScale = 1f;
     }
 
     public override void PostDraw()
     {
-        ImGui.GetIO().FontGlobalScale = _savedFontGlobalScale;
+        FontDiagnostics.Sample("ModalHost.PostDraw/before-restore");
+        FontScalePin.Restore(_savedFontGlobalScale);
+        FontDiagnostics.Sample("ModalHost.PostDraw/after-restore");
         ImGui.PopStyleVar();
     }
 

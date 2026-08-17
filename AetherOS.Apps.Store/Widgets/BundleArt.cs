@@ -45,6 +45,26 @@ internal static class BundleArt
             return false;
         }
 
+        return DrawFan(dl, wraps, found, tl, size, rounding, corners, alpha);
+    }
+
+    /// <summary>The fan itself, over any hand of pictures. A subcategory deals its own first three
+    /// products through here, which is why it is not private to the bundle path.</summary>
+    public static bool DrawFan(
+        ImDrawListPtr dl,
+        Dalamud.Interface.Textures.TextureWraps.IDalamudTextureWrap?[] wraps,
+        int found,
+        Vector2 tl,
+        Vector2 size,
+        float rounding,
+        ImDrawFlags corners = ImDrawFlags.RoundCornersAll,
+        float alpha = 1f)
+    {
+        if (found == 0)
+        {
+            return false;
+        }
+
         var tint = ImGui.ColorConvertFloat4ToU32(new Vector4(1f, 1f, 1f, alpha));
         if (found == 1 || size.X < Px(FanMinWidth))
         {

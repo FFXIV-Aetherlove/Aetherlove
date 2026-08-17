@@ -1,0 +1,14 @@
+{
+  "name": "Carpenter's Saw",
+  "slot": "arms",
+  "tier": "premium",
+  "file": "arms_saw.png",
+  "anchor": "handR",
+  "origin": [
+    25,
+    146
+  ],
+  "width": 72,
+  "height": 177,
+  "behind": false
+}
