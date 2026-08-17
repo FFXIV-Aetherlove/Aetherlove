@@ -122,6 +122,9 @@ public sealed class AppCapabilities : IAppCapabilities
             ImGuiKey.Key1, ImGuiKey.Key2, ImGuiKey.Key3, ImGuiKey.Key4, ImGuiKey.Key5, ImGuiKey.Key6,
             ImGuiKey.Key7,
             ImGuiKey.Y, ImGuiKey.N,
+            ImGuiKey.Q, ImGuiKey.R, ImGuiKey.T, ImGuiKey.U, ImGuiKey.I, ImGuiKey.O, ImGuiKey.P,
+            ImGuiKey.F, ImGuiKey.G, ImGuiKey.H, ImGuiKey.J, ImGuiKey.K, ImGuiKey.L,
+            ImGuiKey.Z, ImGuiKey.X, ImGuiKey.C, ImGuiKey.V, ImGuiKey.B,
         ];
 
         private static readonly VirtualKey[] GameKeys =
@@ -133,6 +136,9 @@ public sealed class AppCapabilities : IAppCapabilities
             VirtualKey.KEY_1, VirtualKey.KEY_2, VirtualKey.KEY_3, VirtualKey.KEY_4, VirtualKey.KEY_5,
             VirtualKey.KEY_6, VirtualKey.KEY_7,
             VirtualKey.Y, VirtualKey.N,
+            VirtualKey.Q, VirtualKey.R, VirtualKey.T, VirtualKey.U, VirtualKey.I, VirtualKey.O, VirtualKey.P,
+            VirtualKey.F, VirtualKey.G, VirtualKey.H, VirtualKey.J, VirtualKey.K, VirtualKey.L,
+            VirtualKey.Z, VirtualKey.X, VirtualKey.C, VirtualKey.V, VirtualKey.B,
         ];
 
         private readonly bool[] _down = new bool[Map.Length];
@@ -157,6 +163,21 @@ public sealed class AppCapabilities : IAppCapabilities
         {
             Refresh();
             return _edge[(int)key];
+        }
+
+        public bool TryGetPressedKey(out AppKey key)
+        {
+            Refresh();
+            for (var i = 0; i < _edge.Length; i++)
+            {
+                if (_edge[i])
+                {
+                    key = (AppKey)i;
+                    return true;
+                }
+            }
+            key = default;
+            return false;
         }
 
         public bool GameTextFocused => TextInputActive();
