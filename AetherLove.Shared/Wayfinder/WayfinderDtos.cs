@@ -66,8 +66,9 @@ public sealed record WayfinderNewChallengeDto(
     string? ZoneName,
     PhotoUploadDto Photo);
 
-/// <summary><see cref="PendingReview"/> is true when auto-moderation flagged the submission, so it waits
-/// for a moderator instead of going live.</summary>
+/// <summary><see cref="PendingReview"/> is always true: every scout submission waits for a moderator
+/// rather than going live on the strength of auto-moderation alone. The field stays on the wire because
+/// older clients read it, and because the answer is a server policy that may soften again.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record WayfinderNewChallengeResultDto(
     Guid ChallengeId,

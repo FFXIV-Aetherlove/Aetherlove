@@ -147,9 +147,17 @@ public sealed class WeatherStationService : IWeatherStation, IDisposable
     /// environment keeps the lighting it last resolved and only recomputes when something makes it, so a
     /// midday sky stayed bright at 23:20. Writing the real time into the override slot before dropping the
     /// flag leaves nothing stale behind, and re-applying the forecast weather with a transition is what
-    /// actually forces the recompute.</summary>
+    /// actually forces the recompute.
+    ///
+    /// <para>The early return is not an optimisation: without an override of our own to undo there is
+    /// nothing to restore, and nudging anyway wrote over the environment of every player who never opened
+    /// the app.</para></summary>
     public unsafe void ClearTimeOverride()
     {
+        if (_timeOverrideMinutes == null)
+        {
+            return;
+        }
         _timeOverrideMinutes = null;
         var framework = Framework.Instance();
         if (framework != null)
@@ -161,11 +169,19 @@ public sealed class WeatherStationService : IWeatherStation, IDisposable
     }
 
     /// <summary>Re-applies whatever weather should be running, which makes the environment resolve its
-    /// whole state again (lighting and sky included) instead of keeping what it last computed.</summary>
+    /// whole state again (lighting and sky included) instead of keeping what it last computed. Only ever
+    /// call this to undo an override of ours while the player stands where they are; a zone load resolves
+    /// the environment by itself.</summary>
     private unsafe void NudgeEnvironment()
     {
+        // The rate table is cached per zone and refreshed lazily, so without this the nudge can write the
+        // PREVIOUS zone's weather into the new one.
+        if (!RefreshZone())
+        {
+            return;
+        }
         var env = EnvManager.Instance();
-        if (env == null || _rates.Length == 0)
+        if (env == null)
         {
             return;
         }
@@ -214,10 +230,22 @@ public sealed class WeatherStationService : IWeatherStation, IDisposable
         }
     }
 
-    private void OnTerritoryChanged(uint _)
+    /// <summary>Drops both overrides on the way into a new zone, and deliberately writes nothing back: the
+    /// zone load resolves the environment on its own, so a nudge here is a write into somebody else's sky.
+    /// The clock flag still has to come off, or the new zone would keep running on the frozen hour.</summary>
+    private unsafe void OnTerritoryChanged(uint _)
     {
         _weatherOverride = null;
-        ClearTimeOverride();
+        if (_timeOverrideMinutes == null)
+        {
+            return;
+        }
+        _timeOverrideMinutes = null;
+        var framework = Framework.Instance();
+        if (framework != null)
+        {
+            framework->ClientTime.IsEorzeaTimeOverridden = false;
+        }
     }
 
     private TerritoryType? TerritoryRow()
