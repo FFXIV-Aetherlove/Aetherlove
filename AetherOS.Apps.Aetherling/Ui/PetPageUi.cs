@@ -7,17 +7,29 @@ using Dalamud.Interface;
 
 namespace AetherOS.Apps.Aetherling.Ui;
 
-/// <summary>The chrome the pet's two sub-pages share: the way back, the title, and the two row shapes they
-/// are both made of.</summary>
+/// <summary>The chrome the pet's sub-pages share: the title, and the row shapes they are all made
+/// of.</summary>
 internal static class PetPageUi
 {
-    /// <summary>Back pill and title. Returns the y to carry on from.</summary>
-    public static float Header(OsAppContext ctx, ImDrawListPtr dl, Vector2 origin, string back, string title,
-        Action onBack)
+    /// <summary>The page title. There is no way back on it: the nav bar at the foot is the app's only
+    /// navigation, so the top of a page is title and nothing else. Returns the y to carry on from.</summary>
+    public static float Header(OsAppContext ctx, ImDrawListPtr dl, Vector2 origin, string title)
     {
-        var pad = Px(18f);
-        if (SharedUiHelpers.DrawFloatingBackPill(new Vector2(origin.X + pad, origin.Y + Px(14f)), back,
-                FontAwesomeIcon.Heart))
+        var y = origin.Y + Px(18f);
+        using (ctx.TitleFont?.Push())
+        {
+            dl.AddText(new Vector2(origin.X + Px(18f), y), Look.U32(Look.CrystalPale), title);
+        }
+        return y + Px(38f);
+    }
+
+    /// <summary>Title with a way back, for the one page the nav bar cannot speak for: the leaderboard
+    /// returns to a run that is paused behind it rather than to a page of its own.</summary>
+    public static float HeaderWithBack(OsAppContext ctx, ImDrawListPtr dl, Vector2 origin, string back,
+        string title, Action onBack)
+    {
+        if (SharedUiHelpers.DrawFloatingBackPill(new Vector2(origin.X + Px(18f), origin.Y + Px(14f)), back,
+                FontAwesomeIcon.Gamepad))
         {
             onBack();
         }
@@ -25,7 +37,7 @@ internal static class PetPageUi
         var y = origin.Y + Px(56f);
         using (ctx.TitleFont?.Push())
         {
-            dl.AddText(new Vector2(origin.X + pad, y), Look.U32(Look.CrystalPale), title);
+            dl.AddText(new Vector2(origin.X + Px(18f), y), Look.U32(Look.CrystalPale), title);
         }
         return y + Px(38f);
     }

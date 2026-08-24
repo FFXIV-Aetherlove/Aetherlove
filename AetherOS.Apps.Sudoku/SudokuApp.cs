@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -20,7 +20,9 @@ namespace AetherOS.Apps.Sudoku;
 public sealed class SudokuApp : IAetherApp
 {
     private const string HighScoresKey = "high_scores";
+    private const string HelpSeenKey = "help_seen";
     private const int ScoreSlots = 5;
+    private const float StrikeFlashSeconds = 0.8f;
 
     private static readonly Vector4 TileTopColor = new(0.36f, 0.55f, 0.62f, 1f);
     private static readonly Vector4 TileBottomColor = new(0.11f, 0.20f, 0.26f, 1f);
@@ -33,6 +35,7 @@ public sealed class SudokuApp : IAetherApp
         GameOver,
         Scores,
         Leaderboard,
+        Help,
     }
 
     private readonly Func<string> name;
@@ -52,6 +55,8 @@ public sealed class SudokuApp : IAetherApp
     private bool pencil;
     private int lastRunScore;
     private bool lastRunWasRecord;
+    private int lastSeenStrikeStamp;
+    private double strikeFlashElapsed = StrikeFlashSeconds;
 
     public SudokuApp(Func<string> name, IAppCapabilities capabilities, AetherLove.Os.IArcadeRewards rewards,
         AetherLove.Os.IArcadeScores scores)
@@ -137,6 +142,9 @@ public sealed class SudokuApp : IAetherApp
                     this.view = View.Splash;
                 });
                 break;
+            case View.Help:
+                DrawHelp(ctx, winPos, winSize);
+                break;
             default:
                 DrawSplash(ctx, now, winPos, winSize);
                 break;
@@ -151,6 +159,12 @@ public sealed class SudokuApp : IAetherApp
         }
         this.scoresLoaded = true;
         this.highScores = this.storage.Get<int[]>(HighScoresKey) ?? [];
+        // The rules (ladder, strikes, the clock that only costs points, the notes toggle) are not
+        // guessable from the splash, so the very first visit opens on the explainer instead.
+        if (!this.storage.Get<bool>(HelpSeenKey))
+        {
+            this.view = View.Help;
+        }
     }
 
     private int BestScore => this.highScores.Length > 0 ? this.highScores[0] : 0;
@@ -203,7 +217,6 @@ public sealed class SudokuApp : IAetherApp
         dl.AddText(winPos + new Vector2((winSize.X - subSize.X) * 0.5f, wordY + wordH + ctx.Px(12f)),
             ImGui.GetColorU32(RetroLcd.Pixel with { W = 0.75f }), subtitle);
 
-        DrawLadderPreview(ctx, dl, winPos, winSize);
 
         var buttonW = winSize.X * 0.62f;
         var buttonH = ctx.Px(38f);
@@ -232,6 +245,11 @@ public sealed class SudokuApp : IAetherApp
         {
             ctx.Shell.GoHomeToFolder(IOsShell.ArcadeFolderId);
         }
+        if (RetroLcd.Key("##sudokuHelp", FontAwesomeIcon.Question,
+            winPos + new Vector2(winSize.X - ctx.Px(42f), ctx.Px(12f)), ctx.Px(30f)))
+        {
+            this.view = View.Help;
+        }
 
         if (BestScore > 0)
         {
@@ -239,21 +257,6 @@ public sealed class SudokuApp : IAetherApp
             var bestSize = ImGui.CalcTextSize(best);
             dl.AddText(winPos + new Vector2((winSize.X - bestSize.X) * 0.5f, winSize.Y - ctx.Px(28f)),
                 ImGui.GetColorU32(RetroLcd.Pixel with { W = 0.7f }), best);
-        }
-    }
-
-    /// <summary>The four rungs, so it is obvious up front that this climbs rather than asks.</summary>
-    private static void DrawLadderPreview(OsAppContext ctx, ImDrawListPtr dl, Vector2 winPos, Vector2 winSize)
-    {
-        var y = winPos.Y + (winSize.Y * 0.40f);
-        var step = winSize.X / 5f;
-        for (var i = 0; i < 4; i++)
-        {
-            var label = ctx.Localize(DifficultyKey((SudokuDifficulty)i));
-            var size = ImGui.CalcTextSize(label);
-            var alpha = 0.35f + (0.2f * i);
-            dl.AddText(new Vector2(winPos.X + (step * (i + 0.5f)) + ((step - size.X) * 0.5f) - (step * 0.5f), y),
-                ImGui.GetColorU32(RetroLcd.Pixel with { W = alpha }), label);
         }
     }
 
@@ -280,6 +283,7 @@ public sealed class SudokuApp : IAetherApp
         {
             this.game.Poll();
         }
+        this.strikeFlashElapsed += delta;
 
         var hudH = ctx.Px(28f);
         DrawHud(ctx, winPos, winSize, hudH);
@@ -309,8 +313,8 @@ public sealed class SudokuApp : IAetherApp
             case SudokuOutcome.Solved:
                 this.view = View.Cleared;
                 break;
-            case SudokuOutcome.OutOfTime:
             case SudokuOutcome.OutOfStrikes:
+            case SudokuOutcome.Abandoned:
                 FinishRun();
                 break;
         }
@@ -328,31 +332,66 @@ public sealed class SudokuApp : IAetherApp
             this.paused = true;
         }
 
-        dl.AddText(new Vector2(winPos.X + padX, textY), ImGui.GetColorU32(RetroLcd.Pixel),
-            string.Format(ctx.Localize("os.sudoku_score"), this.game.Score));
+        var scoreText = string.Format(ctx.Localize("os.sudoku_score"), this.game.Score);
+        dl.AddText(new Vector2(winPos.X + padX, textY), ImGui.GetColorU32(RetroLcd.Pixel), scoreText);
 
         var rung = ctx.Localize(DifficultyKey(this.game.Difficulty));
-        var clock = TimeSpan.FromSeconds(this.game.SecondsLeft).ToString(@"m\:ss");
-        var mid = $"{rung}  {clock}";
+        string mid;
+        float midAlpha;
+        if (this.game.IsOvertime)
+        {
+            // The clock only costs points now: overtime counts up, dimmed, no panic.
+            var over = TimeSpan.FromSeconds(this.game.OvertimeSeconds).ToString(@"m\:ss");
+            mid = $"{rung}  {string.Format(ctx.Localize("os.sudoku_overtime"), over)}";
+            midAlpha = 0.6f;
+        }
+        else
+        {
+            var clock = TimeSpan.FromSeconds(this.game.SecondsLeft).ToString(@"m\:ss");
+            mid = $"{rung}  {clock}";
+            // The last minute pulses the readout so it is obvious without a separate warning.
+            var urgent = this.game.SecondsLeft <= 60.0;
+            midAlpha = !urgent ? 0.72f
+                : ctx.ReduceMotion || this.paused ? 1f
+                : 0.75f + (0.25f * MathF.Sin((float)ImGui.GetTime() * 5f));
+        }
         var midSize = ImGui.CalcTextSize(mid);
-        // The last minute turns the readout down so it is obvious without a separate warning.
-        var urgent = this.game.SecondsLeft <= 60.0;
         dl.AddText(new Vector2(winPos.X + winSize.X - padX - reserve - midSize.X, textY),
-            ImGui.GetColorU32(RetroLcd.Pixel with { W = urgent ? 1f : 0.72f }), mid);
+            ImGui.GetColorU32(RetroLcd.Pixel with { W = midAlpha }), mid);
 
-        DrawStrikes(ctx, dl, winPos, hudH);
+        DrawMistakes(ctx, dl, winPos, hudH, padX, ImGui.CalcTextSize(scoreText).X);
     }
 
-    private void DrawStrikes(OsAppContext ctx, ImDrawListPtr dl, Vector2 winPos, float hudH)
+    /// <summary>"Mistakes 1/3" plus pips, shaken for a beat when a strike lands so a wrong digit is felt
+    /// rather than silently leaving the cell empty.</summary>
+    private void DrawMistakes(OsAppContext ctx, ImDrawListPtr dl, Vector2 winPos, float hudH, float padX, float scoreW)
     {
-        var size = ctx.Px(7f);
+        if (this.game.StrikeStamp != this.lastSeenStrikeStamp)
+        {
+            this.lastSeenStrikeStamp = this.game.StrikeStamp;
+            this.strikeFlashElapsed = 0.0;
+        }
+        var flashing = this.strikeFlashElapsed < StrikeFlashSeconds;
+        var shake = flashing && !ctx.ReduceMotion
+            ? MathF.Sin((float)(this.strikeFlashElapsed * 40.0)) * ctx.Px(2f)
+                * (1f - (float)(this.strikeFlashElapsed / StrikeFlashSeconds))
+            : 0f;
+
+        var label = string.Format(ctx.Localize("os.sudoku_mistakes"), this.game.Strikes, SudokuGame.MaxStrikes);
+        var labelSize = ImGui.CalcTextSize(label);
+        var x = winPos.X + padX + scoreW + ctx.Px(14f) + shake;
+        var textY = winPos.Y + ((hudH - ImGui.GetTextLineHeight()) * 0.5f);
+        dl.AddText(new Vector2(x, textY),
+            ImGui.GetColorU32(RetroLcd.Pixel with { W = flashing ? 1f : 0.72f }), label);
+
+        var size = ctx.Px(9f);
         var gap = ctx.Px(5f);
-        var x = winPos.X + ctx.Px(10f) + ImGui.CalcTextSize("Score 000000").X + ctx.Px(10f);
-        var y = winPos.Y + ((hudH - size) * 0.5f);
+        var pipX = x + labelSize.X + ctx.Px(8f);
+        var pipY = winPos.Y + ((hudH - size) * 0.5f);
         for (var i = 0; i < SudokuGame.MaxStrikes; i++)
         {
             var spent = i < this.game.Strikes;
-            var tl = new Vector2(x + (i * (size + gap)), y);
+            var tl = new Vector2(pipX + (i * (size + gap)), pipY);
             if (spent)
             {
                 dl.AddRectFilled(tl, tl + new Vector2(size, size), ImGui.GetColorU32(RetroLcd.Pixel));
@@ -403,6 +442,15 @@ public sealed class SudokuApp : IAetherApp
             else if (selectedDigit != 0 && this.game[index] == selectedDigit)
             {
                 dl.AddRectFilled(tl, tl + new Vector2(cell, cell), ImGui.GetColorU32(RetroLcd.Pixel with { W = 0.18f }));
+            }
+
+            // A struck cell flashes for a beat, so a rejected digit reads as a mistake rather than as
+            // the app ignoring the input.
+            if (index == this.game.LastStrikeCell && this.strikeFlashElapsed < StrikeFlashSeconds)
+            {
+                var flashAlpha = 0.55f * (1f - (float)(this.strikeFlashElapsed / StrikeFlashSeconds));
+                dl.AddRectFilled(tl, tl + new Vector2(cell, cell),
+                    ImGui.GetColorU32(RetroLcd.Pixel with { W = flashAlpha }));
             }
 
             var value = this.game[index];
@@ -485,11 +533,13 @@ public sealed class SudokuApp : IAetherApp
 
     private void DrawPad(OsAppContext ctx, Vector2 winPos, Vector2 winSize, float padH)
     {
-        var key = MathF.Min(padH * 0.30f, (winSize.X - ctx.Px(24f)) / 5.4f);
+        // Three key rows plus their two gaps must FIT padH: 3 keys + 2 gaps of 0.14 key = 3.28 keys,
+        // held to 94% of the pad so the tools row never clips into the bezel.
+        var key = MathF.Min((padH * 0.94f) / 3.28f, (winSize.X - ctx.Px(24f)) / 5.4f);
         var gap = key * 0.14f;
         var rowW = (key * 5f) + (gap * 4f);
         var baseX = winPos.X + ((winSize.X - rowW) * 0.5f);
-        var baseY = winPos.Y + winSize.Y - padH + (padH * 0.06f);
+        var baseY = winPos.Y + winSize.Y - padH + (padH * 0.03f);
 
         for (var digit = 1; digit <= 9; digit++)
         {
@@ -503,17 +553,19 @@ public sealed class SudokuApp : IAetherApp
             }
         }
 
-        // Pencil and erase share the tenth slot's row, to the right of the 6-9 run.
-        var toolsX = baseX + (4 * (key + gap));
-        var toolsY = baseY + key + gap;
-        if (RetroLcd.KeyLabel("##sudokuPencil", this.pencil ? "N" : "n", new Vector2(toolsX, toolsY), key))
+        // The tools live on their own row, apart from the digits: a wide Notes toggle whose fill IS its
+        // state (ink-filled while notes are on), and the eraser beside it.
+        var toolsY = baseY + ((key + gap) * 2f);
+        var notesW = (key * 2f) + gap;
+        var toolsW = notesW + gap + key;
+        var toolsX = baseX + ((rowW - toolsW) * 0.5f);
+        if (RetroLcd.Button("##sudokuNotes", ctx.Localize("os.sudoku_notes"),
+            new Vector2(toolsX, toolsY), new Vector2(notesW, key), key * 0.22f, filled: this.pencil))
         {
             this.pencil = !this.pencil;
         }
-
-        var eraseY = toolsY + key + gap;
         if (RetroLcd.Key("##sudokuErase", FontAwesomeIcon.Eraser,
-            new Vector2(baseX + (rowW * 0.5f) - (key * 0.5f), eraseY), key) && this.selected >= 0)
+            new Vector2(toolsX + notesW + gap, toolsY), key) && this.selected >= 0)
         {
             this.game.Clear(this.selected);
         }
@@ -575,6 +627,15 @@ public sealed class SudokuApp : IAetherApp
             this.lastFrameTime = ImGui.GetTime();
             this.paused = false;
         }
+        // With the clock no longer a fail state, a run has no natural end but strikes; quitting from the
+        // pause still submits everything earned so far.
+        if (RetroLcd.Button("##sudokuQuit", ctx.Localize("os.sudoku_quit"),
+            boardTL + new Vector2((boardSize - buttonW) * 0.5f, (boardSize * 0.5f) + buttonH + ctx.Px(10f)),
+            new Vector2(buttonW, buttonH), ctx.Px(4f), filled: false))
+        {
+            this.paused = false;
+            this.game.Abandon();
+        }
     }
 
     /// <summary>Between grids: what the last one paid, and what is coming next.</summary>
@@ -592,13 +653,27 @@ public sealed class SudokuApp : IAetherApp
                 ImGui.GetColorU32(RetroLcd.Pixel), title);
         }
 
-        var lines = new[]
+        // The receipt: why the grid paid what it did, so time and mistakes stop being invisible forces.
+        var lines = new List<string>();
+        if (this.game.LastWasOvertime)
         {
-            string.Format(ctx.Localize("os.sudoku_score"), this.game.Score),
-            string.Format(ctx.Localize("os.sudoku_solved_count"), this.game.Solved),
-            string.Format(ctx.Localize("os.sudoku_next"), ctx.Localize(DifficultyKey(this.game.Difficulty))),
-        };
-        var y = winSize.Y * 0.36f;
+            lines.Add(ctx.Localize("os.sudoku_overtime_zero"));
+        }
+        else if (this.game.LastAward is { } award)
+        {
+            lines.Add(string.Format(ctx.Localize("os.sudoku_breakdown_base"), award.Base));
+            lines.Add(string.Format(ctx.Localize("os.sudoku_breakdown_time"), award.TimeBonus));
+            if (award.MistakePenalty > 0)
+            {
+                lines.Add(string.Format(ctx.Localize("os.sudoku_breakdown_mistakes"), award.MistakePenalty));
+            }
+            lines.Add(string.Format(ctx.Localize("os.sudoku_breakdown_logic"), (int)(award.Integrity * 100f)));
+            lines.Add(string.Format(ctx.Localize("os.sudoku_breakdown_total"), award.Total));
+        }
+        lines.Add(string.Format(ctx.Localize("os.sudoku_score"), this.game.Score));
+        lines.Add(string.Format(ctx.Localize("os.sudoku_solved_count"), this.game.Solved));
+        lines.Add(string.Format(ctx.Localize("os.sudoku_next"), ctx.Localize(DifficultyKey(this.game.Difficulty))));
+        var y = winSize.Y * 0.32f;
         foreach (var line in lines)
         {
             var size = ImGui.CalcTextSize(line);
@@ -633,8 +708,8 @@ public sealed class SudokuApp : IAetherApp
                 ImGui.GetColorU32(RetroLcd.Pixel), title);
         }
 
-        var reason = this.game.Outcome == SudokuOutcome.OutOfTime
-            ? "os.sudoku_out_of_time"
+        var reason = this.game.Outcome == SudokuOutcome.Abandoned
+            ? "os.sudoku_abandoned"
             : "os.sudoku_out_of_strikes";
         var lines = new[]
         {
@@ -664,6 +739,56 @@ public sealed class SudokuApp : IAetherApp
             winPos + new Vector2((winSize.X - buttonW) * 0.5f, firstY + buttonH + ctx.Px(10f)),
             new Vector2(buttonW, buttonH), ctx.Px(4f), filled: false))
         {
+            this.splashStartedAt = ImGui.GetTime();
+            this.view = View.Splash;
+        }
+    }
+
+    /// <summary>The lay of the land before the first grid, Eordle's pattern: shown once on the very first
+    /// visit, reachable forever after from the splash's "?" key. The Notes demo is drawn with the real
+    /// toggle chrome in its ON state, so the legend cannot drift from the game.</summary>
+    private void DrawHelp(OsAppContext ctx, Vector2 winPos, Vector2 winSize)
+    {
+        var dl = ImGui.GetWindowDrawList();
+        var title = ctx.Localize("os.sudoku_help");
+        using (ctx.TitleFont?.Push())
+        {
+            var titleSize = ImGui.CalcTextSize(title);
+            dl.AddText(ImGui.GetFont(), ImGui.GetFontSize(),
+                winPos + new Vector2((winSize.X - titleSize.X) * 0.5f, ctx.Px(18f)),
+                ImGui.GetColorU32(RetroLcd.Pixel), title);
+        }
+
+        var margin = ctx.Px(16f);
+        var wrap = winSize.X - (margin * 2f);
+        var y = winPos.Y + ctx.Px(62f);
+        foreach (var key in (string[])["os.sudoku_help_ladder", "os.sudoku_help_strikes",
+            "os.sudoku_help_timer", "os.sudoku_help_logic"])
+        {
+            ImGui.SetCursorScreenPos(new Vector2(winPos.X + margin, y));
+            ImGui.PushTextWrapPos(winSize.X - margin);
+            ImGui.TextColored(RetroLcd.Pixel with { W = 0.85f }, ctx.Localize(key));
+            ImGui.PopTextWrapPos();
+            y = ImGui.GetCursorScreenPos().Y + ctx.Px(8f);
+        }
+
+        // The notes row: the real toggle drawn in its ON state beside its explanation.
+        var demoH = ctx.Px(26f);
+        var demoW = ctx.Px(64f);
+        RetroLcd.Button("##sudokuHelpNotesDemo", ctx.Localize("os.sudoku_notes"),
+            new Vector2(winPos.X + margin, y), new Vector2(demoW, demoH), demoH * 0.22f, filled: true);
+        ImGui.SetCursorScreenPos(new Vector2(winPos.X + margin + demoW + ctx.Px(10f), y + ctx.Px(3f)));
+        ImGui.PushTextWrapPos(winSize.X - margin);
+        ImGui.TextColored(RetroLcd.Pixel with { W = 0.85f }, ctx.Localize("os.sudoku_help_notes"));
+        ImGui.PopTextWrapPos();
+
+        var buttonW = winSize.X * 0.62f;
+        var buttonH = ctx.Px(38f);
+        if (RetroLcd.Button("##sudokuHelpClose", ctx.Localize("os.sudoku_help_close"),
+            winPos + new Vector2((winSize.X - buttonW) * 0.5f, winSize.Y - buttonH - ctx.Px(20f)),
+            new Vector2(buttonW, buttonH), ctx.Px(4f), filled: true))
+        {
+            this.storage.Set(HelpSeenKey, true);
             this.splashStartedAt = ImGui.GetTime();
             this.view = View.Splash;
         }

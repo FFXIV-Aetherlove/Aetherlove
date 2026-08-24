@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Numerics;
 using AetherLove.Shared;
 using AetherLove.Shared.Profile;
@@ -30,9 +31,16 @@ public partial class OnboardingScreen
 
         _raceIdx       = IndexOf(RaceValues, b.Race, fallback: 0);
         _genderIdx     = IndexOf(GenderValues, b.Gender, fallback: 0);
-        _regionIdx     = IndexOf(RegionValues, b.Region, fallback: 0);
         _expansionIdx  = IndexOf(ExpansionValues, b.FavoriteExpansion, fallback: 0);
         _jobComboIdx   = IndexOf(JobValues, b.FavoriteJob, fallback: 0);
+
+        MaskToBools(RegionValues, b.Region,
+            (a, m) => ((short)a & (short)m) != 0, _ownRegions);
+        // The retired PreferNotToSay value hydrates to no selectable bit; migrate it to NA as before.
+        if (!_ownRegions.Any(x => x))
+        {
+            _ownRegions[0] = true;
+        }
 
         MaskToBools(LanguageValues, b.LanguageMask,
             (a, m) => ((short)a & (short)m) != 0, _langSelected);

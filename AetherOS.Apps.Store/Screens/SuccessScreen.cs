@@ -4,6 +4,7 @@ using System.Numerics;
 using System.Threading.Tasks;
 using AetherLove.Services;
 using AetherLove.Services.Localization;
+using AetherLove.Shared.Aetherling;
 using AetherLove.Shared.Store;
 using AetherLove.UI;
 using AetherLove.Widgets;
@@ -59,12 +60,12 @@ internal sealed class SuccessScreen(IStoreHost host, StoreMediaCache media, Acti
 
     public void Draw(OsAppContext ctx)
     {
-        if (_feedRequested)
+        if (_petHandoff is { } handoff)
         {
             // Handing over on the draw thread, because the tap that asked for it happens inside
             // this window's own submission.
-            _feedRequested = false;
-            ctx.Shell.SendIntent(AetherlingAppId, OsIntents.Create(OsIntents.AetherlingFeed));
+            _petHandoff = null;
+            ctx.Shell.SendIntent(AetherlingAppId, OsIntents.Create(handoff));
             return;
         }
         if (_celebration is not { } celebration)
@@ -333,13 +334,15 @@ internal sealed class SuccessScreen(IStoreHost host, StoreMediaCache media, Acti
     /// <summary>The pet app's id. A string rather than a reference: apps never reference each other.</summary>
     private const string AetherlingAppId = "aetherling";
 
-    private bool _feedRequested;
+    private string? _petHandoff;
 
     private void RunEnable(Enableable target)
     {
         if (target.Kind == StoreItemKind.AetherlingConsumable)
         {
-            _feedRequested = true;
+            _petHandoff = string.Equals(target.ItemRef, AetherlingLimits.NameChangeRef, StringComparison.Ordinal)
+                ? OsIntents.AetherlingRename
+                : OsIntents.AetherlingFeed;
             return;
         }
 

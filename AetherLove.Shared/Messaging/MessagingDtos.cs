@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using MessagePack;
 
 namespace AetherLove.Shared.Messaging;
@@ -43,7 +43,8 @@ public sealed record EncryptedMessageDto(
     string[]? TheirReactions = null,
     DateTimeOffset? PinnedAtUtc = null,
     DateTimeOffset UpdatedAtUtc = default,
-    DateTimeOffset? DeletedAtUtc = null);
+    DateTimeOffset? DeletedAtUtc = null,
+    ChatImageDto? Image = null);
 
 /// <summary>One era of a user's public-key timeline. Messages sent inside [FromUtc, UntilUtc) were encrypted
 /// against this public key; UntilUtc null = the active key. Produced by a passphrase reset, which retires the
@@ -91,7 +92,8 @@ public sealed record MessageReceivedPushDto(
     byte[] Nonce,
     DateTimeOffset CreatedAtUtc,
     Guid? ReplyToMessageId = null,
-    Guid ForProfileId = default);
+    Guid ForProfileId = default,
+    ChatImageDto? Image = null);
 
 /// <summary>Push from server to the sender when the recipient marks the conversation read.</summary>
 [MessagePackObject(keyAsPropertyName: true)]

@@ -130,7 +130,7 @@ public sealed class EchoHostClient : IDisposable
             _lastVideoId = videoId;
             _lastPosition = start;
         }
-        Send(new { t = "load", videoId, start, epoch });
+        Send(new { t = "load", videoId, start, epoch }, replayedOnConnect: true);
     }
 
     public void Play() => Send(new { t = "play" });
@@ -144,7 +144,7 @@ public sealed class EchoHostClient : IDisposable
         {
             _lastPosition = target;
         }
-        Send(new { t = "seek", sec = target });
+        Send(new { t = "seek", sec = target }, replayedOnConnect: true);
     }
 
     public void SetVolume(float v01)
@@ -154,7 +154,7 @@ public sealed class EchoHostClient : IDisposable
         {
             _volume = value;
         }
-        Send(new { t = "volume", v = value });
+        Send(new { t = "volume", v = value }, replayedOnConnect: true);
     }
 
     public void SetCaptions(bool on)
@@ -163,7 +163,7 @@ public sealed class EchoHostClient : IDisposable
         {
             _captions = on;
         }
-        Send(new { t = "captions", on });
+        Send(new { t = "captions", on }, replayedOnConnect: true);
     }
 
     public void SetSize(int w, int h)
@@ -179,7 +179,7 @@ public sealed class EchoHostClient : IDisposable
             _width = width;
             _height = height;
         }
-        Send(new { t = "size", w = width, h = height });
+        Send(new { t = "size", w = width, h = height }, replayedOnConnect: true);
     }
 
     public void Dispose() => Stop();
@@ -366,9 +366,9 @@ public sealed class EchoHostClient : IDisposable
             width = _width;
             height = _height;
         }
-        Send(new { t = "size", w = width, h = height });
-        Send(new { t = "volume", v = volume });
-        Send(new { t = "captions", on = captions });
+        Send(new { t = "size", w = width, h = height }, replayedOnConnect: true);
+        Send(new { t = "volume", v = volume }, replayedOnConnect: true);
+        Send(new { t = "captions", on = captions }, replayedOnConnect: true);
         if (videoId is { Length: > 0 })
         {
             Load(videoId, position);
@@ -491,7 +491,10 @@ public sealed class EchoHostClient : IDisposable
         StateChanged?.Invoke(state);
     }
 
-    private void Send(object message)
+    /// <summary>Writes one command line. <paramref name="replayedOnConnect"/> marks the commands
+    /// <see cref="Resume"/> re-sends from remembered state once the handshake lands, so losing one before the
+    /// host is up costs nothing and is not worth a warning; anything else genuinely goes missing.</summary>
+    private void Send(object message, bool replayedOnConnect = false)
     {
         StreamWriter? writer;
         CancellationTokenSource? life;
@@ -503,7 +506,14 @@ public sealed class EchoHostClient : IDisposable
         var line = JsonSerializer.Serialize(message, message.GetType());
         if (writer is null)
         {
-            UiHost.Log.Warning($"[Echo] Dropped a command, the control pipe is not up yet: {line}");
+            if (replayedOnConnect)
+            {
+                UiHost.Log.Debug($"[Echo] Held a command until the host is up; it is re-sent on connect: {line}");
+            }
+            else
+            {
+                UiHost.Log.Warning($"[Echo] Dropped a command, the control pipe is not up yet: {line}");
+            }
             return;
         }
         try

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using AetherLove.Shared.EchoVidya;
@@ -143,6 +143,20 @@ public sealed partial class AetherHubContext
         try
         {
             return await (await ConnAsync(ct)).InvokeAsync<HangoutSummaryDto>("PublishEchoRoomHangoutAsync", roomId, req, ct).ConfigureAwait(false);
+        }
+        catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl) { throw rl; }
+    }
+
+    /// <summary>Publishes the caller's live together party as an AetherParty hangout. The category is forced
+    /// server-side, so the request's own category is ignored.</summary>
+    public async Task<HangoutSummaryDto> PublishTogetherPartyHangoutAsync(
+        Guid partyId, CreateHangoutRequest req, CancellationToken ct = default)
+    {
+        try
+        {
+            return await (await ConnAsync(ct))
+                .InvokeAsync<HangoutSummaryDto>("PublishTogetherPartyHangoutAsync", partyId, req, ct)
+                .ConfigureAwait(false);
         }
         catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl) { throw rl; }
     }

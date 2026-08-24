@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Numerics;
@@ -28,8 +28,7 @@ public sealed partial class MessengerApp
     private readonly ConcurrentDictionary<Guid, ImageVisual> _imageCache = new();
     private readonly ConcurrentDictionary<Guid, byte> _imageFetches = new();
 
-    // File uploads held back pre-release: the Photos-app round trip is disabled (see DrawAttachPhotoMenu).
-    // private (Guid ChatId, MessengerChatKind Kind, int Epoch)? _pendingPhotoChat;
+    private (Guid ChatId, MessengerChatKind Kind, int Epoch)? _pendingPhotoChat;
 
     private string? _pendingImagePath;
     private Vector4 _pendingImageCrop;
@@ -68,38 +67,35 @@ public sealed partial class MessengerApp
             _caps.Camera.Capture(new CameraRequest(1f, 128, FreeForm: true),
                 shot => _uiActions.Enqueue(() => BeginImageCompose(chatId, kind, epoch, shot.Path, shot.Crop, fromCamera: true)));
         }
-        // File uploads (photo album + pick-from-disk) are held back until the image feature ships publicly;
-        // only camera captures are offered for now. Re-enable by uncommenting these two entries (and the
-        // OnPhotoPicked handler + PhotoPicked intent route + _pendingPhotoChat field below), and the server gate.
-        // if (DrawIconMenuItem(FontAwesomeIcon.Image, Loc.T("os.msgr_attach_photos")))
-        // {
-        //     ImGui.CloseCurrentPopup();
-        //     _pendingPhotoChat = (chatId, kind, epoch);
-        //     _shell?.SendIntent("photos", OsIntents.Create(OsIntents.PickPhoto));
-        // }
-        // if (DrawIconMenuItem(FontAwesomeIcon.FolderOpen, Loc.T("os.msgr_attach_disk")))
-        // {
-        //     ImGui.CloseCurrentPopup();
-        //     // The shared crop widget is fixed-aspect (a 0 aspect divides by zero); a 1:1 square keeps it usable.
-        //     _caps.Images.PickAndCrop(
-        //         new ImageCropRequest(Loc.T("os.msgr_attach_disk"), "Images{.png,.jpg,.jpeg,.webp}",
-        //             Loc.T("os.msgr_image_crop"), 1f, 64, 64),
-        //         cropped => _uiActions.Enqueue(() => BeginImageCompose(chatId, kind, epoch, cropped.Path, cropped.Crop)));
-        // }
+        if (DrawIconMenuItem(FontAwesomeIcon.Image, Loc.T("os.msgr_attach_photos")))
+        {
+            ImGui.CloseCurrentPopup();
+            _pendingPhotoChat = (chatId, kind, epoch);
+            _shell?.SendIntent("photos", OsIntents.Create(OsIntents.PickPhoto));
+        }
+        if (DrawIconMenuItem(FontAwesomeIcon.FolderOpen, Loc.T("os.msgr_attach_disk")))
+        {
+            ImGui.CloseCurrentPopup();
+            _caps.Images.PickFile(
+                new ImagePickRequest(Loc.T("os.msgr_attach_disk"), "Images{.png,.jpg,.jpeg,.webp}"),
+                path => _uiActions.Enqueue(() => BeginImageCompose(chatId, kind, epoch, path, WholeImage)));
+        }
     }
 
-    // File uploads are held back pre-release (see DrawAttachPhotoMenu); the Photos-app round trip is disabled.
-    // /// <summary>The Photos app returned a picked image path (PhotoPicked intent).</summary>
-    // private void OnPhotoPicked(string path)
-    // {
-    //     if (_pendingPhotoChat is not { } ctx)
-    //     {
-    //         return;
-    //     }
-    //     _pendingPhotoChat = null;
-    //     // A Photos-app image is used whole; the sentinel rect marks "full image" to the server.
-    //     BeginImageCompose(ctx.ChatId, ctx.Kind, ctx.Epoch, path, new Vector4(0, 0, 100000, 100000), fromCamera: false);
-    // }
+    /// <summary>The sentinel crop rect meaning "keep all of it": a picked picture is sent whole, because a
+    /// chat attachment is not a portrait and a forced square would cut half of a landscape shot away.</summary>
+    private static readonly Vector4 WholeImage = new(0f, 0f, 100000f, 100000f);
+
+    /// <summary>The Photos app returned a picked image path (PhotoPicked intent).</summary>
+    private void OnPhotoPicked(string path)
+    {
+        if (_pendingPhotoChat is not { } ctx)
+        {
+            return;
+        }
+        _pendingPhotoChat = null;
+        BeginImageCompose(ctx.ChatId, ctx.Kind, ctx.Epoch, path, WholeImage);
+    }
 
     private void BeginImageCompose(Guid chatId, MessengerChatKind kind, int epoch, string path, Vector4 crop,
         bool fromCamera = false)
@@ -568,7 +564,8 @@ public sealed partial class MessengerApp
             dl.AddText(pillTl + Px(5f, 2f), White(0.85f), label);
         }
 
-        if (ImGui.BeginPopupContextItem($"##msgrImgCtx{msg.Id:N}", ImGuiPopupFlags.MouseButtonRight))
+        // A picture that is already gone has nothing left to report or delete.
+        if (!expired && ImGui.BeginPopupContextItem($"##msgrImgCtx{msg.Id:N}", ImGuiPopupFlags.MouseButtonRight))
         {
             if (ImGui.MenuItem(Loc.T("os.msgr_image_report")))
             {
@@ -727,17 +724,28 @@ public sealed partial class MessengerApp
                 {
                     var mb = item.ByteSize / 1024f / 1024f;
                     var days = Math.Max(1, (int)Math.Ceiling((item.ExpiresAtUtc - DateTimeOffset.UtcNow).TotalDays));
-                    ImGui.TextColored(BodyText, Loc.T("os.msgr_datalimits_row", mb.ToString("0.#"), item.ChatName, days));
+                    var where = item.IsLoveChat
+                        ? Loc.T("os.msgr_datalimits_lovechat", item.ChatName)
+                        : item.ChatName;
+                    ImGui.TextColored(BodyText, Loc.T("os.msgr_datalimits_row", mb.ToString("0.#"), where, days));
                     ImGui.SameLine();
                     if (ImGui.SmallButton($"{Loc.T("os.msgr_image_delete")}##del{item.ImageId:N}"))
                     {
                         var id = item.ImageId;
+                        var loveChat = item.IsLoveChat;
                         // Drop the cached texture so the chat bubble flips to the removed placeholder instead
                         // of rendering the now-deleted image from memory.
                         _imageCache[id] = new ImageVisual(null, true);
                         RunHub(async () =>
                         {
-                            await _hub.DeleteMessengerImageAsync(id).ConfigureAwait(false);
+                            if (loveChat)
+                            {
+                                await _hub.DeleteChatImageAsync(id).ConfigureAwait(false);
+                            }
+                            else
+                            {
+                                await _hub.DeleteMessengerImageAsync(id).ConfigureAwait(false);
+                            }
                             _uiActions.Enqueue(OpenDataLimits);
                         });
                     }

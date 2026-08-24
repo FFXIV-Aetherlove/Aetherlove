@@ -1,4 +1,4 @@
-namespace AetherLove.Services.Localization;
+﻿namespace AetherLove.Services.Localization;
 
 internal static class CommonDe
 {
@@ -191,5 +191,37 @@ internal static class CommonDe
         // added after update 2.2.3
         ["common.travel_teleport_with"] = "Teleport ({0})",
         ["common.travel_tooltip"] = "Mit {0} hierher reisen",
+
+        // added after update 2.4.0
+        ["common.session_expired_title"] = "Du musst dich erneut anmelden",
+        ["common.session_expired_body"] = "Deine Sitzung ist abgelaufen, deshalb erreicht das Handy AetherOS nicht mehr. Das ist keine Störung: alles läuft, es weiß nur nicht mehr, wer du bist.",
+        ["common.session_expired_button"] = "Erneut anmelden",
+        ["common.session_expired_hint"] = "Das Handy startet neu und bringt dich zurück zur Anmeldung.",
+    
+        // the file picker (added after update 2.4.0)
+        ["picker.quick_links"] = "Orte",
+        ["picker.favorites"] = "Favoriten",
+        ["picker.drives"] = "Laufwerke",
+        ["picker.place_desktop"] = "Desktop",
+        ["picker.place_documents"] = "Dokumente",
+        ["picker.place_downloads"] = "Downloads",
+        ["picker.place_pictures"] = "Bilder",
+        ["picker.place_screenshots"] = "Spiel-Screenshots",
+        ["picker.search_hint"] = "In diesem Ordner suchen...",
+        ["picker.empty"] = "Dieser Ordner ist leer.",
+        ["picker.open"] = "Öffnen",
+        ["picker.nothing_selected"] = "Nichts ausgewählt",
+        ["picker.new_folder_hint"] = "Ordnername...",
+        ["picker.new_folder_create"] = "Erstellen",
+        ["picker.show_hidden"] = "Versteckte Dateien",
+        ["picker.sort_name"] = "Name",
+        ["picker.sort_date"] = "Datum",
+        ["picker.sort_size"] = "Größe",
+        ["picker.tip_star"] = "Ordner als Favorit markieren oder entfernen (Rechtsklick auf einen Favoriten entfernt ihn)",
+        ["picker.tip_edit_path"] = "Pfad eingeben",
+        ["picker.preview_loading"] = "Vorschau wird geladen...",
+        ["picker.save"] = "Speichern",
+        ["picker.file_name_hint"] = "Dateiname...",
+        ["picker.selected_count"] = "{0} ausgewählt",
     };
 }

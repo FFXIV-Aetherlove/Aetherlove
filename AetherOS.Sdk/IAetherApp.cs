@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
@@ -74,8 +74,12 @@ public interface IAetherApp
     /// frame the widgets page is visible, so keep it cheap.</summary>
     IReadOnlyList<OsWidgetAction> WidgetActions => Array.Empty<OsWidgetAction>();
 
-    /// <summary>True while the surface app is running a non-interruptible flow (e.g. first-run onboarding), so the
-    /// host suppresses the OS home indicator and status bar until the app clears it.</summary>
+    /// <summary>True while the surface app is running an immersive flow (e.g. first-run onboarding), so the
+    /// host suppresses the OS status bar until the app clears it.
+    /// <para>It does NOT suppress the home indicator: leaving must always be possible, or an app that asks
+    /// for an account holds the whole phone hostage until one is made. An app whose flow can be walked out
+    /// of half-way is responsible for restarting it cleanly on the next open (both onboardings reset in
+    /// their own <c>OnShow</c>).</para></summary>
     bool LocksShell => false;
 
     /// <summary>True while the app wants drags on its surface for itself, so the host stops ImGui reading them as

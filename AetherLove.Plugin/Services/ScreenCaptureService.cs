@@ -1,4 +1,5 @@
-using System;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png;
@@ -36,6 +37,19 @@ public sealed unsafe class ScreenCaptureService : IDisposable
         UiFlags.TargetInfo,
     };
 
+    /// <summary>The group-pose windows, which are ordinary addons rather than a HUD group, so the UiFlags
+    /// above never touch them: a gpose selfie photographed its own camera panel. Hidden by node flag for the
+    /// capture and put back exactly as found.</summary>
+    private static readonly string[] GposeAddons =
+    {
+        "CameraSetting",
+        "GroupPoseStickyGuide",
+        "GroupPoseGuide",
+        "GposeTargetLoc",
+        "GposeGuide",
+    };
+
+    private readonly List<string> _hiddenAddons = [];
     private readonly object _lock = new();
     private CaptureState _state = CaptureState.Idle;
     private byte[]? _pixels;
@@ -189,14 +203,62 @@ public sealed unsafe class ScreenCaptureService : IDisposable
                 _hiddenGroups |= group;
             }
         }
-        if (_hiddenGroups != UiFlags.None)
+        if (HideGposeAddons() || _hiddenGroups != UiFlags.None)
         {
             _hideFramesLeft = HideDelayFrames;
         }
     }
 
+    /// <summary>Hides whichever group-pose windows are up right now. Returns whether anything was hidden,
+    /// so the readback still waits its couple of frames for them to leave the backbuffer.</summary>
+    private bool HideGposeAddons()
+    {
+        _hiddenAddons.Clear();
+        foreach (var name in GposeAddons)
+        {
+            try
+            {
+                var addon = (FFXIVClientStructs.FFXIV.Component.GUI.AtkUnitBase*)
+                    Plugin.GameGui.GetAddonByName(name).Address;
+                if (addon is null || !addon->IsVisible)
+                {
+                    continue;
+                }
+                addon->IsVisible = false;
+                _hiddenAddons.Add(name);
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.Debug(ex, "[ScreenCapture] could not hide {Addon}.", name);
+            }
+        }
+        return _hiddenAddons.Count > 0;
+    }
+
+    private void RestoreGposeAddons()
+    {
+        foreach (var name in _hiddenAddons)
+        {
+            try
+            {
+                var addon = (FFXIVClientStructs.FFXIV.Component.GUI.AtkUnitBase*)
+                    Plugin.GameGui.GetAddonByName(name).Address;
+                if (addon is not null)
+                {
+                    addon->IsVisible = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.Debug(ex, "[ScreenCapture] could not restore {Addon}.", name);
+            }
+        }
+        _hiddenAddons.Clear();
+    }
+
     private void RestoreUi()
     {
+        RestoreGposeAddons();
         if (_hiddenGroups == UiFlags.None)
         {
             return;
@@ -359,6 +421,35 @@ public sealed unsafe class ScreenCaptureService : IDisposable
             _pixels = null;
             _state = CaptureState.Done;
         }
+    }
+
+    /// <summary>The captured frame as an image, for a caller that wants to paint on it before saving.</summary>
+    public static Image<Rgba32> Decode(byte[] pixels, int w, int h, DXGI_FORMAT fmt)
+    {
+        using var img = fmt switch
+        {
+            DXGI_FORMAT.DXGI_FORMAT_R10G10B10A2_UNORM => LoadRgb10A2(pixels, w, h),
+            DXGI_FORMAT.DXGI_FORMAT_R8G8B8A8_UNORM or DXGI_FORMAT.DXGI_FORMAT_R8G8B8A8_UNORM_SRGB
+                => Image.LoadPixelData<Rgba32>(Opaque(pixels), w, h),
+            _ => (Image)Image.LoadPixelData<Bgra32>(Opaque(pixels), w, h),
+        };
+        return img.CloneAs<Rgba32>();
+    }
+
+    public static byte[] EncodePng(Image image, Rectangle? crop = null)
+    {
+        using var copy = image.Clone(_ => { });
+        if (crop is { } rect)
+        {
+            rect = Rectangle.Intersect(rect, new Rectangle(0, 0, copy.Width, copy.Height));
+            if (rect.Width > 0 && rect.Height > 0)
+            {
+                copy.Mutate(x => x.Crop(rect));
+            }
+        }
+        using var stream = new MemoryStream();
+        copy.Save(stream, new PngEncoder());
+        return stream.ToArray();
     }
 
     public static byte[] EncodePng(byte[] pixels, int w, int h, DXGI_FORMAT fmt, Rectangle? crop = null)

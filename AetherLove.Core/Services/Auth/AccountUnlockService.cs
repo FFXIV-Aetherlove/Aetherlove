@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -106,6 +106,22 @@ public sealed class AccountUnlockService
                 opened[id] = (stashPriv, null);
             }
         }
+        // The account keypair is a third anchor: a profile provisioned on a device with neither a KEK
+        // nor a sibling key (the only-profile-deleted case) is wrapped under it. Known locally, or
+        // opened here straight from the KEK-wrapped account bundle before any profile bundle is.
+        var accountPriv = _keys.AccountKeys?.PrivateKey;
+        if (accountPriv is null && accountBundle is not null)
+        {
+            foreach (var c in keks)
+            {
+                if (_crypto.UnwrapPrivateKey(accountBundle.EncryptedPrivateKey, accountBundle.WrapNonce, c.Kek) is { } acctPriv)
+                {
+                    accountPriv = acctPriv;
+                    break;
+                }
+            }
+        }
+
         var progress = true;
         while (progress)
         {
@@ -116,7 +132,7 @@ public sealed class AccountUnlockService
                 {
                     continue;
                 }
-                if (TryOpen(b, keks, opened) is not { } hit)
+                if (TryOpen(b, keks, opened, accountPriv) is not { } hit)
                 {
                     continue;
                 }
@@ -277,7 +293,7 @@ public sealed class AccountUnlockService
     }
 
     private (byte[] Priv, Candidate? ViaKek)? TryOpen(KeyBundleDto b, List<Candidate> keks,
-        Dictionary<Guid, (byte[] Priv, Candidate? ViaKek)> opened)
+        Dictionary<Guid, (byte[] Priv, Candidate? ViaKek)> opened, byte[]? accountPriv)
     {
         foreach (var c in keks)
         {
@@ -285,6 +301,12 @@ public sealed class AccountUnlockService
             {
                 return (priv, c);
             }
+        }
+        if (accountPriv is not null
+            && _crypto.UnwrapPrivateKey(b.EncryptedPrivateKey, b.WrapNonce,
+                _crypto.DeriveProfileAccountWrapKey(accountPriv, b.PublicKey)) is { } viaAccount)
+        {
+            return (viaAccount, null);
         }
         foreach (var (_, anchor) in opened)
         {

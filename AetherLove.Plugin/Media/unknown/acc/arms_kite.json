@@ -1,0 +1,25 @@
+{
+  "name": "Seabreeze Kite",
+  "slot": "arms",
+  "tier": "seasonal",
+  "file": "arms_kite.png",
+  "anchor": "handL",
+  "origin": [
+    55,
+    104
+  ],
+  "width": 53,
+  "height": 63,
+  "behind": false,
+  "fx": "kite",
+  "fxBridle": [
+    -22.1,
+    -44.8
+  ],
+  "fxReach": [
+    11.0,
+    10.0,
+    11.0,
+    49.0
+  ]
+}

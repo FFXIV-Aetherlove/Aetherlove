@@ -20,8 +20,8 @@ internal sealed class CrystalCatchGame : IPetGame
 {
     private const int TotalHearts = 3;
     private const float KeySteerSpeed = 1.5f;
-    private const float MouthWidthFactor = 0.55f;
-    private const float MouthHeightFactor = 0.65f;
+    private const float MouthWidthFactor = 0.70f;
+    private const float MouthHeightFactor = 0.75f;
     private const float GraceSeconds = 1.1f;
     private const float FastSeconds = 8f;
     private const float SlowSeconds = 6f;
@@ -651,7 +651,7 @@ internal sealed class CrystalCatchGame : IPetGame
         {
             pose.CellIndex = GameScene.Cell(stage.Manifest, "idle", _runCycle % 1f);
         }
-        stage.Runtime.Draw(dl, ctx.Capabilities.Textures, bottom, petPx, pose);
+        stage.Runtime.Draw(dl, ctx.Capabilities.Textures, bottom, petPx, pose, props: false);
     }
 
     /// <summary>Small chips under the hearts naming what is in effect and how long it has left.</summary>

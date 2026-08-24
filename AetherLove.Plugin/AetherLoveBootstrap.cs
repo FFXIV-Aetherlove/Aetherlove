@@ -36,6 +36,8 @@ public sealed class AetherLoveBootstrap : IHostedService
     private readonly ChangelogWindow _changelogWindow;
     private readonly DebugWindow _debugWindow;
     private readonly AetherlingDebugWindow _aetherlingDebugWindow;
+    private readonly PartyDockWindow _partyDockWindow;
+    private readonly Services.Together.TogetherStateService _togetherState;
     private readonly EchoWindow _echoWindow;
     private readonly SkinPreviewWindow _skinPreviewWindow;
     private readonly Os.AetherlingHostService _aetherlingHost;
@@ -86,6 +88,8 @@ public sealed class AetherLoveBootstrap : IHostedService
         ChangelogWindow changelogWindow,
         DebugWindow debugWindow,
         AetherlingDebugWindow aetherlingDebugWindow,
+        PartyDockWindow partyDockWindow,
+        Services.Together.TogetherStateService togetherState,
         EchoWindow echoWindow,
         SkinPreviewWindow skinPreviewWindow,
         ScreenRouter router,
@@ -131,6 +135,8 @@ public sealed class AetherLoveBootstrap : IHostedService
         _changelogWindow = changelogWindow;
         _debugWindow = debugWindow;
         _aetherlingDebugWindow = aetherlingDebugWindow;
+        _partyDockWindow = partyDockWindow;
+        _togetherState = togetherState;
         _echoWindow = echoWindow;
         _skinPreviewWindow = skinPreviewWindow;
         _aetherlingHost = aetherlingHost;
@@ -184,6 +190,7 @@ public sealed class AetherLoveBootstrap : IHostedService
         _windowSystem.AddWindow(_changelogWindow);
         _windowSystem.AddWindow(_debugWindow);
         _windowSystem.AddWindow(_aetherlingDebugWindow);
+        _windowSystem.AddWindow(_partyDockWindow);
         _windowSystem.AddWindow(_echoWindow);
         _windowSystem.AddWindow(_skinPreviewWindow);
         _windowSystem.AddWindow(_modalHost);
@@ -331,6 +338,14 @@ public sealed class AetherLoveBootstrap : IHostedService
         try
         {
             UI.FontDiagnostics.Sample("Handler/entry");
+            // Party pushes queue their events on the signal thread; this is the once-per-frame draw-thread
+            // drain that raises them, phone open or closed.
+            _togetherState.DrainEvents();
+            // An Echo room does not outlive the phone: powering it off leaves the room and closes the window.
+            if (!_mainWindow.IsPoweredOn && _echoWindow.IsOpen)
+            {
+                _echoWindow.LeaveWithPhone();
+            }
             _windowSystem.Draw();
             UI.FontDiagnostics.Sample("Handler/after-window-system");
 
@@ -588,50 +603,7 @@ public sealed class AetherLoveBootstrap : IHostedService
             _aetherlingDebugWindow.IsOpen = true;
             return;
         }
-        if (sub.Equals("hatchling reset", StringComparison.OrdinalIgnoreCase))
-        {
-            StartAetherlingReset();
-            return;
-        }
-        if (sub.Equals("hatchling replay", StringComparison.OrdinalIgnoreCase))
-        {
-            ReplayAetherlingBirth();
-            return;
-        }
         OpenIfClosed();
-    }
-
-    /// <summary>Staff-only: puts the account back to before it ever bought one and refunds what it spent, so
-    /// the whole ceremony can be walked again. The server does the checking; a non-staff caller is refused
-    /// there, not here.</summary>
-    private void StartAetherlingReset()
-    {
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await _hubClient.ResetAetherlingAsync().ConfigureAwait(false);
-
-                // The snapshot is what every surface reads, so clearing it is what actually puts the app back
-                // to the beginning; without it the phone keeps drawing the creature the server just deleted.
-                _aetherlingHost.ClearSnapshot();
-                _osShell.SendIntent("aetherling", AetherOS.Sdk.OsIntents.Create(AetherOS.Sdk.OsIntents.AetherlingReset));
-                _log.Information("[AetherLove] Aetherling reset; sparks refunded.");
-                Plugin.ChatGui.Print("[AetherOS] Aetherling reset. Sparks refunded.");
-            }
-            catch (Exception ex)
-            {
-                _log.Warning(ex, "[AetherLove] Aetherling reset failed.");
-                Plugin.ChatGui.PrintError($"[AetherOS] Aetherling reset failed: {ex.Message}");
-            }
-        });
-    }
-
-    /// <summary>Replays the birth animation without touching the server, for tuning its timing.</summary>
-    private void ReplayAetherlingBirth()
-    {
-        OpenIfClosed();
-        _osShell.SendIntent("aetherling", AetherOS.Sdk.OsIntents.Create(AetherOS.Sdk.OsIntents.AetherlingReplayBirth));
     }
 
     /// <summary>Wipes local caches (chats, messenger, cached photos/avatars/icons) then restarts the phone:

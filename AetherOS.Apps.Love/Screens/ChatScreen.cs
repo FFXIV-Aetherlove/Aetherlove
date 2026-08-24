@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -45,7 +45,8 @@ public partial class ChatScreen
         bool IsOwn,
         DateTimeOffset SentAt,
         DateTimeOffset? ReadByOtherAtUtc,
-        bool IsDeleted = false);
+        bool IsDeleted = false,
+        AetherLove.Shared.Messaging.ChatImageDto? Image = null);
 
     private readonly List<DisplayedMessage> _messages = new();
     /// <summary>Guards <see cref="_messages"/>: rendered on the UI thread, mutated from worker threads.</summary>
@@ -103,6 +104,10 @@ public partial class ChatScreen
     private ISharedImmediateTexture? _headerAvatarTex;
     private volatile bool _loading;
     private volatile string? _loadError;
+
+    /// <summary>True while the load error is the keyless-profile one, so the bubble offers the recovery
+    /// screen instead of a dead end.</summary>
+    private bool _e2eSetupOffered;
     private double _loadStartedAt;
     /// <summary>Delay before the loading hint shows, so a cache-backed open never flashes a spinner.</summary>
     private const double LoadIndicatorDelay = 0.25;
@@ -164,6 +169,7 @@ public partial class ChatScreen
         ChatSyncService sync,
         SettingsScreen settingsScreen,
         VenueShareContext shareCtx,
+        PartyInviteShareContext partyInviteShareCtx,
         HangoutShareContext hangoutShareCtx,
         NewsShareContext newsShareCtx,
         CalendarShareContext calendarShareCtx,
@@ -188,6 +194,7 @@ public partial class ChatScreen
         _sync = sync;
         _settingsScreen = settingsScreen;
         _shareCtx = shareCtx;
+        _partyInviteShareCtx = partyInviteShareCtx;
         _hangoutShareCtx = hangoutShareCtx;
         _newsShareCtx = newsShareCtx;
         _calendarShareCtx = calendarShareCtx;
@@ -198,12 +205,16 @@ public partial class ChatScreen
         _marketData = marketData;
         _marketIndex = marketIndex;
         _caps = caps;
+        _translate = new TranslateUi("lovechat", caps.Translation,
+            () => shell.Shell?.SendIntent("settings", AetherOS.Sdk.OsIntents.CreateReturn(
+                AetherOS.Sdk.OsIntents.OpenTranslationSettings, "aetherlove")));
     }
 
     private readonly Services.Messenger.MessengerStore _messengerStore;
 
     private readonly SettingsScreen _settingsScreen;
     private readonly VenueShareContext _shareCtx;
+    private readonly PartyInviteShareContext _partyInviteShareCtx;
     private readonly HangoutShareContext _hangoutShareCtx;
     private readonly NewsShareContext _newsShareCtx;
     private readonly CalendarShareContext _calendarShareCtx;
@@ -213,6 +224,8 @@ public partial class ChatScreen
     private readonly Services.Market.MarketDataService _marketData;
     private readonly Services.Market.MarketItemIndex _marketIndex;
     private readonly AetherOS.Sdk.IAppCapabilities _caps;
+    private readonly TranslateUi _translate;
+    private long _translateVersion;
 
     // Queued share body, auto-sent once the message key is ready; the app to return to when the chat was opened
     // from a cross-app share (Places/Hangouts), else null for the normal in-app back.
@@ -227,6 +240,7 @@ public partial class ChatScreen
     public void OnShow()
     {
         _events.MessageReceived += OnMessageReceived;
+        _events.ChatImageRemoved += OnChatImageRemoved;
         _events.MessageRead += OnMessageRead;
         _events.Unmatched += OnUnmatched;
         _events.BlockedByPeer += OnBlockedByPeer;
@@ -246,7 +260,12 @@ public partial class ChatScreen
         _peerNameStyle = _chatListScreen.SelectedPeerNameStyle;
         _peerHolidayMode = _chatListScreen.SelectedPeerHolidayMode;
         _peerFrameRef = _chatListScreen.SelectedPeerFrameRef;
-        if (_shareCtx.PendingShareVenueId is { } shareVenueId)
+        if (_partyInviteShareCtx.PendingParty is { } pendingParty)
+        {
+            _partyInviteShareCtx.PendingParty = null;
+            _pendingShareSend = PartyShare.Compose(pendingParty.PartyId, pendingParty.Code);
+        }
+        else if (_shareCtx.PendingShareVenueId is { } shareVenueId)
         {
             _shareCtx.PendingShareVenueId = null;
             _pendingShareSend = VenueShare.Compose(shareVenueId);
@@ -292,6 +311,7 @@ public partial class ChatScreen
         ResetFailedNewsCards();
         ResetFailedLevemeteCards();
         ResetFailedEchoCards();
+        ResetFailedPartyCards();
         lock (_messagesLock)
         {
             _messages.Clear();
@@ -327,6 +347,7 @@ public partial class ChatScreen
     {
         StashDraft();
         _events.MessageReceived -= OnMessageReceived;
+        _events.ChatImageRemoved -= OnChatImageRemoved;
         _events.MessageRead -= OnMessageRead;
         _events.Unmatched -= OnUnmatched;
         _events.BlockedByPeer -= OnBlockedByPeer;
@@ -393,8 +414,10 @@ public partial class ChatScreen
         }
         if (!_keys.HasLocalKey)
         {
-            // Normally unreachable: the startup recovery gate establishes local E2E before chat opens.
+            // Reached when silent provisioning could not mint this profile's keys (a recreated profile on
+            // a device with nothing to wrap under). The recovery screen fixes it; the bubble carries a door.
             _loadError = Loc.T("chat.e2e_self_broken");
+            _e2eSetupOffered = true;
             _loading = false;
             return;
         }
@@ -403,6 +426,7 @@ public partial class ChatScreen
         _loading = true;
         _loadStartedAt = ImGui.GetTime();
         _loadError = null;
+        _e2eSetupOffered = false;
         var ct = _cts.Token;
         _ = Task.Run(async () =>
         {
@@ -596,10 +620,12 @@ public partial class ChatScreen
         var key = era ?? _messageKey;
         try
         {
-            var bytes = _crypto.Decrypt(key, m.Nonce, m.Ciphertext);
-            var text = Encoding.UTF8.GetString(bytes);
+            // An image with no caption carries no ciphertext at all; decrypting nothing is not a failure.
+            var text = m.Ciphertext.Length == 0 && m.Image is not null
+                ? string.Empty
+                : Encoding.UTF8.GetString(_crypto.Decrypt(key, m.Nonce, m.Ciphertext));
             return new DisplayedMessage(
-                m.Id, text, m.SenderProfileId != _peerId, m.CreatedAtUtc, m.ReadByOtherAtUtc);
+                m.Id, text, m.SenderProfileId != _peerId, m.CreatedAtUtc, m.ReadByOtherAtUtc, Image: m.Image);
         }
         catch (Exception ex)
         {
@@ -609,7 +635,8 @@ public partial class ChatScreen
             {
                 UiHost.Log.Warning(ex, $"[ChatScreen] Decrypt failed for {m.Id}.");
             }
-            return new DisplayedMessage(m.Id, Loc.T("chat.unreadable_message"), m.SenderProfileId != _peerId, m.CreatedAtUtc, m.ReadByOtherAtUtc);
+            return new DisplayedMessage(m.Id, Loc.T("chat.unreadable_message"), m.SenderProfileId != _peerId,
+                m.CreatedAtUtc, m.ReadByOtherAtUtc, Image: m.Image);
         }
     }
 
@@ -625,11 +652,12 @@ public partial class ChatScreen
         }
         try
         {
-            var bytes = _crypto.Decrypt(_messageKey, p.Nonce, p.Ciphertext);
-            var text = Encoding.UTF8.GetString(bytes);
+            var text = p.Ciphertext.Length == 0 && p.Image is not null
+                ? string.Empty
+                : Encoding.UTF8.GetString(_crypto.Decrypt(_messageKey, p.Nonce, p.Ciphertext));
             lock (_messagesLock)
             {
-                _messages.Add(new DisplayedMessage(p.MessageId, text, false, p.CreatedAtUtc, null));
+                _messages.Add(new DisplayedMessage(p.MessageId, text, false, p.CreatedAtUtc, null, Image: p.Image));
                 _entryAnim[p.MessageId] = 0f;
             }
             if (p.ReplyToMessageId is { } replyId)
@@ -719,6 +747,14 @@ public partial class ChatScreen
         DrainUiActions();
         DrainIdMigrations();
 
+        // A translation swap changes a bubble's text, so any height computed from the old text is stale.
+        if (_translate.Version != _translateVersion)
+        {
+            _translateVersion = _translate.Version;
+            _msgContentH.Clear();
+            _msgRowH.Clear();
+        }
+
         // Gated on the load FINISHING, not just the key: the loader clears _messages after the key becomes
         // ready, so sending in that window would wipe the share's optimistic bubble until the next reopen.
         if (_pendingShareSend is { } shareText && _messageKey is not null && !_loading)
@@ -757,6 +793,9 @@ public partial class ChatScreen
         DrawPinnedOverlay();
         DrawCalendarEventPrompt();
         DrawUserNoteOverlay();
+        DrawImageComposeOverlay();
+        DrawImageReportOverlay();
+        DrawImageViewer();
 
         DrawOpenFade(contentTL, contentSize);
 
@@ -777,6 +816,8 @@ public partial class ChatScreen
             });
 
         DrawDeleteMessageConfirm(ImGui.GetWindowPos(), ImGui.GetWindowSize());
+
+        _translate.DrawConsentOverlay(ImGui.GetWindowPos(), ImGui.GetWindowSize());
 
         SupporterInfoPopup.Draw(ImGui.GetWindowPos(), ImGui.GetWindowSize(), OpenSupporterSettings);
 
@@ -856,18 +897,27 @@ public partial class ChatScreen
 
     private void DrawReportSubmittedToast()
     {
+        if (_msgrInviteToast > 0f)
+        {
+            _msgrInviteToast -= ImGui.GetIO().DeltaTime;
+            DrawToastBar(Loc.T("chat.msgr_request_sent"), Math.Clamp(_msgrInviteToast / 4f, 0f, 1f), "##msgrInviteToast");
+        }
         if (_reportSubmittedTimer <= 0f)
         {
             return;
         }
-        var alpha = Math.Clamp(_reportSubmittedTimer / 4f, 0f, 1f);
+        DrawToastBar(Loc.T("chat.report_submitted_toast"), Math.Clamp(_reportSubmittedTimer / 4f, 0f, 1f), "##reportToast");
+    }
+
+    private static void DrawToastBar(string message, float alpha, string id)
+    {
         var col = new Vector4(0.18f, 0.62f, 0.30f, alpha);
         ImGui.PushStyleColor(ImGuiCol.ChildBg, col);
-        using (var c = ImRaii.Child("##reportToast", new Vector2(ImGui.GetContentRegionAvail().X, Px(26f)), false))
+        using (var c = ImRaii.Child(id, new Vector2(ImGui.GetContentRegionAvail().X, Px(26f)), false))
         {
             if (c.Success)
             {
-                var msg = Loc.T("chat.report_submitted_toast");
+                var msg = message;
                 var sz = ImGui.CalcTextSize(msg);
                 ImGui.SetCursorPosX((ImGui.GetContentRegionAvail().X - sz.X) * 0.5f);
                 ImGui.SetCursorPosY((Px(26f) - sz.Y) * 0.5f);
@@ -1357,6 +1407,17 @@ public partial class ChatScreen
             if (_loadError is not null)
             {
                 DrawErrorBubble(_loadError);
+                if (_e2eSetupOffered)
+                {
+                    ImGui.Spacing();
+                    ImGui.SetCursorPosX(Px(8f));
+                    if (SharedUiHelpers.Button(Loc.T("chat.e2e_setup_button"),
+                            new Vector2(ImGui.GetContentRegionAvail().X - Px(8f), Px(32f)))
+                        && _shell.OpenEncryptionRecovery is { } openRecovery)
+                    {
+                        openRecovery();
+                    }
+                }
             }
 
             var lineH = ImGui.GetTextLineHeight();
@@ -1504,6 +1565,11 @@ public partial class ChatScreen
 
     private void DrawMessageBubble(DisplayedMessage msg, float windowWidth, int slot, bool isGroupStart, bool isGroupEnd)
     {
+        if (msg.Image is not null)
+        {
+            DrawImageMessage(msg, windowWidth, isGroupEnd);
+            return;
+        }
         if (VenueShare.TryParse(msg.Text, out var sharedVenueId))
         {
             DrawVenueCardMessage(msg, sharedVenueId, windowWidth, isGroupEnd);
@@ -1544,8 +1610,13 @@ public partial class ChatScreen
             DrawEchoCardMessage(msg, sharedRoomId, sharedRoomCode, windowWidth, isGroupEnd);
             return;
         }
+        if (PartyShare.TryParse(msg.Text, out var sharedPartyId, out var sharedPartyCode, out var partyInvite))
+        {
+            DrawPartyCardMessage(msg, sharedPartyId, sharedPartyCode, partyInvite, windowWidth, isGroupEnd);
+            return;
+        }
 
-        var parsed = ParsedMessage.Parse(msg.Text);
+        var parsed = ParsedMessage.Parse(_translate.Display(msg.Id, msg.Text));
         var maxBubW = windowWidth * 0.72f;
         var padding = Px(12, 8);
         var drawList = ImGui.GetWindowDrawList();
@@ -1705,6 +1776,15 @@ public partial class ChatScreen
         var innerW = windowWidth * 0.72f - padding.X * 2f;
         var lineH = ImGui.GetTextLineHeight();
 
+        if (msg.Image is not null)
+        {
+            var imageRow = ImageThumbSize(msg.Image, windowWidth).Y + (isGroupEnd ? lineH + Px(8f) : Px(2f));
+            if (needsDivider)
+            {
+                imageRow += lineH + Px(16f);
+            }
+            return imageRow;
+        }
         if (VenueShare.TryParse(msg.Text, out _))
         {
             var cardRow = Px(VenueCardH) + (isGroupEnd ? lineH + Px(8f) : Px(2f));
@@ -1759,10 +1839,20 @@ public partial class ChatScreen
             }
             return cardRow;
         }
+        if (PartyShare.TryParse(msg.Text, out _, out _, out var partyInviteText))
+        {
+            var cardRow = Px(PartyCardH) + PartyInviteMessageHeight(partyInviteText, windowWidth)
+                + (isGroupEnd ? lineH + Px(8f) : Px(2f));
+            if (needsDivider)
+            {
+                cardRow += lineH + Px(16f);
+            }
+            return cardRow;
+        }
 
         var contentH = _msgContentH.TryGetValue(msg.Id, out var cached)
             ? cached
-            : ParsedMessage.Parse(msg.Text).MeasureHeight(innerW);
+            : ParsedMessage.Parse(_translate.Display(msg.Id, msg.Text)).MeasureHeight(innerW);
 
         var bubbleH = MathF.Max(contentH, lineH) + padding.Y * 2f;
         var rowH = isGroupEnd
@@ -1991,7 +2081,7 @@ public partial class ChatScreen
         const float EmojiBtn = 28f;
         const float SendBtn = 56f;
         const float Gap = 4f;
-        var inputWidth = windowWidth - Px(EmojiBtn) - Px(SendBtn) - Px(Gap * 3f);
+        var inputWidth = windowWidth - Px(EmojiBtn) * 2f - Px(SendBtn) - Px(Gap * 4f);
 
         ImGui.SetCursorPosY(ImGui.GetWindowSize().Y - InputBarHeight());
         DrawEmojiAutocompleteRow();
@@ -1999,6 +2089,17 @@ public partial class ChatScreen
         ImGui.Spacing();
 
         DrawReplyComposeBar();
+
+        using (ImRaii.PushFont(UiBuilder.IconFont))
+        {
+            if (SharedUiHelpers.Button($"{FontAwesomeIcon.Plus.ToIconString()}##chatAttach",
+                    new Vector2(Px(EmojiBtn), 0f)))
+            {
+                ImGui.OpenPopup("##chatAttach");
+            }
+        }
+        DrawAttachMenu();
+        ImGui.SameLine(0, Px(Gap));
 
         {
             var frameH = ImGui.GetFrameHeight();

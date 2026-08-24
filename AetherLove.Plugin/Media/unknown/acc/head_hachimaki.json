@@ -3,12 +3,15 @@
   "slot": "head",
   "tier": "seasonal",
   "file": "head_hachimaki.png",
+  "back": "head_hachimaki_back.png",
   "anchor": "head",
   "origin": [
-    66,
-    -13
+    58,
+    18
   ],
-  "width": 165,
-  "height": 63,
+  "width": 157,
+  "height": 71,
+  "wrapRx": 48.7,
+  "wrapBand": true,
   "behind": false
 }

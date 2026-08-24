@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Threading.Tasks;
 using AetherLove.Config;
@@ -13,6 +13,7 @@ using AetherLove.Services.Signal;
 using AetherLove.UI;
 using AetherLove.Windows;
 using AetherOS.Shell;
+using Dalamud.Game;
 using Dalamud.Game.ClientState.Keys;
 using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
@@ -44,6 +45,9 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IMarketBoard MarketBoard { get; private set; } = null!;
     [PluginService] internal static IContextMenu ContextMenu { get; private set; } = null!;
     [PluginService] internal static IKeyState KeyState { get; private set; } = null!;
+    [PluginService] internal static ITargetManager TargetManager { get; private set; } = null!;
+    [PluginService] internal static ISigScanner SigScanner { get; private set; } = null!;
+    [PluginService] internal static IToastGui ToastGui { get; private set; } = null!;
 
     internal static string ServerBaseUrl => AetherLove.Shared.AetherConstants.ServerBaseUrl;
 
@@ -156,9 +160,25 @@ public sealed class Plugin : IDalamudPlugin
         services.AddSingleton<Services.Echo.EchoHostInstaller>();
         services.AddSingleton<Services.Echo.EchoHostClient>();
         services.AddSingleton<Services.Echo.EchoStateService>();
+        services.AddSingleton<Services.Together.TogetherStateService>();
+        services.AddSingleton<Services.Together.WayfinderRunStateService>();
+        services.AddSingleton<Services.Translation.TranslationService>();
         services.AddSingleton<Services.Echo.EchoSyncEngine>();
         services.AddSingleton<Services.EchoShareContext>();
-        services.AddSingleton<Windows.EchoWindow>();
+        services.AddSingleton(sp => new Windows.EchoWindow(
+            sp.GetRequiredService<Services.Echo.EchoHostClient>(),
+            sp.GetRequiredService<Services.Echo.EchoStateService>(),
+            sp.GetRequiredService<Services.Echo.EchoSyncEngine>(),
+            sp.GetRequiredService<Services.Echo.EchoHostLocator>(),
+            sp.GetRequiredService<Services.Hub.AetherHubContext>(),
+            sp.GetRequiredService<Configuration>(),
+            sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>(),
+            openTranslationSettings: () =>
+            {
+                sp.GetRequiredService<MainPluginWindow>().IsOpen = true;
+                sp.GetRequiredService<Os.OsShell>().SendIntent("settings",
+                    AetherOS.Sdk.OsIntents.Create(AetherOS.Sdk.OsIntents.OpenTranslationSettings));
+            }));
         services.AddSingleton<AetherOS.Apps.EchoVidya.IEchoHost, Os.EchoHostService>();
         services.AddSingleton<Os.HousingLotteryWatchService>();
         services.AddSingleton<Os.RealtorPhaseWatchService>();
@@ -168,6 +188,7 @@ public sealed class Plugin : IDalamudPlugin
         services.AddSingleton<Services.Auth.AccountUnlockService>();
         services.AddSingleton<PendingMatchContext>();
         services.AddSingleton<VenueShareContext>();
+        services.AddSingleton<PartyInviteShareContext>();
         services.AddSingleton<HangoutShareContext>();
         services.AddSingleton<NewsShareContext>();
         services.AddSingleton<CalendarShareContext>();
@@ -189,6 +210,7 @@ public sealed class Plugin : IDalamudPlugin
         services.AddSingleton<PassphraseUnlockScreen>();
         services.AddSingleton<EncryptionRecoveryScreen>();
         services.AddSingleton<OfflineScreen>();
+        services.AddSingleton<SessionExpiredScreen>();
         services.AddSingleton<OutdatedScreen>();
 
         services.AddSingleton<Os.AppStorageService>();
@@ -221,6 +243,7 @@ public sealed class Plugin : IDalamudPlugin
             sp.GetRequiredService<CalendarShareContext>(),
             sp.GetRequiredService<LevemeteShareContext>(),
             sp.GetRequiredService<MarketShareContext>(),
+            sp.GetRequiredService<PartyInviteShareContext>(),
             sp.GetRequiredService<Services.Patreon.PatreonLinkFlow>(),
             sp.GetRequiredService<SiblingBadgeStore>(),
             sp.GetRequiredService<Services.Messenger.MessengerStore>(),
@@ -416,7 +439,7 @@ public sealed class Plugin : IDalamudPlugin
             sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>()));
         services.AddSingleton<Os.AetherlingHostService>();
         services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Aetherling.AetherlingApp(
-            // The mystery ends one account at a time: the tile keeps its question marks until yours hatches.
+            // The tile takes the creature's name the moment this account has one.
             () => sp.GetRequiredService<Os.AetherlingHostService>().PetName
                   ?? Services.Localization.Loc.T("os.app_aetherling"),
             () => sp.GetRequiredService<SessionBootstrapper>().LastConnection?.AetherlingEnabled != false,
@@ -453,6 +476,11 @@ public sealed class Plugin : IDalamudPlugin
             sp.GetRequiredService<Os.CalendarHostService>(),
             sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>(),
             sp.GetRequiredService<AetherOS.Apps.Calendar.ICalendarStore>()));
+        services.AddSingleton<Os.TogetherHostService>();
+        services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Together.TogetherApp(
+            () => Services.Localization.Loc.T("os.app_together"),
+            sp.GetRequiredService<Os.TogetherHostService>(),
+            sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>()));
         services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Notes.NotesApp(
             () => Services.Localization.Loc.T("os.app_notes"),
             sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>()));
@@ -460,10 +488,43 @@ public sealed class Plugin : IDalamudPlugin
             () => Services.Localization.Loc.T("os.app_calculator"),
             sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>()));
         services.AddSingleton<Os.IOsAccountInfo, Os.OsAccountInfo>();
+        services.AddSingleton<Os.IOsTogether, Os.OsTogetherService>();
         services.AddAetherOsShell();
 
         services.AddSingleton<MainPluginWindow>();
         services.AddSingleton<MiniWindow>();
+        services.AddSingleton(sp => new PartyDockWindow(
+            sp.GetRequiredService<Os.IOsTogether>(),
+            sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>(),
+            openPhone: () =>
+            {
+                // The party card lives on the widget page now, so the dock opens the phone there rather
+                // than on the shade it used to pin to.
+                sp.GetRequiredService<MainPluginWindow>().IsOpen = true;
+                sp.GetRequiredService<Navigation.ScreenRouter>().Navigate(Navigation.Screen.Home);
+                sp.GetRequiredService<HomeScreen>().ShowPage(-1);
+            },
+            openTranslationSettings: () =>
+            {
+                sp.GetRequiredService<MainPluginWindow>().IsOpen = true;
+                sp.GetRequiredService<Os.OsShell>().SendIntent("settings",
+                    AetherOS.Sdk.OsIntents.Create(AetherOS.Sdk.OsIntents.OpenTranslationSettings));
+            },
+            openNotice: line =>
+            {
+                // A tapped activity notice follows the host: the room by its join intent, the hunt by
+                // opening the app, whose foreground lands on the party run by itself.
+                sp.GetRequiredService<MainPluginWindow>().IsOpen = true;
+                var shell = sp.GetRequiredService<Os.OsShell>();
+                if (line.Kind == "echo" && line.RefId is { } roomId && line.Code is { Length: > 0 } code)
+                {
+                    shell.SendIntent("echo", AetherOS.Sdk.OsIntents.CreateRoomJoin(AetherOS.Sdk.OsIntents.EchoJoin, roomId, code));
+                }
+                else if (line.Kind is { Length: > 0 } appId)
+                {
+                    shell.OpenApp(appId);
+                }
+            }));
         services.AddSingleton<SkinPreviewWindow>();
         services.AddSingleton<Services.DtrBarService>();
         services.AddSingleton<ChangelogWindow>();

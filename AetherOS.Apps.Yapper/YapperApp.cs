@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -91,9 +91,11 @@ public sealed class YapperApp : IAetherApp, IAppSettings
         _mediaCache = new YapperMediaCache(host, System.IO.Path.Combine(_storage.Directory, "MediaCache"));
         _mediaViewer = new MediaViewer(_mediaCache);
         _reportOverlay = new ReportOverlay(host);
+        _translate = new AetherLove.UI.TranslateUi("yapper", caps.Translation,
+            () => _shell?.SendIntent("settings", OsIntents.CreateReturn(OsIntents.OpenTranslationSettings, "yapper")));
         _notifications = new NotificationsScreen(host, _mediaCache, OpenYapById, OpenPeerProfile, OnInboxRead);
         host.NotificationReceived += OnNotificationPush;
-        _yapCard = new YapCard(host, _store, _mediaCache,
+        _yapCard = new YapCard(host, _store, _mediaCache, _translate,
             () => _me?.ProfileId,
             OpenDetail,
             dto => OpenCompose(ComposeScreen.Mode.Reply, dto),
@@ -132,7 +134,10 @@ public sealed class YapperApp : IAetherApp, IAppSettings
                 _confirmOverlay.Open(title, body, confirmLabel, danger, onConfirm),
             OnProfileDeleted);
         _messages = new MessagesScreen(host, _dms, _mediaCache, OpenDmChat);
-        _dmChat = new DmChatScreen(host, _dms, _mediaCache, () => _me?.ProfileId, Back, OpenPeerProfile);
+        _dmChat = new DmChatScreen(host, _dms, _mediaCache, _translate, () => _me?.ProfileId, Back, OpenPeerProfile,
+            caps);
+        host.DmImageRemoved += imageId => _dmChat.OnDmImageRemoved(imageId);
+        _dmChat.PickFromPhotos = RequestPhotoPick;
         host.DmReceived += OnDmPush;
         host.DmRead += payload => _dms.ApplyPeerRead(payload.PeerProfileId, payload.MessageIds, payload.ReadAtUtc);
         host.DmReaction += payload => _dms.ApplyReaction(payload.MessageId, payload.ProfileId, payload.Token, payload.Added);
@@ -248,6 +253,7 @@ public sealed class YapperApp : IAetherApp, IAppSettings
 
     private const string NotifTag = "yap:notif";
     private IOsShell? _shell;
+    private readonly AetherLove.UI.TranslateUi _translate;
 
     private void OnInboxRead()
     {
@@ -376,6 +382,11 @@ public sealed class YapperApp : IAetherApp, IAppSettings
     public void OnForeground()
     {
         RefreshMe();
+        // Walking out of the wizard means leaving it, not pausing it: coming back starts at the first step.
+        if (_view == View.Onboarding)
+        {
+            _onboarding.OnShow();
+        }
         if (_view == View.Home)
         {
             _home.OnShow();
@@ -443,6 +454,12 @@ public sealed class YapperApp : IAetherApp, IAppSettings
         {
             _pendingShare = null;
             _compose.OpenShare(pendingShare.Kind, pendingShare.RefId, pendingShare.Title ?? string.Empty);
+            Navigate(View.Compose);
+        }
+        if (_me is not null && _pendingPhotoShare is { } pendingPhoto)
+        {
+            _pendingPhotoShare = null;
+            _compose.OpenWithImage(pendingPhoto);
             Navigate(View.Compose);
         }
 
@@ -514,12 +531,13 @@ public sealed class YapperApp : IAetherApp, IAppSettings
         }
         _reportOverlay.Draw(ctx);
         _confirmOverlay.Draw(ctx);
+        _translate.DrawConsentOverlay(ImGui.GetWindowPos(), ImGui.GetWindowSize());
         _imageSheet.Draw(ctx);
         _mediaViewer.Draw();
         FlushSeen(force: false);
     }
 
-    public IReadOnlyList<string> AcceptedShareTypes => [ShareTypes.Venue, ShareTypes.Levemete];
+    public IReadOnlyList<string> AcceptedShareTypes => [ShareTypes.Venue, ShareTypes.Levemete, ShareTypes.Party, ShareTypes.Photo];
 
     public void OnIntent(OsIntent intent)
     {
@@ -530,9 +548,33 @@ public sealed class YapperApp : IAetherApp, IAppSettings
             pending?.Invoke(photoPath);
             return;
         }
+        if (intent.Type == ShareIntent.Type && ShareIntent.TryUnwrap(intent, out var picture)
+            && picture.Type == ShareTypes.Photo && picture.LocalPath is { Length: > 0 } picturePath)
+        {
+            // A shared picture is a yap with the picture attached; the profile gate is the same as any share.
+            if (_me is null)
+            {
+                _pendingPhotoShare = picturePath;
+                return;
+            }
+            _compose.OpenWithImage(picturePath);
+            Navigate(View.Compose);
+            return;
+        }
         if (intent.Type == ShareIntent.Type && ShareIntent.TryUnwrap(intent, out var shared)
             && Guid.TryParse(shared.RefId, out var refId))
         {
+            // A party invite goes to a DM, not a yap: the code is for people you pick, not the feed. It is
+            // staged as input text for the next opened chat; the messages list is the picker.
+            if (shared.Type == ShareTypes.Party)
+            {
+                if (shared.Subtitle.Length > 0)
+                {
+                    _dmChat.PendingParty = (refId, shared.Subtitle);
+                    Navigate(View.Messages);
+                }
+                return;
+            }
             var kind = shared.Type switch
             {
                 ShareTypes.Venue => YapEmbedKind.Venue,
@@ -555,6 +597,7 @@ public sealed class YapperApp : IAetherApp, IAppSettings
     }
 
     private (YapEmbedKind Kind, Guid RefId, string? Title)? _pendingShare;
+    private string? _pendingPhotoShare;
 
     internal void Navigate(View view)
     {

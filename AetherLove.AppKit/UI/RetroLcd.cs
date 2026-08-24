@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
@@ -16,6 +16,9 @@ public static class RetroLcd
     public static readonly Vector4 Panel = new(0.561f, 0.659f, 0.239f, 1f);
     public static readonly Vector4 Pixel = new(0.129f, 0.169f, 0.059f, 1f);
     public static readonly Vector4 PanelEdge = new(0.451f, 0.541f, 0.176f, 1f);
+    /// <summary>A dimmed backdrop for screens that spotlight only part of themselves (e.g. the playfield),
+    /// leaving the rest of the panel unlit.</summary>
+    public static readonly Vector4 PanelDim = new(0.224f, 0.264f, 0.096f, 1f);
 
     public const int GlyphWidth = 5;
     public const int GlyphHeight = 7;
@@ -131,8 +134,11 @@ public static class RetroLcd
     }
 
     /// <summary>A chunky LCD button. Returns true on click; <paramref name="filled"/> marks the primary.</summary>
-    public static bool Button(string id, string label, Vector2 tl, Vector2 size, float rounding, bool filled)
+    public static bool Button(string id, string label, Vector2 tl, Vector2 size, float rounding, bool filled,
+        Vector4? ink = null, Vector4? paper = null)
     {
+        var inkColor = ink ?? Pixel;
+        var paperColor = paper ?? Panel;
         ImGui.SetCursorScreenPos(tl);
         var clicked = ImGui.InvisibleButton(id, size);
         var hovered = ImGui.IsItemHovered();
@@ -146,22 +152,27 @@ public static class RetroLcd
         var solid = filled || held;
         if (solid)
         {
-            dl.AddRectFilled(tl, tl + size, ImGui.GetColorU32(Pixel with { W = held ? 1f : 0.9f }), rounding);
+            dl.AddRectFilled(tl, tl + size, ImGui.GetColorU32(inkColor with { W = held ? 1f : 0.9f }), rounding);
         }
         else if (hovered)
         {
-            dl.AddRectFilled(tl, tl + size, ImGui.GetColorU32(Pixel with { W = 0.12f }), rounding);
+            dl.AddRectFilled(tl, tl + size, ImGui.GetColorU32(inkColor with { W = 0.12f }), rounding);
         }
-        dl.AddRect(tl, tl + size, ImGui.GetColorU32(Pixel), rounding, ImDrawFlags.None, 2f);
+        dl.AddRect(tl, tl + size, ImGui.GetColorU32(inkColor), rounding, ImDrawFlags.None, 2f);
 
         var textSize = ImGui.CalcTextSize(label);
-        dl.AddText(tl + ((size - textSize) * 0.5f), ImGui.GetColorU32(solid ? Panel : Pixel), label);
+        // Clipped to the key face: these buttons are sized in design pixels and a label that is short in
+        // English is not short in every language, and a word spilling past its own border reads as a bug.
+        dl.PushClipRect(tl, tl + size, true);
+        dl.AddText(tl + ((size - textSize) * 0.5f), ImGui.GetColorU32(solid ? paperColor : inkColor), label);
+        dl.PopClipRect();
         return clicked;
     }
 
     /// <summary>The rounded-square key face, shared by the icon and lettered variants.</summary>
-    private static (bool Pressed, bool Held) KeyChrome(string id, Vector2 tl, float size)
+    private static (bool Pressed, bool Held) KeyChrome(string id, Vector2 tl, float size, Vector4? ink = null)
     {
+        var inkColor = ink ?? Pixel;
         ImGui.SetCursorScreenPos(tl);
         ImGui.InvisibleButton(id, new Vector2(size, size));
         var pressed = ImGui.IsItemClicked();
@@ -173,18 +184,19 @@ public static class RetroLcd
 
         var dl = ImGui.GetWindowDrawList();
         var br = tl + new Vector2(size, size);
-        dl.AddRectFilled(tl, br, ImGui.GetColorU32(Pixel with { W = held ? 0.85f : 0.14f }), size * 0.22f);
-        dl.AddRect(tl, br, ImGui.GetColorU32(Pixel with { W = 0.65f }), size * 0.22f, ImDrawFlags.None, 2f);
+        dl.AddRectFilled(tl, br, ImGui.GetColorU32(inkColor with { W = held ? 0.85f : 0.14f }), size * 0.22f);
+        dl.AddRect(tl, br, ImGui.GetColorU32(inkColor with { W = 0.65f }), size * 0.22f, ImDrawFlags.None, 2f);
         return (pressed, held);
     }
 
     /// <summary>A control-pad key: rounded square, icon, pressed state. Returns true on press (not
     /// release), so a quick tap registers on the very next game step.</summary>
-    public static bool Key(string id, Dalamud.Interface.FontAwesomeIcon icon, Vector2 tl, float size)
+    public static bool Key(string id, Dalamud.Interface.FontAwesomeIcon icon, Vector2 tl, float size,
+        Vector4? ink = null, Vector4? paper = null)
     {
-        var (pressed, held) = KeyChrome(id, tl, size);
+        var (pressed, held) = KeyChrome(id, tl, size, ink);
         DrawIcon(ImGui.GetWindowDrawList(), icon, size * 0.4f, tl + new Vector2(size * 0.5f, size * 0.5f),
-            ImGui.GetColorU32(held ? Panel : Pixel));
+            ImGui.GetColorU32(held ? (paper ?? Panel) : (ink ?? Pixel)));
         return pressed;
     }
 
@@ -208,11 +220,12 @@ public static class RetroLcd
 
     /// <summary>The pause key every game wears in the top-right of its HUD, centred in the band. Returns true
     /// on press.</summary>
-    public static bool PauseKey(Vector2 winPos, Vector2 winSize, float padX, float hudHeight)
+    public static bool PauseKey(Vector2 winPos, Vector2 winSize, float padX, float hudHeight,
+        Vector4? ink = null, Vector4? paper = null)
     {
         var size = PauseKeyWidth(hudHeight);
         return Key("##lcdPause", Dalamud.Interface.FontAwesomeIcon.Pause,
-            new Vector2(winPos.X + winSize.X - padX - size, winPos.Y + ((hudHeight - size) * 0.5f)), size);
+            new Vector2(winPos.X + winSize.X - padX - size, winPos.Y + ((hudHeight - size) * 0.5f)), size, ink, paper);
     }
 
     /// <summary>True while a control-pad key is held down, for continuous movement (paddles).</summary>
@@ -253,5 +266,36 @@ public static class RetroLcd
         var gap = MathF.Max(1f, cell * 0.08f);
         var tl = boardTL + new Vector2(x * cell, y * cell);
         dl.AddRectFilled(tl + new Vector2(gap, gap), tl + new Vector2(cell - gap, cell - gap), color);
+    }
+
+    /// <summary>One board cell rendered from a texture atlas tile instead of a flat fill or procedural
+    /// pixel art, for games with hand-drawn block skins.</summary>
+    public static void TexturedCell(ImDrawListPtr dl, Vector2 boardTL, int x, int y, float cell,
+        ImTextureID texture, Vector2 uv0, Vector2 uv1, float alpha = 1f)
+    {
+        var tl = boardTL + new Vector2(x * cell, y * cell);
+        // A hair of overlap on the trailing edge hides the 1px seam subpixel rounding otherwise leaves
+        // between adjacent cells.
+        dl.AddImage(texture, tl, tl + new Vector2(cell + 0.75f, cell + 0.75f), uv0, uv1, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, alpha)));
+    }
+
+    /// <summary>Repeats a texture tile across a rectangle, clipped to it so a size that isn't an exact
+    /// multiple of the tile just shows a partial tile at the far edge instead of overflowing.</summary>
+    public static void TiledImage(ImDrawListPtr dl, Vector2 tl, Vector2 size, float tileSize,
+        ImTextureID texture, Vector2 uv0, Vector2 uv1, Vector4 tint)
+    {
+        var color = ImGui.GetColorU32(tint);
+        dl.PushClipRect(tl, tl + size, true);
+        var cols = (int)MathF.Ceiling(size.X / tileSize);
+        var rows = (int)MathF.Ceiling(size.Y / tileSize);
+        for (var ty = 0; ty < rows; ty++)
+        {
+            for (var tx = 0; tx < cols; tx++)
+            {
+                var p0 = tl + new Vector2(tx * tileSize, ty * tileSize);
+                dl.AddImage(texture, p0, p0 + new Vector2(tileSize + 0.75f, tileSize + 0.75f), uv0, uv1, color);
+            }
+        }
+        dl.PopClipRect();
     }
 }

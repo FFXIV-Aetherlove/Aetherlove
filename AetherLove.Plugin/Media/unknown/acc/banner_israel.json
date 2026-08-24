@@ -1,0 +1,14 @@
+{
+  "name": "Israel Banner",
+  "slot": "banner",
+  "tier": "premium",
+  "file": "banner_israel.png",
+  "anchor": "body",
+  "origin": [
+    102,
+    108
+  ],
+  "width": 73,
+  "height": 134,
+  "behind": true
+}

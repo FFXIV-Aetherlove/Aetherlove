@@ -1,0 +1,31 @@
+{
+  "name": "Horse Ears",
+  "slot": "ears",
+  "tier": "premium",
+  "file": "",
+  "anchor": "earL",
+  "origin": [
+    0,
+    0
+  ],
+  "width": 0,
+  "height": 0,
+  "behind": true,
+  "ears": {
+    "nudge": [
+      1.33,
+      -1.33
+    ],
+    "baseHalfWidth": 12.67,
+    "height": 61.33,
+    "bowOut": 0.18,
+    "bowIn": 0.02,
+    "lean": 8.0,
+    "inner": 0.55,
+    "floppy": 0.1,
+    "droop": 0.0,
+    "tuft": 0.0,
+    "tipWidth": 0.08,
+    "fur": 0.02
+  }
+}

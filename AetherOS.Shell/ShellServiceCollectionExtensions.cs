@@ -1,4 +1,4 @@
-using AetherLove.Os;
+﻿using AetherLove.Os;
 using AetherLove.Screens;
 using AetherOS.Sdk;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,6 +16,8 @@ public static class ShellServiceCollectionExtensions
         services.AddSingleton<IOsShell>(sp => sp.GetRequiredService<OsShell>());
         services.AddSingleton<OsTour>();
         services.AddSingleton<NewAppOffer>();
+        services.AddSingleton<TranslationOffer>();
+        services.AddSingleton<TogetherOnboarding>();
         services.AddSingleton<WallpaperService>();
         services.AddSingleton<NotificationShade>();
         services.AddSingleton<StatusBar>();

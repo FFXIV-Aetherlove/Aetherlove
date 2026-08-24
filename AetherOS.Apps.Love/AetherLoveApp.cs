@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -10,6 +10,7 @@ using AetherLove.Services.Auth;
 using AetherLove.Services.Chat;
 using AetherLove.Services.Crypto;
 using AetherLove.Services.Hub;
+using AetherLove.Services.Localization;
 using AetherLove.Services.Patreon;
 using AetherLove.Services.Signal;
 using AetherLove.Shared.Messaging;
@@ -57,6 +58,7 @@ public sealed partial class AetherLoveApp : IAetherApp, IAppSettings
     private readonly VenueShareContext _venueShare;
     private readonly LevemeteShareContext _levemeteShare;
     private readonly MarketShareContext _marketShare;
+    private readonly PartyInviteShareContext _partyInviteShare;
     private readonly HangoutShareContext _hangoutShare;
     private readonly NewsShareContext _newsShare;
     private readonly CalendarShareContext _calendarShare;
@@ -70,7 +72,7 @@ public sealed partial class AetherLoveApp : IAetherApp, IAppSettings
     private bool _entered;
     private Guid _enteredProfileId;
 
-    private static readonly string[] AcceptedTypes = [ShareTypes.Venue, ShareTypes.Hangout, ShareTypes.News, ShareTypes.CalendarEvent, ShareTypes.Levemete, ShareTypes.MarketItem];
+    private static readonly string[] AcceptedTypes = [ShareTypes.Venue, ShareTypes.Hangout, ShareTypes.News, ShareTypes.CalendarEvent, ShareTypes.Levemete, ShareTypes.MarketItem, ShareTypes.Party];
 
     public AetherLoveApp(
         ILoveHost host,
@@ -95,6 +97,7 @@ public sealed partial class AetherLoveApp : IAetherApp, IAppSettings
         CalendarShareContext calendarShare,
         LevemeteShareContext levemeteShare,
         MarketShareContext marketShare,
+        PartyInviteShareContext partyInviteShare,
         PatreonLinkFlow patreon,
         SiblingBadgeStore siblingBadges,
         AetherLove.Services.Messenger.MessengerStore messengerStore,
@@ -102,6 +105,7 @@ public sealed partial class AetherLoveApp : IAetherApp, IAppSettings
         AetherLove.Services.Market.MarketItemIndex marketIndex)
     {
         _host = host;
+        _shell.OpenEncryptionRecovery = host.OpenEncryptionRecovery;
         _caps = caps;
         _hub = hub;
         _notifications = notifications;
@@ -114,6 +118,7 @@ public sealed partial class AetherLoveApp : IAetherApp, IAppSettings
         _calendarShare = calendarShare;
         _levemeteShare = levemeteShare;
         _marketShare = marketShare;
+        _partyInviteShare = partyInviteShare;
         _keys = keys;
         _crypto = crypto;
         _sharePicker = new ShareMatchPickerView(chatCache);
@@ -128,7 +133,7 @@ public sealed partial class AetherLoveApp : IAetherApp, IAppSettings
         _saveErr = saveErr;
 
         _settings = new SettingsScreen(_router, hub, signal, tokens, chatCache, _shell, bootstrap);
-        _profile = new ProfileScreen(_router, hub, flairCatalog, bootstrap, _settings, _shell);
+        _profile = new ProfileScreen(_router, hub, flairCatalog, bootstrap, _settings, _shell, caps);
         _deck = new DeckScreen(_router, _profile, hub, pendingMatch, notifications, ownAvatar, host, flairCatalog, _settings);
         _profile.OnProfileHidden = id => _deck.RemoveCard(id);
 
@@ -161,14 +166,14 @@ public sealed partial class AetherLoveApp : IAetherApp, IAppSettings
         _chatCategory = new ChatCategoryScreen(_chatList);
         _encVerify = new EncryptionVerificationScreen(_router, keys);
         _chat = new ChatScreen(_shell, _router, _chatList, _profile, _encVerify, hub, crypto, keys, chatEvents,
-            notifications, chatSync, _settings, venueShare, hangoutShare, newsShare, calendarShare, levemeteShare,
-            marketShare, hangoutOpener, messengerStore, marketData, marketIndex, caps);
+            notifications, chatSync, _settings, venueShare, partyInviteShare, hangoutShare, newsShare, calendarShare,
+            levemeteShare, marketShare, hangoutOpener, messengerStore, marketData, marketIndex, caps);
         _myProfile = new MyProfileScreen(_shell, _profile, hub, ownAvatar, rateLimit, saveErr, imageReq, caps,
             bootstrap);
         _blocked = new BlockedScreen(_router, hub);
         _onboarding = new OnboardingScreen(_router, hub, bootstrap, rateLimit, saveErr, imageReq, caps, _shell);
         _supporterThanks = new SupporterThanksScene(patreon);
-        _profilePicker = new ProfilePickerScreen(_router, hub, bootstrap, keys, _settings);
+        _profilePicker = new ProfilePickerScreen(_router, hub, bootstrap, keys, _settings, host.OpenEncryptionRecovery);
         _settings.OpenProfilePicker = () =>
         {
             _profilePicker.OpenedFromSettings = true;
@@ -381,6 +386,8 @@ public sealed partial class AetherLoveApp : IAetherApp, IAppSettings
             ShareTypes.CalendarEvent => CalendarEventShare.TryComposeFromShareItem(item),
             ShareTypes.Levemete when Guid.TryParse(item.RefId, out var adId) => LevemeteShare.Compose(adId),
             ShareTypes.MarketItem when uint.TryParse(item.RefId, out var marketItemId) => MarketShare.Compose(marketItemId),
+            ShareTypes.Party when item.Subtitle.Length > 0 && Guid.TryParse(item.RefId, out var sharedPartyId) =>
+                PartyShare.Compose(sharedPartyId, item.Subtitle),
             _ => null,
         };
         var myPriv = _keys.GetPrivateKey();
@@ -421,6 +428,9 @@ public sealed partial class AetherLoveApp : IAetherApp, IAppSettings
             case ShareTypes.MarketItem when uint.TryParse(item.RefId, out var marketItemId):
                 _marketShare.PendingShareItemId = marketItemId;
                 break;
+            case ShareTypes.Party when item.Subtitle.Length > 0 && Guid.TryParse(item.RefId, out var partyId):
+                _partyInviteShare.PendingParty = (partyId, item.Subtitle);
+                break;
             default:
                 return;
         }
@@ -442,6 +452,13 @@ public sealed partial class AetherLoveApp : IAetherApp, IAppSettings
         {
             _profilePicker.OpenedFromSettings = false;
             _router.Navigate(LoveView.ProfilePicker);
+            return;
+        }
+        // Onboarding is the one view a warm resume does not resume INTO: somebody who walked out of the
+        // wizard half-way is not asking to be dropped back on step six, so it starts over.
+        if (_router.Current == LoveView.Onboarding)
+        {
+            ResolveEntryView();
             return;
         }
         // Warm resume: the app was already entered this session as this profile, so going home and coming

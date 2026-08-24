@@ -1,12 +1,13 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using AetherLove.Widgets;
 using AetherOS.Sdk;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Game.ClientState.Keys;
-using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.Textures;
 
 namespace AetherLove.Os;
@@ -20,7 +21,8 @@ public sealed class AppCapabilities : IAppCapabilities
     private readonly AppStorageService _storage;
 
     public AppCapabilities(SelfieCaptureOverlay selfie, ImageRequirementsModal imageReqModal, ShareService share,
-        AppStorageService storage, AudioService audio)
+        AppStorageService storage, AudioService audio, Services.Together.TogetherStateService togetherState,
+        Services.Translation.TranslationService translation, Config.Configuration config)
     {
         Audio = audio;
         Camera = new CameraService(selfie);
@@ -31,6 +33,8 @@ public sealed class AppCapabilities : IAppCapabilities
         Keyboard = new KeyboardInputService();
         Share = share;
         Travel = new LifestreamBridge();
+        Party = new PartyStateService(togetherState);
+        Translation = new TranslationBridgeService(translation, config);
         _storage = storage;
     }
 
@@ -43,6 +47,8 @@ public sealed class AppCapabilities : IAppCapabilities
     public IAudioPlayer Audio { get; }
     public IShareService Share { get; }
     public ITravelBridge Travel { get; }
+    public IPartyState Party { get; }
+    public ITranslationBridge Translation { get; }
 
     public IAppStorage Storage(string appId) => _storage.For(appId);
 
@@ -56,6 +62,78 @@ public sealed class AppCapabilities : IAppCapabilities
     /// <summary>Draws the shared file dialog and crop popup. The shell calls this once per frame so apps never
     /// host their own picking overlays.</summary>
     public void DrawFrame() => _images.DrawFrame();
+
+    /// <summary>The translation capability over the client-direct Google service (ADR 9); the opt-in and
+    /// the target language live in the OS settings config so the settings app and the consent popup write
+    /// the same switch.</summary>
+    private sealed class TranslationBridgeService(
+        Services.Translation.TranslationService service, Config.Configuration config) : ITranslationBridge
+    {
+        public bool Enabled => config.OsSettings.TranslationsEnabled;
+
+        public string TargetLanguage => config.OsSettings.TranslationLanguage;
+
+        public void Enable()
+        {
+            config.OsSettings.TranslationsEnabled = true;
+            config.Save();
+        }
+
+        public async Task<TranslationResult?> TranslateAsync(string text, CancellationToken ct = default)
+        {
+            if (!Enabled)
+            {
+                return null;
+            }
+            var result = await service.TranslateAsync(text, TargetLanguage, ct).ConfigureAwait(false);
+            return result is null ? null : new TranslationResult(result.Text, result.SourceLanguage);
+        }
+    }
+
+    /// <summary>Read-only party view for apps over the client party state. The state service raises
+    /// PartyChanged from its per-frame drain, so the forwarded event is already on the draw thread.</summary>
+    private sealed class PartyStateService : IPartyState
+    {
+        private readonly Services.Together.TogetherStateService _state;
+
+        public PartyStateService(Services.Together.TogetherStateService state)
+        {
+            _state = state;
+            _state.PartyChanged += () => Changed?.Invoke();
+        }
+
+        public bool InParty => _state.EndReason is null && _state.Party is not null;
+
+        public Guid? PartyId => _state.EndReason is null ? _state.Party?.Id : null;
+
+        public string? Code => _state.EndReason is null ? _state.Party?.Code : null;
+
+        public bool AmHost => _state.AmHost;
+
+        public Guid? OwnAccountId => _state.OwnAccountId;
+
+        public PartyActivityInfo? Activity =>
+            _state.Activity is { } activity
+                ? new PartyActivityInfo(activity.AppId, activity.RefId, activity.Code)
+                : null;
+
+        public IReadOnlyList<PartyMemberInfo> Members
+        {
+            get
+            {
+                var members = _state.Members;
+                var result = new PartyMemberInfo[members.Count];
+                for (var i = 0; i < members.Count; i++)
+                {
+                    var m = members[i];
+                    result[i] = new PartyMemberInfo(m.AccountId, m.DisplayName, m.IsHost, m.Connected);
+                }
+                return result;
+            }
+        }
+
+        public event Action? Changed;
+    }
 
     private sealed class CameraService : ICameraService
     {
@@ -124,6 +202,14 @@ public sealed class AppCapabilities : IAppCapabilities
             ImGuiKey.Key1, ImGuiKey.Key2, ImGuiKey.Key3, ImGuiKey.Key4, ImGuiKey.Key5, ImGuiKey.Key6,
             ImGuiKey.Key7,
             ImGuiKey.Y, ImGuiKey.N,
+            ImGuiKey.Q, ImGuiKey.R, ImGuiKey.T, ImGuiKey.U, ImGuiKey.I, ImGuiKey.O, ImGuiKey.P,
+            ImGuiKey.F, ImGuiKey.G, ImGuiKey.H, ImGuiKey.J, ImGuiKey.K, ImGuiKey.L,
+            ImGuiKey.Z, ImGuiKey.X, ImGuiKey.C, ImGuiKey.V, ImGuiKey.B,
+            ImGuiKey.Key8, ImGuiKey.Key9, ImGuiKey.Key0, ImGuiKey.Backspace,
+            ImGuiKey.Keypad0, ImGuiKey.Keypad1, ImGuiKey.Keypad2, ImGuiKey.Keypad3, ImGuiKey.Keypad4,
+            ImGuiKey.Keypad5, ImGuiKey.Keypad6, ImGuiKey.Keypad7, ImGuiKey.Keypad8, ImGuiKey.Keypad9,
+            ImGuiKey.KeypadAdd, ImGuiKey.KeypadSubtract, ImGuiKey.KeypadMultiply, ImGuiKey.KeypadDivide,
+            ImGuiKey.KeypadDecimal, ImGuiKey.KeypadEnter,
         ];
 
         private static readonly VirtualKey[] GameKeys =
@@ -135,6 +221,14 @@ public sealed class AppCapabilities : IAppCapabilities
             VirtualKey.KEY_1, VirtualKey.KEY_2, VirtualKey.KEY_3, VirtualKey.KEY_4, VirtualKey.KEY_5,
             VirtualKey.KEY_6, VirtualKey.KEY_7,
             VirtualKey.Y, VirtualKey.N,
+            VirtualKey.Q, VirtualKey.R, VirtualKey.T, VirtualKey.U, VirtualKey.I, VirtualKey.O, VirtualKey.P,
+            VirtualKey.F, VirtualKey.G, VirtualKey.H, VirtualKey.J, VirtualKey.K, VirtualKey.L,
+            VirtualKey.Z, VirtualKey.X, VirtualKey.C, VirtualKey.V, VirtualKey.B,
+            VirtualKey.KEY_8, VirtualKey.KEY_9, VirtualKey.KEY_0, VirtualKey.BACK,
+            VirtualKey.NUMPAD0, VirtualKey.NUMPAD1, VirtualKey.NUMPAD2, VirtualKey.NUMPAD3, VirtualKey.NUMPAD4,
+            VirtualKey.NUMPAD5, VirtualKey.NUMPAD6, VirtualKey.NUMPAD7, VirtualKey.NUMPAD8, VirtualKey.NUMPAD9,
+            VirtualKey.ADD, VirtualKey.SUBTRACT, VirtualKey.MULTIPLY, VirtualKey.DIVIDE,
+            VirtualKey.DECIMAL, VirtualKey.RETURN,
         ];
 
         private readonly bool[] _down = new bool[Map.Length];
@@ -159,6 +253,21 @@ public sealed class AppCapabilities : IAppCapabilities
         {
             Refresh();
             return _edge[(int)key];
+        }
+
+        public bool TryGetPressedKey(out AppKey key)
+        {
+            Refresh();
+            for (var i = 0; i < _edge.Length; i++)
+            {
+                if (_edge[i])
+                {
+                    key = (AppKey)i;
+                    return true;
+                }
+            }
+            key = default;
+            return false;
         }
 
         public bool GameTextFocused => TextInputActive();
@@ -347,7 +456,7 @@ public sealed class AppCapabilities : IAppCapabilities
 
     private sealed class ImagePickerService : IImagePicker
     {
-        private readonly FileDialogManager _fileDialog = new();
+        private readonly AetherLove.Widgets.AetherFileDialogManager _fileDialog = new();
         private readonly ImageCropPopup _cropPopup = new();
         private readonly PendingImagePick _pendingPick;
 

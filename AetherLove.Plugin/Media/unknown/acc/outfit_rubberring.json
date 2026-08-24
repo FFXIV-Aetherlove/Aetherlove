@@ -3,12 +3,14 @@
   "slot": "outfit",
   "tier": "seasonal",
   "file": "outfit_rubberring.png",
+  "back": "outfit_rubberring_back.png",
   "anchor": "body",
   "origin": [
     84,
-    -46
+    19
   ],
   "width": 169,
-  "height": 42,
+  "height": 47,
+  "wrapRx": 57.67,
   "behind": false
 }

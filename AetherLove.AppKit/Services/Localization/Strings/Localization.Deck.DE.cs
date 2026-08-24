@@ -6,7 +6,7 @@ internal static class DeckDe
     {
         // Deck
         ["deck.cooldown_heading"] = "Du bist auf dem neuesten Stand!",
-        ["deck.cooldown_body"] = "AetherLove gibt dir alle paar Stunden eine frische Auswahl an Profilen, damit jeder eine faire Chance bekommt. Schau bald wieder vorbei für neue potenzielle Matches!",
+        ["deck.cooldown_body"] = "AetherLove gibt dir alle paar Stunden eine neue Auswahl an Profilen. So bekommt jeder eine faire Chance. Schau bald wieder vorbei für weitere potenzielle Matches!",
         ["deck.new_matches_ready"] = "Neue Matches sind bereit!",
         ["deck.server_error"] = "Server konnte nicht erreicht werden: {0}",
         ["deck.view_profile"] = "Profil ansehen",
@@ -61,14 +61,14 @@ internal static class DeckDe
         ["deck.superlike_tooltip"] = "Superlikes: {0}/{1} übrig",
         ["deck.superlike_cooldown"] = "Neue Superlikes in {0}h:{1:00}m",
         ["deck.superlike_intro_title"] = "Superlike",
-        ["deck.superlike_intro"] = "Mit einem Superlike zeigst du jemandem, dass er dir wirklich aufgefallen ist: Dein Profil landet mit goldenem Auftritt ganz oben in seinem Deck. Liked die Person zurück, matcht ihr sofort. {0} Wenn du diesen Hinweis schließt, wird kein Superlike verbraucht. Tippe also einfach noch einmal auf den Stern, wenn du bereit bist.",
+        ["deck.superlike_intro"] = "Mit einem Superlike sagst du jemandem, dass du ihn wirklich magst. Dein Profil springt mit goldenem Auftritt ganz nach oben in seinem Deck. Liked die Person zurück, matcht ihr sofort. {0} Wenn du diesen Hinweis schließt, wird kein Superlike verbraucht. Tippe einfach noch einmal auf den Stern, wenn du bereit bist.",
         ["deck.superlike_intro_daily"] = "Du hast {0} pro Tag.",
         ["deck.superlike_intro_weekly"] = "Du hast 1 kostenlosen pro Woche.",
         ["deck.superliked_you"] = "Du hast einen Superlike erhalten!",
         ["deck.superliked_you_sub"] = "Ein Like zurück und ihr matcht sofort.",
         ["deck.superlikes_waiting"] = "Wartende Superlikes: {0}",
 
-        ["deck.superlike_supporter_pitch"] = "Supporter bekommen mehr Superlikes: jeden Tag ein frisches Kontingent, dazu weitere Extras wie zusätzliche Fotos, exklusive Namensstile, Bonus-Statistiken und mehr.",
+        ["deck.superlike_supporter_pitch"] = "Supporter bekommen jeden Tag ein frisches Kontingent an Superlikes. Sie bekommen außerdem zusätzliche Fotos, exklusive Namensstile, Bonus-Statistiken und mehr.",
         ["deck.superlike_free_tooltip"] = "Dein kostenloser Superlike der Woche",
         ["deck.superlike_weekly_cooldown"] = "Nächster kostenloser Superlike in {0} T {1} Std.",
     };

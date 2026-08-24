@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using AetherLove.Shared.Profile;
 using MessagePack;
 
@@ -237,7 +237,36 @@ public sealed record YapperDmMessageDto(
     Guid? ReplyToMessageId = null,
     YapperDmReactionsDto[]? Reactions = null,
     DateTimeOffset? PinnedAtUtc = null,
-    DateTimeOffset? DeletedAtUtc = null);
+    DateTimeOffset? DeletedAtUtc = null,
+    YapperDmImageDto? Image = null);
+
+/// <summary>A picture attached to a DM. The bytes are NOT end-to-end encrypted, unlike the message beside
+/// them: they are screened for CSAM before they are stored and can be reported afterwards, and neither is
+/// possible on something the server cannot read. Any caption stays encrypted.</summary>
+[MessagePackObject(keyAsPropertyName: true)]
+public sealed record YapperDmImageDto(
+    Guid ImageId,
+    int Width,
+    int Height,
+    long ByteSize,
+    DateTimeOffset ExpiresAtUtc);
+
+/// <summary>Camera, photo library or a file off disk; <see cref="FromCamera"/> is provenance only.
+/// <see cref="ExpiryHours"/> is snapped to the sender's tier by the server.</summary>
+[MessagePackObject(keyAsPropertyName: true)]
+public sealed record SendYapperDmImageRequest(
+    Guid PeerProfileId,
+    Profile.PhotoUploadDto Image,
+    byte[]? CaptionCiphertext = null,
+    byte[]? CaptionNonce = null,
+    bool FromCamera = false,
+    int ExpiryHours = 72,
+    Guid? ReplyToMessageId = null);
+
+/// <summary>Push to both sides when a picture leaves: sender delete or moderator removal. The expiry sweep
+/// stays silent, because clients expire an image on their own clock.</summary>
+[MessagePackObject(keyAsPropertyName: true)]
+public sealed record YapperDmImageRemovedPushDto(Guid ImageId);
 
 /// <summary>A keyset page of one thread's messages, newest first.</summary>
 [MessagePackObject(keyAsPropertyName: true)]

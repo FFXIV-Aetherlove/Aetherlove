@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Numerics;
@@ -579,7 +579,21 @@ internal sealed class ChallengeScreen
         }
 
         ImGui.SetCursorPos(new Vector2(Px(PadX), winH - Px(58f)));
-        if (ModalUi.Button(Loc.T("os.wf_done"), winW - Px(PadX) * 2f))
+        if (found.SelfiePath is { } shareable)
+        {
+            // Share beside Done: the picture is the thing worth showing somebody.
+            var half = (winW - Px(PadX) * 2f - Px(10f)) * 0.5f;
+            if (ModalUi.Button($"{Loc.T("os.wf_share")}##wfFoundShare", half))
+            {
+                HomeScreen.ShareSelfie(ctx, shareable);
+            }
+            ImGui.SameLine(0f, Px(10f));
+            if (ModalUi.Button(Loc.T("os.wf_done"), half))
+            {
+                _backToHome();
+            }
+        }
+        else if (ModalUi.Button(Loc.T("os.wf_done"), winW - Px(PadX) * 2f))
         {
             _backToHome();
         }

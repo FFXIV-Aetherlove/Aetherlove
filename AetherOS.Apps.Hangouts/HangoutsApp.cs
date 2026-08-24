@@ -1,4 +1,5 @@
-using System;
+﻿using System.Collections.Generic;
+﻿using System;
 using System.Numerics;
 using AetherLove;
 using AetherLove.Services.Hangouts;
@@ -37,6 +38,7 @@ public sealed class HangoutsApp : IAetherApp, IAppSettings
         _manage = new MyHangoutView(host, state, GoDirectory);
         _detail.ShareHandler = OfferHangout;
         _detail.JoinWatchRoomHandler = JoinWatchRoom;
+        _detail.JoinPartyHandler = JoinParty;
         _manage.ShareHandler = OfferHangout;
         _screen = new HangoutsScreen(host, state, OpenDetail, OpenManage);
     }
@@ -54,6 +56,10 @@ public sealed class HangoutsApp : IAetherApp, IAppSettings
     }
 
     /// <summary>Hands a watch party off to Echo, which joins by code and offers a way back here.</summary>
+    /// <summary>Join by code, the one thing a party invite ever needs. The shell owns every party surface,
+    /// so this is an intent rather than a call: the app never touches party state.</summary>
+    private void JoinParty(string code) => _shell?.JoinParty(code);
+
     private void JoinWatchRoom(Guid roomId, string code) =>
         _shell?.SendIntent("echo", OsIntents.CreateRoomJoin(OsIntents.EchoJoin, roomId, code, Id));
 
@@ -99,10 +105,21 @@ public sealed class HangoutsApp : IAetherApp, IAppSettings
         _detail.Draw(winPos, winSize);
     }
 
+    public IReadOnlyList<string> AcceptedShareTypes => [ShareTypes.Party];
+
     public void OnIntent(OsIntent intent)
     {
         if (intent.Type == OsIntents.OpenManage)
         {
+            OpenManage();
+            return;
+        }
+        // A party shared here becomes an AetherParty hangout: the ordinary create form, submitted through
+        // the publish call, so the party's code rides the card and its join button.
+        if (intent.Type == ShareIntent.Type && ShareIntent.TryUnwrap(intent, out var shared)
+            && shared.Type == ShareTypes.Party && Guid.TryParse(shared.RefId, out var partyId))
+        {
+            _manage.PendingPartyId = partyId;
             OpenManage();
         }
     }

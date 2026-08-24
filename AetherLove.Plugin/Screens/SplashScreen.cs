@@ -22,8 +22,10 @@ public sealed class SplashScreen : IDisposable
 
     private const float FadeInSeconds = 0.4f;
 
-    /// <summary>Time the splash shows before it fades out, so the loading animation plays and the starfield lingers.</summary>
-    private const float ShineDuration = 8f;
+    /// <summary>Minimum hold before the fade-out: long enough for the charge animation's breath and beam
+    /// sweep to play, but the real gate is the bootstrap; a finished boot leaves at this mark rather than
+    /// sitting out a longer show (it held 8s flat before 2026-08-18).</summary>
+    private const float ShineDuration = 5f;
 
     /// <summary>The splash content fade-out at the end, before it hands off to the home screen.</summary>
     private const float FadeOutSeconds = 0.45f;

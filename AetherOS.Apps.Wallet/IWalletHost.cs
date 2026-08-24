@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using AetherLove.Shared.Sparks;
@@ -65,4 +65,21 @@ public interface IWalletHost
 
     /// <summary>Resolves a game icon for the current frame; never cache the returned handle.</summary>
     ImTextureID? GetCurrencyIcon(uint iconId);
+
+    /// <summary>Who is logged in right now, null while logged out or before the first framework sample
+    /// after login lands (the player object is not there on the login event itself).</summary>
+    WalletCharacterIdentity? CurrentCharacter { get; }
+
+    /// <summary>Every character this device has seen, the logged-in one included, newest snapshot first.
+    /// The host owns the capture: every live read refreshes the current character's entry, and a login
+    /// captures one on its own a little after the inventory has loaded, so an alt only has to have been
+    /// played once with the plugin on for the wallet to know it.</summary>
+    IReadOnlyList<WalletCharacterSnapshot> KnownCharacters { get; }
+
+    /// <summary>Bumped whenever <see cref="KnownCharacters"/> changes, so a screen can rebuild its
+    /// character strip on change rather than on every frame.</summary>
+    int CharactersVersion { get; }
+
+    /// <summary>Drops a remembered character. The logged-in one comes straight back on the next read.</summary>
+    void ForgetCharacter(ulong contentId);
 }

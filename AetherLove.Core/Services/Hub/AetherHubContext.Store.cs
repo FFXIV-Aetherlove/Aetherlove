@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using AetherLove.Shared.Store;
@@ -17,6 +17,12 @@ public sealed partial class AetherHubContext
 
     public async Task<StoreProductDto?> GetStoreProductAsync(Guid productId, CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync<StoreProductDto?>("GetStoreProductAsync", productId, ct).ConfigureAwait(false);
+
+    public async Task<StoreProductDto?> GetStoreProductByRefAsync(
+        StoreItemKind kind, string itemRef, CancellationToken ct = default) =>
+        await (await ConnAsync(ct))
+            .InvokeAsync<StoreProductDto?>("GetStoreProductByRefAsync", (short)kind, itemRef, ct)
+            .ConfigureAwait(false);
 
     public async Task<byte[]?> GetStoreProductImageAsync(Guid productId, CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync<byte[]?>("GetStoreProductImageAsync", productId, ct).ConfigureAwait(false);

@@ -58,7 +58,7 @@ internal static class ProfileEn
         // ProfileScreen - copy profile text (viewing others only)
         ["profile.copy_text"] = "Copy profile text",
         ["profile.copy_warning_title"] = "Warning",
-        ["profile.copy_warning_body"] = "You've copied someone's text. Be careful about clicking or following any links it contains; you do so at your own risk.",
+        ["profile.copy_warning_body"] = "You copied someone else's text. Be careful with any links in it. You follow them at your own risk.",
         ["profile.copy_warning_agree"] = "I understand, and agree",
 
         // MyProfileScreen hub: stats + menu
@@ -104,7 +104,7 @@ internal static class ProfileEn
         ["profile.content_hint"] = "Select everything that applies.",
         ["profile.looking_for_hint"] = "Being honest helps find better matches.",
         ["profile.nsfw_lalafell"] = "Adult and NSFW features are not available while your race is set to Lalafell. See the Terms of Service for details.",
-        ["profile.nsfw_explainer"] = "NSFW stands for \"Not Safe For Work\": content containing nudity or sexual themes. Opt in to see and be matched with NSFW profiles.",
+        ["profile.nsfw_explainer"] = "NSFW means \"Not Safe For Work\". NSFW content has nudity or sexual themes. Turn this on to see NSFW profiles and match with them.",
         ["profile.nsfw_optin"] = "NSFW Profiles: YES",
         ["profile.favourite_job_tooltip"] = "The job or role you enjoy the most. Type to filter.",
         ["profile.favourite_ff_character_full"] = "Favourite Final Fantasy Character",
@@ -146,7 +146,7 @@ internal static class ProfileEn
         ["profile.undo"] = "Undo",
         ["profile.main_must_be_sfw"] = "Your main profile picture MUST be SFW. Uploading an NSFW picture is grounds for account suspension or deletion.",
         ["profile.sfw_or_nsfw"] = "Is this picture SFW or NSFW?",
-        ["profile.sfw_mismatch_warning"] = "If our system detects you uploaded NSFW while SFW is selected, your photo will be held for moderation and you risk account suspension.",
+        ["profile.sfw_mismatch_warning"] = "Our system checks every picture. If you mark an NSFW picture as SFW, we hold it for moderation. We can also suspend your account.",
         ["profile.photo_ready"] = "Photo ready, not yet saved.",
         ["profile.replace"] = "Replace",
         ["profile.photo_set"] = "Photo set  ✓",
@@ -199,7 +199,7 @@ internal static class ProfileEn
         ["profile.sup_intro"] = "Thank you for supporting AetherLove! Pick a style for your name and choose whether to show the supporter badge. Everyone can see these.",
         ["profile.sup_name_style"] = "Name style",
         ["profile.sup_show_badge"] = "Show my supporter status",
-        ["profile.sup_badge_hint"] = "When off, nobody sees your supporter star or badge anywhere: not on your profiles, not in chats, not on hangouts, and your own profile preview hides them too. Your supporter perks keep working. Applies to your whole account.",
+        ["profile.sup_badge_hint"] = "Turn this off and nobody sees your supporter star or badge. They stay hidden on your profiles, in chats, on hangouts, and in your own profile preview. Your supporter perks keep working. This setting applies to your whole account.",
         ["profile.sup_stats_intro"] = "Supporter-only insight into how your profile is doing across the realm.",
         ["profile.sup_stat_likes_received"] = "Likes received",
         ["profile.sup_stat_superlikes"] = "Superlikes received",
@@ -232,11 +232,14 @@ internal static class ProfileEn
         ["profile.menu_holiday"] = "Holiday mode",
         ["profile.holiday_toggle"] = "Holiday mode on",
         ["profile.holiday_msg_label"] = "Holiday message",
-        ["profile.holiday_msg_hint"] = "While holiday mode is on, everyone who views your profile sees an away banner with your message, and your matches see an away marker on your picture.",
+        ["profile.holiday_msg_hint"] = "Holiday mode shows an away banner with your message to everyone who views your profile. Your matches also see an away marker on your picture.",
         ["profile.holiday_save"] = "Save",
         ["profile.holiday_saved"] = "Saved!",
         ["profile.holiday_active_banner"] = "HOLIDAY MODE ACTIVE",
         ["profile.holiday_banner"] = "This player has holiday mode activated: {0}",
         ["profile.holiday_banner_short"] = "This player has holiday mode activated.",
+
+        // added after update 2.4.0
+        ["profile.region_min_hint"] = "Pick at least one region.",
     };
 }

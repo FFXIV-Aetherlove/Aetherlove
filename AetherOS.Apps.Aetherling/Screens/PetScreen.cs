@@ -19,7 +19,6 @@ namespace AetherOS.Apps.Aetherling.Screens;
 /// live in the Modes partial; growing is the feed ladder the server runs.</summary>
 internal sealed partial class PetScreen(IAetherlingHost host, PetRuntime pet)
 {
-    private const string MenuId = "##aetherlingPetMenu";
 
     /// <summary>How long after the birth the furniture arrives, so the card does not land on the pop.</summary>
     private const float SettleSeconds = 0.7f;
@@ -59,16 +58,17 @@ internal sealed partial class PetScreen(IAetherlingHost host, PetRuntime pet)
     /// button and nothing else asks for attention.</summary>
     public bool IntroSeen { get; set; }
 
-    /// <summary>Raised by the "what is this" button, and by the menu's tour row.</summary>
+    /// <summary>Raised by the "what is this" button. The nav bar's help entry goes to the same
+    /// place, straight from the app.</summary>
     public event Action? IntroRequested;
 
-    public event Action? AboutRequested;
-
-    public event Action? SettingsRequested;
-
-    public event Action? WardrobeRequested;
-
-    public event Action? GamesRequested;
+    /// <summary>A line over the creature from outside the screen (the emote eureka): rides the feed
+    /// toast's own plate, because two toast systems on one page is one too many.</summary>
+    public void ShowToast(string text)
+    {
+        _feedToast = text;
+        _feedToastLeft = 4f;
+    }
 
     public void OnShow(AetherlingDto? core, bool justBorn)
     {
@@ -86,7 +86,14 @@ internal sealed partial class PetScreen(IAetherlingHost host, PetRuntime pet)
         }
     }
 
-    public void Apply(AetherlingDto? core) => AdoptCore(core);
+    public void Apply(AetherlingDto? core)
+    {
+        AdoptCore(core);
+        if (core is not null)
+        {
+            _wheel?.Adopt(core);
+        }
+    }
 
     /// <summary>Stores a snapshot and re-samples the clock offset against it. The offset has to be
     /// taken at the MOMENT the reply lands: computed fresh every frame it would always resolve back
@@ -116,6 +123,7 @@ internal sealed partial class PetScreen(IAetherlingHost host, PetRuntime pet)
         _lastFrameTime = now;
 
         DrainPending();
+        DrainRename();
         DrainInventory();
         DrainFeeding(ctx, dt);
         pet.ApplyLook(_core);
@@ -150,25 +158,35 @@ internal sealed partial class PetScreen(IAetherlingHost host, PetRuntime pet)
         var pad = Px(18f);
         var headerY = origin.Y + Px(16f);
         var name = core.PetName ?? AetherlingLimits.DefaultName;
+        float nameWidth;
+        float nameLineH;
         using (ctx.TitleFont?.Push())
         {
             dl.AddText(new Vector2(origin.X + pad, headerY), Look.U32(Look.CrystalPale), name);
+            nameWidth = ImGui.CalcTextSize(name).X;
+            nameLineH = ImGui.GetTextLineHeight();
+        }
+        if (core is { NameChosen: true, HatchedAtUtc: not null }
+            && !_namingOpen && !RenameOverlayOpen && _settle >= 1f && !Evolution.Playing)
+        {
+            DrawRenamePill(ctx, dl, new Vector2(origin.X + pad + nameWidth + Px(10f), headerY), nameLineH);
         }
         var born = (core.HatchedAtUtc ?? core.CreatedAtUtc).ToLocalTime().ToString("d MMM yyyy");
         dl.AddText(new Vector2(origin.X + pad, headerY + Px(40f)), Look.U32(Look.Whisper, 0.85f),
             string.Format(ctx.Localize("os.aetherling_kindled_on"), born));
 
         var stageTop = headerY + Px(70f);
-        var stageBottom = origin.Y + size.Y - Px(58f) - ModesReserved(core);
+        var wheelButton = WheelButtonVisible(core);
+        var introButton = !IntroSeen && !_namingOpen && _arrive >= 1f;
+        var stageBottom = origin.Y + size.Y - Px(58f) - (wheelButton || introButton ? Px(WheelRowExtra) : 0f) - FootReserved(core);
         var stage = new Vector2(size.X - (pad * 2f), MathF.Max(Px(150f), stageBottom - stageTop));
         var stageTl = new Vector2(origin.X + pad, stageTop);
 
         // Submitted before the card underneath it, or the card's own whole-area target takes the click.
-        if (!IntroSeen && !_namingOpen && _arrive >= 1f)
+        if (introButton)
         {
             DrawIntroButton(ctx, dl, stageTl, stage, now);
         }
-        DrawMenu(ctx, headerY + Px(14f), size.X, name);
         DrawStage(ctx, dl, stageTl, stage, origin, size, core);
 
         var hint = _feedToastLeft > 0f && _feedToast is { Length: > 0 }
@@ -176,13 +194,21 @@ internal sealed partial class PetScreen(IAetherlingHost host, PetRuntime pet)
             : ctx.Localize("os.aetherling_tap_hint");
         Look.Centred(dl, hint, origin.X + (size.X * 0.5f), stageTl.Y + stage.Y + Px(12f),
             Look.U32(Look.Whisper, 0.7f * _settle), 0.9f);
+        if (wheelButton)
+        {
+            DrawWheelButton(ctx, dl,
+                new Vector2(origin.X + ((size.X - Px(WheelButtonSize)) * 0.5f), stageTl.Y + stage.Y + Px(36f)),
+                core, now);
+        }
 
         if (ModesAvailable(core))
         {
-            DrawModes(ctx, dl, origin, size, core);
+            DrawFoot(ctx, dl, origin, size, core);
             TickPetting(ctx, dt, stageTl, stage);
             TickCarriedAndFlying(ctx, dt, stageTl, stage);
         }
+
+        DrawCheer(ctx, dl, origin, size, dt);
 
         if (!core.NameChosen && !_namingOpen && _settle >= 1f)
         {
@@ -195,6 +221,14 @@ internal sealed partial class PetScreen(IAetherlingHost host, PetRuntime pet)
         if (_namingOpen)
         {
             DrawNamingCard(ctx, dl, origin, size);
+        }
+        else if (_renameOpen)
+        {
+            DrawRenameCard(ctx, dl, origin, size);
+        }
+        else if (_renameOfferOpen)
+        {
+            DrawRenameOffer(ctx, dl, origin, size);
         }
 
         // Last, so it covers the page it took over. When it finishes and the pet has just grown up,
@@ -213,6 +247,10 @@ internal sealed partial class PetScreen(IAetherlingHost host, PetRuntime pet)
         {
             Ticket.Draw(ctx, origin, size, dt);
         }
+        if (WheelOpen && !Evolution.Playing)
+        {
+            Wheel.Draw(ctx, origin, size, dt);
+        }
     }
 
     /// <summary>The one way in to the explanation, sitting over its head until it has been read. It breathes
@@ -221,11 +259,13 @@ internal sealed partial class PetScreen(IAetherlingHost host, PetRuntime pet)
     {
         const float LabelScale = 1.2f;
         var label = ctx.Localize("os.aetherling_what_is_this");
-        var height = Px(48f);
+        // Under the stage, in the band the wheel button uses, rather than over the creature: a button
+        // behind a hopping pet was a target nobody could hit.
+        var height = Px(44f);
         var width = (ImGui.CalcTextSize(label).X * LabelScale) + Px(58f);
         var tl = new Vector2(
             stageTl.X + ((stage.X - width) * 0.5f),
-            stageTl.Y + ((stage.Y - height) * 0.5f));
+            stageTl.Y + stage.Y + Px(36f));
 
         ImGui.SetCursorScreenPos(tl);
         var pressed = ImGui.InvisibleButton("##aetherlingWhatIsThis", new Vector2(width, height));
@@ -251,51 +291,6 @@ internal sealed partial class PetScreen(IAetherlingHost host, PetRuntime pet)
         }
     }
 
-    /// <summary>The app menu, the same one every other app carries.</summary>
-    private void DrawMenu(OsAppContext ctx, float centreY, float width, string name)
-    {
-        var menuTl = AppHeader.DrawMenuButton(width, 18f, MenuId, badge: !IntroSeen, centerY: centreY);
-
-        // BeginMenuPopup pushes its styles BEFORE it opens anything, so EndMenuPopup has to run whether or
-        // not the popup is up. Returning early on false leaked two colours and four style vars every frame
-        // the menu was closed, which is a plugin-wide fault: the stacks are the whole frame's, so it landed
-        // on whoever drew next.
-        var open = AppHeader.BeginMenuPopup(menuTl, MenuId);
-        if (open)
-        {
-            var about = string.Format(ctx.Localize("os.aetherling_menu_about"), name);
-            var wardrobe = ctx.Localize("os.aetherling_menu_wardrobe");
-            var settings = string.Format(ctx.Localize("os.aetherling_menu_settings"), name);
-            var tour = ctx.Localize("os.aetherling_menu_tour");
-            var showWardrobe = _core?.Adult is not null;
-            var w = showWardrobe
-                ? AppHeader.MenuWidth(about, wardrobe, settings, tour)
-                : AppHeader.MenuWidth(about, settings, tour);
-            var rowH = AppHeader.MenuRowHeight();
-            if (AppHeader.MenuRow(FontAwesomeIcon.Heart, about, w, rowH))
-            {
-                AboutRequested?.Invoke();
-                ImGui.CloseCurrentPopup();
-            }
-            if (showWardrobe && AppHeader.MenuRow(FontAwesomeIcon.HatWizard, wardrobe, w, rowH))
-            {
-                WardrobeRequested?.Invoke();
-                ImGui.CloseCurrentPopup();
-            }
-            if (AppHeader.MenuRow(FontAwesomeIcon.Cog, settings, w, rowH))
-            {
-                SettingsRequested?.Invoke();
-                ImGui.CloseCurrentPopup();
-            }
-            if (AppHeader.MenuRow(FontAwesomeIcon.Route, tour, w, rowH))
-            {
-                IntroRequested?.Invoke();
-                ImGui.CloseCurrentPopup();
-            }
-        }
-        AppHeader.EndMenuPopup(open);
-    }
-
     /// <summary>The card it sits on. The whole card is the target, because aiming at a small creature that
     /// hops is a chore rather than a kindness.</summary>
     private void DrawStage(
@@ -313,7 +308,7 @@ internal sealed partial class PetScreen(IAetherlingHost host, PetRuntime pet)
         dl.AddRectFilled(tl, br, 0x14FFFFFFu, Px(18f));
         dl.AddRect(tl, br, 0x1AFFFFFFu, Px(18f), ImDrawFlags.RoundCornersAll, Px(1f));
 
-        if (!_namingOpen && !Ticket.Visible && _arrive >= 1f)
+        if (!_namingOpen && !RenameOverlayOpen && !Ticket.Visible && !WheelOpen && _arrive >= 1f)
         {
             ImGui.SetCursorScreenPos(tl);
             if (ImGui.InvisibleButton("##aetherlingStage", size))
@@ -367,6 +362,7 @@ internal sealed partial class PetScreen(IAetherlingHost host, PetRuntime pet)
                 Look.GroundRipples(dl, bottom, glowW * 1.7f, glowH * 1.7f, Look.Crystal, 0.20f, now);
             }
             pet.Draw(dl, ctx.Capabilities.Textures, bottom, petSize, pose);
+            pet.DrawGlyph(dl, bottom, petSize, bubbleFrame: false);
         }
 
         dl.PopClipRect();

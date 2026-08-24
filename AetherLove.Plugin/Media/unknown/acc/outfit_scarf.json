@@ -3,12 +3,14 @@
   "slot": "outfit",
   "tier": "premium",
   "file": "outfit_scarf.png",
+  "back": "outfit_scarf_back.png",
   "anchor": "body",
   "origin": [
     67,
-    -42
+    15
   ],
   "width": 134,
-  "height": 88,
+  "height": 90,
+  "wrapRx": 57.67,
   "behind": false
 }

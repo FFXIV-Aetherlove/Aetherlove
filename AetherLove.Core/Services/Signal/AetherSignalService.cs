@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -143,12 +143,7 @@ public sealed class AetherSignalService : IAsyncDisposable
             SetState(SignalConnectionState.Connecting);
             _lastFailureWasUnauthorized = false;
             await _hub.StartAsync(ct).ConfigureAwait(false);
-            SetState(SignalConnectionState.Connected);
-            CancelOfflineDebounce();
-            RestoreOnline();
-            InvalidateProfileCaches();
-            RefreshConnectionInfo();
-            _log.Information("[AetherSignalService] Connected to AetherLove hub.");
+            AfterConnected();
         }
         catch (OperationCanceledException)
         {
@@ -159,6 +154,27 @@ public sealed class AetherSignalService : IAsyncDisposable
             SetState(SignalConnectionState.Disconnected);
             _lastFailureWasUnauthorized = true;
             _log.Warning("[AetherSignalService] Hub rejected token (401).");
+
+            // A 401 on a token this client still thinks is fresh can be clock skew or a rotated signing key,
+            // so force one refresh and try again. A 401 on THAT refresh is the session itself ending, which
+            // TokenService records stickily: the phone stops pretending to be offline and asks for a sign-in.
+            if (!_tokens.SessionExpired
+                && await _tokens.TryRefreshAsync(ct, force: true).ConfigureAwait(false)
+                && _hub is not null)
+            {
+                try
+                {
+                    SetState(SignalConnectionState.Connecting);
+                    await _hub.StartAsync(ct).ConfigureAwait(false);
+                    _lastFailureWasUnauthorized = false;
+                    AfterConnected();
+                }
+                catch (Exception retry)
+                {
+                    SetState(SignalConnectionState.Disconnected);
+                    _log.Warning(retry, "[AetherSignalService] Retry after a forced refresh failed.");
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -169,6 +185,16 @@ public sealed class AetherSignalService : IAsyncDisposable
         {
             _gate.Release();
         }
+    }
+
+    private void AfterConnected()
+    {
+        SetState(SignalConnectionState.Connected);
+        CancelOfflineDebounce();
+        RestoreOnline();
+        InvalidateProfileCaches();
+        RefreshConnectionInfo();
+        _log.Information("[AetherSignalService] Connected to AetherLove hub.");
     }
 
     public async Task DisconnectAsync()
@@ -236,7 +262,10 @@ public sealed class AetherSignalService : IAsyncDisposable
                 // Refresh happens before each (re)connect, not after expiry mid-connection.
                 options.AccessTokenProvider = async () =>
                 {
-                    if (_tokens.IsAccessTokenStale())
+                    // A refresh the server has already rejected outright will be rejected again; asking once
+                    // per reconnect attempt only fills the log with 401s while the phone waits for the user
+                    // to sign in.
+                    if (_tokens.IsAccessTokenStale() && !_tokens.SessionExpired)
                     {
                         var ok = await _tokens.TryRefreshAsync(CancellationToken.None)
                                               .ConfigureAwait(false);
@@ -354,6 +383,14 @@ public sealed class AetherSignalService : IAsyncDisposable
             }
             _notifier.NotifyChatMessage();
             PostLoveMessageNotification(payload.FromProfileId, forActive, payload.ForProfileId);
+        });
+
+        hub.On<ChatImageRemovedPushDto>("ChatImageRemoved", payload =>
+        {
+            if (IsForActive(payload.ForProfileId))
+            {
+                _chatEvents.RaiseChatImageRemoved(payload);
+            }
         });
 
         hub.On<MessageReadPushDto>("MessageRead", payload =>
@@ -606,8 +643,67 @@ public sealed class AetherSignalService : IAsyncDisposable
         RegisterMessengerHandlers(hub);
         RegisterYapperHandlers(hub);
         RegisterEchoHandlers(hub);
+        RegisterTogetherHandlers(hub);
 
         return hub;
+    }
+
+    /// <summary>Together-party pushes. Every handler only mutates the state service, which queues its own
+    /// events for the draw thread to drain; nothing here may touch ImGui. A reconnect re-syncs the party
+    /// (SignalR drops group membership with the connection), and a failed re-sync treats it as ended so
+    /// the shell never shows a phantom party.</summary>
+    private void RegisterTogetherHandlers(HubConnection hub)
+    {
+        var state = _services.GetRequiredService<Services.Together.TogetherStateService>();
+        var runState = _services.GetRequiredService<Services.Together.WayfinderRunStateService>();
+
+        hub.On<Shared.Together.TogetherMemberDto, Guid>("TogetherMemberJoined", (member, partyId) =>
+            state.ApplyMemberJoined(partyId, member));
+        hub.On<Shared.Together.TogetherMemberLeftDto>("TogetherMemberLeft", state.ApplyMemberLeft);
+        hub.On<Shared.Together.TogetherMemberPresenceDto>("TogetherMemberPresence", state.ApplyMemberPresence);
+        hub.On<Shared.Together.TogetherActivityChangedDto>("TogetherActivityChanged", state.ApplyActivityChanged);
+        hub.On<Shared.Together.TogetherChatLineDto>("TogetherChat", state.ApplyChat);
+        hub.On<Shared.Wayfinder.WayfinderPartyRunDto>("WayfinderPartyRunChanged", runState.ApplyRun);
+        hub.On<Shared.Together.TogetherPartyEndedDto>("TogetherPartyEnded", push =>
+        {
+            state.ApplyPartyEnded(push);
+            runState.Clear();
+        });
+        hub.On<Shared.Together.TogetherKickedDto>("TogetherKicked", push =>
+        {
+            state.ApplyKicked(push);
+            runState.Clear();
+        });
+
+        hub.Reconnected += connectionId =>
+        {
+            if (state.CurrentPartyId is not { } partyId)
+            {
+                return Task.CompletedTask;
+            }
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var hubClient = _services.GetRequiredService<Services.Hub.AetherHubContext>();
+                    var snapshot = await hubClient.GetTogetherPartySyncAsync(partyId).ConfigureAwait(false);
+                    state.ApplySnapshot(snapshot);
+                    if (snapshot.Activity?.AppId == "wayfinder"
+                        && await hubClient.GetWayfinderPartyRunAsync(true).ConfigureAwait(false) is { } run)
+                    {
+                        runState.ApplyRun(run);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _log.Warning(ex, "[AetherSignalService] Together re-sync failed; treating the party as gone.");
+                    state.ApplyPartyEnded(new Shared.Together.TogetherPartyEndedDto(
+                        partyId, Shared.Together.TogetherEndReason.Empty));
+                    runState.Clear();
+                }
+            });
+            return Task.CompletedTask;
+        };
     }
 
     /// <summary>Echo watch-room pushes. Every handler only mutates the state service, which queues its own
@@ -680,6 +776,10 @@ public sealed class AetherSignalService : IAsyncDisposable
         hub.On<Shared.Yapper.YapperDmDeletedPushDto>("YapperDmDeleted", payload =>
         {
             _yapperRelay.RaiseDmDeleted(payload);
+        });
+        hub.On<Shared.Yapper.YapperDmImageRemovedPushDto>("YapperDmImageRemoved", payload =>
+        {
+            _yapperRelay.RaiseDmImageRemoved(payload);
         });
     }
 

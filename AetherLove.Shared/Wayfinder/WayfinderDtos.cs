@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using AetherLove.Shared.Profile;
 using MessagePack;
 
@@ -28,7 +28,8 @@ public sealed record WayfinderStateDto(
     int DailyCap,
     int ChallengesAvailable,
     int TotalFound,
-    int SupporterDailyCap = 0);
+    int SupporterDailyCap = 0,
+    bool InGroupRun = false);
 
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record WayfinderStartResultDto(
@@ -71,3 +72,55 @@ public sealed record WayfinderNewChallengeDto(
 public sealed record WayfinderNewChallengeResultDto(
     Guid ChallengeId,
     bool PendingReview);
+
+/// <summary>One person's place in a party hunt. <see cref="Joined"/> is true from the gathering join on;
+/// spectators (never joined, or dropped at begin) carry false. <see cref="AssignmentId"/> exists once the
+/// hunt begins; each client picks its own out of the roster (ids are not secrets).</summary>
+[MessagePackObject(keyAsPropertyName: true)]
+public sealed record WayfinderRunMemberDto(
+    Guid AccountId,
+    bool Joined,
+    Guid? AssignmentId,
+    short? BestVerdict,
+    bool Found);
+
+/// <summary>A party hunt, full-replace on every change. While Gathering only the roster and
+/// <see cref="HostWorldId"/> matter; from Active on the challenge fields are set.
+/// <see cref="ImageBytes"/> rides only on the begin push and the explicit get, never on roster/verdict
+/// updates.</summary>
+[MessagePackObject(keyAsPropertyName: true)]
+public sealed record WayfinderPartyRunDto(
+    Guid RunId,
+    Guid PartyId,
+    short Status,
+    int HostWorldId,
+    Guid? ChallengeId,
+    string? ChallengeName,
+    short Expansion,
+    byte[]? ImageBytes,
+    DateTimeOffset? ExpiresAtUtc,
+    int RemainingSeconds,
+    int FoundCount,
+    int ParticipantCount,
+    WayfinderRunMemberDto[] Members);
+
+/// <summary>The party-hunt position snapshot: the solo shape plus the client-attested current world, the
+/// backstop behind the join-time world gate.</summary>
+[MessagePackObject(keyAsPropertyName: true)]
+public sealed record WayfinderGroupSubmitDto(
+    Guid AssignmentId,
+    int TerritoryId,
+    float X,
+    float Y,
+    float Z,
+    int WorldId);
+
+[MessagePackObject(keyAsPropertyName: true)]
+public sealed record WayfinderGroupSubmitResultDto(
+    short Verdict,
+    int AttemptCount,
+    bool Found,
+    bool WorldOk,
+    int? SecondsToFind,
+    int FoundCount,
+    int ParticipantCount);

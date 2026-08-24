@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -131,7 +131,9 @@ public sealed class GrooveHostService : IGrooveHost, IOsMediaRemote, IDisposable
         }
     }
 
-    private static bool RunsUnderWine()
+    /// <summary>Wine or a Wine-based wrapper (Proton, CrossOver, XIV on Mac). Internal because the MPRIS
+    /// backend re-asks before it launches anything on the host.</summary>
+    internal static bool RunsUnderWine()
     {
         try
         {

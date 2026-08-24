@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using AetherLove.Shared.Profile;
@@ -238,4 +238,23 @@ public sealed partial class AetherHubContext
 
     public async Task DeleteYapperDmAsync(Guid messageId, CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync("DeleteYapperDmAsync", messageId, ct).ConfigureAwait(false);
+
+    public async Task<YapperDmMessageDto> SendYapperDmImageAsync(SendYapperDmImageRequest req, CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<YapperDmMessageDto>("SendYapperDmImageAsync", req, ct)
+            .ConfigureAwait(false);
+
+    public async Task<byte[]?> GetYapperDmImageAsync(Guid imageId, CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<byte[]?>("GetYapperDmImageAsync", imageId, ct).ConfigureAwait(false);
+
+    public async Task DeleteYapperDmImageAsync(Guid imageId, CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync("DeleteYapperDmImageAsync", imageId, ct).ConfigureAwait(false);
+
+    public async Task ReportYapperDmImageAsync(Guid imageId, string reason, CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync("ReportYapperDmImageAsync", imageId, reason, ct)
+            .ConfigureAwait(false);
+
+    public async Task<AetherLove.Shared.Messenger.MessengerStorageDto> GetYapperDmImageStorageAsync(
+        CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<AetherLove.Shared.Messenger.MessengerStorageDto>(
+            "GetYapperDmImageStorageAsync", ct).ConfigureAwait(false);
 }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Numerics;
 
 namespace AetherOS.Apps.Aetherling.Engine;
@@ -34,6 +34,7 @@ public sealed class AnimationController
     private const float NapAfterSeconds = 600f;
 
     private const float BoopSeconds = 0.5f;
+    private const float SpinSeconds = 0.5f;
     private const float HopSeconds = 0.85f;
     private const float HopReach = 42f;
     private const float HopHeight = 30f;
@@ -47,8 +48,12 @@ public sealed class AnimationController
     private float _variantIn;
     private float _boopT = 1f;
     private float _hopT = 1f;
+    private float _spinT = 1f;
     private bool _hopLeft;
     private bool _napping;
+    private EmoteDef? _emote;
+    private float _emoteT;
+    private float _emoteAmplitude = 1f;
 
     public AnimationController(AtlasManifest manifest, Random? rng = null)
     {
@@ -83,6 +88,61 @@ public sealed class AnimationController
         _clip.Play("hop");
     }
 
+    /// <summary>The hop with a turn through it: the creature's "look what I've got", for the moment it
+    /// takes up a weapon of its own.
+    /// <para>There is no spin sheet and there does not need to be one. A round wisp turns the way a coin
+    /// does, by presenting its edge, which the pose already says with a width squeeze and a flip at the
+    /// pinch. Touching only those two composes it with whatever clip is running, and every accessory comes
+    /// round with the body, weapon included.</para></summary>
+    public void PlayTurn()
+    {
+        PlayHopClip();
+        _spinT = 0f;
+    }
+
+    /// <summary>The choreography playing right now, or null. One at a time: a new emote through
+    /// <see cref="PlayEmote"/> replaces a running one, and everything else waits its turn.</summary>
+    public EmoteDef? CurrentEmote => _emote;
+
+    /// <summary>Lays a choreography over whatever clip is running. Wakes it and re-arms the wandering
+    /// timers, because an emote is attention even when the pet started it. Amplitude below 1 is the
+    /// practice attempt: the same curves, visibly not quite having it yet.</summary>
+    public void PlayEmote(EmoteDef def, float amplitude = 1f)
+    {
+        _sinceInteraction = 0f;
+        _napping = false;
+        _hopT = 1f;
+        _boopT = 1f;
+        _variantIn = NextVariant();
+        _emote = def;
+        _emoteT = 0f;
+        _emoteAmplitude = amplitude;
+        if (_clip.ClipName != "idle")
+        {
+            _clip.Play("idle");
+        }
+    }
+
+    /// <summary>A visiting companion follows its owner's creature rather than its own timers: the huddle
+    /// feeds it the owner's interaction clock every frame, so naps, drowsy lids and the mood land at the
+    /// same moment on every member's screen.</summary>
+    public void MimicInteractionClock(float sinceInteraction)
+    {
+        _sinceInteraction = sinceInteraction;
+    }
+
+    /// <summary>Forces the nap state to match the mimicked creature, playing the matching clip on the
+    /// transition. The clock mimic above keeps <see cref="Update"/> from immediately fighting it.</summary>
+    public void MimicNap(bool napping)
+    {
+        if (napping == _napping)
+        {
+            return;
+        }
+        _napping = napping;
+        _clip.Play(napping ? "nap" : "idle");
+    }
+
     /// <summary>A poke. Wakes it, plays the boop, and re-arms the wandering timers.</summary>
     public void Boop()
     {
@@ -99,6 +159,16 @@ public sealed class AnimationController
         _sinceInteraction += dt;
         _boopT = MathF.Min(1f, _boopT + (dt / BoopSeconds));
         _hopT = MathF.Min(1f, _hopT + (dt / HopSeconds));
+        _spinT = MathF.Min(1f, _spinT + (dt / SpinSeconds));
+
+        if (_emote is { } emote)
+        {
+            _emoteT += dt;
+            if (_emoteT >= emote.Seconds)
+            {
+                _emote = null;
+            }
+        }
 
         if (!_napping && _sinceInteraction >= NapAfterSeconds)
         {
@@ -210,6 +280,22 @@ public sealed class AnimationController
             var reach = HopReach * arc * (_hopLeft ? -1f : 1f);
             pose.Offset = new Vector2(reach, -HopHeight * arc);
             pose.FlipX = _hopLeft;
+        }
+
+        if (_spinT < 1f)
+        {
+            // The floor keeps the sprite from vanishing outright at the edge-on frame.
+            var turn = MathF.Cos(2f * MathF.PI * _spinT);
+            pose.Scale.X *= MathF.Max(0.05f, MathF.Abs(turn));
+            pose.FlipX ^= turn < 0f;
+        }
+
+        if (_emote is { } emote)
+        {
+            var delta = emote.Pose(Math.Clamp(_emoteT / emote.Seconds, 0f, 1f));
+            pose.Offset += delta.Offset * _emoteAmplitude;
+            pose.Scale *= Vector2.One + ((delta.ScaleMul - Vector2.One) * _emoteAmplitude);
+            pose.FlipX ^= delta.FlipX;
         }
 
         return pose;

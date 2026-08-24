@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace AetherOS.Apps.EchoVidya.Localization;
 
@@ -122,6 +122,10 @@ public static class AppStrings
         ["os.echo_room_publish_public"] = "List publicly in Hangouts",
         ["os.echo_room_publish_no_world"] = "Log in to a character first: a hangout needs a world.",
         ["os.echo_room_publish_confirm"] = "Publish",
+
+        // watch with party (added after update 2.4.0)
+        ["os.echo_room_party_label"] = "Watch with party",
+        ["os.echo_room_party_hint"] = "Shows this room on your together party, so everyone can hop in straight from the shade.",
     };
 
     private static readonly IReadOnlyDictionary<string, string> De = new Dictionary<string, string>
@@ -241,6 +245,10 @@ public static class AppStrings
         ["os.echo_room_publish_public"] = "Öffentlich bei den Treffen listen",
         ["os.echo_room_publish_no_world"] = "Melde dich zuerst mit einem Charakter an: ein Treffen braucht eine Welt.",
         ["os.echo_room_publish_confirm"] = "Veröffentlichen",
+
+        // watch with party (added after update 2.4.0)
+        ["os.echo_room_party_label"] = "Mit der Gruppe schauen",
+        ["os.echo_room_party_hint"] = "Zeigt diesen Raum in deiner Gruppe an, damit alle direkt aus der Leiste reinspringen können.",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Es = new Dictionary<string, string>
@@ -360,6 +368,10 @@ public static class AppStrings
         ["os.echo_room_publish_public"] = "Listar públicamente en Quedadas",
         ["os.echo_room_publish_no_world"] = "Entra primero con un personaje: una quedada necesita un mundo.",
         ["os.echo_room_publish_confirm"] = "Publicar",
+
+        // watch with party (added after update 2.4.0)
+        ["os.echo_room_party_label"] = "Ver con el grupo",
+        ["os.echo_room_party_hint"] = "Muestra esta sala en tu grupo; así todos pueden entrar con un toque desde el panel.",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Fr = new Dictionary<string, string>
@@ -479,6 +491,10 @@ public static class AppStrings
         ["os.echo_room_publish_public"] = "Lister publiquement dans Rencontres",
         ["os.echo_room_publish_no_world"] = "Connectez-vous d'abord à un personnage : une rencontre a besoin d'un monde.",
         ["os.echo_room_publish_confirm"] = "Publier",
+
+        // watch with party (added after update 2.4.0)
+        ["os.echo_room_party_label"] = "Regarder avec le groupe",
+        ["os.echo_room_party_hint"] = "Affiche cette salle dans votre groupe : chacun peut alors la rejoindre d'un geste depuis le panneau déroulant.",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Pt = new Dictionary<string, string>
@@ -598,6 +614,10 @@ public static class AppStrings
         ["os.echo_room_publish_public"] = "Listar publicamente nos Encontros",
         ["os.echo_room_publish_no_world"] = "Entre com um personagem primeiro: um encontro precisa de um mundo.",
         ["os.echo_room_publish_confirm"] = "Publicar",
+
+        // watch with party (added after update 2.4.0)
+        ["os.echo_room_party_label"] = "Assistir com o grupo",
+        ["os.echo_room_party_hint"] = "Mostra esta sala no seu grupo; assim todo mundo entra com um toque pelo painel de notificações.",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Ru = new Dictionary<string, string>
@@ -717,6 +737,10 @@ public static class AppStrings
         ["os.echo_room_publish_public"] = "Показывать всем во «Встречах»",
         ["os.echo_room_publish_no_world"] = "Сначала зайдите за персонажа: встрече нужен мир.",
         ["os.echo_room_publish_confirm"] = "Опубликовать",
+
+        // watch with party (added after update 2.4.0)
+        ["os.echo_room_party_label"] = "Смотреть вместе с отрядом",
+        ["os.echo_room_party_hint"] = "Комната появится у твоего отряда, и каждый сможет заглянуть в один тап из шторки.",
     };
 
     public static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> Packs =

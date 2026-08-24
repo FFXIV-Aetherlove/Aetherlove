@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -25,6 +25,7 @@ internal sealed class HomeScreen
     private readonly Action<WayfinderAssignmentDto> _openChallenge;
     private readonly Action _openTour;
     private readonly Action _openCreate;
+    private readonly Action _openParty;
     private readonly EntranceAnimation _entrance = new();
 
     private volatile WayfinderStateDto? _state;
@@ -34,13 +35,14 @@ internal sealed class HomeScreen
     private int _generation;
 
     public HomeScreen(IWayfinderHost host, WayfinderHistory history,
-        Action<WayfinderAssignmentDto> openChallenge, Action openTour, Action openCreate)
+        Action<WayfinderAssignmentDto> openChallenge, Action openTour, Action openCreate, Action openParty)
     {
         _host = host;
         _history = history;
         _openChallenge = openChallenge;
         _openTour = openTour;
         _openCreate = openCreate;
+        _openParty = openParty;
     }
 
     public void OnShow()
@@ -154,6 +156,10 @@ internal sealed class HomeScreen
         }
 
         DrawStartsCard(state, winW);
+        if (ctx.Capabilities.Party.InParty)
+        {
+            DrawPartyCard(winW);
+        }
 
         if (_error is { } error)
         {
@@ -476,6 +482,59 @@ internal sealed class HomeScreen
         ImGui.Dummy(new Vector2(0f, cardH + Px(8f)));
     }
 
+    /// <summary>Entry into the party hunt, shown only while in a together party. The sub-line mirrors the
+    /// run's state so a live hunt is reachable in one tap from the app's front door.</summary>
+    private void DrawPartyCard(float winW)
+    {
+        var t = ThemeService.Current;
+        var cardW = winW - Px(PadX) * 2f;
+        var cardH = Px(58f);
+        ImGui.SetCursorPosX(Px(PadX));
+        var tl = ImGui.GetCursorScreenPos();
+        var clicked = ImGui.InvisibleButton("##wfPartyEntry", new Vector2(cardW, cardH));
+        HandOnHover();
+        var hovered = ImGui.IsItemHovered();
+        var dl = ImGui.GetWindowDrawList();
+        var green = new Vector4(0.36f, 0.82f, 0.46f, 1f);
+        var live = _host.PartyRun is { } run
+            && (WayfinderRunStatus)run.Status is WayfinderRunStatus.Gathering or WayfinderRunStatus.Active;
+        dl.AddRectFilled(tl, tl + new Vector2(cardW, cardH),
+            ImGui.GetColorU32(green with { W = hovered ? 0.20f : live ? 0.14f : 0.08f }), Px(14f));
+        dl.AddRect(tl, tl + new Vector2(cardW, cardH), ImGui.GetColorU32(green with { W = 0.45f }), Px(14f),
+            ImDrawFlags.None, Px(1.2f));
+
+        var iconPx = Px(18f);
+        var iconSz = IconDraw.Measure(FontAwesomeIcon.UserFriends, iconPx);
+        IconDraw.Add(dl, FontAwesomeIcon.UserFriends, iconPx,
+            new Vector2(tl.X + Px(16f), tl.Y + (cardH - iconSz.Y) * 0.5f), ImGui.GetColorU32(green));
+        var textX = tl.X + Px(16f) + iconSz.X + Px(12f);
+        dl.AddText(new Vector2(textX, tl.Y + Px(10f)), ImGui.GetColorU32(UiColors.Body),
+            Loc.T("os.wf_party_entry_title"));
+        var sub = _host.PartyRun is { } current
+            ? (WayfinderRunStatus)current.Status switch
+            {
+                WayfinderRunStatus.Gathering => Loc.T("os.wf_party_state_gathering"),
+                WayfinderRunStatus.Active => Loc.T("os.wf_party_state_live"),
+                _ => Loc.T("os.wf_party_state_results"),
+            }
+            : Loc.T("os.wf_party_entry_hint");
+        dl.AddText(ImGui.GetFont(), ImGui.GetFontSize() * 0.85f,
+            new Vector2(textX, tl.Y + Px(14f) + ImGui.GetTextLineHeight()),
+            ImGui.GetColorU32(live ? green : UiColors.Hint), sub);
+
+        var chevronPx = Px(13f);
+        var chevronSz = IconDraw.Measure(FontAwesomeIcon.ChevronRight, chevronPx);
+        IconDraw.Add(dl, FontAwesomeIcon.ChevronRight, chevronPx,
+            new Vector2(tl.X + cardW - chevronSz.X - Px(16f), tl.Y + (cardH - chevronSz.Y) * 0.5f),
+            ImGui.GetColorU32(UiColors.Hint));
+
+        ImGui.Dummy(new Vector2(0f, Px(8f)));
+        if (clicked)
+        {
+            _openParty();
+        }
+    }
+
     /// <summary>The scout-only entry into waypoint authoring.</summary>
     private void DrawAddWaypointRow(float winW)
     {
@@ -604,6 +663,18 @@ internal sealed class HomeScreen
     }
 
     /// <summary>A found place's own picture, in the same free-floating window the challenge shot uses.</summary>
+    /// <summary>Offers a find's selfie to the share sheet as a picture, so it can go into a chat or a yap.</summary>
+    internal static void ShareSelfie(OsAppContext ctx, string path)
+    {
+        ctx.Capabilities.Share.Offer(new ShareItem
+        {
+            Type = ShareTypes.Photo,
+            LocalPath = path,
+            Title = Loc.T("os.wf_share_title"),
+            SourceAppId = "wayfinder",
+        });
+    }
+
     private void DrawHistoryViewer(OsAppContext ctx)
     {
         if (_viewerPath is not { } path || ctx.Capabilities.Textures.Get(path) is not { } tex)
@@ -621,9 +692,14 @@ internal sealed class HomeScreen
                 ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse))
         {
             var avail = ImGui.GetContentRegionAvail();
-            if (avail.X > 0f && avail.Y > 0f)
+            var shareH = ImGui.GetFrameHeight() + Px(6f);
+            if (avail.X > 0f && avail.Y > shareH)
             {
-                ImGui.Image(tex, avail);
+                ImGui.Image(tex, new Vector2(avail.X, avail.Y - shareH));
+            }
+            if (ModalUi.Button($"{Loc.T("os.wf_share")}##wfViewerShare", avail.X))
+            {
+                ShareSelfie(ctx, path);
             }
             if (ImGui.IsWindowFocused() && ImGui.IsKeyPressed(ImGuiKey.Escape))
             {

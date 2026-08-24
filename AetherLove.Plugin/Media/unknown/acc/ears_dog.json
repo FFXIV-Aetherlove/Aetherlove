@@ -1,0 +1,31 @@
+{
+  "name": "Dog Ears",
+  "slot": "ears",
+  "tier": "premium",
+  "file": "",
+  "anchor": "earL",
+  "origin": [
+    0,
+    0
+  ],
+  "width": 0,
+  "height": 0,
+  "behind": true,
+  "ears": {
+    "nudge": [
+      0.0,
+      -2.0
+    ],
+    "baseHalfWidth": 20.0,
+    "height": 63.33,
+    "bowOut": 0.55,
+    "bowIn": 0.25,
+    "lean": 24.0,
+    "inner": 0.48,
+    "floppy": 0.8,
+    "droop": 50.0,
+    "tuft": 0.0,
+    "tipWidth": 0.3,
+    "fur": 0.06
+  }
+}

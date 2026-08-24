@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
@@ -171,6 +171,18 @@ public sealed class PhotosApp : IAetherApp, IAppSettings
             }
             return;
         }
+        if (intent.Type == OsIntents.PhotosOpenSettings)
+        {
+            this.newAlbumPrompt = false;
+            this.confirmDeleteAlbum = false;
+            this.confirmDeletePhoto = false;
+            this.movingPhoto = false;
+            this.renamingAlbum = false;
+            this.renamingPhoto = false;
+            this.edit = null;
+            this.view = View.Settings;
+            return;
+        }
         if (intent.Type != OsIntents.PickPhoto)
         {
             return;
@@ -194,11 +206,35 @@ public sealed class PhotosApp : IAetherApp, IAppSettings
         }
     }
 
+    /// <summary>The library's overflow menu: its settings, and the folder the pictures actually live in.</summary>
+    private void DrawOverflowMenu(OsAppContext ctx)
+    {
+        if (!ImGui.BeginPopup("##photosMenu"))
+        {
+            return;
+        }
+        if (ImGui.MenuItem(ctx.Localize("os.photos_settings")))
+        {
+            ImGui.CloseCurrentPopup();
+            this.view = View.Settings;
+        }
+        if (ImGui.MenuItem(ctx.Localize("os.photos_open_folder")))
+        {
+            ImGui.CloseCurrentPopup();
+            ctx.Capabilities.System.OpenFolder(this.library.LibraryFolder);
+        }
+        ImGui.EndPopup();
+    }
+
     private void DrawAlbums(OsAppContext ctx)
     {
-        var flags = this.newAlbumPrompt ? ImGuiWindowFlags.NoScrollWithMouse : ImGuiWindowFlags.None;
+        // Read ONCE for the whole frame: the new-album card raises the prompt mid-body, and reading the
+        // field again at the bottom then ended a disabled scope this frame never began, which is an
+        // unbalanced ImGui stack rather than a cosmetic slip.
+        var prompting = this.newAlbumPrompt;
+        var flags = prompting ? ImGuiWindowFlags.NoScrollWithMouse : ImGuiWindowFlags.None;
         ImGui.BeginChild("##photosAlbums", ImGui.GetContentRegionAvail(), false, flags);
-        if (this.newAlbumPrompt)
+        if (prompting)
         {
             ImGui.BeginDisabled();
         }
@@ -225,12 +261,13 @@ public sealed class PhotosApp : IAetherApp, IAppSettings
         {
             var afterTitle = ImGui.GetCursorScreenPos();
             var gearR = ctx.Px(15f);
-            if (RoundIconButton("##photosSettingsOpen", FontAwesomeIcon.Cog,
+            if (RoundIconButton("##photosMenuOpen", FontAwesomeIcon.Bars,
                     new Vector2(winPos.X + winW - pad - gearR, titleTop + titleH * 0.5f), gearR, ctx.Px(14f),
-                    NoFill, HoverFill, MutedText, ctx.Localize("os.photos_settings")))
+                    NoFill, HoverFill, MutedText, ctx.Localize("os.photos_menu")))
             {
-                this.view = View.Settings;
+                ImGui.OpenPopup("##photosMenu");
             }
+            DrawOverflowMenu(ctx);
             ImGui.SetCursorScreenPos(afterTitle);
         }
         ImGui.Dummy(new Vector2(0f, ctx.Px(8f)));
@@ -260,7 +297,7 @@ public sealed class PhotosApp : IAetherApp, IAppSettings
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(winW, rows * cardH + (rows - 1) * gap + ctx.Px(14f)));
 
-        if (this.newAlbumPrompt)
+        if (prompting)
         {
             ImGui.EndDisabled();
             this.DrawNewAlbumPrompt(ctx);
@@ -472,12 +509,14 @@ public sealed class PhotosApp : IAetherApp, IAppSettings
                 ctx.Localize("os.photos_auto_printscreens_hint"), x, width, ref this.autoImportScreenshots))
         {
             store.Set(PhotoSettings.AutoImportScreenshots, this.autoImportScreenshots);
+            ctx.Shell.DismissByTag("photos:screenshots");
         }
         ImGui.Dummy(new Vector2(width, ctx.Px(14f)));
     }
 
-    /// <summary>Reads the stored toggles once per app lifetime; every key is absent-means-enabled, and the
-    /// store deserializes under a lock, so it must not be hit from the draw loop.</summary>
+    /// <summary>Reads the stored toggles once per app lifetime (the store deserializes under a lock, so this
+    /// must not be hit from the draw loop). The phone's own captures are absent-means-enabled; the game
+    /// screenshot import is absent-means-ask and stays off until the user opts in.</summary>
     private void LoadSettings(OsAppContext ctx)
     {
         if (this.settingsLoaded)
@@ -488,7 +527,8 @@ public sealed class PhotosApp : IAetherApp, IAppSettings
         var store = ctx.Capabilities.Storage(this.Id);
         this.autoImportCameraRoll = store.Get<bool?>(PhotoSettings.AutoImportCameraRoll) ?? true;
         this.autoImportAppCaptures = store.Get<bool?>(PhotoSettings.AutoImportAppCaptures) ?? true;
-        this.autoImportScreenshots = store.Get<bool?>(PhotoSettings.AutoImportScreenshots) ?? true;
+        // Unset means "never asked", and nothing imports until the user opts in, so the toggle shows off.
+        this.autoImportScreenshots = store.Get<bool?>(PhotoSettings.AutoImportScreenshots) ?? false;
     }
 
     private static void SectionLabel(OsAppContext ctx, float x, string text)
@@ -563,14 +603,17 @@ public sealed class PhotosApp : IAetherApp, IAppSettings
             return;
         }
 
-        var flags = this.confirmDeleteAlbum ? ImGuiWindowFlags.NoScrollWithMouse : ImGuiWindowFlags.None;
+        // Read once for the whole frame; the top bar's trash raises the confirm mid-body, and reading it
+        // again at the bottom would end a disabled scope this frame never began.
+        var confirming = this.confirmDeleteAlbum;
+        var flags = confirming ? ImGuiWindowFlags.NoScrollWithMouse : ImGuiWindowFlags.None;
         ImGui.BeginChild("##photosAlbum", ImGui.GetContentRegionAvail(), false, flags);
         if (this.resetAlbumScroll)
         {
             ImGui.SetScrollY(0f);
             this.resetAlbumScroll = false;
         }
-        if (this.confirmDeleteAlbum)
+        if (confirming)
         {
             ImGui.BeginDisabled();
         }
@@ -605,7 +648,7 @@ public sealed class PhotosApp : IAetherApp, IAppSettings
             this.DrawPhotoGrid(ctx, photos, winPos, winW, pad);
         }
 
-        if (this.confirmDeleteAlbum)
+        if (confirming)
         {
             ImGui.EndDisabled();
             var result = this.DrawConfirmOverlay(ctx, "albumDelete");
@@ -867,6 +910,8 @@ public sealed class PhotosApp : IAetherApp, IAppSettings
         var photo = photos[index];
 
         ImGui.BeginChild("##photosViewer", ImGui.GetContentRegionAvail(), false, ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse);
+        // Same rule as the album views: the viewer's own bars raise both of these mid-body, so the scope
+        // is decided once and the matching end reads the SAME local.
         var overlayActive = this.confirmDeletePhoto || this.movingPhoto;
         if (overlayActive)
         {

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace AetherOS.Apps.Stacker.Localization;
 
@@ -10,7 +10,7 @@ public static class AppStrings
         // added after update 2.1.3 (stacker)
         ["os.stacker_subtitle"] = "Stack them. Clear them. Repeat.",
         ["os.stacker_play"] = "Play",
-        ["os.stacker_high_scores"] = "High scores",
+        ["os.stacker_high_scores"] = "My high scores",
         ["os.stacker_best"] = "Best {0}",
         ["os.stacker_score"] = "Score {0}",
         ["os.stacker_level_lines"] = "Level {0}  Lines {1}",
@@ -23,13 +23,38 @@ public static class AppStrings
         ["os.stacker_no_scores"] = "No scores yet. Go get one!",
         ["os.stacker_paused"] = "Paused",
         ["os.stacker_resume"] = "Resume",
+
+        // added after update 2.4.0 (stacker modern)
+        ["os.stacker_mode_classic"] = "Classic",
+        ["os.stacker_mode_modern"] = "Modern",
+        ["os.stacker_mode_classic_hint"] = "The original ruleset: simple spins, pure LCD look, its own leaderboard.",
+        ["os.stacker_mode_modern_hint"] = "Hold, SRS wall kicks, T-Spins, combos and skins. Scores on its own leaderboard.",
+        ["os.stacker_restart"] = "Restart",
+        ["os.stacker_controls"] = "Controls",
+        ["os.stacker_press_key"] = "Press a key",
+        ["os.stacker_control_moveleft"] = "Move left",
+        ["os.stacker_control_moveright"] = "Move right",
+        ["os.stacker_control_rotateleft"] = "Rotate left",
+        ["os.stacker_control_rotateright"] = "Rotate right",
+        ["os.stacker_control_hold"] = "Hold",
+        ["os.stacker_control_movedown"] = "Soft drop",
+        ["os.stacker_control_harddrop"] = "Instant drop",
+        ["os.stacker_hold_label"] = "Hold",
+        ["os.stacker_next_label"] = "Next",
+        ["os.stacker_fx_tetris"] = "Tetris!",
+        ["os.stacker_fx_b2b"] = "Back-to-Back {0}",
+        ["os.stacker_fx_tspin"] = "T-Spin",
+        ["os.stacker_fx_tspin_mini"] = "T-Spin Mini",
+        ["os.stacker_fx_tspin_double"] = "T-Spin Double",
+        ["os.stacker_fx_tspin_triple"] = "T-Spin Triple",
+        ["os.stacker_fx_combo"] = "{0}x Combo!",
     };
 
     private static readonly IReadOnlyDictionary<string, string> De = new Dictionary<string, string>
     {
         ["os.stacker_subtitle"] = "Stapeln. Räumen. Wiederholen.",
         ["os.stacker_play"] = "Spielen",
-        ["os.stacker_high_scores"] = "Bestenliste",
+        ["os.stacker_high_scores"] = "Meine Bestwerte",
         ["os.stacker_best"] = "Beste {0}",
         ["os.stacker_score"] = "Punkte {0}",
         ["os.stacker_level_lines"] = "Level {0}  Reihen {1}",
@@ -42,13 +67,38 @@ public static class AppStrings
         ["os.stacker_no_scores"] = "Noch keine Punkte. Auf geht's!",
         ["os.stacker_paused"] = "Pause",
         ["os.stacker_resume"] = "Weiter",
+
+        // added after update 2.4.0 (stacker modern)
+        ["os.stacker_mode_classic"] = "Klassisch",
+        ["os.stacker_mode_modern"] = "Modern",
+        ["os.stacker_mode_classic_hint"] = "Das Original: einfache Drehungen, purer LCD-Look, eigene Bestenliste.",
+        ["os.stacker_mode_modern_hint"] = "Hold, SRS-Wallkicks, T-Spins, Combos und Skins. Punkte auf eigener Bestenliste.",
+        ["os.stacker_restart"] = "Neu starten",
+        ["os.stacker_controls"] = "Steuerung",
+        ["os.stacker_press_key"] = "Taste drücken",
+        ["os.stacker_control_moveleft"] = "Nach links",
+        ["os.stacker_control_moveright"] = "Nach rechts",
+        ["os.stacker_control_rotateleft"] = "Links drehen",
+        ["os.stacker_control_rotateright"] = "Rechts drehen",
+        ["os.stacker_control_hold"] = "Halten",
+        ["os.stacker_control_movedown"] = "Soft Drop",
+        ["os.stacker_control_harddrop"] = "Sofort fallen",
+        ["os.stacker_hold_label"] = "Hold",
+        ["os.stacker_next_label"] = "Nächster",
+        ["os.stacker_fx_tetris"] = "Tetris!",
+        ["os.stacker_fx_b2b"] = "Back-to-Back {0}",
+        ["os.stacker_fx_tspin"] = "T-Spin",
+        ["os.stacker_fx_tspin_mini"] = "T-Spin Mini",
+        ["os.stacker_fx_tspin_double"] = "T-Spin Double",
+        ["os.stacker_fx_tspin_triple"] = "T-Spin Triple",
+        ["os.stacker_fx_combo"] = "{0}x Combo!",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Es = new Dictionary<string, string>
     {
         ["os.stacker_subtitle"] = "Apila. Elimina. Repite.",
         ["os.stacker_play"] = "Jugar",
-        ["os.stacker_high_scores"] = "Mejores puntuaciones",
+        ["os.stacker_high_scores"] = "Mis récords",
         ["os.stacker_best"] = "Mejor {0}",
         ["os.stacker_score"] = "Puntos {0}",
         ["os.stacker_level_lines"] = "Nivel {0}  Líneas {1}",
@@ -61,13 +111,38 @@ public static class AppStrings
         ["os.stacker_no_scores"] = "Aún no hay puntuaciones. ¡A por ellas!",
         ["os.stacker_paused"] = "En pausa",
         ["os.stacker_resume"] = "Continuar",
+
+        // added after update 2.4.0 (stacker modern)
+        ["os.stacker_mode_classic"] = "Clásico",
+        ["os.stacker_mode_modern"] = "Moderno",
+        ["os.stacker_mode_classic_hint"] = "El original: giros simples, look LCD puro y su propia clasificación.",
+        ["os.stacker_mode_modern_hint"] = "Hold, wall kicks SRS, T-Spins, combos y skins. Puntúa en su propia clasificación.",
+        ["os.stacker_restart"] = "Reiniciar",
+        ["os.stacker_controls"] = "Controles",
+        ["os.stacker_press_key"] = "Pulsa una tecla",
+        ["os.stacker_control_moveleft"] = "Mover a la izquierda",
+        ["os.stacker_control_moveright"] = "Mover a la derecha",
+        ["os.stacker_control_rotateleft"] = "Girar a la izquierda",
+        ["os.stacker_control_rotateright"] = "Girar a la derecha",
+        ["os.stacker_control_hold"] = "Reservar",
+        ["os.stacker_control_movedown"] = "Caída suave",
+        ["os.stacker_control_harddrop"] = "Caída instantánea",
+        ["os.stacker_hold_label"] = "Hold",
+        ["os.stacker_next_label"] = "Siguiente",
+        ["os.stacker_fx_tetris"] = "¡Tetris!",
+        ["os.stacker_fx_b2b"] = "Back-to-Back {0}",
+        ["os.stacker_fx_tspin"] = "T-Spin",
+        ["os.stacker_fx_tspin_mini"] = "T-Spin Mini",
+        ["os.stacker_fx_tspin_double"] = "T-Spin doble",
+        ["os.stacker_fx_tspin_triple"] = "T-Spin triple",
+        ["os.stacker_fx_combo"] = "¡Combo x{0}!",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Fr = new Dictionary<string, string>
     {
         ["os.stacker_subtitle"] = "Empilez. Effacez. Recommencez.",
         ["os.stacker_play"] = "Jouer",
-        ["os.stacker_high_scores"] = "Meilleurs scores",
+        ["os.stacker_high_scores"] = "Mes records",
         ["os.stacker_best"] = "Record {0}",
         ["os.stacker_score"] = "Score {0}",
         ["os.stacker_level_lines"] = "Niveau {0}  Lignes {1}",
@@ -80,13 +155,38 @@ public static class AppStrings
         ["os.stacker_no_scores"] = "Pas encore de score. À vous de jouer !",
         ["os.stacker_paused"] = "En pause",
         ["os.stacker_resume"] = "Reprendre",
+
+        // added after update 2.4.0 (stacker modern)
+        ["os.stacker_mode_classic"] = "Classique",
+        ["os.stacker_mode_modern"] = "Moderne",
+        ["os.stacker_mode_classic_hint"] = "L'original : rotations simples, pur look LCD, son propre classement.",
+        ["os.stacker_mode_modern_hint"] = "Hold, wall kicks SRS, T-Spins, combos et skins. Score sur son propre classement.",
+        ["os.stacker_restart"] = "Recommencer",
+        ["os.stacker_controls"] = "Commandes",
+        ["os.stacker_press_key"] = "Appuyez sur une touche",
+        ["os.stacker_control_moveleft"] = "Aller à gauche",
+        ["os.stacker_control_moveright"] = "Aller à droite",
+        ["os.stacker_control_rotateleft"] = "Tourner à gauche",
+        ["os.stacker_control_rotateright"] = "Tourner à droite",
+        ["os.stacker_control_hold"] = "Réserver",
+        ["os.stacker_control_movedown"] = "Chute douce",
+        ["os.stacker_control_harddrop"] = "Chute instantanée",
+        ["os.stacker_hold_label"] = "Hold",
+        ["os.stacker_next_label"] = "Suivant",
+        ["os.stacker_fx_tetris"] = "Tetris !",
+        ["os.stacker_fx_b2b"] = "Back-to-Back {0}",
+        ["os.stacker_fx_tspin"] = "T-Spin",
+        ["os.stacker_fx_tspin_mini"] = "T-Spin Mini",
+        ["os.stacker_fx_tspin_double"] = "T-Spin double",
+        ["os.stacker_fx_tspin_triple"] = "T-Spin triple",
+        ["os.stacker_fx_combo"] = "Combo x{0} !",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Pt = new Dictionary<string, string>
     {
         ["os.stacker_subtitle"] = "Empilhe. Limpe. Repita.",
         ["os.stacker_play"] = "Jogar",
-        ["os.stacker_high_scores"] = "Melhores pontuações",
+        ["os.stacker_high_scores"] = "Meus recordes",
         ["os.stacker_best"] = "Recorde {0}",
         ["os.stacker_score"] = "Pontos {0}",
         ["os.stacker_level_lines"] = "Nível {0}  Linhas {1}",
@@ -99,13 +199,38 @@ public static class AppStrings
         ["os.stacker_no_scores"] = "Ainda sem pontuações. Vai lá!",
         ["os.stacker_paused"] = "Pausado",
         ["os.stacker_resume"] = "Continuar",
+
+        // added after update 2.4.0 (stacker modern)
+        ["os.stacker_mode_classic"] = "Clássico",
+        ["os.stacker_mode_modern"] = "Moderno",
+        ["os.stacker_mode_classic_hint"] = "O original: giros simples, visual LCD puro e placar próprio.",
+        ["os.stacker_mode_modern_hint"] = "Hold, wall kicks SRS, T-Spins, combos e skins. Pontua em placar próprio.",
+        ["os.stacker_restart"] = "Reiniciar",
+        ["os.stacker_controls"] = "Controles",
+        ["os.stacker_press_key"] = "Pressione uma tecla",
+        ["os.stacker_control_moveleft"] = "Mover para a esquerda",
+        ["os.stacker_control_moveright"] = "Mover para a direita",
+        ["os.stacker_control_rotateleft"] = "Girar para a esquerda",
+        ["os.stacker_control_rotateright"] = "Girar para a direita",
+        ["os.stacker_control_hold"] = "Reservar",
+        ["os.stacker_control_movedown"] = "Queda suave",
+        ["os.stacker_control_harddrop"] = "Queda instantânea",
+        ["os.stacker_hold_label"] = "Hold",
+        ["os.stacker_next_label"] = "Próxima",
+        ["os.stacker_fx_tetris"] = "Tetris!",
+        ["os.stacker_fx_b2b"] = "Back-to-Back {0}",
+        ["os.stacker_fx_tspin"] = "T-Spin",
+        ["os.stacker_fx_tspin_mini"] = "T-Spin Mini",
+        ["os.stacker_fx_tspin_double"] = "T-Spin duplo",
+        ["os.stacker_fx_tspin_triple"] = "T-Spin triplo",
+        ["os.stacker_fx_combo"] = "Combo x{0}!",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Ru = new Dictionary<string, string>
     {
         ["os.stacker_subtitle"] = "Складывай. Убирай. Повторяй.",
         ["os.stacker_play"] = "Играть",
-        ["os.stacker_high_scores"] = "Рекорды",
+        ["os.stacker_high_scores"] = "Мои рекорды",
         ["os.stacker_best"] = "Рекорд {0}",
         ["os.stacker_score"] = "Очки {0}",
         ["os.stacker_level_lines"] = "Уровень {0}  Линии {1}",
@@ -118,6 +243,31 @@ public static class AppStrings
         ["os.stacker_no_scores"] = "Рекордов пока нет. Самое время!",
         ["os.stacker_paused"] = "Пауза",
         ["os.stacker_resume"] = "Продолжить",
+
+        // added after update 2.4.0 (stacker modern)
+        ["os.stacker_mode_classic"] = "Классика",
+        ["os.stacker_mode_modern"] = "Модерн",
+        ["os.stacker_mode_classic_hint"] = "Оригинал: простые повороты, чистый LCD-вид, свой рейтинг.",
+        ["os.stacker_mode_modern_hint"] = "Hold, wall kicks по SRS, T-Spin, комбо и скины. Очки идут в отдельный рейтинг.",
+        ["os.stacker_restart"] = "Заново",
+        ["os.stacker_controls"] = "Управление",
+        ["os.stacker_press_key"] = "Нажми клавишу",
+        ["os.stacker_control_moveleft"] = "Влево",
+        ["os.stacker_control_moveright"] = "Вправо",
+        ["os.stacker_control_rotateleft"] = "Поворот влево",
+        ["os.stacker_control_rotateright"] = "Поворот вправо",
+        ["os.stacker_control_hold"] = "В запас",
+        ["os.stacker_control_movedown"] = "Мягкое падение",
+        ["os.stacker_control_harddrop"] = "Мгновенное падение",
+        ["os.stacker_hold_label"] = "Hold",
+        ["os.stacker_next_label"] = "Далее",
+        ["os.stacker_fx_tetris"] = "Тетрис!",
+        ["os.stacker_fx_b2b"] = "Back-to-Back {0}",
+        ["os.stacker_fx_tspin"] = "T-Spin",
+        ["os.stacker_fx_tspin_mini"] = "T-Spin Mini",
+        ["os.stacker_fx_tspin_double"] = "Двойной T-Spin",
+        ["os.stacker_fx_tspin_triple"] = "Тройной T-Spin",
+        ["os.stacker_fx_combo"] = "Комбо x{0}!",
     };
 
     public static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> Packs =

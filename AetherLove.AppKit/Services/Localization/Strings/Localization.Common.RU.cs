@@ -1,4 +1,4 @@
-namespace AetherLove.Services.Localization;
+﻿namespace AetherLove.Services.Localization;
 
 internal static class CommonRu
 {
@@ -182,5 +182,37 @@ internal static class CommonRu
         // added after update 2.2.3
         ["common.travel_teleport_with"] = "Телепорт ({0})",
         ["common.travel_tooltip"] = "Отправиться сюда через {0}",
+
+        // added after update 2.4.0
+        ["common.session_expired_title"] = "Нужно войти заново",
+        ["common.session_expired_body"] = "Сессия закончилась, и телефон больше не может связаться с AetherOS. Это не сбой: всё работает, просто он уже не знает, кто ты.",
+        ["common.session_expired_button"] = "Войти заново",
+        ["common.session_expired_hint"] = "Телефон перезапустится и вернёт тебя к экрану входа.",
+    
+        // the file picker (added after update 2.4.0)
+        ["picker.quick_links"] = "Места",
+        ["picker.favorites"] = "Избранное",
+        ["picker.drives"] = "Диски",
+        ["picker.place_desktop"] = "Рабочий стол",
+        ["picker.place_documents"] = "Документы",
+        ["picker.place_downloads"] = "Загрузки",
+        ["picker.place_pictures"] = "Изображения",
+        ["picker.place_screenshots"] = "Скриншоты игры",
+        ["picker.search_hint"] = "Поиск в этой папке...",
+        ["picker.empty"] = "Эта папка пуста.",
+        ["picker.open"] = "Открыть",
+        ["picker.nothing_selected"] = "Ничего не выбрано",
+        ["picker.new_folder_hint"] = "Имя папки...",
+        ["picker.new_folder_create"] = "Создать",
+        ["picker.show_hidden"] = "Скрытые файлы",
+        ["picker.sort_name"] = "Имя",
+        ["picker.sort_date"] = "Дата",
+        ["picker.sort_size"] = "Размер",
+        ["picker.tip_star"] = "Добавить папку в избранное или убрать её (правый клик по избранному удаляет его)",
+        ["picker.tip_edit_path"] = "Ввести путь",
+        ["picker.preview_loading"] = "Загрузка предпросмотра...",
+        ["picker.save"] = "Сохранить",
+        ["picker.file_name_hint"] = "Имя файла...",
+        ["picker.selected_count"] = "Выбрано: {0}",
     };
 }

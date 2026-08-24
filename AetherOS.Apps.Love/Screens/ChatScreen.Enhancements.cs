@@ -674,6 +674,7 @@ public partial class ChatScreen
             ImGui.CloseCurrentPopup();
             CopyTextWithLinkWarning(msg.Text);
         }
+        _translate.DrawMenuItems(msg.Id, msg.Text);
         // An unsent optimistic message has no server row yet, so it can't be deleted until it lands.
         if (msg.IsOwn && !_unsentTempIds.Contains(msg.Id)
             && DrawIconMenuItem(FontAwesomeIcon.TrashAlt, Loc.T("chat.delete_message"), UiColors.MenuDanger))

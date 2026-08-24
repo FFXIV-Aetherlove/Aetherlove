@@ -53,7 +53,7 @@ public static class AppStrings
         ["os.notes_tour_s1_body"] = "The round button in the corner opens a fresh page.",
         ["os.notes_tour_s1_f1"] = "Tap the plus to create a note.",
         ["os.notes_tour_s1_f2"] = "Long text wraps by itself as you type.",
-        ["os.notes_tour_s1_f3"] = "The back pill saves and returns to the list.",
+        ["os.notes_tour_s1_f3"] = "The back button saves your note and takes you back to the list.",
         ["os.notes_tour_s2_title"] = "Find anything",
         ["os.notes_tour_s2_body"] = "The search field at the top looks through everything you wrote.",
         ["os.notes_tour_s2_f1"] = "It matches titles.",
@@ -66,8 +66,8 @@ public static class AppStrings
         ["os.notes_tour_s3_f3"] = "Recolour it any time.",
         ["os.notes_tour_s4_title"] = "Copy and paste",
         ["os.notes_tour_s4_body"] = "Notes travel between the phone and the rest of your machine.",
-        ["os.notes_tour_s4_f1"] = "Copy note puts the whole thing on the clipboard.",
-        ["os.notes_tour_s4_f2"] = "Paste into note adds the clipboard at the end.",
+        ["os.notes_tour_s4_f1"] = "\"Copy note\" puts the whole note on your clipboard.",
+        ["os.notes_tour_s4_f2"] = "\"Paste into note\" adds the clipboard text to the end.",
         ["os.notes_tour_s4_hint"] = "That is everything. Enjoy the quiet.",
     };
 
@@ -119,7 +119,7 @@ public static class AppStrings
         ["os.notes_tour_s1_body"] = "Der runde Knopf in der Ecke öffnet eine frische Seite.",
         ["os.notes_tour_s1_f1"] = "Tipp auf das Plus, um eine Notiz anzulegen.",
         ["os.notes_tour_s1_f2"] = "Langer Text bricht beim Tippen von selbst um.",
-        ["os.notes_tour_s1_f3"] = "Die Zurück-Pille speichert und bringt dich zur Liste.",
+        ["os.notes_tour_s1_f3"] = "Der Zurück-Button speichert deine Notiz und bringt dich zurück zur Liste.",
         ["os.notes_tour_s2_title"] = "Alles wiederfinden",
         ["os.notes_tour_s2_body"] = "Das Suchfeld oben durchsucht alles, was du geschrieben hast.",
         ["os.notes_tour_s2_f1"] = "Es findet Titel.",
@@ -132,8 +132,8 @@ public static class AppStrings
         ["os.notes_tour_s3_f3"] = "Färb sie jederzeit neu ein.",
         ["os.notes_tour_s4_title"] = "Kopieren und einfügen",
         ["os.notes_tour_s4_body"] = "Notizen wandern zwischen dem Handy und dem Rest deines Rechners.",
-        ["os.notes_tour_s4_f1"] = "Notiz kopieren legt das Ganze in die Zwischenablage.",
-        ["os.notes_tour_s4_f2"] = "In Notiz einfügen hängt die Zwischenablage hinten an.",
+        ["os.notes_tour_s4_f1"] = "\"Notiz kopieren\" legt die ganze Notiz in deine Zwischenablage.",
+        ["os.notes_tour_s4_f2"] = "\"In Notiz einfügen\" hängt den Text aus der Zwischenablage hinten an.",
         ["os.notes_tour_s4_hint"] = "Das war alles. Viel Spaß beim Schreiben.",
     };
 
@@ -185,7 +185,7 @@ public static class AppStrings
         ["os.notes_tour_s1_body"] = "El botón redondo de la esquina abre una página en blanco.",
         ["os.notes_tour_s1_f1"] = "Toca el más para crear una nota.",
         ["os.notes_tour_s1_f2"] = "El texto largo se ajusta solo mientras escribes.",
-        ["os.notes_tour_s1_f3"] = "La píldora de volver guarda y te lleva a la lista.",
+        ["os.notes_tour_s1_f3"] = "El botón de volver guarda tu nota y te devuelve a la lista.",
         ["os.notes_tour_s2_title"] = "Encuentra lo que sea",
         ["os.notes_tour_s2_body"] = "El campo de búsqueda de arriba mira en todo lo que escribiste.",
         ["os.notes_tour_s2_f1"] = "Busca en los títulos.",
@@ -198,8 +198,8 @@ public static class AppStrings
         ["os.notes_tour_s3_f3"] = "Cámbiale el color cuando quieras.",
         ["os.notes_tour_s4_title"] = "Copiar y pegar",
         ["os.notes_tour_s4_body"] = "Las notas van y vienen entre el teléfono y el resto de tu equipo.",
-        ["os.notes_tour_s4_f1"] = "Copiar nota lleva todo al portapapeles.",
-        ["os.notes_tour_s4_f2"] = "Pegar en la nota añade el portapapeles al final.",
+        ["os.notes_tour_s4_f1"] = "\"Copiar nota\" pone toda la nota en tu portapapeles.",
+        ["os.notes_tour_s4_f2"] = "\"Pegar en la nota\" añade el texto del portapapeles al final.",
         ["os.notes_tour_s4_hint"] = "Eso es todo. Disfruta de la calma.",
     };
 
@@ -251,7 +251,7 @@ public static class AppStrings
         ["os.notes_tour_s1_body"] = "Le bouton rond dans le coin ouvre une page vierge.",
         ["os.notes_tour_s1_f1"] = "Touchez le plus pour créer une note.",
         ["os.notes_tour_s1_f2"] = "Le texte long revient à la ligne tout seul.",
-        ["os.notes_tour_s1_f3"] = "La pastille de retour enregistre et ramène à la liste.",
+        ["os.notes_tour_s1_f3"] = "Le bouton retour enregistre votre note et vous ramène à la liste.",
         ["os.notes_tour_s2_title"] = "Retrouvez n'importe quoi",
         ["os.notes_tour_s2_body"] = "Le champ de recherche en haut fouille tout ce que vous avez écrit.",
         ["os.notes_tour_s2_f1"] = "Il cherche dans les titres.",
@@ -264,8 +264,8 @@ public static class AppStrings
         ["os.notes_tour_s3_f3"] = "Changez sa couleur quand vous voulez.",
         ["os.notes_tour_s4_title"] = "Copier et coller",
         ["os.notes_tour_s4_body"] = "Les notes circulent entre le téléphone et le reste de votre machine.",
-        ["os.notes_tour_s4_f1"] = "Copier la note met tout dans le presse-papiers.",
-        ["os.notes_tour_s4_f2"] = "Coller dans la note ajoute le presse-papiers à la fin.",
+        ["os.notes_tour_s4_f1"] = "\"Copier la note\" met toute la note dans votre presse-papiers.",
+        ["os.notes_tour_s4_f2"] = "\"Coller dans la note\" ajoute le texte du presse-papiers à la fin.",
         ["os.notes_tour_s4_hint"] = "C'est tout. Profitez du calme.",
     };
 
@@ -317,7 +317,7 @@ public static class AppStrings
         ["os.notes_tour_s1_body"] = "O botão redondo no canto abre uma página em branco.",
         ["os.notes_tour_s1_f1"] = "Toque no mais para criar uma nota.",
         ["os.notes_tour_s1_f2"] = "Texto longo quebra a linha sozinho enquanto você digita.",
-        ["os.notes_tour_s1_f3"] = "A pílula de voltar salva e leva você para a lista.",
+        ["os.notes_tour_s1_f3"] = "O botão de voltar salva sua nota e leva você de volta à lista.",
         ["os.notes_tour_s2_title"] = "Ache qualquer coisa",
         ["os.notes_tour_s2_body"] = "O campo de busca no topo procura em tudo o que você escreveu.",
         ["os.notes_tour_s2_f1"] = "Procura nos títulos.",
@@ -330,8 +330,8 @@ public static class AppStrings
         ["os.notes_tour_s3_f3"] = "Troque a cor quando quiser.",
         ["os.notes_tour_s4_title"] = "Copiar e colar",
         ["os.notes_tour_s4_body"] = "As notas circulam entre o telefone e o resto da sua máquina.",
-        ["os.notes_tour_s4_f1"] = "Copiar nota joga tudo na área de transferência.",
-        ["os.notes_tour_s4_f2"] = "Colar na nota acrescenta a área de transferência no fim.",
+        ["os.notes_tour_s4_f1"] = "\"Copiar nota\" coloca a nota inteira na sua área de transferência.",
+        ["os.notes_tour_s4_f2"] = "\"Colar na nota\" acrescenta o texto da área de transferência no fim.",
         ["os.notes_tour_s4_hint"] = "É isso. Aproveite o sossego.",
     };
 
@@ -383,7 +383,7 @@ public static class AppStrings
         ["os.notes_tour_s1_body"] = "Круглая кнопка в углу открывает чистую страницу.",
         ["os.notes_tour_s1_f1"] = "Нажми на плюс, чтобы создать заметку.",
         ["os.notes_tour_s1_f2"] = "Длинный текст сам переносится по строкам.",
-        ["os.notes_tour_s1_f3"] = "Кнопка возврата сохраняет и уводит обратно в список.",
+        ["os.notes_tour_s1_f3"] = "Кнопка возврата сохраняет заметку и возвращает тебя в список.",
         ["os.notes_tour_s2_title"] = "Найди что угодно",
         ["os.notes_tour_s2_body"] = "Поле поиска сверху смотрит во всё, что ты написал.",
         ["os.notes_tour_s2_f1"] = "Ищет по заголовкам.",
@@ -396,8 +396,8 @@ public static class AppStrings
         ["os.notes_tour_s3_f3"] = "Меняй цвет когда захочешь.",
         ["os.notes_tour_s4_title"] = "Копирование и вставка",
         ["os.notes_tour_s4_body"] = "Заметки свободно ходят между телефоном и остальным компьютером.",
-        ["os.notes_tour_s4_f1"] = "«Скопировать заметку» кладёт всё в буфер обмена.",
-        ["os.notes_tour_s4_f2"] = "«Вставить в заметку» добавляет буфер в конец.",
+        ["os.notes_tour_s4_f1"] = "«Скопировать заметку» кладёт всю заметку в твой буфер обмена.",
+        ["os.notes_tour_s4_f2"] = "«Вставить в заметку» добавляет текст из буфера обмена в конец.",
         ["os.notes_tour_s4_hint"] = "Вот и всё. Приятного письма.",
     };
 

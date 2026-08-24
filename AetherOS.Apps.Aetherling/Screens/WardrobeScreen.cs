@@ -22,6 +22,16 @@ namespace AetherOS.Apps.Aetherling.Screens;
 /// so a stale cache can never dress a pet in something it does not own.</summary>
 internal sealed class WardrobeScreen(IAetherlingHost host, PetRuntime pet)
 {
+    /// <summary>Which half of the screen is on. Both write the same look through the same save pipeline,
+    /// so they are one screen with two faces rather than two screens fighting over one record.</summary>
+    internal enum Face
+    {
+        Dressing,
+        Performance,
+    }
+
+    private Face _face = Face.Dressing;
+
     private const float SaveDelaySeconds = 1f;
 
     private AetherlingDto? _core;
@@ -49,14 +59,23 @@ internal sealed class WardrobeScreen(IAetherlingHost host, PetRuntime pet)
     private float _errorLeft;
 
     private double _lastFrameTime;
-    private float _scrollY;
 
-    public void OnShow(AetherlingDto? core)
+    /// <summary>Where the colour lane is and where it is heading. Two values rather than one because the
+    /// arrows move the target and the lane eases after it; a lane that jumped would lose the sense that the
+    /// colours continue past the edge.</summary>
+    private float _paletteScroll;
+    private float _paletteScrollTarget;
+    private bool _paletteCentreOnSelected;
+
+    public void OnShow(AetherlingDto? core, Face face = Face.Dressing)
     {
+        _face = face;
         _core = core;
         _lastFrameTime = ImGui.GetTime();
         _error = null;
-        _scrollY = 0f;
+        _paletteScroll = 0f;
+        _paletteScrollTarget = 0f;
+        _paletteCentreOnSelected = true;
         if (core?.Look is { } look)
         {
             _palette = look.Palette;
@@ -91,7 +110,7 @@ internal sealed class WardrobeScreen(IAetherlingHost host, PetRuntime pet)
         }
     }
 
-    public void Draw(OsAppContext ctx, Action onBack)
+    public void Draw(OsAppContext ctx, Action onNoPet)
     {
         var dl = ImGui.GetWindowDrawList();
         var origin = ImGui.GetWindowPos();
@@ -107,24 +126,22 @@ internal sealed class WardrobeScreen(IAetherlingHost host, PetRuntime pet)
         Look.Backdrop(dl, ctx.Theme, origin, size);
         if (_core is not { } core)
         {
-            onBack();
+            onNoPet();
             return;
         }
 
         pet.Tick(ctx.ReduceMotion);
 
         var name = core.PetName ?? AetherlingLimits.DefaultName;
-        var headerBottom = PetPageUi.Header(ctx, dl, origin, name,
-            ctx.Localize("os.aetherling_wardrobe_title"), () =>
-            {
-                Flush();
-                onBack();
-            });
+        var headerBottom = PetPageUi.Header(ctx, dl, origin, ctx.Localize(_face == Face.Performance
+            ? "os.aetherling_menu_emotes"
+            : "os.aetherling_wardrobe_title"));
 
-        // The live preview, fixed above the strip. It is sized against what it is WEARING: a lance and a
+        // The live preview, fixed above the strip and deliberately shallow: the page is a list of things
+        // to put on, so the list gets the room. It is sized against what it is WEARING: a lance and a
         // wizard's hat reach well past the creature's own square, and a size measured on a bare pet put
         // them straight through the sockets underneath.
-        var previewH = MathF.Max(Px(146f), size.Y * 0.32f);
+        var previewH = MathF.Max(Px(112f), size.Y * 0.23f);
         var previewBottom = headerBottom + previewH;
         var footprint = pet.AccessoryFootprint();
         var petSize = MathF.Min(
@@ -147,6 +164,10 @@ internal sealed class WardrobeScreen(IAetherlingHost host, PetRuntime pet)
             pet.Boop();
             host.PlayChirp();
         }
+        if (ImGui.IsItemHovered())
+        {
+            HandOnHover();
+        }
 
         if (_error is { Length: > 0 } && _errorLeft > 0f)
         {
@@ -155,28 +176,38 @@ internal sealed class WardrobeScreen(IAetherlingHost host, PetRuntime pet)
                 Look.U32(new Vector4(0.95f, 0.6f, 0.55f, 0.95f)), 0.82f);
         }
 
-        // The sockets sit outside the scroller, so what is equipped where is always on screen while
-        // the list under them scrolls.
-        var stripTop = previewBottom + Px(10f);
-        if (core.Adult is not null)
+        // Colours first and always visible: they are what the creature IS rather than something worn, and
+        // burying them under a shelf made the one thing everybody changes the hardest thing to reach. The
+        // sockets sit under them, both outside the scroller, so what is equipped where stays on screen
+        // while the list below scrolls.
+        var stripTop = previewBottom + Px(8f);
+        if (core.Adult is not null && _face == Face.Dressing)
         {
-            _slot = EquipSlots.Draw(ctx, dl, new Vector2(origin.X, stripTop), size.X, _slot, WornInSlot, OwnsForSlot);
-            stripTop += EquipSlots.Height;
+            stripTop += DrawPaletteLane(ctx, dl, origin, size, stripTop);
+            _slot = EquipSlots.Draw(ctx, dl, new Vector2(origin.X, stripTop), size.X, _slot,
+                WornInSlot, OwnsForSlot);
+            stripTop += EquipSlots.HeightFor(size.X);
         }
 
-        var shelfTop = stripTop + Px(12f);
+        var shelfTop = stripTop + Px(8f);
         ImGui.SetCursorScreenPos(new Vector2(origin.X, shelfTop));
         var shelf = ImGui.BeginChild("##wardrobeShelf"u8,
-            new Vector2(size.X, origin.Y + size.Y - shelfTop), false, ImGuiWindowFlags.NoBackground);
+            new Vector2(size.X, origin.Y + size.Y - shelfTop - PetNavBar.Reserved), false,
+            ImGuiWindowFlags.NoBackground);
         try
         {
             if (shelf)
             {
-                DrawSlotContents(ctx);
-                DrawPalettes(ctx);
-                DrawReactions(ctx);
+                if (_face == Face.Performance)
+                {
+                    DrawReactions(ctx);
+                    DrawEmotes(ctx);
+                }
+                else
+                {
+                    DrawSlotContents(ctx);
+                }
                 ImGui.Dummy(new Vector2(1f, Px(18f)));
-                _scrollY = ImGui.GetScrollY();
             }
         }
         finally
@@ -187,43 +218,115 @@ internal sealed class WardrobeScreen(IAetherlingHost host, PetRuntime pet)
 
     // ------------------------------------------------------------------ sections
 
-    private void DrawPalettes(OsAppContext ctx)
+    /// <summary>Every colour the player owns, in one lane across the top of the page. It scrolls sideways
+    /// rather than wrapping, because a wrapping grid of swatches pushed the sockets and the shelf off the
+    /// screen, and it sits above the sockets rather than inside the shelf because the colour is the first
+    /// thing anybody changes. Past the edge the lane is driven by its own arrows and eased by hand: an
+    /// ImGui scrollbar would need a child window, and a child here would eat the shelf's vertical scroll.
+    /// Returns the height it used.</summary>
+    private float DrawPaletteLane(OsAppContext ctx, ImDrawListPtr dl, Vector2 origin, Vector2 size, float top)
     {
-        var owned = PetState.OwnedRefs(_inventory, StoreItemKind.AetherlingPalette);
         var catalogue = pet.Catalogue;
         if (catalogue is null)
         {
-            return;
+            return 0f;
         }
-
+        var owned = PetState.OwnedRefs(_inventory, StoreItemKind.AetherlingPalette);
         var choices = catalogue.Palettes
             .Where(p => p.ItemTier == ItemTier.Free || owned.Contains(Slug(p.Name)))
             .ToList();
-        // A lone base colour is not a choice, but the section stays: the shop pill under it is the
-        // whole answer for the player who has exactly one.
-        SectionLabel(ctx.Localize("os.aetherling_wardrobe_palettes"));
-        var dl = ImGui.GetWindowDrawList();
-        var side = Px(40f);
-        var gap = Px(10f);
-        var pad = Px(18f);
-        var perRow = Math.Max(1, (int)((ImGui.GetWindowSize().X - (pad * 2f)) / (side + gap)));
-        var start = ImGui.GetCursorScreenPos() + new Vector2(pad, 0f);
+        if (choices.Count == 0)
+        {
+            return 0f;
+        }
 
+        var side = Px(38f);
+        var gap = Px(8f);
+        var pad = Px(10f);
+        var arrow = Px(22f);
+
+        // The shop chip rides the end of the lane rather than sitting under it: a row of colours whose last
+        // entry buys more colours needs no heading and no pill of its own.
+        var cells = choices.Count + 1;
+        var total = (cells * side) + ((cells - 1) * gap);
+        var laneLeft = origin.X + pad;
+        var laneRight = origin.X + size.X - pad;
+        var scrolls = total > laneRight - laneLeft;
+        if (scrolls)
+        {
+            laneLeft += arrow;
+            laneRight -= arrow;
+        }
+        var laneW = laneRight - laneLeft;
+        var reach = MathF.Max(0f, total - laneW);
+
+        if (_paletteCentreOnSelected)
+        {
+            _paletteCentreOnSelected = false;
+            var index = choices.FindIndex(
+                p => string.Equals(Slug(p.Name), _palette, StringComparison.OrdinalIgnoreCase));
+            if (index >= 0)
+            {
+                _paletteScrollTarget = Math.Clamp((index * (side + gap)) - ((laneW - side) * 0.5f), 0f, reach);
+                _paletteScroll = _paletteScrollTarget;
+            }
+        }
+
+        _paletteScrollTarget = Math.Clamp(_paletteScrollTarget, 0f, reach);
+        _paletteScroll = ctx.ReduceMotion
+            ? _paletteScrollTarget
+            : _paletteScroll + ((_paletteScrollTarget - _paletteScroll)
+                * MathF.Min(1f, ImGui.GetIO().DeltaTime * 12f));
+        if (MathF.Abs(_paletteScrollTarget - _paletteScroll) < 0.5f)
+        {
+            _paletteScroll = _paletteScrollTarget;
+        }
+
+        // The arrows go first: a swatch under one would otherwise take the press, first-submitted wins.
+        if (scrolls)
+        {
+            var page = laneW * 0.8f;
+            if (DrawLaneArrow(dl, "##paletteLeft", FontAwesomeIcon.AngleLeft,
+                    new Vector2(origin.X + pad, top), arrow, side, _paletteScrollTarget > 0.5f))
+            {
+                _paletteScrollTarget = MathF.Max(0f, _paletteScrollTarget - page);
+            }
+            if (DrawLaneArrow(dl, "##paletteRight", FontAwesomeIcon.AngleRight,
+                    new Vector2(origin.X + size.X - pad - arrow, top), arrow, side,
+                    _paletteScrollTarget < reach - 0.5f))
+            {
+                _paletteScrollTarget = MathF.Min(reach, _paletteScrollTarget + page);
+            }
+        }
+
+        dl.PushClipRect(new Vector2(laneLeft, top - Px(4f)), new Vector2(laneRight, top + side + Px(4f)), true);
         for (var i = 0; i < choices.Count; i++)
         {
             var palette = choices[i];
             var slug = Slug(palette.Name);
-            var tl = start + new Vector2((i % perRow) * (side + gap), (i / perRow) * (side + gap));
-            ImGui.SetCursorScreenPos(tl);
-            var pressed = ImGui.InvisibleButton($"##palette{slug}", new Vector2(side, side));
-            var hovered = ImGui.IsItemHovered();
-            if (hovered)
+            var tl = new Vector2(laneLeft + (i * (side + gap)) - _paletteScroll, top);
+            var selected = string.Equals(_palette, slug, StringComparison.OrdinalIgnoreCase);
+
+            // Clipping hides pixels and nothing else: a swatch scrolled out of the lane would still hold a
+            // button over the arrow beside it.
+            var hovered = false;
+            if (tl.X + side > laneLeft && tl.X < laneRight)
             {
-                HandOnHover();
-                ImGui.SetTooltip(palette.Name);
+                ImGui.SetCursorScreenPos(tl);
+                var pressed = ImGui.InvisibleButton($"##palette{slug}", new Vector2(side, side));
+                hovered = ImGui.IsItemHovered();
+                if (hovered)
+                {
+                    HandOnHover();
+                    ImGui.SetTooltip(palette.Name);
+                }
+                if (pressed && !selected)
+                {
+                    _palette = slug;
+                    Touch();
+                }
             }
 
-            var selected = string.Equals(_palette, slug, StringComparison.OrdinalIgnoreCase);
             var centre = tl + new Vector2(side * 0.5f, side * 0.5f);
             dl.AddCircleFilled(centre, side * 0.42f, Look.U32(palette.BodyColor), 24);
             dl.AddCircleFilled(centre + new Vector2(side * 0.12f, -side * 0.12f), side * 0.16f,
@@ -235,17 +338,53 @@ internal sealed class WardrobeScreen(IAetherlingHost host, PetRuntime pet)
                 dl.AddCircle(centre, (side * 0.42f) + Px(3f),
                     Look.U32(Look.CrystalPale, selected ? 0.95f : 0.4f), 24, Px(selected ? 2f : 1.2f));
             }
-
-            if (pressed && !selected)
-            {
-                _palette = slug;
-                Touch();
-            }
         }
 
-        var rows = (choices.Count + perRow - 1) / perRow;
-        ImGui.SetCursorScreenPos(start + new Vector2(-pad, rows * (side + gap)));
-        DrawShopPill(ctx, "palettes");
+        var shopTl = new Vector2(laneLeft + (choices.Count * (side + gap)) - _paletteScroll, top);
+        if (shopTl.X + side > laneLeft && shopTl.X < laneRight)
+        {
+            ImGui.SetCursorScreenPos(shopTl);
+            var pressed = ImGui.InvisibleButton("##paletteShop", new Vector2(side, side));
+            var hovered = ImGui.IsItemHovered();
+            if (hovered)
+            {
+                HandOnHover();
+                ImGui.SetTooltip(ctx.Localize("os.aetherling_shop_for_items"));
+            }
+            var centre = shopTl + new Vector2(side * 0.5f, side * 0.5f);
+            dl.AddCircleFilled(centre, side * 0.42f,
+                Look.U32(Look.Spark with { W = hovered ? 0.32f : 0.18f }), 24);
+            IconDraw.AddCentered(dl, FontAwesomeIcon.Plus, Px(13f), centre, Look.U32(Look.CrystalPale, 0.92f));
+            if (pressed)
+            {
+                ctx.Shell.SendIntent("store", OsIntents.CreatePath(OsIntents.StoreOpen, "palettes"));
+            }
+        }
+        dl.PopClipRect();
+
+        return side + Px(10f);
+    }
+
+    /// <summary>One end of the colour lane. Dimmed rather than hidden at the end of its travel, so the lane
+    /// keeps its width and the swatches never shuffle sideways when the last one scrolls into view.</summary>
+    private static bool DrawLaneArrow(ImDrawListPtr dl, string id, FontAwesomeIcon icon, Vector2 tl,
+        float width, float height, bool live)
+    {
+        ImGui.SetCursorScreenPos(tl);
+        var pressed = ImGui.InvisibleButton(id, new Vector2(width, height)) && live;
+        var hovered = ImGui.IsItemHovered() && live;
+        if (hovered)
+        {
+            HandOnHover();
+        }
+        var centre = tl + new Vector2(width * 0.5f, height * 0.5f);
+        if (live)
+        {
+            dl.AddCircleFilled(centre, width * 0.44f, Look.U32(Look.Crystal with { W = hovered ? 0.22f : 0.10f }), 20);
+        }
+        IconDraw.AddCentered(dl, icon, Px(14f), centre,
+            Look.U32(Look.CrystalPale, live ? (hovered ? 1f : 0.8f) : 0.18f));
+        return pressed;
     }
 
     /// <summary>Everything the player owns for the socket the strip has selected. One socket at a time,
@@ -298,8 +437,16 @@ internal sealed class WardrobeScreen(IAetherlingHost host, PetRuntime pet)
     /// <summary>The store shelf a socket's items live on. The accessory shelves are named for these very
     /// sockets (<c>acc-head</c>, <c>acc-glasses</c>, ...), so the pill lands on the hats rather than on the
     /// whole of Accessories; arms are a root shelf of their own.</summary>
-    private static string ShelfFor(string slot) =>
-        slot == AccessoryDef.ArmsSlot ? AccessoryDef.ArmsSlot : $"acc-{slot}";
+    /// <summary>Which store shelf the slot's shop pill opens. The banner slot sells from two rooms now
+    /// (job banners and the flags), so it opens their parent and lets the player pick the room.</summary>
+    private static string ShelfFor(string slot) => slot switch
+    {
+        AccessoryDef.ArmsSlot => AccessoryDef.ArmsSlot,
+        AccessoryDef.BannerSlot => "accessories",
+        // The two part slots sell from one shared shelf, so both sockets land on it.
+        AccessoryDef.EarsSlot or AccessoryDef.TailSlot => "acc-ears-tails",
+        _ => $"acc-{slot}",
+    };
 
     /// <summary>The way out of an owned list and into the shelf it came from. Named for the store's own
     /// category key, which is what the deep link resolves against.</summary>
@@ -420,6 +567,93 @@ internal sealed class WardrobeScreen(IAetherlingHost host, PetRuntime pet)
         ImGui.Dummy(new Vector2(1f, Px(8f)));
     }
 
+    /// <summary>What the creature has picked up from its person, and nothing else. Only learned emotes
+    /// are listed: the unlearned ones were a progress checklist, and a checklist of things you must be
+    /// SEEN doing is the wrong shape for a channel that watches you. Every row plays on tap.</summary>
+    private void DrawEmotes(OsAppContext ctx)
+    {
+        if (_core?.Emotes is not { } emotes)
+        {
+            return;
+        }
+
+        SectionLabel(ctx.Localize("os.aetherling_wardrobe_emotes"));
+
+        var dl = ImGui.GetWindowDrawList();
+        var origin = ImGui.GetWindowPos();
+        var size = ImGui.GetWindowSize();
+        var hintY = ImGui.GetCursorScreenPos().Y;
+        var hint = string.Format(
+            ctx.Localize("os.aetherling_wardrobe_emotes_hint"),
+            _core?.PetName ?? AetherlingLimits.DefaultName);
+        var lines = Look.CentredWrapped(dl, hint, origin.X + (size.X * 0.5f), hintY,
+            size.X - Px(48f), Look.U32(Look.Whisper, 0.8f), 0.86f);
+        ImGui.SetCursorScreenPos(new Vector2(origin.X, hintY + (lines * Look.LineStep(0.86f)) + Px(10f)));
+
+        // Only what it actually knows. A list of things it has NOT learned is a checklist of chores, and
+        // it also tells on the meter: what is shown here is what the creature can do, nothing else.
+        var known = 0;
+        foreach (var def in Engine.EmoteChoreographies.All)
+        {
+            var progress = emotes.Emotes.FirstOrDefault(e => e.Key == def.Key);
+            if (progress?.LearnedAtUtc is null)
+            {
+                continue;
+            }
+            DrawEmoteRow(ctx, def);
+            known++;
+        }
+        if (known == 0)
+        {
+            var emptyY = ImGui.GetCursorScreenPos().Y;
+            var empty = string.Format(
+                ctx.Localize("os.aetherling_emotes_none"),
+                _core?.PetName ?? AetherlingLimits.DefaultName);
+            var emptyLines = Look.CentredWrapped(dl, empty, origin.X + (size.X * 0.5f), emptyY,
+                size.X - Px(48f), Look.U32(Look.Whisper, 0.6f), 0.86f);
+            ImGui.SetCursorScreenPos(new Vector2(origin.X, emptyY + (emptyLines * Look.LineStep(0.86f))));
+        }
+        ImGui.Dummy(new Vector2(1f, Px(8f)));
+    }
+
+    private void DrawEmoteRow(OsAppContext ctx, Engine.EmoteDef def)
+    {
+        var dl = ImGui.GetWindowDrawList();
+        var origin = ImGui.GetWindowPos();
+        var size = ImGui.GetWindowSize();
+        var pad = Px(18f);
+        var height = Px(44f);
+        var tl = new Vector2(origin.X + pad, ImGui.GetCursorScreenPos().Y);
+        var width = size.X - (pad * 2f);
+
+        ImGui.SetCursorScreenPos(tl);
+        var pressed = ImGui.InvisibleButton($"##emote{def.Key}", new Vector2(width, height));
+        var hovered = ImGui.IsItemHovered();
+        if (hovered)
+        {
+            HandOnHover();
+        }
+        if (pressed)
+        {
+            pet.AuditionGlyph("burst");
+            pet.PlayEmote(def);
+        }
+
+        dl.AddRectFilled(tl, tl + new Vector2(width, height),
+            Look.U32(Look.Crystal with { W = hovered ? 0.12f : 0.05f }), Px(10f));
+        dl.AddRect(tl, tl + new Vector2(width, height), Look.U32(Look.Crystal, 0.6f), Px(10f),
+            ImDrawFlags.RoundCornersAll, Px(1.2f));
+
+        var textY = tl.Y + ((height - ImGui.GetTextLineHeight()) * 0.5f);
+        dl.AddText(new Vector2(tl.X + Px(14f), textY), Look.U32(Look.CrystalPale, 0.95f), def.Name);
+
+        var chip = ctx.Localize("os.aetherling_emote_play");
+        var chipW = ImGui.CalcTextSize(chip).X;
+        dl.AddText(new Vector2(tl.X + width - chipW - Px(14f), textY), Look.U32(Look.Crystal, 0.85f), chip);
+
+        ImGui.SetCursorScreenPos(new Vector2(origin.X, tl.Y + height + Px(6f)));
+    }
+
     // ------------------------------------------------------------------ rows
 
     private void DrawItemRow(OsAppContext ctx, AccessoryDef def, string itemRef)
@@ -449,10 +683,28 @@ internal sealed class WardrobeScreen(IAetherlingHost host, PetRuntime pet)
                 ImDrawFlags.RoundCornersAll, Px(1.2f));
         }
 
-        // The real sprite as its own thumbnail, boxed to the row.
+        // The real sprite as its own thumbnail, boxed to the row. A code-drawn part has no sprite, so it
+        // takes a rendered one from acc/thumbs; the socket's own drawing stands in until that decodes.
         var thumb = height - Px(10f);
         var thumbTl = tl + new Vector2(Px(6f), Px(5f));
-        if (pet.Catalogue is { } catalogue
+        var thumbCentre = thumbTl + new Vector2(thumb * 0.5f, thumb * 0.5f);
+        if (def.IsDrawnPart)
+        {
+            if (pet.Catalogue is { } parts
+                && ctx.Capabilities.Textures.Get(parts.AccessoryThumbPath(def)) is { } partTex)
+            {
+                dl.AddImage(partTex, thumbTl, thumbTl + new Vector2(thumb, thumb));
+            }
+            else if (def.Slot == AccessoryDef.EarsSlot)
+            {
+                EquipSlots.PaintEars(dl, thumbCentre, thumb, Look.U32(Look.CrystalPale, 0.85f));
+            }
+            else
+            {
+                EquipSlots.PaintTail(dl, thumbCentre, thumb, Look.U32(Look.CrystalPale, 0.85f));
+            }
+        }
+        else if (pet.Catalogue is { } catalogue
             && ctx.Capabilities.Textures.Get(catalogue.AccessoryImagePath(def)) is { } tex)
         {
             var fit = MathF.Min(thumb / Math.Max(1, def.Width), thumb / Math.Max(1, def.Height));
@@ -569,7 +821,7 @@ internal sealed class WardrobeScreen(IAetherlingHost host, PetRuntime pet)
         _accessories.RemoveAll(a => pet.Catalogue.Accessory(a)?.Slot == AccessoryDef.ArmsSlot);
         _accessories.AddRange(take);
         Touch();
-        pet.PlayHopClip();
+        pet.PlayTurn();
     }
 
     private void Touch()

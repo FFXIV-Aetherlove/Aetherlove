@@ -1,6 +1,5 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -110,7 +109,7 @@ internal sealed class SparksScreen
                 return;
             }
             _allRows = rows;
-            _favoriteRows = _favorites.Pick(rows);
+            _favoriteRows = _host.CurrentCharacter is { } who ? _favorites.Pick(who.ContentId, rows) : [];
             _currenciesLoading = false;
         });
     }
@@ -119,10 +118,14 @@ internal sealed class SparksScreen
     /// already captured, so the row simply stops being drawn from the next one.</summary>
     private void Unstar(uint itemId)
     {
-        _favorites.Toggle(itemId);
+        if (_host.CurrentCharacter is not { } who)
+        {
+            return;
+        }
+        _favorites.Toggle(who.ContentId, itemId);
         if (_allRows is { } rows)
         {
-            _favoriteRows = _favorites.Pick(rows);
+            _favoriteRows = _favorites.Pick(who.ContentId, rows);
         }
     }
 
@@ -233,9 +236,8 @@ internal sealed class SparksScreen
         var cardW = winW - Px(PadX) * 2f;
         var lineH = ImGui.GetTextLineHeight();
         var ringR = Px(64f);
-        var showBonus = wallet.BonusEarnedThisWeek > 0 || wallet.Catalog.Any(e => e.Pool == SparkPool.Bonus);
-        var legendLines = showBonus ? 4f : 3f;
-        var cardH = Px(16f) + lineH + Px(10f) + ringR * 2f + Px(16f) + legendLines * (lineH + Px(5f)) + Px(12f);
+        const float LegendLines = 3f;
+        var cardH = Px(16f) + lineH + Px(10f) + ringR * 2f + Px(16f) + LegendLines * (lineH + Px(5f)) + Px(12f);
 
         ImGui.SetCursorPosX(Px(PadX));
         var tl = ImGui.GetCursorScreenPos();
@@ -257,12 +259,6 @@ internal sealed class SparksScreen
         DrawLegendLine(dl, legendX, ref legendY, lineH, UiColors.FavoriteStar,
             Loc.T("os.wallet_explorer_legend", wallet.ExemptEarnedThisWeek.ToString("N0", ctx.Culture),
                 (wallet.TotalWeeklyCap - wallet.RoutineWeeklyCap).ToString("N0", ctx.Culture)));
-        if (showBonus)
-        {
-            DrawLegendLine(dl, legendX, ref legendY, lineH, ImGui.GetColorU32(UiColors.Success),
-                Loc.T("os.wallet_bonus_legend", wallet.BonusEarnedThisWeek.ToString("N0", ctx.Culture),
-                    wallet.BonusWeeklyCap.ToString("N0", ctx.Culture)));
-        }
 
         var untilReset = wallet.WeekResetsAtUtc - DateTimeOffset.UtcNow;
         var clockSz = IconDraw.Measure(FontAwesomeIcon.HourglassHalf, Px(12f));
@@ -375,9 +371,11 @@ internal sealed class SparksScreen
         SparkAction.EchoJoined => FontAwesomeIcon.UserFriends,
         SparkAction.StoreVisit => FontAwesomeIcon.ShoppingBag,
         SparkAction.WalletVisit => FontAwesomeIcon.Wallet,
-        // Only ever reached once the pet is grown: the wallet withholds this row entirely before that, so
-        // the icon is safe to be the creature's own rather than a question mark.
+        SparkAction.AetherlingAdopt => FontAwesomeIcon.Gem,
+        SparkAction.AetherlingAttune => FontAwesomeIcon.Bolt,
         SparkAction.AetherlingGame => FontAwesomeIcon.Gamepad,
+        SparkAction.ArcadeWeeklyFirst or SparkAction.ArcadeWeeklySecond or SparkAction.ArcadeWeeklyThird =>
+            FontAwesomeIcon.Trophy,
         SparkAction.AdminAdjust => FontAwesomeIcon.Wrench,
         _ => FontAwesomeIcon.Question,
     };
@@ -396,15 +394,18 @@ internal sealed class SparksScreen
         SparkAction.WayfinderFindFirst => Loc.T("os.wallet_action_wayfinder_first"),
         SparkAction.WayfinderFindSecond => Loc.T("os.wallet_action_wayfinder_second"),
         SparkAction.WayfinderFind => Loc.T("os.wallet_action_wayfinder_find"),
+        SparkAction.WayfinderPartyBonus => Loc.T("os.wallet_action_wayfinder_party"),
         SparkAction.GrooveActivity => Loc.T("os.wallet_action_groove"),
         SparkAction.EchoHosted => Loc.T("os.wallet_action_echo_host"),
         SparkAction.EchoJoined => Loc.T("os.wallet_action_echo_join"),
         SparkAction.StoreVisit => Loc.T("os.wallet_action_store_visit"),
         SparkAction.WalletVisit => Loc.T("os.wallet_action_wallet_visit"),
-        // The whole Aetherling family keeps the question marks: the wallet renders for accounts that have
-        // never hatched anything, and the mystery rule forbids naming the pet there.
-        SparkAction.AetherlingAdopt or SparkAction.AetherlingAttune or SparkAction.AetherlingGame =>
-            Loc.T("os.wallet_action_unknown_thing"),
+        SparkAction.AetherlingAdopt => Loc.T("os.wallet_action_aetherling_adopt"),
+        SparkAction.AetherlingAttune => Loc.T("os.wallet_action_aetherling_attune"),
+        SparkAction.AetherlingGame => Loc.T("os.wallet_action_aetherling_game_plain"),
+        SparkAction.ArcadeWeeklyFirst => Loc.T("os.wallet_action_arcade_weekly_first"),
+        SparkAction.ArcadeWeeklySecond => Loc.T("os.wallet_action_arcade_weekly_second"),
+        SparkAction.ArcadeWeeklyThird => Loc.T("os.wallet_action_arcade_weekly_third"),
         SparkAction.AdminAdjust => Loc.T("os.wallet_action_admin_adjust"),
         _ => Loc.T("os.wallet_action_unknown"),
     };

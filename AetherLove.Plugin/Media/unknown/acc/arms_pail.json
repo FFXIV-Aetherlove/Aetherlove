@@ -1,0 +1,14 @@
+{
+  "name": "Tidesand Pail",
+  "slot": "arms",
+  "tier": "seasonal",
+  "file": "arms_pail.png",
+  "anchor": "handL",
+  "origin": [
+    53,
+    53
+  ],
+  "width": 62,
+  "height": 73,
+  "behind": false
+}

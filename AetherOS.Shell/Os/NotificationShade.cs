@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Numerics;
 using AetherLove.Services;
@@ -39,13 +39,18 @@ public sealed class NotificationShade
     private const float AnimSpeed = 7f;
 
     public NotificationShade(OsShell shell, WallpaperService wallpapers, IOsAccountInfo account,
-        IOsMediaRemote media)
+        IOsMediaRemote media, IOsTogether together, AetherLove.Screens.HomeScreen home)
     {
         _shell = shell;
         _wallpapers = wallpapers;
         _account = account;
         _media = media;
+        _together = together;
+        _home = home;
     }
+
+    private readonly IOsTogether _together;
+    private readonly AetherLove.Screens.HomeScreen _home;
 
     public bool Visible => _openT > 0.001f || _targetOpen || _dragging;
 
@@ -250,11 +255,90 @@ public sealed class NotificationShade
 
         y = DrawQuickToggles(dl, innerTL.X, y, innerW);
         y = DrawBrightness(dl, innerTL.X, y, innerW);
+        if (_together.InParty)
+        {
+            y = DrawPartyRow(dl, innerTL.X, y, innerW);
+        }
         if (_media.TileVisible)
         {
             y = DrawMediaTile(dl, innerTL.X, y, innerW);
         }
         DrawNotificationList(innerTL.X, y, innerW, panelBR.Y - Px(26f) - y);
+    }
+
+    /// <summary>A slim "you are in a party" row while one is live: the management surface lives on the
+    /// widget page now, so this is a status line with the two things worth having at arm's reach, the way
+    /// there and the way out. The leave pill is submitted before the row's open target
+    /// (first-submitted-wins).</summary>
+    private float DrawPartyRow(ImDrawListPtr dl, float x, float y, float w)
+    {
+        var cardH = Px(46f);
+        var tl = new Vector2(x, y);
+        var br = tl + new Vector2(w, cardH);
+        dl.AddRectFilled(tl, br, OsDraw.White(0.08f), Px(14f));
+
+        var green = AetherLove.UI.UiColors.Party;
+        var iconC = new Vector2(tl.X + Px(22f), tl.Y + (cardH * 0.5f));
+        dl.AddCircleFilled(iconC, Px(14f), ImGui.ColorConvertFloat4ToU32(green with { W = 0.18f }));
+        IconDraw.AddCentered(dl, FontAwesomeIcon.UserFriends, Px(12f), iconC,
+            ImGui.ColorConvertFloat4ToU32(green with { W = 0.95f }));
+
+        var leaveLabel = Loc.T(_together.AmHost ? "os.party_end" : "os.party_leave");
+        var leaveW = (ImGui.CalcTextSize(leaveLabel).X * 0.82f) + Px(20f);
+        var leaveH = Px(24f);
+        var leaveTL = new Vector2(br.X - Px(10f) - leaveW, tl.Y + ((cardH - leaveH) * 0.5f));
+        if (!InputLocked && !_together.Busy)
+        {
+            ImGui.SetCursorScreenPos(leaveTL);
+            if (ImGui.InvisibleButton("##shadePartyLeave", new Vector2(leaveW, leaveH)))
+            {
+                if (_together.AmHost)
+                {
+                    _together.End();
+                }
+                else
+                {
+                    _together.Leave();
+                }
+            }
+            if (ImGui.IsItemHovered())
+            {
+                SharedUiHelpers.HandOnHover();
+            }
+        }
+        var leaveHovered = ImGui.IsMouseHoveringRect(leaveTL, leaveTL + new Vector2(leaveW, leaveH));
+        dl.AddRectFilled(leaveTL, leaveTL + new Vector2(leaveW, leaveH),
+            OsDraw.White(leaveHovered ? 0.16f : 0.09f), leaveH * 0.5f);
+        var leaveSz = ImGui.CalcTextSize(leaveLabel) * 0.82f;
+        dl.AddText(ImGui.GetFont(), ImGui.GetFontSize() * 0.82f,
+            leaveTL + ((new Vector2(leaveW, leaveH) - leaveSz) * 0.5f), OsDraw.White(0.9f), leaveLabel);
+
+        // The rest of the row goes to the party card on the widget page.
+        if (!InputLocked)
+        {
+            ImGui.SetCursorScreenPos(tl);
+            if (ImGui.InvisibleButton("##shadePartyOpen", new Vector2(w - leaveW - Px(20f), cardH)))
+            {
+                Close();
+                _shell.GoHome();
+                _home.ShowPage(-1);
+            }
+            if (ImGui.IsItemHovered())
+            {
+                SharedUiHelpers.HandOnHover();
+            }
+        }
+
+        var textX = iconC.X + Px(22f);
+        var lineH = ImGui.GetTextLineHeight();
+        dl.AddText(new Vector2(textX, tl.Y + (cardH * 0.5f) - lineH + Px(1f)), OsDraw.White(0.95f),
+            Loc.T("os.party_title"));
+        var sub = string.Format(Loc.T("os.party_in_party"),
+            string.Format(Loc.T("os.party_members"), _together.Members.Count, _together.MaxMembers));
+        dl.AddText(ImGui.GetFont(), ImGui.GetFontSize() * 0.8f,
+            new Vector2(textX, tl.Y + (cardH * 0.5f) + Px(2f)), OsDraw.White(0.6f), sub);
+
+        return y + cardH + Px(10f);
     }
 
     /// <summary>The now-playing card: art, title/artist and transport. Buttons are submitted before the

@@ -113,7 +113,7 @@ public class ProfileScreen
 
     public ProfileScreen(LoveRouter router, AetherHubContext hub, FlairCatalog flairCatalog,
                          SessionBootstrapper bootstrap, SettingsScreen settingsScreen,
-                         LoveShell shell)
+                         LoveShell shell, AetherOS.Sdk.IAppCapabilities caps)
     {
         _router = router;
         _hub = hub;
@@ -121,7 +121,12 @@ public class ProfileScreen
         _bootstrap = bootstrap;
         _settingsScreen = settingsScreen;
         _shell = shell;
+        _translate = new TranslateUi("loveprofile", caps.Translation,
+            () => shell.Shell?.SendIntent("settings", AetherOS.Sdk.OsIntents.CreateReturn(
+                AetherOS.Sdk.OsIntents.OpenTranslationSettings, "aetherlove")));
     }
+
+    private readonly TranslateUi _translate;
 
     private readonly SettingsScreen _settingsScreen;
     private readonly LoveShell _shell;
@@ -266,7 +271,7 @@ public class ProfileScreen
         {
             parts.Add(race);
         }
-        var region = RegionLabel(dto.Region);
+        var region = RegionMaskLabel(dto.Region);
         if (!string.IsNullOrEmpty(region))
         {
             parts.Add(region);
@@ -489,6 +494,7 @@ public class ProfileScreen
             }
 
             DrawHideConfirm(ImGui.GetWindowPos(), winSize);
+            _translate.DrawConsentOverlay(ImGui.GetWindowPos(), winSize);
         }
     }
 
@@ -1217,7 +1223,9 @@ public class ProfileScreen
         var bioW = winW - PadX * 2f;
         ImGui.SetCursorPosX(PadX);
         ImGui.PushStyleColor(ImGuiCol.Text, UiColors.BioText);
-        AetherLove.Emoji.ParsedMessage.Parse(_profile.Bio).DrawWrapped("##aboutBio", bioW);
+        var bioId = $"bio{_profile.ProfileId:N}";
+        AetherLove.Emoji.ParsedMessage.Parse(_translate.Display(bioId, _profile.Bio!))
+            .DrawWrapped("##aboutBio", bioW);
         ImGui.PopStyleColor();
         if (_source != ProfileSource.Self
             && ImGui.BeginPopupContextItem("##bioCopyCtx", ImGuiPopupFlags.MouseButtonRight))
@@ -1227,6 +1235,7 @@ public class ProfileScreen
                 ImGui.CloseCurrentPopup();
                 CopyTextWithLinkWarning(_profile!.Bio ?? string.Empty);
             }
+            _translate.DrawMenuItems(bioId, _profile!.Bio ?? string.Empty);
             ImGui.EndPopup();
         }
         SpaceDivide(dl, winW);

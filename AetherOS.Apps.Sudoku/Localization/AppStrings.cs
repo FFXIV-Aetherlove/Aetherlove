@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace AetherOS.Apps.Sudoku.Localization;
 
@@ -8,9 +8,9 @@ public static class AppStrings
     private static readonly IReadOnlyDictionary<string, string> En = new Dictionary<string, string>
     {
         // added after update 2.2.3 (sudoku)
-        ["os.sudoku_subtitle"] = "Every grid you clear hands you a harder one.",
+        ["os.sudoku_subtitle"] = "Each grid you finish is harder than the last.",
         ["os.sudoku_play"] = "Play",
-        ["os.sudoku_high_scores"] = "High scores",
+        ["os.sudoku_high_scores"] = "My high scores",
         ["os.sudoku_best"] = "Best {0}",
         ["os.sudoku_score"] = "Score {0}",
         ["os.sudoku_easy"] = "Easy",
@@ -23,7 +23,6 @@ public static class AppStrings
         ["os.sudoku_next"] = "Next: {0}",
         ["os.sudoku_next_button"] = "Next grid",
         ["os.sudoku_reached"] = "Reached: {0}",
-        ["os.sudoku_out_of_time"] = "Out of time.",
         ["os.sudoku_out_of_strikes"] = "Three mistakes.",
         ["os.sudoku_paused"] = "Paused",
         ["os.sudoku_resume"] = "Resume",
@@ -32,14 +31,33 @@ public static class AppStrings
         ["os.sudoku_play_again"] = "Play again",
         ["os.sudoku_menu"] = "Menu",
         ["os.sudoku_no_scores"] = "No scores yet. Go get one!",
+        // added after update 2.4.0 (sudoku forgiveness)
+        ["os.sudoku_help"] = "How it works",
+        ["os.sudoku_help_ladder"] = "Each grid you finish is harder than the last: two Easy, two Medium, two Difficult, then Insane.",
+        ["os.sudoku_help_strikes"] = "Three wrong digits end the run. A wrong digit is never placed. The cell flashes red and stays empty.",
+        ["os.sudoku_help_timer"] = "Every grid has a clock. If it runs out you keep playing, but that grid scores 0 points.",
+        ["os.sudoku_help_logic"] = "You earn more points for digits you can work out. Guessing earns less, but it never ends your run.",
+        ["os.sudoku_help_notes"] = "Notes mode writes small candidate digits instead of answers. The button stays lit while it is on.",
+        ["os.sudoku_help_close"] = "Got it",
+        ["os.sudoku_mistakes"] = "Mistakes {0}/{1}",
+        ["os.sudoku_notes"] = "Notes",
+        ["os.sudoku_overtime"] = "Overtime +{0}",
+        ["os.sudoku_overtime_zero"] = "The clock ran out. This grid scored 0 points.",
+        ["os.sudoku_quit"] = "Quit run",
+        ["os.sudoku_abandoned"] = "Run ended.",
+        ["os.sudoku_breakdown_base"] = "Base {0}",
+        ["os.sudoku_breakdown_time"] = "Time bonus +{0}",
+        ["os.sudoku_breakdown_mistakes"] = "Mistakes -{0}",
+        ["os.sudoku_breakdown_logic"] = "Logic {0}%",
+        ["os.sudoku_breakdown_total"] = "Grid total {0}",
     };
 
     private static readonly IReadOnlyDictionary<string, string> De = new Dictionary<string, string>
     {
         // added after update 2.2.3 (sudoku)
-        ["os.sudoku_subtitle"] = "Jedes gelöste Gitter bringt ein schwereres.",
+        ["os.sudoku_subtitle"] = "Jedes Gitter, das du löst, ist schwerer als das letzte.",
         ["os.sudoku_play"] = "Spielen",
-        ["os.sudoku_high_scores"] = "Bestenliste",
+        ["os.sudoku_high_scores"] = "Meine Bestwerte",
         ["os.sudoku_best"] = "Beste {0}",
         ["os.sudoku_score"] = "Punkte {0}",
         ["os.sudoku_easy"] = "Leicht",
@@ -52,7 +70,6 @@ public static class AppStrings
         ["os.sudoku_next"] = "Nächstes: {0}",
         ["os.sudoku_next_button"] = "Nächstes Gitter",
         ["os.sudoku_reached"] = "Erreicht: {0}",
-        ["os.sudoku_out_of_time"] = "Zeit abgelaufen.",
         ["os.sudoku_out_of_strikes"] = "Drei Fehler.",
         ["os.sudoku_paused"] = "Pause",
         ["os.sudoku_resume"] = "Weiter",
@@ -61,14 +78,33 @@ public static class AppStrings
         ["os.sudoku_play_again"] = "Nochmal",
         ["os.sudoku_menu"] = "Menü",
         ["os.sudoku_no_scores"] = "Noch keine Punkte. Auf geht's!",
+        // added after update 2.4.0 (sudoku forgiveness)
+        ["os.sudoku_help"] = "So funktioniert es",
+        ["os.sudoku_help_ladder"] = "Jedes Gitter, das du löst, ist schwerer als das letzte: zwei leichte, zwei mittlere, zwei schwere, dann Wahnsinn.",
+        ["os.sudoku_help_strikes"] = "Drei falsche Ziffern beenden den Lauf. Eine falsche Ziffer wird nie gesetzt. Das Feld blinkt rot und bleibt leer.",
+        ["os.sudoku_help_timer"] = "Jedes Gitter hat eine Uhr. Läuft sie ab, spielst du weiter, aber dieses Gitter bringt 0 Punkte.",
+        ["os.sudoku_help_logic"] = "Für Ziffern, die du herleiten kannst, bekommst du mehr Punkte. Raten bringt weniger, beendet den Lauf aber nie.",
+        ["os.sudoku_help_notes"] = "Der Notiz-Modus schreibt kleine Kandidaten statt Antworten. Der Knopf leuchtet, solange er an ist.",
+        ["os.sudoku_help_close"] = "Alles klar",
+        ["os.sudoku_mistakes"] = "Fehler {0}/{1}",
+        ["os.sudoku_notes"] = "Notizen",
+        ["os.sudoku_overtime"] = "Nachspielzeit +{0}",
+        ["os.sudoku_overtime_zero"] = "Die Uhr ist abgelaufen. Dieses Gitter brachte 0 Punkte.",
+        ["os.sudoku_quit"] = "Lauf beenden",
+        ["os.sudoku_abandoned"] = "Lauf beendet.",
+        ["os.sudoku_breakdown_base"] = "Basis {0}",
+        ["os.sudoku_breakdown_time"] = "Zeitbonus +{0}",
+        ["os.sudoku_breakdown_mistakes"] = "Fehler -{0}",
+        ["os.sudoku_breakdown_logic"] = "Logik {0}%",
+        ["os.sudoku_breakdown_total"] = "Gitter gesamt {0}",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Es = new Dictionary<string, string>
     {
         // added after update 2.2.3 (sudoku)
-        ["os.sudoku_subtitle"] = "Cada cuadrícula resuelta te trae una más difícil.",
+        ["os.sudoku_subtitle"] = "Cada cuadrícula que terminas es más difícil que la anterior.",
         ["os.sudoku_play"] = "Jugar",
-        ["os.sudoku_high_scores"] = "Mejores puntuaciones",
+        ["os.sudoku_high_scores"] = "Mis récords",
         ["os.sudoku_best"] = "Mejor {0}",
         ["os.sudoku_score"] = "Puntos {0}",
         ["os.sudoku_easy"] = "Fácil",
@@ -81,7 +117,6 @@ public static class AppStrings
         ["os.sudoku_next"] = "Siguiente: {0}",
         ["os.sudoku_next_button"] = "Siguiente cuadrícula",
         ["os.sudoku_reached"] = "Alcanzado: {0}",
-        ["os.sudoku_out_of_time"] = "Se acabó el tiempo.",
         ["os.sudoku_out_of_strikes"] = "Tres errores.",
         ["os.sudoku_paused"] = "En pausa",
         ["os.sudoku_resume"] = "Continuar",
@@ -90,14 +125,33 @@ public static class AppStrings
         ["os.sudoku_play_again"] = "Jugar de nuevo",
         ["os.sudoku_menu"] = "Menú",
         ["os.sudoku_no_scores"] = "Aún no hay puntuaciones. ¡A por una!",
+        // added after update 2.4.0 (sudoku forgiveness)
+        ["os.sudoku_help"] = "Cómo funciona",
+        ["os.sudoku_help_ladder"] = "Cada cuadrícula que terminas es más difícil que la anterior: dos fáciles, dos medias, dos difíciles y luego Demencial.",
+        ["os.sudoku_help_strikes"] = "Tres cifras erróneas terminan la partida. Una cifra errónea nunca se coloca. La casilla parpadea en rojo y sigue vacía.",
+        ["os.sudoku_help_timer"] = "Cada cuadrícula tiene un reloj. Si se agota, sigues jugando, pero esa cuadrícula puntúa 0.",
+        ["os.sudoku_help_logic"] = "Ganas más puntos por las cifras que puedes deducir. Adivinar da menos, pero nunca termina la partida.",
+        ["os.sudoku_help_notes"] = "El modo notas escribe cifras candidatas pequeñas en vez de respuestas. El botón se queda encendido mientras está activo.",
+        ["os.sudoku_help_close"] = "Entendido",
+        ["os.sudoku_mistakes"] = "Errores {0}/{1}",
+        ["os.sudoku_notes"] = "Notas",
+        ["os.sudoku_overtime"] = "Prórroga +{0}",
+        ["os.sudoku_overtime_zero"] = "Se acabó el tiempo. Esta cuadrícula puntuó 0.",
+        ["os.sudoku_quit"] = "Abandonar partida",
+        ["os.sudoku_abandoned"] = "Partida finalizada.",
+        ["os.sudoku_breakdown_base"] = "Base {0}",
+        ["os.sudoku_breakdown_time"] = "Bono de tiempo +{0}",
+        ["os.sudoku_breakdown_mistakes"] = "Errores -{0}",
+        ["os.sudoku_breakdown_logic"] = "Lógica {0}%",
+        ["os.sudoku_breakdown_total"] = "Total de la cuadrícula {0}",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Fr = new Dictionary<string, string>
     {
         // added after update 2.2.3 (sudoku)
-        ["os.sudoku_subtitle"] = "Chaque grille résolue en amène une plus dure.",
+        ["os.sudoku_subtitle"] = "Chaque grille que vous terminez est plus dure que la précédente.",
         ["os.sudoku_play"] = "Jouer",
-        ["os.sudoku_high_scores"] = "Meilleurs scores",
+        ["os.sudoku_high_scores"] = "Mes records",
         ["os.sudoku_best"] = "Record {0}",
         ["os.sudoku_score"] = "Score {0}",
         ["os.sudoku_easy"] = "Facile",
@@ -110,7 +164,6 @@ public static class AppStrings
         ["os.sudoku_next"] = "Suivante : {0}",
         ["os.sudoku_next_button"] = "Grille suivante",
         ["os.sudoku_reached"] = "Atteint : {0}",
-        ["os.sudoku_out_of_time"] = "Temps écoulé.",
         ["os.sudoku_out_of_strikes"] = "Trois erreurs.",
         ["os.sudoku_paused"] = "En pause",
         ["os.sudoku_resume"] = "Reprendre",
@@ -119,14 +172,33 @@ public static class AppStrings
         ["os.sudoku_play_again"] = "Rejouer",
         ["os.sudoku_menu"] = "Menu",
         ["os.sudoku_no_scores"] = "Pas encore de score. À toi de jouer !",
+        // added after update 2.4.0 (sudoku forgiveness)
+        ["os.sudoku_help"] = "Comment ça marche",
+        ["os.sudoku_help_ladder"] = "Chaque grille que vous terminez est plus dure que la précédente : deux faciles, deux moyennes, deux difficiles, puis Démente.",
+        ["os.sudoku_help_strikes"] = "Trois chiffres faux terminent la partie. Un chiffre faux n'est jamais posé. La case clignote en rouge et reste vide.",
+        ["os.sudoku_help_timer"] = "Chaque grille a une horloge. Si elle s'épuise, vous continuez à jouer, mais cette grille rapporte 0 point.",
+        ["os.sudoku_help_logic"] = "Vous gagnez plus de points pour les chiffres que vous pouvez déduire. Deviner rapporte moins, mais ne termine jamais la partie.",
+        ["os.sudoku_help_notes"] = "Le mode notes écrit de petits chiffres candidats au lieu de réponses. Le bouton reste allumé tant qu'il est actif.",
+        ["os.sudoku_help_close"] = "Compris",
+        ["os.sudoku_mistakes"] = "Erreurs {0}/{1}",
+        ["os.sudoku_notes"] = "Notes",
+        ["os.sudoku_overtime"] = "Prolongation +{0}",
+        ["os.sudoku_overtime_zero"] = "Le temps est écoulé. Cette grille a rapporté 0 point.",
+        ["os.sudoku_quit"] = "Quitter la partie",
+        ["os.sudoku_abandoned"] = "Partie terminée.",
+        ["os.sudoku_breakdown_base"] = "Base {0}",
+        ["os.sudoku_breakdown_time"] = "Bonus de temps +{0}",
+        ["os.sudoku_breakdown_mistakes"] = "Erreurs -{0}",
+        ["os.sudoku_breakdown_logic"] = "Logique {0}%",
+        ["os.sudoku_breakdown_total"] = "Total de la grille {0}",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Pt = new Dictionary<string, string>
     {
         // added after update 2.2.3 (sudoku)
-        ["os.sudoku_subtitle"] = "Cada grelha resolvida traz uma mais difícil.",
+        ["os.sudoku_subtitle"] = "Cada grelha que terminas é mais difícil do que a anterior.",
         ["os.sudoku_play"] = "Jogar",
-        ["os.sudoku_high_scores"] = "Melhores pontuações",
+        ["os.sudoku_high_scores"] = "Meus recordes",
         ["os.sudoku_best"] = "Melhor {0}",
         ["os.sudoku_score"] = "Pontos {0}",
         ["os.sudoku_easy"] = "Fácil",
@@ -139,7 +211,6 @@ public static class AppStrings
         ["os.sudoku_next"] = "Seguinte: {0}",
         ["os.sudoku_next_button"] = "Grelha seguinte",
         ["os.sudoku_reached"] = "Alcançado: {0}",
-        ["os.sudoku_out_of_time"] = "Tempo esgotado.",
         ["os.sudoku_out_of_strikes"] = "Três erros.",
         ["os.sudoku_paused"] = "Em pausa",
         ["os.sudoku_resume"] = "Continuar",
@@ -148,14 +219,33 @@ public static class AppStrings
         ["os.sudoku_play_again"] = "Jogar de novo",
         ["os.sudoku_menu"] = "Menu",
         ["os.sudoku_no_scores"] = "Ainda sem pontuações. Vai buscar uma!",
+        // added after update 2.4.0 (sudoku forgiveness)
+        ["os.sudoku_help"] = "Como funciona",
+        ["os.sudoku_help_ladder"] = "Cada grelha que terminas é mais difícil do que a anterior: duas fáceis, duas médias, duas difíceis e depois Insana.",
+        ["os.sudoku_help_strikes"] = "Três algarismos errados terminam a partida. Um algarismo errado nunca é colocado. A casa pisca a vermelho e fica vazia.",
+        ["os.sudoku_help_timer"] = "Cada grelha tem um relógio. Se acabar, continuas a jogar, mas essa grelha vale 0 pontos.",
+        ["os.sudoku_help_logic"] = "Ganhas mais pontos pelos algarismos que consegues deduzir. Adivinhar dá menos, mas nunca termina a partida.",
+        ["os.sudoku_help_notes"] = "O modo notas escreve pequenos algarismos candidatos em vez de respostas. O botão fica aceso enquanto está ligado.",
+        ["os.sudoku_help_close"] = "Entendido",
+        ["os.sudoku_mistakes"] = "Erros {0}/{1}",
+        ["os.sudoku_notes"] = "Notas",
+        ["os.sudoku_overtime"] = "Prorrogação +{0}",
+        ["os.sudoku_overtime_zero"] = "O tempo acabou. Esta grelha valeu 0 pontos.",
+        ["os.sudoku_quit"] = "Sair da partida",
+        ["os.sudoku_abandoned"] = "Partida terminada.",
+        ["os.sudoku_breakdown_base"] = "Base {0}",
+        ["os.sudoku_breakdown_time"] = "Bónus de tempo +{0}",
+        ["os.sudoku_breakdown_mistakes"] = "Erros -{0}",
+        ["os.sudoku_breakdown_logic"] = "Lógica {0}%",
+        ["os.sudoku_breakdown_total"] = "Total da grelha {0}",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Ru = new Dictionary<string, string>
     {
         // added after update 2.2.3 (sudoku)
-        ["os.sudoku_subtitle"] = "Каждая решённая сетка подкидывает следующую, потруднее.",
+        ["os.sudoku_subtitle"] = "Каждая следующая сетка сложнее предыдущей.",
         ["os.sudoku_play"] = "Играть",
-        ["os.sudoku_high_scores"] = "Рекорды",
+        ["os.sudoku_high_scores"] = "Мои рекорды",
         ["os.sudoku_best"] = "Рекорд {0}",
         ["os.sudoku_score"] = "Очки {0}",
         ["os.sudoku_easy"] = "Легко",
@@ -168,7 +258,6 @@ public static class AppStrings
         ["os.sudoku_next"] = "Дальше: {0}",
         ["os.sudoku_next_button"] = "Следующая сетка",
         ["os.sudoku_reached"] = "Дошёл до: {0}",
-        ["os.sudoku_out_of_time"] = "Время вышло.",
         ["os.sudoku_out_of_strikes"] = "Три ошибки.",
         ["os.sudoku_paused"] = "Пауза",
         ["os.sudoku_resume"] = "Продолжить",
@@ -177,6 +266,25 @@ public static class AppStrings
         ["os.sudoku_play_again"] = "Ещё раз",
         ["os.sudoku_menu"] = "Меню",
         ["os.sudoku_no_scores"] = "Рекордов пока нет. Пора это исправить!",
+        // added after update 2.4.0 (sudoku forgiveness)
+        ["os.sudoku_help"] = "Как это работает",
+        ["os.sudoku_help_ladder"] = "Каждая следующая сетка сложнее предыдущей: две лёгкие, две средние, две трудные, затем безумная.",
+        ["os.sudoku_help_strikes"] = "Три неверные цифры завершают забег. Неверная цифра никогда не ставится. Клетка мигает красным и остаётся пустой.",
+        ["os.sudoku_help_timer"] = "У каждой сетки есть таймер. Если он кончится, ты продолжаешь игру, но эта сетка даст 0 очков.",
+        ["os.sudoku_help_logic"] = "За цифры, которые ты вычислил, ты получаешь больше очков. Угадывание даёт меньше, но забег не заканчивает.",
+        ["os.sudoku_help_notes"] = "Режим заметок пишет мелкие цифры-кандидаты вместо ответов. Пока он включён, кнопка подсвечена.",
+        ["os.sudoku_help_close"] = "Понятно",
+        ["os.sudoku_mistakes"] = "Ошибки {0}/{1}",
+        ["os.sudoku_notes"] = "Заметки",
+        ["os.sudoku_overtime"] = "Сверх времени +{0}",
+        ["os.sudoku_overtime_zero"] = "Время вышло. Эта сетка дала 0 очков.",
+        ["os.sudoku_quit"] = "Закончить забег",
+        ["os.sudoku_abandoned"] = "Забег завершён.",
+        ["os.sudoku_breakdown_base"] = "База {0}",
+        ["os.sudoku_breakdown_time"] = "Бонус за время +{0}",
+        ["os.sudoku_breakdown_mistakes"] = "Ошибки -{0}",
+        ["os.sudoku_breakdown_logic"] = "Логика {0}%",
+        ["os.sudoku_breakdown_total"] = "Итог сетки {0}",
     };
 
     public static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> Packs =

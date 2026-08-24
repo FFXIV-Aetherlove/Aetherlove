@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using AetherLove.Services.Signal;
@@ -328,6 +328,22 @@ public sealed partial class AetherHubContext
 
     public async Task<SendMessageResponse> SendMessageAsync(SendMessageRequest req, CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync<SendMessageResponse>("SendMessageAsync", req, ct).ConfigureAwait(false);
+
+    public async Task<EncryptedMessageDto> SendChatImageAsync(SendChatImageRequest req, CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<EncryptedMessageDto>("SendChatImageAsync", req, ct).ConfigureAwait(false);
+
+    public async Task<byte[]?> GetChatImageAsync(Guid imageId, CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<byte[]?>("GetChatImageAsync", imageId, ct).ConfigureAwait(false);
+
+    public async Task DeleteChatImageAsync(Guid imageId, CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync("DeleteChatImageAsync", imageId, ct).ConfigureAwait(false);
+
+    public async Task ReportChatImageAsync(Guid imageId, string reason, CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync("ReportChatImageAsync", imageId, reason, ct).ConfigureAwait(false);
+
+    public async Task<AetherLove.Shared.Messenger.MessengerStorageDto> GetChatImageStorageAsync(CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<AetherLove.Shared.Messenger.MessengerStorageDto>(
+            "GetChatImageStorageAsync", ct).ConfigureAwait(false);
 
     public async Task<ConversationHistoryDto> GetConversationAsync(Guid peerId, CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync<ConversationHistoryDto>("GetConversationAsync", peerId, ct).ConfigureAwait(false);

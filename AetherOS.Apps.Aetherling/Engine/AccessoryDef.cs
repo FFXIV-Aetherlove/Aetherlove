@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
 using System.Text.Json;
@@ -20,6 +20,15 @@ public sealed class AccessoryDef
 
     /// <summary>The furniture slot: things the creature sits in or beside rather than wears.</summary>
     public const string NookSlot = "nook";
+
+    /// <summary>The ears slot: a code-drawn pair riding the shell's own <c>earL</c>/<c>earR</c>
+    /// anchors, behind the head like the horns. Independent of <see cref="TailSlot"/>: either
+    /// may be worn alone, both together, or neither.</summary>
+    public const string EarsSlot = "ears";
+
+    /// <summary>The tail slot: a code-drawn tail on the shell's own <c>tail</c> anchor, behind
+    /// the body so it pokes out from behind rather than being painted over it.</summary>
+    public const string TailSlot = "tail";
 
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
@@ -63,6 +72,76 @@ public sealed class AccessoryDef
     [JsonIgnore]
     public bool StaysStill => Still ?? Slot == NookSlot;
 
+    /// <summary>The live-sim record, when this item has one: "kite" hands the item to the
+    /// flown-item rig (<c>Rendering/KiteFx.cs</c>), which simulates the strings the sprite no
+    /// longer bakes. Null (every item shipped before this field) draws exactly as it always did.</summary>
+    [JsonPropertyName("fx")]
+    public string? Fx { get; set; }
+
+    /// <summary>Where the simulated lines moor on the sprite: pixels relative to the ORIGIN (the
+    /// pin), y down, unflipped. Written by the generator that draws the sprite, so the two can
+    /// never disagree.</summary>
+    [JsonPropertyName("fxBridle")]
+    public float[]? FxBridle { get; set; }
+
+    /// <summary>Room the sim occupies beyond the image quad, [left, up, right, down] in the
+    /// sprite's own pixels. The footprint charges it: the sprite shrank to what is genuinely a
+    /// picture, but the lines still sweep the space the baked ones held.</summary>
+    [JsonPropertyName("fxReach")]
+    public float[]? FxReach { get; set; }
+
+    [JsonIgnore]
+    public Vector2 FxBridlePoint => FxBridle is { Length: >= 2 } b ? new Vector2(b[0], b[1]) : Vector2.Zero;
+
+    /// <summary>The tail model, on a <see cref="TailSlot"/> item. Present instead of a sprite:
+    /// these parts are drawn in code from the shell's palette, so they cost no texture memory,
+    /// follow every colour profile for free, and can be driven by a mood.</summary>
+    [JsonPropertyName("tail")]
+    public TailPartDef? Tail { get; set; }
+
+    /// <summary>The ear model, on an <see cref="EarsSlot"/> item.</summary>
+    [JsonPropertyName("ears")]
+    public EarPartDef? Ears { get; set; }
+
+    /// <summary>A strand fan worn on the <see cref="EarsSlot"/> (the Antennae): a pair of code-drawn
+    /// stalks sown under the head pin and driven by the strand rig, where an ear model is a shape.</summary>
+    [JsonPropertyName("strands")]
+    public StrandDef? Strands { get; set; }
+
+    /// <summary>The FAR half of an item that goes AROUND the creature, drawn behind the body while
+    /// <see cref="File"/> is drawn in front of it. Empty on everything that does not wrap. Two pictures
+    /// because a ring goes round a creature and no single quad can be both in front of a body and behind
+    /// it; both halves share one origin, emitted from one crop box, so they cannot drift apart.</summary>
+    [JsonPropertyName("back")]
+    public string Back { get; set; } = string.Empty;
+
+    /// <summary>The waist this wrap was DRAWN for: the seat half-width it was authored against, 256-space.
+    /// The renderer scales the item by the shell's own seat over this, which is what lets one ring fit a
+    /// hatchling and the adult without a second PNG. 0 means "do not rescale".</summary>
+    [JsonPropertyName("wrapRx")]
+    public float WrapRx { get; set; }
+
+    /// <summary>A band of cloth rather than a torus: the seat sets how far it reaches and the cloth keeps
+    /// the thickness it was drawn at, so the scale applies in X only.</summary>
+    [JsonPropertyName("wrapBand")]
+    public bool WrapBand { get; set; }
+
+    /// <summary>True when this item has a far half to draw behind the body. Keyed on the FIELD, never on
+    /// the slot: the Rubber Ring stays an outfit piece and gains a back half without moving tab.</summary>
+    [JsonIgnore]
+    public bool HasWrapBack => Back.Length > 0;
+
+    /// <summary>True when this item is placed by the shell's seat rather than by its own pin.</summary>
+    [JsonIgnore]
+    public bool RidesWrapSeat => WrapRx > 0f;
+
+    /// <summary>True for the code-drawn parts, which carry a model record where every other
+    /// accessory carries a PNG. The one place the catalogue has to know they are different;
+    /// everything downstream reads the slot.</summary>
+    [JsonIgnore]
+    public bool IsDrawnPart => (Slot == TailSlot && Tail != null)
+                               || (Slot == EarsSlot && (Ears != null || Strands != null));
+
     [JsonIgnore]
     public Vector2 OriginPoint => new(
         Origin.Length >= 2 ? Origin[0] : 0, Origin.Length >= 2 ? Origin[1] : 0);
@@ -94,7 +173,7 @@ public sealed class AccessoryDef
             try
             {
                 var def = JsonSerializer.Deserialize<AccessoryDef>(System.IO.File.ReadAllText(file));
-                if (def is { File.Length: > 0 })
+                if (def != null && (def.File.Length > 0 || def.IsDrawnPart))
                 {
                     result.Add(def);
                 }

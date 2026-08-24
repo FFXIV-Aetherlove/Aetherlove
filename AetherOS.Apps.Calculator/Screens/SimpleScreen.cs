@@ -70,6 +70,7 @@ internal sealed class SimpleScreen
 
     public void Draw(OsAppContext ctx)
     {
+        ReadKeyboard(ctx);
         var top = ImGui.GetCursorScreenPos();
         var region = ImGui.GetContentRegionAvail();
         var padX = ctx.Px(8f);
@@ -183,6 +184,38 @@ internal sealed class SimpleScreen
                     Press(ctx, key);
                 }
             }
+        }
+    }
+
+    /// <summary>Number-row and numpad typing while this screen is up. Polling captures the keyboard from
+    /// the game for as long as the calculator shows, which is exactly what typing into it means; the
+    /// service already stands down while a game text field is open.</summary>
+    private void ReadKeyboard(OsAppContext ctx)
+    {
+        var keys = ctx.Capabilities.Keyboard;
+        ReadOnlySpan<(AppKey Key, string Insert)> inserts =
+        [
+            (AppKey.D1, "1"), (AppKey.D2, "2"), (AppKey.D3, "3"), (AppKey.D4, "4"), (AppKey.D5, "5"),
+            (AppKey.D6, "6"), (AppKey.D7, "7"), (AppKey.D8, "8"), (AppKey.D9, "9"), (AppKey.D0, "0"),
+            (AppKey.Num1, "1"), (AppKey.Num2, "2"), (AppKey.Num3, "3"), (AppKey.Num4, "4"), (AppKey.Num5, "5"),
+            (AppKey.Num6, "6"), (AppKey.Num7, "7"), (AppKey.Num8, "8"), (AppKey.Num9, "9"), (AppKey.Num0, "0"),
+            (AppKey.NumAdd, "+"), (AppKey.NumSub, "-"), (AppKey.NumMul, "*"), (AppKey.NumDiv, "/"),
+            (AppKey.NumDecimal, "."),
+        ];
+        foreach (var (key, insert) in inserts)
+        {
+            if (keys.WasPressed(key))
+            {
+                _session.Insert(insert);
+            }
+        }
+        if (keys.WasPressed(AppKey.Enter) || keys.WasPressed(AppKey.NumEnter))
+        {
+            _session.Submit(ctx.Localize);
+        }
+        if (keys.WasPressed(AppKey.Backspace))
+        {
+            _session.Backspace();
         }
     }
 

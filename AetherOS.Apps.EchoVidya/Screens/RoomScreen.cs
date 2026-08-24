@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Numerics;
 using System.Text;
@@ -316,6 +316,37 @@ internal sealed class RoomScreen
         });
     }
 
+    /// <summary>Puts the room on the together party (or takes it off): the shade card then offers every
+    /// member a one-tap way in. The toggle's state itself lives on the party, not the room.</summary>
+    private void SetPartyBinding(Guid roomId, bool bind)
+    {
+        _error = null;
+        _busy = true;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                if (bind)
+                {
+                    await _hub.BindEchoRoomToPartyAsync(roomId).ConfigureAwait(false);
+                }
+                else
+                {
+                    await _hub.UnbindEchoRoomFromPartyAsync(roomId).ConfigureAwait(false);
+                }
+            }
+            catch (Exception ex)
+            {
+                _error = HubErrorText.Localize(ex);
+                UiHost.Log.Warning(ex, "[EchoRoom] Changing the party binding failed.");
+            }
+            finally
+            {
+                _busy = false;
+            }
+        });
+    }
+
     /// <summary>Takes the room's hangout listing down. The room itself keeps running, and republishing is
     /// allowed straight after.</summary>
     private void StopHangout(Guid roomId)
@@ -482,6 +513,23 @@ internal sealed class RoomScreen
             ImGui.PopTextWrapPos();
             ImGui.Dummy(new Vector2(0f, Px(14f)));
 
+            if (_caps.Party is { InParty: true, AmHost: true })
+            {
+                var bound = _caps.Party.Activity is { AppId: "echo" } activity && activity.RefId == room.Id;
+                ImGui.SetCursorPosX(Px(PadX));
+                if (DrawToggleSwitch("##echoPartyBind", Loc.T("os.echo_room_party_label"), bound) && !_busy)
+                {
+                    SetPartyBinding(room.Id, !bound);
+                }
+                HandOnHover();
+                ImGui.Dummy(new Vector2(0f, Px(4f)));
+                ImGui.SetCursorPosX(Px(PadX));
+                ImGui.PushTextWrapPos(winW - Px(PadX));
+                ImGui.TextColored(UiColors.Hint, Loc.T("os.echo_room_party_hint"));
+                ImGui.PopTextWrapPos();
+                ImGui.Dummy(new Vector2(0f, Px(14f)));
+            }
+
             var published = room.HangoutId is not null;
             if (published)
             {
@@ -599,10 +647,11 @@ internal sealed class RoomScreen
         }
 
         var avatarR = Px(15f);
-        var avatarC = new Vector2(tl.X + avatarR + Px(2f), tl.Y + rowH * 0.5f);
+        var ringR = avatarR * AvatarRings.Overhang;
+        var avatarC = new Vector2(tl.X + ringR + Px(2f), tl.Y + rowH * 0.5f);
         DrawMemberAvatar(dl, avatarC, avatarR, member);
 
-        var nameX = avatarC.X + avatarR + Px(10f);
+        var nameX = avatarC.X + ringR + Px(10f);
         var nameW = rowW - (nameX - tl.X) - (kickable ? kickSize + Px(8f) : 0f);
         var lineH = ImGui.GetTextLineHeight();
         if (member.IsOwner)
@@ -621,16 +670,25 @@ internal sealed class RoomScreen
         ImGui.Dummy(new Vector2(rowW, rowH));
     }
 
-    /// <summary>An initial on a colour disc keyed by the account id: the OS avatar arrives as a remote URL and
-    /// the app layer has no loader for one.</summary>
+    /// <summary>The OS avatar off the seat's inline bytes, an initial on a colour disc until they arrive, and
+    /// the ring over either.</summary>
     private static void DrawMemberAvatar(ImDrawListPtr dl, Vector2 center, float radius, EchoMemberDto member)
     {
-        var palette = UiColors.CategoryPalette;
-        var swatch = palette[(int)((uint)member.AccountId.GetHashCode() % (uint)palette.Length)];
-        dl.AddCircleFilled(center, radius, swatch);
-
-        var initial = InitialOf(member.DisplayName);
-        dl.AddText(center - ImGui.CalcTextSize(initial) * 0.5f, OsDrawShared.White(0.95f), initial);
+        var tex = InlineAvatarCache.Resolve("EchoAvatarCache", member.AccountId, member.AvatarImage)?.GetWrapOrDefault();
+        if (tex is not null)
+        {
+            dl.AddImageRounded(tex.Handle, center - new Vector2(radius), center + new Vector2(radius),
+                Vector2.Zero, Vector2.One, 0xFFFFFFFFu, radius, ImDrawFlags.RoundCornersAll);
+        }
+        else
+        {
+            var palette = UiColors.CategoryPalette;
+            var swatch = palette[(int)((uint)member.AccountId.GetHashCode() % (uint)palette.Length)];
+            dl.AddCircleFilled(center, radius, swatch);
+            var initial = InitialOf(member.DisplayName);
+            dl.AddText(center - ImGui.CalcTextSize(initial) * 0.5f, OsDrawShared.White(0.95f), initial);
+        }
+        AvatarRings.Draw(dl, center, radius, member.FrameRef);
     }
 
     private static string InitialOf(string name)

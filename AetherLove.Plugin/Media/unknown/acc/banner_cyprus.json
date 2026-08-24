@@ -1,0 +1,14 @@
+{
+  "name": "Cyprus Banner",
+  "slot": "banner",
+  "tier": "premium",
+  "file": "banner_cyprus.png",
+  "anchor": "body",
+  "origin": [
+    102,
+    108
+  ],
+  "width": 73,
+  "height": 134,
+  "behind": true
+}

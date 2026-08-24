@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using AetherLove.Services.Localization;
 using AetherLove.Shared.Hangouts;
 using AetherLove.UI;
@@ -12,22 +12,30 @@ namespace AetherOS.Apps.Hangouts;
 internal static class HangoutCategories
 {
     internal static readonly HangoutCategory[] CreatableValues =
-        HangoutFields.CategoryValues.Where(c => c != HangoutCategory.WatchParty).ToArray();
+        HangoutFields.CategoryValues
+            .Where(c => c is not (HangoutCategory.WatchParty or HangoutCategory.AetherParty))
+            .ToArray();
 
     /// <summary>What the directory can be filtered by. Watch parties belong here even though nobody can
     /// create one from the form, or a filtered directory would silently hide every one of them.</summary>
     internal static readonly HangoutCategory[] FilterValues =
-        [.. CreatableValues, HangoutCategory.WatchParty];
+        [.. CreatableValues, HangoutCategory.WatchParty, HangoutCategory.AetherParty];
 
     internal static string[] CreatableLabels() => CreatableValues.Select(Label).ToArray();
 
     internal static string[] FilterLabels() => FilterValues.Select(Label).ToArray();
 
-    internal static string Label(HangoutCategory category) => category == HangoutCategory.WatchParty
-        ? Loc.T("hangout.cat_watchparty")
-        : HangoutFields.CategoryLabel(category);
+    internal static string Label(HangoutCategory category) => category switch
+    {
+        HangoutCategory.WatchParty => Loc.T("hangout.cat_watchparty"),
+        HangoutCategory.AetherParty => Loc.T("hangout.cat_aetherparty"),
+        _ => HangoutFields.CategoryLabel(category),
+    };
 
-    internal static FontAwesomeIcon Icon(HangoutCategory category) => category == HangoutCategory.WatchParty
-        ? FontAwesomeIcon.Tv
-        : HangoutFields.CategoryIcon(category);
+    internal static FontAwesomeIcon Icon(HangoutCategory category) => category switch
+    {
+        HangoutCategory.WatchParty => FontAwesomeIcon.Tv,
+        HangoutCategory.AetherParty => FontAwesomeIcon.UserFriends,
+        _ => HangoutFields.CategoryIcon(category),
+    };
 }

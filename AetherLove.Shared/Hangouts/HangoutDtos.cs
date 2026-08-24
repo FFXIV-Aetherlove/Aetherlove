@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using MessagePack;
 
 namespace AetherLove.Shared.Hangouts;
@@ -20,6 +20,9 @@ public enum HangoutCategory : short
     Fates = 13,
     /// <summary>Created only from an Echo room, never offered in the hangout create form.</summary>
     WatchParty = 14,
+
+    /// <summary>Created only by publishing a live together-mode party, never offered in the create form.</summary>
+    AetherParty = 15,
 }
 
 /// <summary>How a hangout ended, as exposed over the wire. Internal server reasons (moderation removal,
@@ -57,7 +60,11 @@ public sealed record HangoutSummaryDto(
     // room; the code is null once that happens and the join action disappears.
     Guid? EchoRoomId = null,
     string? EchoRoomCode = null,
-    string? OwnerFrameRef = null);
+    string? OwnerFrameRef = null,
+    // Set only on an AetherParty. Same lifecycle as the watch room's: the party ends long before the
+    // hangout does, and the code goes null the moment it has, which turns the join action off.
+    Guid? PartyId = null,
+    string? PartyCode = null);
 
 /// <summary>Creation payload. The server clamps <see cref="StartUtc"/> to now when it lies in the past and
 /// validates lead/duration bounds; duration is minutes from the (clamped) start.</summary>

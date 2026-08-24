@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
@@ -44,6 +44,8 @@ internal sealed class GamesScreen
     private readonly CloudHopGame _cloudHop = new();
     private readonly CrystalCatchGame _crystalCatch = new();
     private readonly HillRollGame _hillRoll = new();
+    private readonly Games.LumiLink.LumiLinkGame _lumiLink = new();
+    private readonly Games.LumiLink.LumiLinkGuide _lumiLinkGuide = new();
     private readonly Dictionary<ArcadeGame, int> _bests = [];
 
     private Phase _phase = Phase.Select;
@@ -58,9 +60,13 @@ internal sealed class GamesScreen
     private bool _newBest;
     private int _lastScore;
     private bool _bestsLoaded;
+    private const float LumiLinkSpeedPerLevel = 0.02f;
     private string? _bgmTrack;
+    private float _bgmSpeed = 1f;
 
-    public event Action? BackRequested;
+    /// <summary>On the game list rather than inside one, which is the only phase the app's nav bar may
+    /// draw over: a run holds ImGui's active id, and the leaderboard sits over a run paused behind it.</summary>
+    public bool AtHub => _phase == Phase.Select;
 
     /// <summary>The music switch was flipped. The app owns the stored answer, since the ceremony's own mute
     /// button writes the same one.</summary>
@@ -79,7 +85,7 @@ internal sealed class GamesScreen
         _leaderboard = new SoftLeaderboardPanel(scores);
     }
 
-    private IPetGame[] AllGames => [_cloudHop, _crystalCatch, _hillRoll];
+    private IPetGame[] AllGames => [_cloudHop, _crystalCatch, _hillRoll, _lumiLink];
 
     public void OnShow(AetherlingDto? core)
     {
@@ -130,6 +136,7 @@ internal sealed class GamesScreen
     {
         ArcadeGame.CloudHop => "bgm_cloudhop_dreamydandelion.ogg",
         ArcadeGame.CrystalCatch => "bgm_crystall_catch_treasure_trove.ogg",
+        ArcadeGame.LumiLink => "bgm_lumi_link.ogg",
         _ => "bgm_hill_roll_firefly_forest.ogg",
     };
 
@@ -137,6 +144,7 @@ internal sealed class GamesScreen
     {
         ArcadeGame.CloudHop => FontAwesomeIcon.Cloud,
         ArcadeGame.CrystalCatch => FontAwesomeIcon.Gem,
+        ArcadeGame.LumiLink => FontAwesomeIcon.Th,
         _ => FontAwesomeIcon.Mountain,
     };
 
@@ -196,7 +204,8 @@ internal sealed class GamesScreen
                 }
                 break;
             case Phase.Paused:
-                DrawRun(ctx, dl, origin, size, 0f, inputActive: false);
+                // The board stays hidden: a pause must not be a free look at the next move.
+                Look.Backdrop(dl, ctx.Theme, origin, size);
                 DrawPausedOverlay(ctx, dl, origin, size);
                 ClaimStage(origin, size);
                 if (ImGui.IsKeyPressed(ImGuiKey.Escape, false))
@@ -205,7 +214,8 @@ internal sealed class GamesScreen
                 }
                 break;
             case Phase.Results:
-                DrawRun(ctx, dl, origin, size, 0f, inputActive: false);
+                Look.Backdrop(dl, ctx.Theme, origin, size);
+                Look.Halo(dl, origin + new Vector2(size.X * 0.5f, size.Y * 0.3f), size.X * 0.6f, Look.Crystal, 0.1f);
                 DrawResults(ctx, dl, origin, size);
                 ClaimStage(origin, size);
                 break;
@@ -227,23 +237,41 @@ internal sealed class GamesScreen
     private void SyncBgm()
     {
         var wanted = _phase != Phase.Select && _active is { } game ? BgmFile(game.Id) : null;
-        if (wanted == _bgmTrack)
+        // Lumi-Link's loop climbs two percent per level, pitch and tempo together.
+        var speed = _active is Games.LumiLink.LumiLinkGame lumi && wanted is not null
+            ? 1f + (LumiLinkSpeedPerLevel * Math.Max(0, lumi.Metric1 - 1))
+            : 1f;
+        if (wanted == _bgmTrack && Math.Abs(speed - _bgmSpeed) < 0.001f)
         {
             return;
         }
         _bgmTrack = wanted;
+        _bgmSpeed = speed;
         if (wanted is null)
         {
             _host.StopBgm();
         }
         else
         {
-            _host.StartGameBgm(wanted);
+            _host.StartGameBgm(wanted, speed);
         }
     }
 
+    private const string LumiLinkGuideKey = "games.lumilink.guideSeen";
+
     private void Start(IPetGame game)
     {
+        // The match-3 explains itself the first time; the explainer carries the start with it.
+        if (game is Games.LumiLink.LumiLinkGame && _storage.Get<bool?>(LumiLinkGuideKey) != true && !_lumiLinkGuide.Active)
+        {
+            _lumiLinkGuide.Show(() =>
+            {
+                _storage.Set(LumiLinkGuideKey, true);
+                Start(game);
+            });
+            return;
+        }
+        _lumiLink.SetCreature(_core);
         _active = game;
         game.Reset(new Random());
         _countdown = CountdownSeconds;
@@ -284,8 +312,7 @@ internal sealed class GamesScreen
 
         var pad = Px(PadX);
         var name = _core?.PetName ?? AetherlingLimits.DefaultName;
-        var y = PetPageUi.Header(ctx, dl, origin, name, ctx.Localize("os.aetherling_games_title"),
-            () => BackRequested?.Invoke());
+        var y = PetPageUi.Header(ctx, dl, origin, ctx.Localize("os.aetherling_games_title"));
 
         // Under the title and on its left edge: centred, it landed beside the heading rather than below it.
         dl.AddText(ImGui.GetFont(), ImGui.GetFontSize() * 0.92f, new Vector2(origin.X + pad, y),
@@ -301,11 +328,12 @@ internal sealed class GamesScreen
 
         // The mascot itself, idling under its games; drawn with the runtime's own pose because the hub
         // is not a game and here it is genuinely the creature.
-        var room = origin.Y + size.Y - y - Px(16f);
+        var footY = origin.Y + size.Y - PetNavBar.Reserved;
+        var room = footY - y - Px(16f);
         if (room > Px(56f) && _runtime.Ready)
         {
             var petPx = MathF.Min(room, Px(84f));
-            var bottom = new Vector2(origin.X + (size.X * 0.5f), origin.Y + size.Y - Px(14f));
+            var bottom = new Vector2(origin.X + (size.X * 0.5f), footY - Px(2f));
             Look.GroundGlow(dl, bottom + new Vector2(0f, Px(4f)), petPx * 0.7f, petPx * 0.15f, Look.Crystal, 0.3f);
             _runtime.Draw(dl, ctx.Capabilities.Textures, bottom, petPx, _runtime.Pose);
         }
@@ -432,12 +460,23 @@ internal sealed class GamesScreen
             _boardReturn = Phase.Title;
             _phase = Phase.Leaderboard;
         }
+        var backTop = buttonsTop + Px(104f);
+        if (game is Games.LumiLink.LumiLinkGame)
+        {
+            if (DrawSoftButton(ctx, dl, "##titleHelp", ctx.Localize("os.aetherling_lumilink_help"), centreX,
+                backTop, false))
+            {
+                _lumiLinkGuide.Show(null);
+            }
+            backTop += Px(52f);
+        }
         if (DrawSoftButton(ctx, dl, "##titleBack", ctx.Localize("os.aetherling_game_tohub"), centreX,
-            buttonsTop + Px(104f), false))
+            backTop, false))
         {
             _active = null;
             _phase = Phase.Select;
         }
+        _lumiLinkGuide.Draw(ctx, origin, size, _host.AssetRoot, _core);
     }
 
     private void DrawGameIcon(OsAppContext ctx, ImDrawListPtr dl, ArcadeGame game, Vector2 tl, float side)
@@ -616,7 +655,6 @@ internal sealed class GamesScreen
 
     private void DrawResults(OsAppContext ctx, ImDrawListPtr dl, Vector2 origin, Vector2 size)
     {
-        dl.AddRectFilled(origin, origin + size, Look.U32(new Vector4(0f, 0f, 0f, 0.6f)));
         var centreX = origin.X + (size.X * 0.5f);
         var y = origin.Y + (size.Y * 0.2f);
 
@@ -661,7 +699,7 @@ internal sealed class GamesScreen
     {
         Look.Backdrop(dl, ctx.Theme, origin, size);
         var name = _core?.PetName ?? AetherlingLimits.DefaultName;
-        var y = PetPageUi.Header(ctx, dl, origin, name, ctx.Localize(NameKey(_boardGame)), () =>
+        var y = PetPageUi.HeaderWithBack(ctx, dl, origin, name, ctx.Localize(NameKey(_boardGame)), () =>
         {
             _phase = _active is not null && _boardReturn is Phase.Title or Phase.Results
                 ? _boardReturn

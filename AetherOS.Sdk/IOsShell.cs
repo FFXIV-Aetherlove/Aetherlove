@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace AetherOS.Sdk;
@@ -43,6 +43,13 @@ public interface IOsShell
     /// <summary>Delivers the intent WITHOUT opening the target, so a background hand-off (add a calendar
     /// entry from another app) never yanks the user off their current screen.</summary>
     void DeliverIntent(string targetAppId, OsIntent intent) => SendIntent(targetAppId, intent);
+
+    /// <summary>Joins a together-mode party by code. Every party surface belongs to the shell, so an app
+    /// that renders an invite (a hangout card, a chat card) asks for the join rather than touching party
+    /// state itself. Default no-op for hosts without together mode.</summary>
+    void JoinParty(string code)
+    {
+    }
 
     /// <summary>Replays the guided OS tour from the home screen. Default no-op for hosts without one.</summary>
     void StartTour()

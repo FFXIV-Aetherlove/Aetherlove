@@ -171,7 +171,16 @@ internal static class HubErrorsPt
 
         // aetherling growth (added after update 2.3.4)
         ["huberror.aetherling_no_crystal"] = "Não há nenhum cristal desse tipo para lhe dar.",
+        ["huberror.aetherling_no_rename"] = "Para mudar o nome precisas de uma mudança de nome da loja.",
+        ["huberror.aetherling_wheel_disabled"] = "A roda está fechada neste momento.",
+        ["huberror.aetherling_wheel_spun"] = "Já giraste hoje. Volta depois do reinício.",
         ["huberror.aetherling_full"] = "Está bem cheio. Amanhã volta a ter fome.",
         ["huberror.aetherling_not_owned"] = "Não tem isso para vestir.",
+        // together phase 2 (added after update 2.4.0)
+        ["huberror.wayfinder_run_exists"] = "Já existe uma caçada em grupo aberta.",
+        ["huberror.wayfinder_run_not_found"] = "Não há nenhuma caçada em grupo agora.",
+        ["huberror.wayfinder_run_wrong_world"] = "Você precisa estar em {0} para entrar nessa caçada.",
+        ["huberror.wayfinder_run_not_gathering"] = "Essa caçada já começou.",
+        ["huberror.wayfinder_run_too_few"] = "Antes é preciso que pelo menos dois caçadores entrem.",
     };
 }

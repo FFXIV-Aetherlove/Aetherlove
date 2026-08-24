@@ -1,4 +1,5 @@
-using System;
+﻿using System;
+using System.Collections.Generic;
 using System.Numerics;
 using AetherOS.Apps.Aetherling.Engine;
 using Dalamud.Bindings.ImGui;
@@ -48,6 +49,34 @@ internal static class MouthDraw
             screenAnchor.X + (x256 * sx),
             screenAnchor.Y + (((y256 * mouthScale) + RestDrop) * sy));
 
+        // The path goes into the draw list AND, while a picture is pending, into this scratch list, so the
+        // compositor can replay the same polygon. Cleared at each fill or stroke, exactly as the draw list's
+        // own path is.
+        var trace = PetFrameRecorder.Recording ? new List<Vector2>((Samples * 2) + 4) : null;
+        void P(Vector2 v)
+        {
+            dl.PathLineTo(v);
+            trace?.Add(v);
+        }
+        void Fill(uint colour)
+        {
+            dl.PathFillConvex(colour);
+            if (trace is not null)
+            {
+                PetFrameRecorder.Add(trace, closed: true, thickness: 0f, colour);
+                trace.Clear();
+            }
+        }
+        void Stroke(uint colour, ImDrawFlags flags, float thickness)
+        {
+            dl.PathStroke(colour, flags, thickness);
+            if (trace is not null)
+            {
+                PetFrameRecorder.Add(trace, (flags & ImDrawFlags.Closed) != 0, thickness, colour);
+                trace.Clear();
+            }
+        }
+
         Span<Vector2> top = stackalloc Vector2[Samples + 1];
         for (var s = 0; s <= Samples; s++)
         {
@@ -79,17 +108,17 @@ internal static class MouthDraw
             {
                 for (var s = 0; s <= Samples; s++)
                 {
-                    dl.PathLineTo(top[s]);
+                    P(top[s]);
                 }
 
                 for (var s = Samples; s >= 0; s--)
                 {
-                    dl.PathLineTo(At((((float)s / Samples) - 0.5f) * 2f * half, bottomY[s]));
+                    P(At((((float)s / Samples) - 0.5f) * 2f * half, bottomY[s]));
                 }
 
                 if (pass == 0)
                 {
-                    dl.PathFillConvex(fill);
+                    Fill(fill);
 
                     // The tongue on any visibly open mouth: interior darkest, tongue lighter,
                     // the classic cute-open-mouth read.
@@ -102,7 +131,7 @@ internal static class MouthDraw
                             var v = (float)s / TongueSamples;
                             var u = 0.26f + (0.48f * v);
                             var lip = CatmullRom(heights, u) + (drop * MathF.Sin(MathF.PI * u));
-                            dl.PathLineTo(At((u - 0.5f) * 2f * half, lip - (tongueRise * MathF.Sin(MathF.PI * v))));
+                            P(At((u - 0.5f) * 2f * half, lip - (tongueRise * MathF.Sin(MathF.PI * v))));
                         }
 
                         for (var s = TongueSamples; s >= 0; s--)
@@ -110,16 +139,15 @@ internal static class MouthDraw
                             var v = (float)s / TongueSamples;
                             var u = 0.26f + (0.48f * v);
                             var lip = CatmullRom(heights, u) + (drop * MathF.Sin(MathF.PI * u));
-                            dl.PathLineTo(At((u - 0.5f) * 2f * half, lip));
+                            P(At((u - 0.5f) * 2f * half, lip));
                         }
 
-                        dl.PathFillConvex(
-                            ImGui.ColorConvertFloat4ToU32(TongueColor with { W = TongueColor.W * alpha }));
+                        Fill(ImGui.ColorConvertFloat4ToU32(TongueColor with { W = TongueColor.W * alpha }));
                     }
                 }
                 else
                 {
-                    dl.PathStroke(line, ImDrawFlags.Closed, MathF.Max(1f, LinePx * poseThin));
+                    Stroke(line, ImDrawFlags.Closed, MathF.Max(1f, LinePx * poseThin));
                 }
             }
         }
@@ -127,10 +155,10 @@ internal static class MouthDraw
         {
             for (var s = 0; s <= Samples; s++)
             {
-                dl.PathLineTo(top[s]);
+                P(top[s]);
             }
 
-            dl.PathStroke(line, ImDrawFlags.None, MathF.Max(1f, ClosedLinePx * poseThin));
+            Stroke(line, ImDrawFlags.None, MathF.Max(1f, ClosedLinePx * poseThin));
         }
     }
 

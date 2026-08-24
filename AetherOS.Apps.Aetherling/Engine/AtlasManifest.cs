@@ -66,6 +66,11 @@ public sealed class AtlasManifest
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
 
+    /// <summary>The sheet's stable identity key ("wispv2"), which is what the parts rig watches to
+    /// know the creature changed shells under it.</summary>
+    [JsonPropertyName("skin")]
+    public string Skin { get; set; } = string.Empty;
+
     /// <summary>Material treatment key, which is what picks the specular parameters.</summary>
     [JsonPropertyName("style")]
     public string Style { get; set; } = "core";
@@ -125,6 +130,16 @@ public sealed class AtlasManifest
     public Dictionary<string, int> EyeCells { get; set; } = [];
 
     public float SlotScaleFor(string slot) => SlotScales.TryGetValue(slot, out var scale) ? scale : 1f;
+
+    /// <summary>The waist: where an item that goes AROUND the body rides, and how wide it is there, in
+    /// cell pixels on the rest cell. A shell that declares none is not gated: wraps keep their plain pin.</summary>
+    [JsonPropertyName("wrapSeat")]
+    public SeatDef? WrapSeat { get; set; }
+
+    /// <summary>The same for the crown. A head wrap picks this one, chosen by the anchor the item already
+    /// names, so nothing has to say which seat it wants twice.</summary>
+    [JsonPropertyName("headSeat")]
+    public SeatDef? HeadSeat { get; set; }
 
     /// <summary>The cell a lid state draws on, or null when this sheet cannot say. Anything closed-ish
     /// falls back to the blink's shut cell so an older sheet still shuts its eyes; anything open-ish
@@ -189,4 +204,28 @@ public sealed class AtlasManifest
 
         return new Vector2(Cell / 2f, Cell / 2f);
     }
+}
+
+/// <summary>One ellipse on the rest cell: a waist or a crown an encircling item rides. <c>rx</c> is what
+/// the band should MATCH, usually the body's half-width at <c>cy</c>; <c>sink</c> drops the seat a few
+/// pixels so the band sits ON the silhouette rather than level with its widest point.</summary>
+public sealed class SeatDef
+{
+    [JsonPropertyName("cx")]
+    public float Cx { get; set; }
+
+    [JsonPropertyName("cy")]
+    public float Cy { get; set; }
+
+    [JsonPropertyName("rx")]
+    public float Rx { get; set; }
+
+    [JsonPropertyName("ry")]
+    public float Ry { get; set; }
+
+    [JsonPropertyName("rot")]
+    public float Rot { get; set; }
+
+    [JsonPropertyName("sink")]
+    public float Sink { get; set; }
 }

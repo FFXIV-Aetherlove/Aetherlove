@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using AetherLove.Shared.Yapper;
@@ -10,6 +10,37 @@ namespace AetherOS.Apps.Yapper;
 public interface IYapperHost
 {
     Task<YapperMyProfileDto?> GetMyProfileAsync(CancellationToken ct = default);
+
+    /// <summary>The party behind an invite card in a DM, or null once it has ended.</summary>
+    Task<AetherLove.Shared.Together.TogetherPartyCardDto?> GetPartyCardAsync(Guid partyId, CancellationToken ct = default);
+
+    /// <summary>This account's own messenger friend code, or null when it has none yet. Read for the DM
+    /// composer's "invite to Messenger" entry, which sends the code as a card.</summary>
+    string? MessengerCode { get; }
+
+    /// <summary>Sends a messenger contact request for a code tapped on an invite card. Throws when the code
+    /// is unknown, already paired or already pending; the card treats every one of those as "nothing to
+    /// do here" and falls back to opening the Messenger app.</summary>
+    Task AddMessengerContactAsync(string code, CancellationToken ct = default);
+
+    /// <summary>Sends a picture in a DM, with an optional encrypted caption. The bytes are moderated and are
+    /// NOT end-to-end encrypted, unlike the message they ride with.</summary>
+    Task<YapperDmMessageDto> SendDmImageAsync(SendYapperDmImageRequest req, CancellationToken ct = default);
+
+    /// <summary>A DM picture's bytes, or null once it has expired or been removed.</summary>
+    Task<byte[]?> GetDmImageAsync(Guid imageId, CancellationToken ct = default);
+
+    /// <summary>The sender takes their own picture back; both sides see the placeholder.</summary>
+    Task DeleteDmImageAsync(Guid imageId, CancellationToken ct = default);
+
+    /// <summary>Reports a DM picture into the shared moderation queue.</summary>
+    Task ReportDmImageAsync(Guid imageId, string reason, CancellationToken ct = default);
+
+    /// <summary>Usage against the account's shared image budget, for the compose panel.</summary>
+    Task<AetherLove.Shared.Messenger.MessengerStorageDto> GetDmImageStorageAsync(CancellationToken ct = default);
+
+    /// <summary>A DM picture left: sender delete or moderator removal.</summary>
+    event Action<Guid>? DmImageRemoved;
 
     Task<YapperHandleCheck> CheckHandleAsync(string handle, CancellationToken ct = default);
 

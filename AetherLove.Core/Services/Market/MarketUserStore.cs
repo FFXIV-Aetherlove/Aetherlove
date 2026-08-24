@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using AetherOS.Sdk;
@@ -20,6 +20,7 @@ public sealed class MarketUserStore
     private const string WatchlistKey = "watchlist";
     private const string RecentsKey = "recents";
     private const string SelectionsKey = "selections";
+    private const string ConfirmTravelKey = "confirmTravel";
 
     private readonly IAppStorage _storage;
     private readonly object _gate = new();
@@ -33,6 +34,21 @@ public sealed class MarketUserStore
         _watchlist = storage.Get<List<uint>>(WatchlistKey) ?? [];
         _recents = storage.Get<List<uint>>(RecentsKey) ?? [];
         _selections = storage.Get<List<MarketSelection>>(SelectionsKey) ?? [];
+        _confirmTravel = storage.Get<bool?>(ConfirmTravelKey) ?? true;
+    }
+
+    private volatile bool _confirmTravel;
+
+    /// <summary>Whether a teleport chip asks before it moves the character. On until somebody ticks the
+    /// box: travel is a real thing happening to your character, so the first one is never a surprise.</summary>
+    public bool ConfirmTravel
+    {
+        get => _confirmTravel;
+        set
+        {
+            _confirmTravel = value;
+            _storage.Set(ConfirmTravelKey, (bool?)value);
+        }
     }
 
     public IReadOnlyList<uint> Watchlist

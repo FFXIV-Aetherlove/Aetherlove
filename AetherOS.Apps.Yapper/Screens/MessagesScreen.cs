@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Numerics;
 using System.Threading.Tasks;
 using AetherLove.Services.Localization;
@@ -191,6 +191,11 @@ internal sealed class MessagesScreen
         if (last.DeletedAtUtc is not null)
         {
             return Loc.T("os.yapper_dm_deleted");
+        }
+        // A picture with no caption carries no ciphertext, which is not the same as an unreadable message.
+        if (last.Image is not null && last.Ciphertext.Length == 0)
+        {
+            return Loc.T("chat.preview_image");
         }
         // Keys provision asynchronously, so a preview drawn before they land must not claim the message is
         // undecryptable; it decrypts on a later frame once the pair is in.

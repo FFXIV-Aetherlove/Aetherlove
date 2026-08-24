@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -451,7 +451,8 @@ public partial class ChatListScreen
     {
         if (m.LastMessageCiphertext.Length == 0)
         {
-            return null;
+            // A picture with no caption is a message with no ciphertext, not an unreadable one.
+            return m.LastMessageAtUtc is null ? null : Loc.T("chat.preview_image");
         }
         var key = KeyForPeer(m);
         if (key is null)

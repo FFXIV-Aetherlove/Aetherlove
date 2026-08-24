@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Linq;
 using System.Numerics;
+using System.Threading.Tasks;
+using System.Threading;
 using AetherLove.Services;
 using AetherLove.Services.Localization;
 using AetherLove.Shared.Store;
@@ -100,6 +102,12 @@ public sealed class StoreApp : IAetherApp
 
     public void OnIntent(OsIntent intent)
     {
+        if (intent.Type == OsIntents.StoreProduct
+            && OsIntents.TryGetStoreProduct(intent, out var itemKind, out var itemRef))
+        {
+            OpenProductByRef((StoreItemKind)itemKind, itemRef);
+            return;
+        }
         if (intent.Type != OsIntents.StoreOpen || !OsIntents.TryGetPath(intent, out var path))
         {
             return;
@@ -111,6 +119,23 @@ public sealed class StoreApp : IAetherApp
         _view = View.Browse;
         _browse.OpenDeepLink(categoryKey, seed);
     }
+
+    /// <summary>Only the server knows which row carries a given kind and ref, so the page opens once the
+    /// lookup lands. The answer is parked rather than acted on, because it arrives on a thread-pool
+    /// continuation and every view switch belongs to the draw thread.</summary>
+    private void OpenProductByRef(StoreItemKind kind, string itemRef)
+    {
+        _ = Task.Run(async () =>
+        {
+            var product = await _host.GetStoreProductByRefAsync(kind, itemRef).ConfigureAwait(false);
+            if (product is not null)
+            {
+                Interlocked.Exchange(ref _pendingDeepLink, product);
+            }
+        });
+    }
+
+    private StoreProductDto? _pendingDeepLink;
 
     private void OpenDetail(Guid productId)
     {
@@ -176,6 +201,13 @@ public sealed class StoreApp : IAetherApp
 
     public void Draw(OsAppContext ctx)
     {
+        if (Interlocked.Exchange(ref _pendingDeepLink, null) is { } deepLink)
+        {
+            _detailReturn = View.Home;
+            _view = View.Detail;
+            _detail.Show(deepLink.Id);
+        }
+
         if (_state.Balance is { } balance)
         {
             AnimateBalance(ctx, balance);

@@ -175,7 +175,7 @@ internal sealed class HistoryScreen
         var dl = ImGui.GetWindowDrawList();
         var cardW = winW - Px(PadX) * 2f;
         var hasContext = line.Context is { Length: > 0 }
-            && line.Kind is SparkTransactionKind.Adjustment or SparkTransactionKind.Clawback;
+            && line.Kind is SparkTransactionKind.Adjustment or SparkTransactionKind.Clawback or SparkTransactionKind.Prize;
         var lineH = ImGui.GetTextLineHeight();
         var cardH = hasContext ? Px(20f) + lineH * 3f : Px(16f) + lineH * 2f;
         ImGui.SetCursorPosX(Px(PadX));

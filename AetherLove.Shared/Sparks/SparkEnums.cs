@@ -1,4 +1,4 @@
-namespace AetherLove.Shared.Sparks;
+﻿namespace AetherLove.Shared.Sparks;
 
 /// <summary>Which earning pool a catalog action credits into. Routine counts against the weekly cap
 /// (plus banked carry), Bonus against its own smaller cap, Exempt rides past the routine cap but stays
@@ -22,6 +22,10 @@ public enum SparkTransactionKind : short
 
     /// <summary>A moderation debit that also reduces lifetime earned, unlike a plain adjustment.</summary>
     Clawback = 5,
+
+    /// <summary>A one-off prize credited outside the earning system: no pool, no weekly cap, and no effect
+    /// on what the account can still earn that week.</summary>
+    Prize = 6,
 }
 
 /// <summary>The machine id behind every ledger entry. The client maps it to a localized label and the
@@ -65,7 +69,7 @@ public enum SparkAction : short
     /// <summary>Second Wayfinder find of the spark week.</summary>
     WayfinderFindSecond = 12,
 
-    /// <summary>Wayfinder finds three through five of the spark week.</summary>
+    /// <summary>Every Wayfinder find past the third of the spark week; the weekly ceiling is the only stop.</summary>
     WayfinderFind = 13,
 
     /// <summary>A store checkout debit; RefId is the StorePurchase row id.</summary>
@@ -96,4 +100,20 @@ public enum SparkAction : short
 
     /// <summary>Finished a round of one of the companion's own minigames today; client-reported.</summary>
     AetherlingGame = 22,
+
+    /// <summary>Flat bonus per co-finder when a party hunt resolves; the finder ladder itself pays solo.</summary>
+    WayfinderPartyBonus = 23,
+
+    /// <summary>Top of a game's weekly leaderboard when the spark week closed. Paid by the server's own
+    /// weekly sweep, outside the earning caps; RefId is the (account, game, week) payout.</summary>
+    ArcadeWeeklyFirst = 24,
+
+    /// <summary>Second on a game's weekly leaderboard when the spark week closed.</summary>
+    ArcadeWeeklySecond = 25,
+
+    /// <summary>Third on a game's weekly leaderboard when the spark week closed.</summary>
+    ArcadeWeeklyThird = 26,
+
+    /// <summary>Third Wayfinder find of the spark week.</summary>
+    WayfinderFindThird = 27,
 }

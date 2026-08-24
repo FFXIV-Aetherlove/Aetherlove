@@ -44,6 +44,8 @@ public sealed class AetherlingHostService : IAetherlingHost, IDisposable
     private readonly AetherHubContext _hub;
     private readonly SessionBootstrapper _bootstrap;
     private readonly IAppCapabilities _capabilities;
+    private readonly Services.Together.TogetherStateService _party;
+    private readonly Config.Configuration _config;
     private readonly Services.Sparks.SparkActivityReporter _sparkReporter;
     private readonly BgmPlayer _bgm = new();
     private readonly OneShotSound _sfx = new();
@@ -64,14 +66,20 @@ public sealed class AetherlingHostService : IAetherlingHost, IDisposable
     private string? _track;
     private double _lastVoiceAt = double.NegativeInfinity;
     private string _job = "";
+    private ushort _emoteHeld;
+    private uint _emoteRow;
+    private long _emoteSeq;
 
     public AetherlingHostService(AetherHubContext hub, SessionBootstrapper bootstrap, IAppCapabilities capabilities,
-        Services.Sparks.SparkActivityReporter sparkReporter)
+        Services.Sparks.SparkActivityReporter sparkReporter, Services.Together.TogetherStateService party,
+        Config.Configuration config)
     {
         _hub = hub;
         _bootstrap = bootstrap;
         _capabilities = capabilities;
         _sparkReporter = sparkReporter;
+        _party = party;
+        _config = config;
         BatteryService.HoldEmpty = () => GameSessionActive;
         Plugin.ClientState.Logout += OnLogout;
         Plugin.Framework.Update += OnTick;
@@ -79,7 +87,42 @@ public sealed class AetherlingHostService : IAetherlingHost, IDisposable
 
     public void NoteGameFinished() => _sparkReporter.NoteAetherlingGameFinished();
 
+    /// <summary>The party's pets, minus your own row: the creature standing out there is already yours, and
+    /// a second copy of it in the huddle reads as a bug. Members who never hatched or turned sharing off
+    /// carry no pet on their row, so they drop out here without a second rule.</summary>
+    public IReadOnlyList<AetherOS.Apps.Aetherling.AetherlingPartyPet> PartyPets
+    {
+        get
+        {
+            if (!_config.OsSettings.PartyPetsShown)
+            {
+                return [];
+            }
+            var members = _party.Members;
+            if (members.Count == 0)
+            {
+                return [];
+            }
+            var own = _party.OwnAccountId;
+            var pets = new List<AetherOS.Apps.Aetherling.AetherlingPartyPet>(members.Count);
+            foreach (var member in members)
+            {
+                if (member.Pet is not { } pet || member.AccountId == own)
+                {
+                    continue;
+                }
+                pets.Add(new AetherOS.Apps.Aetherling.AetherlingPartyPet(
+                    member.AccountId, pet.Stage, pet.Palette, pet.Accessories, pet.Name));
+            }
+            return pets;
+        }
+    }
+
+    public int PartyPetSize => _config.OsSettings.PartyPetSize;
+
     public bool GameSessionActive { get; set; }
+
+    public IAetherlingInteractLab? InteractLab { get; set; }
 
     public AetherlingDto? Snapshot
     {
@@ -120,6 +163,8 @@ public sealed class AetherlingHostService : IAetherlingHost, IDisposable
 
     public IAetherlingOverlay? Overlay { get; set; }
 
+    public AetherOS.Sdk.IPetRenderer? PetRenderer { get; set; }
+
     public ITextureCache Textures => _capabilities.Textures;
 
     public bool ReduceMotion => AccessibilityService.ReduceMotion;
@@ -143,6 +188,16 @@ public sealed class AetherlingHostService : IAetherlingHost, IDisposable
             Plugin.Log.Debug(ex, "[Aetherling] Core fetch failed.");
             return null;
         }
+    }
+
+    /// <summary>Sending half of party pets. Lives here rather than in the app because the shell's party
+    /// surfaces own the switch: the pet's own pages never mention the party.</summary>
+    public async Task<AetherlingDto> SetPartySharingAsync(bool shares, CancellationToken ct = default)
+    {
+        var dto = await _hub.SetAetherlingPartySharingAsync(shares, ct).ConfigureAwait(false);
+        _snapshotSeeded = true;
+        _snapshot = dto;
+        return dto;
     }
 
     public async Task<AetherlingDto> PurchaseAsync(CancellationToken ct = default)
@@ -172,6 +227,14 @@ public sealed class AetherlingHostService : IAetherlingHost, IDisposable
     public async Task<AetherlingDto> NameAsync(string name, CancellationToken ct = default)
     {
         var dto = await _hub.NameAetherlingAsync(name, ct).ConfigureAwait(false);
+        _snapshotSeeded = true;
+        _snapshot = dto;
+        return dto;
+    }
+
+    public async Task<AetherlingDto> RenameAsync(string name, CancellationToken ct = default)
+    {
+        var dto = await _hub.RenameAetherlingAsync(name, ct).ConfigureAwait(false);
         _snapshotSeeded = true;
         _snapshot = dto;
         return dto;
@@ -216,6 +279,32 @@ public sealed class AetherlingHostService : IAetherlingHost, IDisposable
         return dto;
     }
 
+    public async Task<AetherLove.Shared.Aetherling.AetherlingWheelDto?> GetWheelAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            return await _hub.GetAetherlingWheelAsync(ct).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Debug(ex, "[Aetherling] Wheel fetch failed.");
+            return null;
+        }
+    }
+
+    public async Task<AetherLove.Shared.Aetherling.AetherlingWheelDto> SpinWheelAsync(CancellationToken ct = default)
+    {
+        var wheel = await _hub.SpinAetherlingWheelAsync(ct).ConfigureAwait(false);
+        if (_snapshot is { } core)
+        {
+            _snapshot = core with { Wheel = new AetherLove.Shared.Aetherling.AetherlingWheelStateDto(true, wheel.NextSpinAtUtc) };
+        }
+        return wheel;
+    }
+
+    public Task<AetherLove.Shared.Aetherling.AetherlingWheelDto> RevealWheelAsync(CancellationToken ct = default) =>
+        _hub.RevealAetherlingWheelAsync(ct);
+
     public async Task<AetherlingDto> CompleteOnboardingAsync(CancellationToken ct = default)
     {
         var dto = await _hub.CompleteAetherlingOnboardingAsync(ct).ConfigureAwait(false);
@@ -243,6 +332,96 @@ public sealed class AetherlingHostService : IAetherlingHost, IDisposable
     /// framework thread, which is how a warrior was handed an armorer's hammer. Empty covers the title
     /// screen, loading and anything else that has no truthful answer.</summary>
     public string CurrentJobAbbreviation => _job;
+
+    public uint LastEmoteRowId => _emoteRow;
+
+    private Dictionary<string, uint>? _emoteRowsByCommand;
+
+    /// <summary>Resolves a text command to its Emote sheet row, from the game's own data: every command
+    /// form a row publishes (command, short, alias, short alias) points back at it, so "/blowkiss" and
+    /// "/kiss" answer the same row and nothing is transcribed by hand.</summary>
+    public uint EmoteRowForCommand(string command)
+    {
+        if (_emoteRowsByCommand is null)
+        {
+            var map = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                foreach (var emote in Plugin.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Emote>())
+                {
+                    if (emote.TextCommand.ValueNullable is not { } tc)
+                    {
+                        continue;
+                    }
+                    foreach (var form in new[] { tc.Command, tc.ShortCommand, tc.Alias, tc.ShortAlias })
+                    {
+                        var text = form.ExtractText();
+                        if (text.Length > 1 && text[0] == '/')
+                        {
+                            map.TryAdd(text, emote.RowId);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.Warning(ex, "[Aetherling] Could not read the Emote sheet; watching is off this session.");
+            }
+            _emoteRowsByCommand = map;
+        }
+        return _emoteRowsByCommand.TryGetValue(command, out var row) ? row : 0u;
+    }
+
+    public long LastEmoteSequence => _emoteSeq;
+
+    public unsafe byte CurrentWeatherId
+    {
+        get
+        {
+            var env = FFXIVClientStructs.FFXIV.Client.Graphics.Environment.EnvManager.Instance();
+            return env == null ? (byte)0 : env->ActiveWeather;
+        }
+    }
+
+    public uint TerritoryId => Plugin.ClientState.TerritoryType;
+
+    public async Task<AetherlingDto?> ReportEmoteSightingAsync(string emoteKey, CancellationToken ct = default)
+    {
+        try
+        {
+            var dto = await _hub.ReportAetherlingEmoteSightingAsync(emoteKey, ct).ConfigureAwait(false);
+            _snapshotSeeded = true;
+            _snapshot = dto;
+            return dto;
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Debug("[Aetherling] emote sighting report failed: {Message}", ex.Message);
+            return null;
+        }
+    }
+
+    /// <summary>Samples the player's own emote state. The controller holds the row id for the emote's
+    /// duration and reads 0 between them, so a repeat only re-fires after the previous run ended, which
+    /// is also what makes a macro burst a single sighting.</summary>
+    private unsafe void SampleEmote()
+    {
+        ushort id = 0;
+        if (Plugin.ObjectTable.LocalPlayer is { } player)
+        {
+            var chara = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)player.Address;
+            if (chara != null)
+            {
+                id = chara->EmoteController.EmoteId;
+            }
+        }
+        if (id != 0 && id != _emoteHeld)
+        {
+            _emoteRow = id;
+            _emoteSeq++;
+        }
+        _emoteHeld = id;
+    }
 
     /// <summary>The English sheet on purpose: the abbreviation is a lookup key rather than a label.</summary>
     private static string ReadJob()
@@ -278,7 +457,7 @@ public sealed class AetherlingHostService : IAetherlingHost, IDisposable
 
     public void StartBgm(float speed) => PlayTrack(Path.Combine(AssetRoot, BgmFile), speed);
 
-    public void StartGameBgm(string fileName) => PlayTrack(Path.Combine(MediaRoot, GameBgmFolder, fileName), 1f);
+    public void StartGameBgm(string fileName, float speed = 1f) => PlayTrack(Path.Combine(MediaRoot, GameBgmFolder, fileName), speed);
 
     /// <summary>Re-rates the track that is already up, and restarts from the top for any other one: the
     /// ceremony and each minigame are different pieces of music, so "already playing" is only an answer
@@ -314,6 +493,7 @@ public sealed class AetherlingHostService : IAetherlingHost, IDisposable
         }
         _audioAccum = 0;
         _job = ReadJob();
+        SampleEmote();
 
         if (!_bgm.IsPlaying)
         {

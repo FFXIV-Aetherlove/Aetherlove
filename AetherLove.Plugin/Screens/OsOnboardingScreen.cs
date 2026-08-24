@@ -37,10 +37,11 @@ public sealed partial class OsOnboardingScreen
         Passphrase = 5,
         PassphraseConfirm = 6,
         Profile = 7,
-        Done = 8,
+        Translations = 8,
+        Done = 9,
     }
 
-    private const int TotalSteps = 9;
+    private const int TotalSteps = 10;
     private const int PassphraseMinLength = 8;
 
     private readonly ScreenRouter _router;
@@ -149,7 +150,8 @@ public sealed partial class OsOnboardingScreen
         {
             _completePending = false;
             _bootstrap.MarkOsOnboardedInSnapshot();
-            _step = Step.Done;
+            SeedTranslationStep();
+            _step = Step.Translations;
         }
         if (_advanceFromPassphrasePending)
         {
@@ -194,6 +196,9 @@ public sealed partial class OsOnboardingScreen
                         break;
                     case Step.Profile:
                         DrawProfile();
+                        break;
+                    case Step.Translations:
+                        DrawTranslations();
                         break;
                     case Step.Done:
                         DrawDone();
@@ -278,6 +283,10 @@ public sealed partial class OsOnboardingScreen
                 return;
             case Step.Profile:
                 StartComplete();
+                return;
+            case Step.Translations:
+                CommitTranslationStep();
+                _step = Step.Done;
                 return;
             default:
                 _step = (Step)((int)_step + 1);

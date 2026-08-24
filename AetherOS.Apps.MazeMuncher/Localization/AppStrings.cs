@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace AetherOS.Apps.MazeMuncher.Localization;
 
@@ -10,7 +10,7 @@ public static class AppStrings
         // added after update 2.1.3 (maze muncher)
         ["os.muncher_subtitle"] = "Eat the dots. Mind the ghosts.",
         ["os.muncher_play"] = "Play",
-        ["os.muncher_high_scores"] = "High scores",
+        ["os.muncher_high_scores"] = "My high scores",
         ["os.muncher_best"] = "Best {0}",
         ["os.muncher_score"] = "Score {0}",
         ["os.muncher_level"] = "Level {0}",
@@ -29,7 +29,7 @@ public static class AppStrings
     {
         ["os.muncher_subtitle"] = "Punkte fressen. Geister meiden.",
         ["os.muncher_play"] = "Spielen",
-        ["os.muncher_high_scores"] = "Bestenliste",
+        ["os.muncher_high_scores"] = "Meine Bestwerte",
         ["os.muncher_best"] = "Beste {0}",
         ["os.muncher_score"] = "Punkte {0}",
         ["os.muncher_level"] = "Level {0}",
@@ -48,7 +48,7 @@ public static class AppStrings
     {
         ["os.muncher_subtitle"] = "Come los puntos. Cuidado con los fantasmas.",
         ["os.muncher_play"] = "Jugar",
-        ["os.muncher_high_scores"] = "Mejores puntuaciones",
+        ["os.muncher_high_scores"] = "Mis récords",
         ["os.muncher_best"] = "Mejor {0}",
         ["os.muncher_score"] = "Puntos {0}",
         ["os.muncher_level"] = "Nivel {0}",
@@ -67,7 +67,7 @@ public static class AppStrings
     {
         ["os.muncher_subtitle"] = "Mangez les points. Méfiez-vous des fantômes.",
         ["os.muncher_play"] = "Jouer",
-        ["os.muncher_high_scores"] = "Meilleurs scores",
+        ["os.muncher_high_scores"] = "Mes records",
         ["os.muncher_best"] = "Record {0}",
         ["os.muncher_score"] = "Score {0}",
         ["os.muncher_level"] = "Niveau {0}",
@@ -86,7 +86,7 @@ public static class AppStrings
     {
         ["os.muncher_subtitle"] = "Coma os pontos. Cuidado com os fantasmas.",
         ["os.muncher_play"] = "Jogar",
-        ["os.muncher_high_scores"] = "Melhores pontuações",
+        ["os.muncher_high_scores"] = "Meus recordes",
         ["os.muncher_best"] = "Recorde {0}",
         ["os.muncher_score"] = "Pontos {0}",
         ["os.muncher_level"] = "Nível {0}",
@@ -105,7 +105,7 @@ public static class AppStrings
     {
         ["os.muncher_subtitle"] = "Ешь точки. Берегись призраков.",
         ["os.muncher_play"] = "Играть",
-        ["os.muncher_high_scores"] = "Рекорды",
+        ["os.muncher_high_scores"] = "Мои рекорды",
         ["os.muncher_best"] = "Рекорд {0}",
         ["os.muncher_score"] = "Очки {0}",
         ["os.muncher_level"] = "Уровень {0}",

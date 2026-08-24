@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -34,7 +34,10 @@ public sealed partial class MessengerApp
         bool HasMessages,
         bool RemovedByPeer,
         MessengerGroupDto? Group,
-        string? PeerFrameRef = null);
+        string? PeerFrameRef = null,
+        // An image with no caption carries no ciphertext at all, which is not the same thing as a message
+        // this device cannot open.
+        bool LastWasImage = false);
 
     private const float ChatRowHeight = 80f;
     private const float CategoryRowHeight = 64f;
@@ -1284,6 +1287,10 @@ public sealed partial class MessengerApp
     {
         if (row.Preview is not { Length: > 0 } preview)
         {
+            if (row.LastWasImage)
+            {
+                return Loc.T("chat.preview_image");
+            }
             // No message has ever been sent here, versus one that exists but this device can't open.
             return row.HasMessages ? Loc.T("os.msgr_encrypted") : Loc.T("os.msgr_say_hello");
         }

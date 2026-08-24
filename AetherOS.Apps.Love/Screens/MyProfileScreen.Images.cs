@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
@@ -9,7 +9,6 @@ using AetherLove.Shared.Profile;
 using AetherLove.UI;
 using AetherLove.Widgets;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Utility.Raii;
 
@@ -37,7 +36,7 @@ public partial class MyProfileScreen
     }
 
 
-    private readonly FileDialogManager _imgFileDialog = new();
+    private readonly AetherLove.Widgets.AetherFileDialogManager _imgFileDialog = new();
     private readonly ImageCropPopup _imgCropPopup = new();
     private readonly SfwImageGateModal _imgSfwGate = new();
     // -1 = avatar, 0..N = photo slot (0 = main portrait, 1..N = extras; N = supporter max)

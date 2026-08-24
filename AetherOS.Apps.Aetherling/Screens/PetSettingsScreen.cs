@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Numerics;
 using AetherLove.Shared.Aetherling;
 using AetherOS.Apps.Aetherling.Ui;
@@ -24,6 +24,12 @@ internal sealed class PetSettingsScreen(IAetherlingHost host)
 
     public bool FloatingLocked { get; set; }
 
+    /// <summary>The watching consent: whether the creature learns emotes by seeing them used.</summary>
+    public bool LearnsEmotes { get; set; } = true;
+
+    /// <summary>Whether it speaks in glyphs out over the game. Never silenced inside the app.</summary>
+    public bool WorldGlyphs { get; set; } = true;
+
     private int _size = FloatingPet.DefaultSizeIndex;
 
     public int FloatingSize
@@ -32,7 +38,7 @@ internal sealed class PetSettingsScreen(IAetherlingHost host)
         set => _size = value;
     }
 
-    public void Draw(OsAppContext ctx, AetherlingDto core, Action onBack)
+    public void Draw(OsAppContext ctx, AetherlingDto core)
     {
         var dl = ImGui.GetWindowDrawList();
         var origin = ImGui.GetWindowPos();
@@ -41,8 +47,8 @@ internal sealed class PetSettingsScreen(IAetherlingHost host)
 
         var name = core.PetName ?? AetherlingLimits.DefaultName;
         var pad = Px(18f);
-        var y = PetPageUi.Header(ctx, dl, origin, name,
-            string.Format(ctx.Localize("os.aetherling_menu_settings"), name), onBack);
+        var y = PetPageUi.Header(ctx, dl, origin,
+            string.Format(ctx.Localize("os.aetherling_menu_settings"), name));
 
         dl.AddText(new Vector2(origin.X + pad, y), Look.U32(Look.Crystal, 0.85f),
             ctx.Localize("os.aetherling_status_outside"));
@@ -80,6 +86,26 @@ internal sealed class PetSettingsScreen(IAetherlingHost host)
             }
             y += Px(42f);
         }
+
+        // Its habits: the watching consent and the out-loud voice.
+        y += Px(8f);
+        dl.AddText(new Vector2(origin.X + pad, y), Look.U32(Look.Crystal, 0.85f),
+            ctx.Localize("os.aetherling_habits_section"));
+        y += Px(26f);
+
+        if (PetPageUi.Toggle(dl, origin, size, y, ctx.Localize("os.aetherling_learns_emotes"), LearnsEmotes))
+        {
+            LearnsEmotes = !LearnsEmotes;
+            SettingsChanged?.Invoke();
+        }
+        y += Px(42f);
+
+        if (PetPageUi.Toggle(dl, origin, size, y, ctx.Localize("os.aetherling_world_glyphs"), WorldGlyphs))
+        {
+            WorldGlyphs = !WorldGlyphs;
+            SettingsChanged?.Invoke();
+        }
+        y += Px(42f);
 
         // Its voice. Nothing to do with the floating window, so it sits outside that section rather than
         // disappearing with it.

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Numerics;
 using AetherLove.Services;
@@ -73,7 +73,6 @@ internal sealed class EarnScreen
 
         DrawPool(ctx, wallet, winW, SparkPool.Routine, "os.wallet_earn_pool_routine", "os.wallet_earn_help_routine");
         DrawPool(ctx, wallet, winW, SparkPool.Exempt, "os.wallet_earn_pool_exempt", "os.wallet_earn_help_exempt");
-        DrawPool(ctx, wallet, winW, SparkPool.Bonus, "os.wallet_earn_pool_bonus", "os.wallet_earn_help_bonus");
 
         DrawCapsNote(ctx, wallet, winW);
 
@@ -184,7 +183,7 @@ internal sealed class EarnScreen
             return SparksScreen.ActionLabel(action);
         }
         var name = ctx.Shell.Apps.FirstOrDefault(a => a.Id == "aetherling")?.Name;
-        return string.IsNullOrWhiteSpace(name) || name == "???"
+        return string.IsNullOrWhiteSpace(name)
             ? Loc.T("os.wallet_action_aetherling_game_plain")
             : Loc.T("os.wallet_action_aetherling_game", name);
     }

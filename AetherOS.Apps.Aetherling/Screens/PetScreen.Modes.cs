@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Threading;
@@ -15,9 +15,9 @@ using Dalamud.Interface;
 
 namespace AetherOS.Apps.Aetherling.Screens;
 
-/// <summary>The mode layer: the frosted pill and what each mode makes of a touch. Petting is the
-/// default and needs nothing; Feeding brings the basket and the thrown-crystal physics; Game is a
-/// button that does nothing yet, on purpose.</summary>
+/// <summary>The foot of the pet page: the basket and its thrown-crystal physics, sitting above the
+/// nav bar. There are no modes: a stroke anywhere on the stage pets, and the basket is always out,
+/// so a touch never has to be told what it meant.</summary>
 internal sealed partial class PetScreen
 {
     private const float FlightSeconds = 0.38f;
@@ -27,8 +27,6 @@ internal sealed partial class PetScreen
     private const float PetStrokeStep = 46f;
     private const float PetLineGapSeconds = 2.5f;
     private const float PetLineLongGapSeconds = 6f;
-
-    private PetMode _mode = PetMode.Petting;
 
     private IReadOnlyList<StoreInventoryItemDto>? _inventory;
     private bool _inventoryLoading;
@@ -106,11 +104,15 @@ internal sealed partial class PetScreen
     /// <summary>Inside this many seconds the countdown warms in colour: the last stretch is the only
     /// part of a wait anybody actually watches.</summary>
     private const float CountdownFinalSeconds = 10f;
-    private const float ModesBottomMargin = 12f;
     private const float ModesRowGap = 10f;
 
+    /// <summary>Whether something on the page owns it: the arrival, the naming card, an unopened ticket,
+    /// or a growing-up. The stage runs full height while one of those is up and its whole-card target is
+    /// submitted first, so a nav bar drawn over it would be structurally dead as well as in the way.</summary>
+    public bool HoldingPage => _core is not { } core || !ModesAvailable(core) || Ticket.Visible || WheelOpen;
+
     private bool ModesAvailable(AetherlingDto core) =>
-        IntroSeen && !_namingOpen && _arrive >= 1f && _settle >= 1f && core.Growth is not null;
+        IntroSeen && !_namingOpen && !RenameOverlayOpen && _arrive >= 1f && _settle >= 1f && core.Growth is not null;
 
     /// <summary>True while the basket has nothing in it, which is the only time the shop chip
     /// takes a row of its own.</summary>
@@ -129,25 +131,21 @@ internal sealed partial class PetScreen
     /// <summary>How much of the page's foot the mode layer occupies, so the stage stops above it
     /// rather than under it. Every row it draws is counted here; a row that is drawn but not
     /// reserved is a row that lands on top of something.</summary>
-    private float ModesReserved(AetherlingDto core)
+    private float FootReserved(AetherlingDto core)
     {
         if (!ModesAvailable(core))
         {
             return 0f;
         }
 
-        var height = ModePill.Height + Px(ModesBottomMargin);
-        if (_mode == PetMode.Feeding)
+        var height = PetNavBar.Reserved + Px(ModesRowGap) + Px(BasketChipSize);
+        if (FeedWaitRemaining(core) > TimeSpan.Zero)
         {
-            height += Px(ModesRowGap) + Px(BasketChipSize);
-            if (FeedWaitRemaining(core) > TimeSpan.Zero)
-            {
-                height += Px(4f) + Px(CountdownHeight);
-            }
-            if (BasketEmpty())
-            {
-                height += Px(6f) + Px(ShopChipHeight);
-            }
+            height += Px(4f) + Px(CountdownHeight);
+        }
+        if (BasketEmpty())
+        {
+            height += Px(6f) + Px(ShopChipHeight);
         }
         return height;
     }
@@ -224,40 +222,12 @@ internal sealed partial class PetScreen
         }
     }
 
-    /// <summary>The pill and, in feeding mode, the basket above it. Laid out bottom-up from the
-    /// page's foot: pill, then basket, then the shop chip when there is nothing to feed.</summary>
-    private void DrawModes(OsAppContext ctx, ImDrawListPtr dl, Vector2 origin, Vector2 size, AetherlingDto core)
+    /// <summary>The basket, laid out bottom-up from the page's foot: it sits on top of the space the
+    /// nav bar keeps for itself, with the countdown and the shop chip stacking above it.</summary>
+    private void DrawFoot(OsAppContext ctx, ImDrawListPtr dl, Vector2 origin, Vector2 size, AetherlingDto core)
     {
-        var pillTop = origin.Y + size.Y - ModePill.Height - Px(ModesBottomMargin);
-        if (_mode == PetMode.Feeding)
-        {
-            var basketTop = pillTop - Px(ModesRowGap) - Px(BasketChipSize);
-            DrawBasket(ctx, dl, origin, size, basketTop, core);
-        }
-
-        var was = _mode;
-        _mode = ModePill.Draw(ctx, dl, new Vector2(origin.X + (size.X * 0.5f), pillTop), _mode,
-            core.Adult is not null, out var action);
-        switch (action)
-        {
-            case PetPillAction.Games:
-                GamesRequested?.Invoke();
-                break;
-            case PetPillAction.Wardrobe:
-                WardrobeRequested?.Invoke();
-                break;
-            case PetPillAction.Stats:
-                AboutRequested?.Invoke();
-                break;
-        }
-        if (_mode != was)
-        {
-            _carried = null;
-            if (_mode == PetMode.Feeding)
-            {
-                RefreshInventory();
-            }
-        }
+        var barTop = origin.Y + size.Y - PetNavBar.Reserved;
+        DrawBasket(ctx, dl, origin, size, barTop - Px(ModesRowGap) - Px(BasketChipSize), core);
     }
 
     // ------------------------------------------------------------------ feeding
@@ -550,7 +520,7 @@ internal sealed partial class PetScreen
 
         // The chew is optimistic; the counts stay server-truthful. A raced refusal shows its
         // line after the crunch, which is the accepted cost of a mouth that answers instantly.
-        pet.PlayFeedLand(element.Accent, ctx.ReduceMotion);
+        pet.PlayFeedLand(element.Accent, ctx.ReduceMotion, element.Key);
         _feedBusy = true;
         var value = (short)element.Value;
         _ = Task.Run(async () =>
@@ -702,10 +672,10 @@ internal sealed partial class PetScreen
         });
     }
 
-    /// <summary>Opens the page with the basket out, for the store's "use them" button.</summary>
+    /// <summary>Opens the page ready to feed, for the store's "use them" button. The basket is
+    /// always out now, so this only drops anything still in hand and refreshes what is in it.</summary>
     public void OpenFeeding()
     {
-        _mode = PetMode.Feeding;
         _carried = null;
         RefreshInventory();
     }
@@ -743,7 +713,8 @@ internal sealed partial class PetScreen
                 Look.U32(Look.CrystalPale, 0.9f * Math.Clamp(alpha, 0f, 1f)), 0.9f);
         }
 
-        if (_mode != PetMode.Petting)
+        // A hand with a crystal in it is aiming, not stroking.
+        if (_carried is not null || _flying is not null)
         {
             return;
         }

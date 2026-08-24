@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace AetherOS.Apps.Breaker;
 
-internal enum PowerKind { Wide, Multi, Slow, Life, Points }
+internal enum PowerKind { Wide, Multi, Slow, Points }
 
 /// <summary>A ball in flight. Positions are in board units (columns wide, rows tall), not pixels, so the
 /// model stays resolution independent.</summary>
@@ -37,6 +37,13 @@ internal sealed class BreakerGame
     private const float BallRadius = 0.28f;
     private const float BaseSpeed = 9.0f;
     private const float MaxSpeed = 15.0f;
+    // Every full loop of the level table raises the speed ceiling, so a run cannot settle into a
+    // comfortable equilibrium and grind forever; the hard cap is where the ball stays humanly returnable.
+    private const float LoopSpeedStep = 1.5f;
+    private const float HardCapSpeed = 24.0f;
+    // Anti-stuck: the ball may never fly closer to horizontal than this fraction of its speed, or it
+    // can shuttle between a wall and a solid brick forever.
+    private const float MinVerticalFraction = 0.16f;
     private const float CapsuleFallSpeed = 4.0f;
     private const float PaddleSpeed = 14.0f;
 
@@ -134,7 +141,6 @@ internal sealed class BreakerGame
 
     public bool Dead { get; private set; }
 
-    /// <summary>True once every level has been cleared; the run ends in triumph rather than defeat.</summary>
     /// <summary>Set for one frame when a level was just cleared, so the renderer can celebrate.</summary>
     public bool LevelJustCleared { get; private set; }
 
@@ -169,9 +175,14 @@ internal sealed class BreakerGame
         }
     }
 
+    /// <summary>The run's current speed ceiling: 15 on the first pass, +1.5 per completed loop of the
+    /// level table, hard-capped at 24. Mirrored by the server checker's Breaker minimum clear time.</summary>
+    private float SpeedCap =>
+        MathF.Min(HardCapSpeed, MaxSpeed + ((this.LevelIndex / Levels.Length) * LoopSpeedStep));
+
     /// <summary>Launch speed climbs with the level, so a lost life deep into a run relaunches fast instead
     /// of resetting the difficulty; from level ~13 every ball starts at the cap.</summary>
-    private float LaunchSpeed => MathF.Min(MaxSpeed, BaseSpeed + ((this.LevelNumber - 1) * 0.5f));
+    private float LaunchSpeed => MathF.Min(this.SpeedCap, BaseSpeed + ((this.LevelNumber - 1) * 0.5f));
 
     /// <summary>Sends the waiting ball on its way, angled slightly by nothing more than tradition.</summary>
     public void Launch()
@@ -242,9 +253,6 @@ internal sealed class BreakerGame
             case PowerKind.Slow:
                 this.slowPowerRemaining = PowerSeconds;
                 break;
-            case PowerKind.Life:
-                this.Lives++;
-                break;
             case PowerKind.Multi:
                 SplitBalls();
                 break;
@@ -306,6 +314,7 @@ internal sealed class BreakerGame
 
             BouncePaddle(ball);
             BounceBricks(ball);
+            EnforceMinVerticalAngle(ball);
 
             if (ball.Y - BallRadius > Rows)
             {
@@ -331,7 +340,7 @@ internal sealed class BreakerGame
             return;
         }
         var offset = Math.Clamp((ball.X - this.PaddleX) / half, -1f, 1f);
-        var speed = MathF.Min(MaxSpeed, MathF.Sqrt((ball.VelocityX * ball.VelocityX)
+        var speed = MathF.Min(this.SpeedCap, MathF.Sqrt((ball.VelocityX * ball.VelocityX)
             + (ball.VelocityY * ball.VelocityY)) * 1.02f);
         var angle = offset * 1.05f;
         ball.VelocityX = MathF.Sin(angle) * speed;
@@ -366,6 +375,9 @@ internal sealed class BreakerGame
 
         if (this.bricks[col, row] < 0)
         {
+            // A tiny random deflection off every solid brick, so a perfectly periodic path between fixed
+            // geometry (the corner-pocket stuck ball) always decays.
+            RotateVelocity(ball, ((float)this.rng.NextDouble() - 0.5f) * 0.12f);
             return;
         }
         this.bricks[col, row]--;
@@ -387,17 +399,45 @@ internal sealed class BreakerGame
         {
             return;
         }
-        // Life capsules are the rare one; the rest come up evenly.
         var roll = this.rng.Next(100);
         var kind = roll switch
         {
-            < 28 => PowerKind.Wide,
-            < 52 => PowerKind.Multi,
-            < 74 => PowerKind.Slow,
-            < 84 => PowerKind.Life,
+            < 30 => PowerKind.Wide,
+            < 56 => PowerKind.Multi,
+            < 80 => PowerKind.Slow,
             _ => PowerKind.Points,
         };
         this.capsules.Add(new Capsule { X = col + 0.5f, Y = row + 0.5f, Kind = kind });
+    }
+
+    private static void RotateVelocity(Ball ball, float angle)
+    {
+        var cos = MathF.Cos(angle);
+        var sin = MathF.Sin(angle);
+        var vx = (ball.VelocityX * cos) - (ball.VelocityY * sin);
+        var vy = (ball.VelocityX * sin) + (ball.VelocityY * cos);
+        ball.VelocityX = vx;
+        ball.VelocityY = vy;
+    }
+
+    /// <summary>Keeps the flight at least <see cref="MinVerticalFraction"/> of its speed away from
+    /// horizontal, preserving speed and both signs, so the ball can never shuttle side to side forever.</summary>
+    private static void EnforceMinVerticalAngle(Ball ball)
+    {
+        var speed = MathF.Sqrt((ball.VelocityX * ball.VelocityX) + (ball.VelocityY * ball.VelocityY));
+        if (speed <= 0f)
+        {
+            return;
+        }
+        var minY = speed * MinVerticalFraction;
+        if (MathF.Abs(ball.VelocityY) >= minY)
+        {
+            return;
+        }
+        var ySign = ball.VelocityY < 0f ? -1f : 1f;
+        var xSign = ball.VelocityX < 0f ? -1f : 1f;
+        ball.VelocityY = ySign * minY;
+        ball.VelocityX = xSign * MathF.Sqrt(MathF.Max(0f, (speed * speed) - (minY * minY)));
     }
 
     private bool AnyBreakableLeft()

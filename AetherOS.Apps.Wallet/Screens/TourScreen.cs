@@ -4,6 +4,7 @@ using AetherLove.Services;
 using AetherLove.Services.Localization;
 using AetherLove.UI;
 using AetherLove.Widgets;
+using AetherLove.Shared.Sparks;
 using AetherOS.Sdk;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -19,18 +20,25 @@ internal sealed class TourScreen
 {
     private const int TotalSteps = 5;
     private const float DemoLoopSeconds = 4.2f;
-    private const int DemoRoutine = 300;
-    private const int DemoExempt = 105;
-    private const int DemoTotal = 450;
 
     private readonly Action _done;
+    private readonly Func<SparkWalletDto?> _wallet;
     private readonly ConfettiBurst _confetti = new();
     private int _step;
 
-    public TourScreen(Action done)
+    public TourScreen(Action done, Func<SparkWalletDto?> wallet)
     {
         _done = done;
+        _wallet = wallet;
     }
+
+    /// <summary>The caps the cap step teaches, from the live wallet when there is one. The tour can run
+    /// before the first snapshot lands, so the shipped defaults stand in; both sides read them from one
+    /// place, because a tour that teaches a number the server no longer uses is worse than no tour.</summary>
+    private (int Routine, int Total) Caps =>
+        _wallet() is { } wallet && wallet.TotalWeeklyCap > 0
+            ? (wallet.RoutineWeeklyCap, wallet.TotalWeeklyCap)
+            : (SparkDefaults.RoutineWeeklyCap, SparkDefaults.TotalWeeklyCap);
 
     public void OnShow()
     {
@@ -137,7 +145,13 @@ internal sealed class TourScreen
             ImGui.TextUnformatted(title);
         }
         ImGui.Dummy(new Vector2(0f, Px(7f)));
-        DrawCenteredParagraph(Loc.T("os.wallet_tour_s2_body"), titleW - Px(48f), new Vector4(0.72f, 0.72f, 0.75f, 1f));
+        var (routineCap, totalCap) = Caps;
+        DrawCenteredParagraph(
+            string.Format(
+                Loc.T("os.wallet_tour_s2_body"),
+                routineCap.ToString("N0", ctx.Culture),
+                totalCap.ToString("N0", ctx.Culture)),
+            titleW - Px(48f), new Vector4(0.72f, 0.72f, 0.75f, 1f));
         ImGui.Dummy(new Vector2(0f, Px(14f)));
 
         // The live demo: the ring fills to the routine tick, then on into the gold zone, looping.
@@ -157,7 +171,10 @@ internal sealed class TourScreen
             reveal = Math.Clamp(phase / 0.7f, 0f, 1f);
             reveal = 1f - (1f - reveal) * (1f - reveal);
         }
-        CapRing.Draw(center, ringR, Px(10f), DemoRoutine, DemoExempt, DemoRoutine, DemoTotal, reveal);
+        // Filled to the everyday cap plus half the explorer allowance, so the gold arc reads as a stretch
+        // that is not finished rather than as a second ceiling.
+        var demoExempt = Math.Max(0, (totalCap - routineCap) / 2);
+        CapRing.Draw(center, ringR, Px(10f), routineCap, demoExempt, routineCap, totalCap, reveal);
         ImGui.Dummy(new Vector2(0f, ringR * 2f + Px(24f)));
 
         DrawFeatureRow(FontAwesomeIcon.CircleNotch, Loc.T("os.wallet_tour_s2_f1"));

@@ -1,4 +1,4 @@
-namespace AetherLove.Services.Localization;
+﻿namespace AetherLove.Services.Localization;
 
 internal static class CommonFr
 {
@@ -182,5 +182,37 @@ internal static class CommonFr
         // added after update 2.2.3
         ["common.travel_teleport_with"] = "Téléportation ({0})",
         ["common.travel_tooltip"] = "Voyager ici avec {0}",
+
+        // added after update 2.4.0
+        ["common.session_expired_title"] = "Tu dois te reconnecter",
+        ["common.session_expired_body"] = "Ta session est terminée, le téléphone ne peut donc plus joindre AetherOS. Ce n'est pas une panne : tout fonctionne, il ne sait simplement plus qui tu es.",
+        ["common.session_expired_button"] = "Se reconnecter",
+        ["common.session_expired_hint"] = "Le téléphone redémarre et te ramène à l'écran de connexion.",
+    
+        // the file picker (added after update 2.4.0)
+        ["picker.quick_links"] = "Emplacements",
+        ["picker.favorites"] = "Favoris",
+        ["picker.drives"] = "Disques",
+        ["picker.place_desktop"] = "Bureau",
+        ["picker.place_documents"] = "Documents",
+        ["picker.place_downloads"] = "Téléchargements",
+        ["picker.place_pictures"] = "Images",
+        ["picker.place_screenshots"] = "Captures du jeu",
+        ["picker.search_hint"] = "Rechercher dans ce dossier...",
+        ["picker.empty"] = "Ce dossier est vide.",
+        ["picker.open"] = "Ouvrir",
+        ["picker.nothing_selected"] = "Rien de sélectionné",
+        ["picker.new_folder_hint"] = "Nom du dossier...",
+        ["picker.new_folder_create"] = "Créer",
+        ["picker.show_hidden"] = "Fichiers cachés",
+        ["picker.sort_name"] = "Nom",
+        ["picker.sort_date"] = "Date",
+        ["picker.sort_size"] = "Taille",
+        ["picker.tip_star"] = "Ajouter ou retirer ce dossier des favoris (clic droit sur un favori pour le retirer)",
+        ["picker.tip_edit_path"] = "Saisir un chemin",
+        ["picker.preview_loading"] = "Chargement de l'aperçu...",
+        ["picker.save"] = "Enregistrer",
+        ["picker.file_name_hint"] = "Nom du fichier...",
+        ["picker.selected_count"] = "{0} sélectionnés",
     };
 }

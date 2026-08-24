@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Threading;
@@ -32,7 +32,7 @@ internal sealed class PetAboutScreen(IAetherlingHost host, PetRuntime pet)
         RefreshInventory();
     }
 
-    public void Draw(OsAppContext ctx, AetherlingDto core, Action onBack)
+    public void Draw(OsAppContext ctx, AetherlingDto core)
     {
         var dl = ImGui.GetWindowDrawList();
         var origin = ImGui.GetWindowPos();
@@ -43,15 +43,16 @@ internal sealed class PetAboutScreen(IAetherlingHost host, PetRuntime pet)
         Look.Backdrop(dl, ctx.Theme, origin, size);
 
         var name = core.PetName ?? AetherlingLimits.DefaultName;
-        var bodyTop = PetPageUi.Header(ctx, dl, origin, name,
-            string.Format(ctx.Localize("os.aetherling_menu_about"), name), onBack);
+        var bodyTop = PetPageUi.Header(ctx, dl, origin,
+            string.Format(ctx.Localize("os.aetherling_menu_about"), name));
 
         // The body is taller than the phone once a grown pet has a radar and six food rows under it, and it
         // is drawn to the list rather than stacked, so it needs a child of its own to scroll inside. The
         // header stays out on the parent, which is what keeps the way back pinned while the rest moves.
         ImGui.SetCursorScreenPos(new Vector2(origin.X, bodyTop));
         var body = ImGui.BeginChild("##aetherlingAbout"u8,
-            new Vector2(size.X, origin.Y + size.Y - bodyTop), false, ImGuiWindowFlags.NoBackground);
+            new Vector2(size.X, origin.Y + size.Y - bodyTop - PetNavBar.Reserved), false,
+            ImGuiWindowFlags.NoBackground);
         try
         {
             if (body)

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using MessagePack;
 
 namespace AetherLove.Shared.Aetherling;
@@ -40,6 +40,10 @@ public static class AetherlingLimits
 
     /// <summary>Most accessories one look may equip at once.</summary>
     public const int MaxEquippedAccessories = 12;
+
+    /// <summary>The store ref of the consumable that buys a rename. Both sides name it: the server spends
+    /// it, the client checks for it before offering the pill.</summary>
+    public const string NameChangeRef = "name-change";
 }
 
 /// <summary>One account's Aethercore. Null on the wire means the account never bought one.
@@ -65,7 +69,10 @@ public sealed record AetherlingDto(
     AetherlingAdultDto? Adult = null,
     AetherlingLookDto? Look = null,
     AetherlingScratchCardDto[]? Cards = null,
-    DateTimeOffset? OnboardingDoneAtUtc = null);
+    DateTimeOffset? OnboardingDoneAtUtc = null,
+    AetherlingEmotesDto? Emotes = null,
+    bool SharesWithParty = true,
+    AetherlingWheelStateDto? Wheel = null);
 
 /// <summary>The growth ladder: 9 fed crystals from hatchling to adult. The client derives the worn
 /// form from <see cref="GrowthFed"/> alone (0-2 first form, 3-5 second, 6-8 third, 9 adult) and renders
@@ -110,3 +117,21 @@ public sealed record AetherlingScratchCardDto(
     DateTimeOffset? RevealedAtUtc,
     short PrizeKind = 0,
     string[]? PrizeRefs = null);
+
+/// <summary>The emote ledger: which of its person's emotes the creature has picked up by watching, and
+/// how far along the ones it is still puzzling over are. Thresholds and the learn gate ride along because
+/// the server owns every number; the client renders meters against them and decides nothing.</summary>
+[MessagePackObject(keyAsPropertyName: true)]
+public sealed record AetherlingEmotesDto(
+    AetherlingEmoteProgressDto[] Emotes,
+    DateTimeOffset? LastLearnedAtUtc,
+    int SightingsToLearn,
+    int LearnGateHours);
+
+/// <summary>One watchable emote: its stable key, how often the creature has seen it, and when it was
+/// learned. Sightings keep counting past the threshold while the daily learn gate holds the unlock.</summary>
+[MessagePackObject(keyAsPropertyName: true)]
+public sealed record AetherlingEmoteProgressDto(
+    string Key,
+    int Sightings,
+    DateTimeOffset? LearnedAtUtc);

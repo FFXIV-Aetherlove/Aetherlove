@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Numerics;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace AetherOS.Sdk;
 
@@ -28,6 +29,10 @@ public static class OsIntents
 
     /// <summary>Open the Settings app straight to the wallpaper and home-screen page.</summary>
     public const string OpenWallpaper = "open.wallpaper";
+
+    /// <summary>Open the Settings app straight to the languages page's translation section (the usual
+    /// optional "returnApp" rides along so the back pill returns to the text that was being translated).</summary>
+    public const string OpenTranslationSettings = "open.translation";
     public const string OpenEntry = "open.entry";
     public const string OpenPreview = "open.preview";
 
@@ -37,6 +42,10 @@ public static class OsIntents
     /// <summary>Open the Market app on a specific item (payload key "itemId", optional "returnApp").</summary>
     public const string OpenMarketItem = "open.market_item";
 
+    /// <summary>Open the Photos app straight on its settings page (the screenshot-import consent
+    /// notification lands here).</summary>
+    public const string PhotosOpenSettings = "photos.settings";
+
     // The messenger's photo-attach round trip (a target-initiated pull, not sheet-based sharing).
     public const string PickPhoto = "pick.photo";
     public const string PhotoPicked = "photo.picked";
@@ -44,26 +53,25 @@ public static class OsIntents
     /// <summary>Open the messenger's add-contact flow prefilled with a friend code (payload key "code").</summary>
     public const string MessengerAdd = "msgr.add";
 
-    /// <summary>Replays the ceremony's last act without touching anything the server knows. For tuning it,
-    /// which otherwise means spending two hundred sparks and waiting out four gates per look.</summary>
-    public const string AetherlingReplayBirth = "aetherling.replay_birth";
-
     /// <summary>Open the pet's status page. Fired by the floating creature's own menu, which is outside the
     /// phone and so has no other way in.</summary>
     public const string AetherlingStatus = "aetherling.status";
-
-    /// <summary>The staff reset landed: forget everything local about the creature and go back to the start.
-    /// The app cannot notice on its own, because the thing it would ask about no longer exists.</summary>
-    public const string AetherlingReset = "aetherling.reset";
 
     /// <summary>Open the pet with its basket out, ready to feed. Fired by the store the moment crystals are
     /// bought, so the thing you just bought is one tap from the mouth it was bought for.</summary>
     public const string AetherlingFeed = "aetherling.feed";
 
+    /// <summary>Open the pet on its home page with the rename box up. Fired by the store the moment a
+    /// Name change is bought, and by anything else that wants the box rather than the page.</summary>
+    public const string AetherlingRename = "aetherling.rename";
+
     /// <summary>Join an Echo watch room from a tapped share card (payload keys "id" and "code", plus the
     /// usual optional "returnApp"). Both are carried because the room id addresses the room and the code
     /// authorises the join, exactly as the share token pairs them.</summary>
     public const string EchoJoin = "echo.join";
+
+    /// <summary>Join a together-mode party by code; payload via <see cref="CreateCode"/>.</summary>
+    public const string PartyJoin = "party.join";
 
     // The camera round trip: an app requests a framed shot, the camera app replies with the saved photo.
     public const string CameraCapture = "camera.capture";
@@ -75,6 +83,11 @@ public static class OsIntents
     /// <summary>Deep-link into the Store (payload key "path", e.g. "crystals/fire": a category key,
     /// optionally followed by a search seed). The Aetherling crystal-shop chip targets this.</summary>
     public const string StoreOpen = "store.open";
+
+    /// <summary>Deep-link into one Store product page, addressed by product identity (payload keys
+    /// "kind" and "ref") rather than by id, since only the server knows the id. The store resolves it and
+    /// opens the detail page; an unknown pair simply lands on Home.</summary>
+    public const string StoreProduct = "store.product";
 
     /// <summary>Open the Wallet. Sent with a "returnApp" payload so the wallet offers a one-click way back
     /// to whatever sent the user there.</summary>
@@ -96,6 +109,43 @@ public static class OsIntents
         Type = type,
         PayloadJson = JsonSerializer.Serialize(new PathPayload(path)),
     };
+
+    /// <summary>A deep link to one product by identity: the kind is the enum's numeric value, the ref its
+    /// catalogue string.</summary>
+    public static OsIntent CreateStoreProduct(short itemKind, string itemRef) => new()
+    {
+        Type = StoreProduct,
+        PayloadJson = JsonSerializer.Serialize(new StoreProductPayload(itemKind, itemRef)),
+    };
+
+    public static bool TryGetStoreProduct(OsIntent intent, out short itemKind, out string itemRef)
+    {
+        itemKind = 0;
+        itemRef = "";
+        if (string.IsNullOrEmpty(intent.PayloadJson))
+        {
+            return false;
+        }
+        try
+        {
+            using var doc = JsonDocument.Parse(intent.PayloadJson);
+            if (doc.RootElement.ValueKind != JsonValueKind.Object
+                || !doc.RootElement.TryGetProperty("kind", out var kindEl)
+                || !kindEl.TryGetInt16(out var kind)
+                || !doc.RootElement.TryGetProperty("ref", out var refEl)
+                || refEl.ValueKind != JsonValueKind.String)
+            {
+                return false;
+            }
+            itemKind = kind;
+            itemRef = refEl.GetString() ?? "";
+            return itemRef.Length > 0;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
 
     public static OsIntent CreateCode(string type, string code) => new()
     {
@@ -395,6 +445,8 @@ public static class OsIntents
     }
 
     private sealed record PathPayload(string path);
+
+    private sealed record StoreProductPayload(short kind, [property: JsonPropertyName("ref")] string itemRef);
 
     private sealed record CodePayload(string code);
 

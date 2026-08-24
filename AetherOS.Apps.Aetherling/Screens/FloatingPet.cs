@@ -1,4 +1,5 @@
-using System;
+﻿using System;
+using System.Collections.Generic;
 using System.Numerics;
 using AetherLove.Services.Localization;
 using AetherOS.Apps.Aetherling.Engine;
@@ -16,7 +17,7 @@ namespace AetherOS.Apps.Aetherling.Screens;
 internal sealed class FloatingPet(IAetherlingHost host, PetRuntime pet) : IAetherlingOverlay
 {
     /// <summary>How big it stands out on the screen at <see cref="DefaultSizeIndex"/>, in unscaled pixels.</summary>
-    private const float PetSize = 132f;
+    internal const float PetSize = 132f;
 
     /// <summary>What each of the five sizes multiplies that by, a third larger each step. S is the size it has
     /// always come out at, so it is where everyone starts and what everything else is measured against.</summary>
@@ -30,6 +31,8 @@ internal sealed class FloatingPet(IAetherlingHost host, PetRuntime pet) : IAethe
     private const float MarginFraction = 0.20f;
 
     private const string MenuId = "##aetherlingFloatMenu";
+
+    private readonly PartyHuddle _huddle = new(host);
 
     private Vector2? _position;
     private bool _dragging;
@@ -69,6 +72,10 @@ internal sealed class FloatingPet(IAetherlingHost host, PetRuntime pet) : IAethe
 
     public bool Visible => Enabled && !Hidden && host.Snapshot is { HatchedAtUtc: not null };
 
+    /// <summary>Whether the creature speaks out over the game. The one off switch (the glyph channel is
+    /// never silenced in the app, where it is the pet's voice rather than a feature); the app persists it.</summary>
+    public bool WorldGlyphs { get; set; } = true;
+
     /// <summary>Puts it back in the middle of the screen, for anyone who has lost it off an edge.</summary>
     public void Recentre() => _recentre = true;
 
@@ -84,6 +91,9 @@ internal sealed class FloatingPet(IAetherlingHost host, PetRuntime pet) : IAethe
             return;
         }
         pet.Tick(host.ReduceMotion);
+        // A fresh recording per frame while a picture is pending, so a compositor always replays one whole
+        // frame rather than the tail of one and the head of the next.
+        Rendering.PetFrameRecorder.Begin();
 
         // The game's own UI scale, not the phone's: out here it shares a screen with the game, and a player
         // who likes a small phone did not ask for a small creature.
@@ -180,7 +190,20 @@ internal sealed class FloatingPet(IAetherlingHost host, PetRuntime pet) : IAethe
         }
 
         pet.Draw(ImGui.GetWindowDrawList(), host.Textures, bottomCentre, size, pet.Pose);
+
+        // On the FOREGROUND list, not the window's: the canvas is deliberately tight (every spare pixel
+        // of margin is a stolen click on someone's hotbar), and out here a symbol needs no window
+        // headroom and takes no clicks, the Kindling-flash precedent.
+        if (WorldGlyphs)
+        {
+            pet.DrawGlyph(ImGui.GetForegroundDrawList(), bottomCentre, size, bubbleFrame: false);
+        }
         ImGui.End();
+
+        // After this window closes: each companion opens one of its own, which cannot be nested inside
+        // another window's scope. They stand beside the owner rather than inside its canvas, which is
+        // deliberately tight (every spare pixel of margin is a stolen click on somebody's hotbar).
+        _huddle.Draw(bottomCentre, size, pet);
     }
 
     /// <summary>The right-click menu. It reads its own strings rather than taking them from a frame context,
@@ -195,10 +218,54 @@ internal sealed class FloatingPet(IAetherlingHost host, PetRuntime pet) : IAethe
         {
             StatusRequested?.Invoke();
         }
+        DrawEmoteMenu();
         if (ImGui.Selectable(Loc.T("os.aetherling_float_hide")))
         {
             HideRequested?.Invoke();
         }
         ImGui.EndPopup();
+    }
+
+    /// <summary>Perform on demand, from out here where the creature actually is. Only what it has learned
+    /// appears, and the submenu itself is absent until there is a first one, so an empty pet's menu never
+    /// carries a door to an empty room. A play the runtime refuses (napping, mid-emote, reduce motion) is
+    /// refused silently, exactly as everywhere else.</summary>
+    private void DrawEmoteMenu()
+    {
+        if (host.Snapshot?.Emotes is not { } emotes)
+        {
+            return;
+        }
+
+        var learned = new List<EmoteDef>();
+        foreach (var def in EmoteChoreographies.All)
+        {
+            foreach (var progress in emotes.Emotes)
+            {
+                if (progress.Key == def.Key && progress.LearnedAtUtc is not null)
+                {
+                    learned.Add(def);
+                    break;
+                }
+            }
+        }
+        if (learned.Count == 0)
+        {
+            return;
+        }
+
+        if (!ImGui.BeginMenu(Loc.T("os.aetherling_float_emotes")))
+        {
+            return;
+        }
+        foreach (var def in learned)
+        {
+            if (ImGui.MenuItem(def.Name))
+            {
+                pet.AuditionGlyph("burst");
+                pet.PlayEmote(def);
+            }
+        }
+        ImGui.EndMenu();
     }
 }

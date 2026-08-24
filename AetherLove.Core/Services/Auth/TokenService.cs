@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -35,6 +35,14 @@ public sealed class TokenService
     /// <summary>True when the last refresh was actively rejected (HTTP 401), as opposed to the server being unreachable.</summary>
     public bool LastRefreshFailedUnauthorized { get; private set; }
 
+    /// <summary>The refresh token itself is dead: the server rejected it outright, so nothing this client
+    /// holds can reach the hub again and no amount of retrying will change that. Unlike
+    /// <see cref="LastRefreshFailedUnauthorized"/> this STICKS, because the reconnect loop calls refresh
+    /// again and again and each call clears that flag on entry; without a sticky answer the phone spends
+    /// the rest of the session showing "offline" for a session that simply ended. Cleared by a successful
+    /// refresh, a fresh sign-in, and <see cref="Clear"/>.</summary>
+    public bool SessionExpired { get; private set; }
+
     /// <summary>True when there is no access token or it expires within <see cref="RefreshSkew"/>.</summary>
     public bool IsAccessTokenStale()
     {
@@ -48,6 +56,7 @@ public sealed class TokenService
 
     public void ApplyTokens(TokenPairDto tokens)
     {
+        SessionExpired = false;
         _config.Auth = new AuthState
         {
             AccessToken = tokens.AccessToken,
@@ -71,6 +80,7 @@ public sealed class TokenService
 
     public void Clear()
     {
+        SessionExpired = false;
         _config.Auth = new AuthState();
         _config.Save();
     }
@@ -111,6 +121,7 @@ public sealed class TokenService
                 if (resp.StatusCode == HttpStatusCode.Unauthorized)
                 {
                     LastRefreshFailedUnauthorized = true;
+                    SessionExpired = true;
                 }
                 _log.Warning($"[TokenService] /auth/refresh returned {(int)resp.StatusCode}.");
                 return false;

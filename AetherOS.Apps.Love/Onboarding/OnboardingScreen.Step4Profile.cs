@@ -38,7 +38,7 @@ public partial class OnboardingScreen
     }
 
 
-    private int _regionIdx;
+    private readonly bool[] _ownRegions = new bool[RegionValues.Length];
     private int _raceIdx;
     private int _genderIdx;
     private readonly bool[] _langSelected = new bool[LanguageEntries.Length];
@@ -145,7 +145,7 @@ public partial class OnboardingScreen
                 var dcSheet = UiHost.DataManager.GetExcelSheet<Lumina.Excel.Sheets.WorldDCGroupType>();
                 var regionId = dcSheet.GetRow(dcId).Region.RowId;
 
-                _regionIdx = regionId switch
+                var regionIdx = regionId switch
                 {
                     2 => 0, // North America
                     3 => 1, // Europe
@@ -153,6 +153,7 @@ public partial class OnboardingScreen
                     1 => 3, // Japan
                     _ => 0, // default to North America when the region can't be detected
                 };
+                _ownRegions[regionIdx] = true;
             }
         }
         catch (Exception ex)
@@ -302,8 +303,12 @@ public partial class OnboardingScreen
         ImGui.SameLine();
         HelpTooltip(Loc.T("onboarding.profile_server_region_tip"));
         ImGui.SetCursorPosX(Px(20f));
-        ImGui.SetNextItemWidth(fullW);
-        ImGui.Combo("##region", ref _regionIdx, Regions, Regions.Length);
+        VenueFields.DrawPillToggleRow("obRegion", Regions, _ownRegions, fullW);
+        if (!_ownRegions.Any(x => x))
+        {
+            ImGui.SetCursorPosX(Px(20f));
+            ImGui.TextColored(UiColors.Hint, Loc.T("profile.region_min_hint"));
+        }
 
         ImGui.Dummy(new Vector2(0f, Px(14f)));
         DrawInfoCallout(Loc.T("onboarding.race_gender_warning"), UiColors.WarningAccent,

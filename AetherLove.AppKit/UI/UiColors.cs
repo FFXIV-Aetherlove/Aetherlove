@@ -1,4 +1,4 @@
-using System.Numerics;
+﻿using System.Numerics;
 
 namespace AetherLove.UI;
 
@@ -28,6 +28,10 @@ internal static class UiColors
 
     /// <summary>Live-now accent (green): hangout status cards, banners, and directory chips.</summary>
     internal static readonly Vector4 LiveGreen = new(0.35f, 0.85f, 0.45f, 1f);
+
+    /// <summary>Together mode's colour on every surface (status light, shade, widget card, dock, app),
+    /// sampled off the Together app's tile art.</summary>
+    public static readonly Vector4 Party = new(0.98f, 0.53f, 0.15f, 1f);
 
     /// <summary>Account-warning accent (orange): the warning notice cards and the "My" hub warnings row.</summary>
     internal static readonly Vector4 WarningAccent = new(0.97f, 0.62f, 0.25f, 1f);

@@ -94,7 +94,9 @@ public sealed class CoreDraw
             var roleTint = tints.For(layer.Role);
             var colour = layer.Role == TintRole.None ? new Vector4(1f, 1f, 1f, roleTint.W) : roleTint;
             colour.W *= layer.Alpha;
-            drawList.AddImage(handle, min, max, uv0, uv1, ImGui.ColorConvertFloat4ToU32(colour));
+            var packed = ImGui.ColorConvertFloat4ToU32(colour);
+            drawList.AddImage(handle, min, max, uv0, uv1, packed);
+            PetFrameRecorder.Add(_assets.LayerPaths[i], min, max, uv0, uv1, packed);
         }
 
         if (fx is { Enabled: true, SheenSweep: true, SweepT: { } sweepT })
@@ -242,17 +244,41 @@ public sealed class CoreDraw
         var local = flipX ? poseOffset with { X = -poseOffset.X } : poseOffset;
         var anchorBase = bottomCentre + (local * (displaySize / 256f));
 
+        // A wrap rides the shell's own seat rather than its pin: the crown's for an item pinned to the
+        // head, the waist's for everything else. The seat is ONE ellipse measured on the rest cell, so
+        // it is carried on the item's pin per cell rather than used as an absolute point, or a band
+        // would hang in the air the creature was measured in while the body bobs underneath it. A
+        // shell that declares no seat keeps the plain pin, which is where every wrap sat before.
+        var seat = def.RidesWrapSeat
+            ? (def.Anchor == "head" ? manifest.HeadSeat : manifest.WrapSeat)
+            : null;
+
         var anchor = manifest.AnchorForCell(def.Anchor, poseCell);
+        if (seat is { } waist)
+        {
+            var rest = manifest.AnchorForCell(def.Anchor, manifest.RestCell ?? 0);
+            anchor = new Vector2(waist.Cx, waist.Cy + waist.Sink) + (anchor - rest);
+        }
         if (flipX)
         {
             anchor.X = manifest.Cell - anchor.X;
         }
         var screenAnchor = LocalToScreen(manifest, anchor, poseScale, anchorBase, ds);
 
+        // The seat sets the size, by the ratio between this shell's seat and the one the art was drawn
+        // for: uniformly for a solid of revolution (a ring round a wider body is a bigger ring, tube and
+        // all) and in X only for a band of cloth, which is the same cloth however long it has to be.
+        var reach = Vector2.One;
+        if (seat is { } sized && def.WrapRx > 0f && def.Width > 0)
+        {
+            var ratio = sized.Rx * (256f / manifest.Cell) / def.WrapRx;
+            reach = new Vector2(ratio, def.WrapBand ? 1f : ratio);
+        }
+
         var accessoryScale = (displaySize / 256f) * manifest.SlotScaleFor(def.Slot);
-        var quadScale = def.Anchor is "head" or "face"
-            ? new Vector2(accessoryScale) * poseScale
-            : new Vector2(accessoryScale);
+        var quadScale = def.Anchor is "head" or "face" || seat is not null
+            ? new Vector2(accessoryScale) * reach * poseScale
+            : new Vector2(accessoryScale) * reach;
 
         var origin = def.OriginPoint;
         if (flipX)
@@ -266,8 +292,79 @@ public sealed class CoreDraw
         var inset = new Vector2(0.5f / MathF.Max(1, def.Width), 0.5f / MathF.Max(1, def.Height));
         var uv0 = new Vector2(flipX ? 1f - inset.X : inset.X, inset.Y);
         var uv1 = new Vector2(flipX ? inset.X : 1f - inset.X, 1f - inset.Y);
-        drawList.AddImage(
-            handle, min, max, uv0, uv1, ImGui.ColorConvertFloat4ToU32(new Vector4(1f, 1f, 1f, alpha)));
+        var accessoryColour = ImGui.ColorConvertFloat4ToU32(new Vector4(1f, 1f, 1f, alpha));
+        drawList.AddImage(handle, min, max, uv0, uv1, accessoryColour);
+        PetFrameRecorder.Add(imagePath, min, max, uv0, uv1, accessoryColour);
+    }
+
+    /// <summary>Draws one code-drawn part (ears or tail) on its per-cell anchors. No texture
+    /// anywhere: the geometry is struck from the model record and the shell's palette, which is
+    /// what makes an Ember fox fox-orange without anyone drawing one.</summary>
+    public void DrawPart(
+        ImDrawListPtr drawList,
+        AccessoryDef def,
+        Vector2 bottomCentre,
+        float displaySize,
+        int cellIndex,
+        Vector2 scale,
+        Vector2 offset,
+        bool flipX,
+        Palette palette,
+        PartsRig parts,
+        TentacleFx? strands = null)
+    {
+        var manifest = _assets.Manifest;
+        var ds = displaySize / manifest.Cell;
+        var local = flipX ? offset with { X = -offset.X } : offset;
+        var anchorBase = bottomCentre + (local * (displaySize / 256f));
+        if (def.Slot == AccessoryDef.TailSlot)
+        {
+            PartsDraw.DrawTail(drawList, manifest, def, cellIndex, scale, flipX, anchorBase, ds, palette, parts);
+        }
+        else if (def.Strands is { } worn)
+        {
+            PartsDraw.DrawEarStrands(drawList, manifest, worn, cellIndex, scale, flipX, anchorBase, ds, palette,
+                strands ?? new TentacleFx());
+        }
+        else
+        {
+            PartsDraw.DrawEars(drawList, manifest, def, cellIndex, scale, flipX, anchorBase, ds, palette, parts);
+        }
+    }
+
+    /// <summary>Draws a flown accessory (fx: "kite"): the sail sprite riding the sim with its
+    /// strings inked in code. The pin arithmetic is <see cref="DrawAccessory"/>'s own, so the
+    /// kite pins to the same hand the static sprite did.</summary>
+    public void DrawFlown(
+        ImDrawListPtr drawList,
+        ITextureCache textures,
+        string imagePath,
+        AccessoryDef def,
+        Vector2 bottomCentre,
+        float displaySize,
+        int cellIndex,
+        Vector2 scale,
+        Vector2 offset,
+        bool flipX,
+        KiteFx rig)
+    {
+        if (textures.Get(imagePath) is not { } handle)
+        {
+            return;
+        }
+        var manifest = _assets.Manifest;
+        var ds = displaySize / manifest.Cell;
+        var local = flipX ? offset with { X = -offset.X } : offset;
+        var anchorBase = bottomCentre + (local * (displaySize / 256f));
+        var anchor = manifest.AnchorForCell(def.Anchor, cellIndex);
+        if (flipX)
+        {
+            anchor.X = manifest.Cell - anchor.X;
+        }
+        var screenAnchor = LocalToScreen(manifest, anchor, scale, anchorBase, ds);
+        var quadScale = (displaySize / 256f) * manifest.SlotScaleFor(def.Slot);
+        PartsDraw.SetRecorderKitePath(imagePath);
+        PartsDraw.DrawKite(drawList, handle, def, manifest, screenAnchor, quadScale, flipX, rig);
     }
 
     /// <summary>Inks the dynamic mouth at the manifest's mouth anchor. A sheet that declares no
@@ -303,6 +400,24 @@ public sealed class CoreDraw
         var ink = manifest.LineColor.Length > 0 ? Palette.ParseHex(manifest.LineColor) : Vector4.Zero;
         MouthDraw.Draw(
             drawList, screenAnchor, displaySize / 256f, scale, flipX, shape, manifest.MouthScale, ink, alpha);
+    }
+
+    /// <summary>Any named anchor of the current cell in screen space, squash and hop applied: what the
+    /// glyph hangs from, exactly the mouth's own conversion made callable.</summary>
+    public Vector2 AnchorScreen(
+        string anchorName, Vector2 bottomCentre, float displaySize, int cellIndex,
+        Vector2 scale, Vector2 offset, bool flipX)
+    {
+        var manifest = _assets.Manifest;
+        var ds = displaySize / manifest.Cell;
+        var local = flipX ? offset with { X = -offset.X } : offset;
+        var anchorBase = bottomCentre + (local * (displaySize / 256f));
+        var anchor = manifest.AnchorForCell(anchorName, cellIndex);
+        if (flipX)
+        {
+            anchor.X = manifest.Cell - anchor.X;
+        }
+        return LocalToScreen(manifest, anchor, scale, anchorBase, ds);
     }
 
     /// <summary>A soft-edged ellipse built from concentric filled rings.</summary>

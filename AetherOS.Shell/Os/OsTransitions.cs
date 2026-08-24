@@ -1,6 +1,7 @@
-using System;
+﻿using System;
 using System.Numerics;
 using AetherLove.Services;
+using AetherLove.UI;
 using AetherOS.Sdk;
 using Dalamud.Bindings.ImGui;
 
@@ -60,6 +61,9 @@ public static class OsTransitions
         _t = 0f;
         _phase = Phase.Shrink;
     }
+
+    /// <summary>How far the card may open before an app's icon art has faded out completely.</summary>
+    private const float IconFadeAt = 0.55f;
 
     public static void Draw(ImDrawListPtr dl, Vector2 contentTL, Vector2 contentBR)
     {
@@ -126,8 +130,26 @@ public static class OsTransitions
         var rounding = float.Lerp((_tileBR.X - _tileTL.X) * 0.28f, Px(6f), expand);
 
         OsDraw.RoundedGradient(dl, tl, br, rounding, _app.TileTop, _app.TileBottom, alpha);
+
+        // An app's own art rides the growing card at very close to its tile size and fades out early. It is
+        // a 256px icon: stretched to the full content rect it turns to mush, and the card's own gradient is
+        // what the eye should be following by then anyway.
+        var centre = (tl + br) * 0.5f;
+        if ((_app.TileImage ?? AppIcons.Tile(_app.Id)) is { } art)
+        {
+            var artAlpha = alpha * Math.Clamp(1f - (expand / IconFadeAt), 0f, 1f);
+            if (artAlpha <= 0.004f)
+            {
+                return;
+            }
+            var side = (_tileBR.X - _tileTL.X) * float.Lerp(1f, 1.12f, expand);
+            var half = new Vector2(side * 0.5f);
+            dl.AddImageRounded(art, centre - half, centre + half, Vector2.Zero, Vector2.One,
+                OsDraw.White(artAlpha), side * 0.28f, ImDrawFlags.RoundCornersAll);
+            return;
+        }
         var iconPx = float.Lerp((_tileBR.X - _tileTL.X) * 0.46f, Px(64f), expand);
-        UI.IconDraw.AddCentered(dl, _app.Icon, iconPx, (tl + br) * 0.5f, OsDraw.White(alpha));
+        UI.IconDraw.AddCentered(dl, _app.Icon, iconPx, centre, OsDraw.White(alpha));
     }
 
     private static float EaseInOutCubic(float t) =>

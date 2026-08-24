@@ -638,7 +638,7 @@ internal sealed class HillRollGame : IPetGame
             _runCyclePhase += dt * MathF.Max(0.4f, _v / GameScoring.HillRollMaxSpeed);
             pose.CellIndex = GameScene.Cell(stage.Manifest, "idle", _runCyclePhase % 1f);
         }
-        stage.Runtime.Draw(dl, ctx.Capabilities.Textures, petBottom, petPx, pose);
+        stage.Runtime.Draw(dl, ctx.Capabilities.Textures, petBottom, petPx, pose, props: false);
     }
 
     private Vector2 CartFxPoint(GameStage stage)

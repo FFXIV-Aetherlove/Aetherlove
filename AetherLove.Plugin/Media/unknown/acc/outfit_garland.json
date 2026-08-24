@@ -3,12 +3,14 @@
   "slot": "outfit",
   "tier": "seasonal",
   "file": "outfit_garland.png",
+  "back": "outfit_garland_back.png",
   "anchor": "body",
   "origin": [
-    65,
-    -43
+    64,
+    16
   ],
-  "width": 129,
-  "height": 25,
+  "width": 128,
+  "height": 32,
+  "wrapRx": 55.0,
   "behind": false
 }

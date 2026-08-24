@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using AetherOS.Sdk;
 
@@ -18,15 +18,25 @@ public sealed class ShareService : IShareService
         _sheet = sheet;
     }
 
-    public IReadOnlyList<IAetherApp> TargetsFor(string type) =>
-        _shell.Apps.Where(a => Offers(a) && a.AcceptedShareTypes.Contains(type)).ToList();
+    public IReadOnlyList<IAetherApp> TargetsFor(string type) => TargetsFor(type, null);
+
+    /// <summary><paramref name="exclude"/> drops targets the SOURCE knows this particular item cannot go to,
+    /// which the type alone cannot express: a party invite reaches every chat, but only the host may publish
+    /// their party as a hangout, and a sheet entry that the server would reject is worse than no entry.</summary>
+    public IReadOnlyList<IAetherApp> TargetsFor(string type, IReadOnlyCollection<string>? exclude) =>
+        _shell.Apps
+            .Where(a => Offers(a) && a.AcceptedShareTypes.Contains(type) && exclude?.Contains(a.Id) != true)
+            .ToList();
 
     private bool Offers(IAetherApp app) => app.Available && !_shell.IsAppRemoved(app.Id);
 
-    public void Offer(ShareItem item, string? title = null)
+    public void Offer(ShareItem item, string? title = null) => Offer(item, title, null);
+
+    public void Offer(ShareItem item, string? title, IReadOnlyCollection<string>? exclude)
     {
         var targets = _shell.Apps
-            .Where(a => Offers(a) && a.AcceptedShareTypes.Contains(item.Type) && a.Id != item.SourceAppId)
+            .Where(a => Offers(a) && a.AcceptedShareTypes.Contains(item.Type) && a.Id != item.SourceAppId
+                && exclude?.Contains(a.Id) != true)
             .ToList();
         if (targets.Count == 0)
         {

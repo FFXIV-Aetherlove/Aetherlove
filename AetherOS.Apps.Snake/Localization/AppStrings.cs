@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace AetherOS.Apps.Snake.Localization;
 
@@ -10,7 +10,7 @@ public static class AppStrings
         // added after update 2.1.3 (snake)
         ["os.snake_subtitle"] = "Eat. Grow. Don't bite yourself.",
         ["os.snake_play"] = "Play",
-        ["os.snake_high_scores"] = "High scores",
+        ["os.snake_high_scores"] = "My high scores",
         ["os.snake_best"] = "Best {0}",
         ["os.snake_score"] = "Score {0}",
         ["os.snake_pellets"] = "Bites: {0}",
@@ -28,7 +28,7 @@ public static class AppStrings
     {
         ["os.snake_subtitle"] = "Fressen. Wachsen. Nicht selbst beißen.",
         ["os.snake_play"] = "Spielen",
-        ["os.snake_high_scores"] = "Bestenliste",
+        ["os.snake_high_scores"] = "Meine Bestwerte",
         ["os.snake_best"] = "Beste {0}",
         ["os.snake_score"] = "Punkte {0}",
         ["os.snake_pellets"] = "Bissen: {0}",
@@ -46,7 +46,7 @@ public static class AppStrings
     {
         ["os.snake_subtitle"] = "Come. Crece. No te muerdas.",
         ["os.snake_play"] = "Jugar",
-        ["os.snake_high_scores"] = "Mejores puntuaciones",
+        ["os.snake_high_scores"] = "Mis récords",
         ["os.snake_best"] = "Mejor {0}",
         ["os.snake_score"] = "Puntos {0}",
         ["os.snake_pellets"] = "Bocados: {0}",
@@ -64,7 +64,7 @@ public static class AppStrings
     {
         ["os.snake_subtitle"] = "Mange. Grandis. Ne te mords pas.",
         ["os.snake_play"] = "Jouer",
-        ["os.snake_high_scores"] = "Meilleurs scores",
+        ["os.snake_high_scores"] = "Mes records",
         ["os.snake_best"] = "Record {0}",
         ["os.snake_score"] = "Score {0}",
         ["os.snake_pellets"] = "Bouchées : {0}",
@@ -82,7 +82,7 @@ public static class AppStrings
     {
         ["os.snake_subtitle"] = "Coma. Cresça. Não se morda.",
         ["os.snake_play"] = "Jogar",
-        ["os.snake_high_scores"] = "Melhores pontuações",
+        ["os.snake_high_scores"] = "Meus recordes",
         ["os.snake_best"] = "Recorde {0}",
         ["os.snake_score"] = "Pontos {0}",
         ["os.snake_pellets"] = "Mordidas: {0}",
@@ -100,7 +100,7 @@ public static class AppStrings
     {
         ["os.snake_subtitle"] = "Ешь. Расти. Не кусай себя.",
         ["os.snake_play"] = "Играть",
-        ["os.snake_high_scores"] = "Рекорды",
+        ["os.snake_high_scores"] = "Мои рекорды",
         ["os.snake_best"] = "Рекорд {0}",
         ["os.snake_score"] = "Очки {0}",
         ["os.snake_pellets"] = "Съедено: {0}",

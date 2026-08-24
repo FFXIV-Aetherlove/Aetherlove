@@ -111,7 +111,7 @@ internal sealed class TableScreen
         if (columns == 1)
         {
             ImGui.SetCursorScreenPos(innerTL);
-            ImGui.PushTextWrapPos(innerTL.X + innerSize.X);
+            ImGui.PushTextWrapPos(innerTL.X + innerSize.X - ImGui.GetWindowPos().X);
             ImGui.TextColored(RetroLcd.Pixel with { W = 0.7f }, ctx.Localize("os.calc_table_empty"));
             ImGui.PopTextWrapPos();
             return;

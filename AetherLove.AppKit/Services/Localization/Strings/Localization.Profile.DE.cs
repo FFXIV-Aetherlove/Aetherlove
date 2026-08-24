@@ -59,7 +59,7 @@ internal static class ProfileDe
         // ProfileScreen - copy profile text (viewing others only)
         ["profile.copy_text"] = "Profiltext kopieren",
         ["profile.copy_warning_title"] = "Warnung",
-        ["profile.copy_warning_body"] = "Du hast den Text einer anderen Person kopiert. Sei vorsichtig, wenn du darin enthaltene Links anklickst oder ihnen folgst. Das geschieht auf eigene Gefahr.",
+        ["profile.copy_warning_body"] = "Du hast den Text einer anderen Person kopiert. Sei vorsichtig mit den Links darin. Du folgst ihnen auf eigene Gefahr.",
         ["profile.copy_warning_agree"] = "Ich habe verstanden und stimme zu",
 
         // MyProfileScreen hub: stats + menu
@@ -105,7 +105,7 @@ internal static class ProfileDe
         ["profile.content_hint"] = "Wähle alles aus, was zutrifft.",
         ["profile.looking_for_hint"] = "Ehrlichkeit hilft, bessere Matches zu finden.",
         ["profile.nsfw_lalafell"] = "Erwachsenen- und NSFW-Funktionen stehen nicht zur Verfügung, solange deine Rasse auf Lalafell eingestellt ist. Details findest du in den Nutzungsbedingungen.",
-        ["profile.nsfw_explainer"] = "NSFW steht für \"Not Safe For Work\": Inhalte mit Nacktheit oder sexuellen Themen. Aktiviere dies, um NSFW-Profile zu sehen und mit ihnen gematcht zu werden.",
+        ["profile.nsfw_explainer"] = "NSFW steht für \"Not Safe For Work\". NSFW-Inhalte zeigen Nacktheit oder sexuelle Themen. Aktiviere dies, um NSFW-Profile zu sehen und mit ihnen zu matchen.",
         ["profile.nsfw_optin"] = "NSFW-Profile: JA",
         ["profile.favourite_job_tooltip"] = "Der Job oder die Rolle, die dir am meisten Spaß macht. Tippe zum Filtern.",
         ["profile.favourite_ff_character_full"] = "Lieblings-Final-Fantasy-Charakter",
@@ -147,7 +147,7 @@ internal static class ProfileDe
         ["profile.undo"] = "Rückgängig",
         ["profile.main_must_be_sfw"] = "Dein Hauptprofilbild MUSS SFW sein. Das Hochladen eines NSFW-Bildes ist ein Grund für die Sperrung oder Löschung des Kontos.",
         ["profile.sfw_or_nsfw"] = "Ist dieses Bild SFW oder NSFW?",
-        ["profile.sfw_mismatch_warning"] = "Wenn unser System feststellt, dass du NSFW hochgeladen hast, während SFW ausgewählt ist, wird dein Foto zur Moderation zurückgehalten und du riskierst eine Kontosperrung.",
+        ["profile.sfw_mismatch_warning"] = "Unser System prüft jedes Bild. Wenn du ein NSFW-Bild als SFW markierst, halten wir es zur Moderation zurück. Wir können auch dein Konto sperren.",
         ["profile.photo_ready"] = "Foto bereit, noch nicht gespeichert.",
         ["profile.replace"] = "Ersetzen",
         ["profile.photo_set"] = "Foto festgelegt  ✓",
@@ -200,7 +200,7 @@ internal static class ProfileDe
         ["profile.sup_intro"] = "Danke, dass du AetherLove unterstützt! Wähle einen Stil für deinen Namen und ob du das Supporter-Abzeichen zeigen willst. Beides ist für alle sichtbar.",
         ["profile.sup_name_style"] = "Namensstil",
         ["profile.sup_show_badge"] = "Meinen Supporter-Status anzeigen",
-        ["profile.sup_badge_hint"] = "Wenn aus, sieht niemand deinen Supporter-Stern oder dein Abzeichen: weder auf deinen Profilen noch in Chats oder Hangouts, und auch deine eigene Profilvorschau blendet sie aus. Deine Supporter-Vorteile funktionieren weiter. Gilt für dein ganzes Konto.",
+        ["profile.sup_badge_hint"] = "Schalte dies aus und niemand sieht deinen Supporter-Stern oder dein Abzeichen. Sie bleiben auf deinen Profilen, in Chats, in Hangouts und in deiner eigenen Profilvorschau verborgen. Deine Supporter-Vorteile funktionieren weiter. Diese Einstellung gilt für dein ganzes Konto.",
         ["profile.sup_stats_intro"] = "Exklusive Supporter-Einblicke, wie dein Profil im ganzen Reich ankommt.",
         ["profile.sup_stat_likes_received"] = "Erhaltene Likes",
         ["profile.sup_stat_superlikes"] = "Erhaltene Superlikes",
@@ -233,11 +233,14 @@ internal static class ProfileDe
         ["profile.menu_holiday"] = "Urlaubsmodus",
         ["profile.holiday_toggle"] = "Urlaubsmodus aktiv",
         ["profile.holiday_msg_label"] = "Urlaubsnachricht",
-        ["profile.holiday_msg_hint"] = "Solange der Urlaubsmodus aktiv ist, sehen alle Besucher deines Profils ein Abwesenheitsbanner mit deiner Nachricht, und deine Matches sehen eine Abwesenheitsmarkierung auf deinem Bild.",
+        ["profile.holiday_msg_hint"] = "Der Urlaubsmodus zeigt allen Besuchern deines Profils ein Abwesenheitsbanner mit deiner Nachricht. Deine Matches sehen außerdem eine Abwesenheitsmarkierung auf deinem Bild.",
         ["profile.holiday_save"] = "Speichern",
         ["profile.holiday_saved"] = "Gespeichert!",
         ["profile.holiday_active_banner"] = "URLAUBSMODUS AKTIV",
         ["profile.holiday_banner"] = "Diese Person hat den Urlaubsmodus aktiviert: {0}",
         ["profile.holiday_banner_short"] = "Diese Person hat den Urlaubsmodus aktiviert.",
+
+        // added after update 2.4.0
+        ["profile.region_min_hint"] = "Wähle mindestens eine Region.",
     };
 }

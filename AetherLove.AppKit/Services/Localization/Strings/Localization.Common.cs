@@ -1,4 +1,4 @@
-namespace AetherLove.Services.Localization;
+﻿namespace AetherLove.Services.Localization;
 
 internal static class CommonEn
 {
@@ -190,5 +190,37 @@ internal static class CommonEn
         // added after update 2.2.3
         ["common.travel_teleport_with"] = "Teleport ({0})",
         ["common.travel_tooltip"] = "Travel here with {0}",
+
+        // added after update 2.4.0
+        ["common.session_expired_title"] = "You need to sign in again",
+        ["common.session_expired_body"] = "Your session has ended, so the phone cannot reach AetherOS any more. This is not an outage: everything is running, it just no longer knows who you are.",
+        ["common.session_expired_button"] = "Sign in again",
+        ["common.session_expired_hint"] = "The phone restarts and takes you back to the sign-in screen.",
+    
+        // the file picker (added after update 2.4.0)
+        ["picker.quick_links"] = "Places",
+        ["picker.favorites"] = "Favorites",
+        ["picker.drives"] = "Drives",
+        ["picker.place_desktop"] = "Desktop",
+        ["picker.place_documents"] = "Documents",
+        ["picker.place_downloads"] = "Downloads",
+        ["picker.place_pictures"] = "Pictures",
+        ["picker.place_screenshots"] = "Game screenshots",
+        ["picker.search_hint"] = "Search this folder...",
+        ["picker.empty"] = "This folder is empty.",
+        ["picker.open"] = "Open",
+        ["picker.nothing_selected"] = "Nothing selected",
+        ["picker.new_folder_hint"] = "Folder name...",
+        ["picker.new_folder_create"] = "Create",
+        ["picker.show_hidden"] = "Hidden files",
+        ["picker.sort_name"] = "Name",
+        ["picker.sort_date"] = "Date",
+        ["picker.sort_size"] = "Size",
+        ["picker.tip_star"] = "Star or unstar this folder (right-click a favorite to remove it)",
+        ["picker.tip_edit_path"] = "Type a path",
+        ["picker.preview_loading"] = "Loading preview...",
+        ["picker.save"] = "Save",
+        ["picker.file_name_hint"] = "File name...",
+        ["picker.selected_count"] = "{0} selected",
     };
 }

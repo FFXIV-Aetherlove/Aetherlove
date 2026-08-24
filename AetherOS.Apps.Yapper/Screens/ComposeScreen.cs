@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -86,6 +86,14 @@ internal sealed class ComposeScreen
         _embedKind = kind;
         _embedId = id;
         _embedTitle = title;
+    }
+
+    /// <summary>Opens a fresh composer with a shared-in picture already attached, the way the photos
+    /// picker would have attached it.</summary>
+    public void OpenWithImage(string path)
+    {
+        Open(Mode.New, null);
+        AddImage(path);
     }
 
     public void Draw(OsAppContext ctx)

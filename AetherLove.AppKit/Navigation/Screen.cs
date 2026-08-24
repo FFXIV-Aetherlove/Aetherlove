@@ -1,4 +1,4 @@
-namespace AetherLove.Navigation;
+﻿namespace AetherLove.Navigation;
 
 /// <summary>Top-level shell/gate screens the phone window dispatches. The AetherLove dating surface is a single
 /// <see cref="App"/> entry; its own views live inside the AetherOS.Apps.Love app, not here.</summary>
@@ -14,6 +14,7 @@ public enum Screen
     PassphraseUnlock,
     EncryptionRecovery,
     Offline,
+    SessionExpired,
     Outdated,
     StaffNotice,
 }

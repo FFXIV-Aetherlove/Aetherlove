@@ -1,4 +1,4 @@
-using AetherLove.Services;
+﻿using AetherLove.Services;
 using AetherLove.UI;
 using Dalamud.Configuration;
 using System;
@@ -237,6 +237,10 @@ public class Configuration : IPluginConfiguration
     /// infrastructure). The old flat properties below forward here, so existing config files migrate on load and
     /// every existing reader keeps working unchanged.</summary>
     public OsSettingsConfig OsSettings { get; set; } = new();
+
+    /// <summary>The file picker's own memory: the one folder every picker on the phone shares, the
+    /// starred folders, and the window and view preferences. See AetherFileDialog.</summary>
+    public FilePickerConfig FilePicker { get; set; } = new();
 
     /// <summary>Phone size preset; scales the whole UI uniformly.</summary>
     public PhoneScalePreset PhoneSize { get; set; } = PhoneScalePreset.Small;

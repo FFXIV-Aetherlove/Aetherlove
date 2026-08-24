@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using MessagePack;
 
 namespace AetherLove.Shared.EchoVidya;
@@ -6,8 +6,9 @@ namespace AetherLove.Shared.EchoVidya;
 // New fields are appended as trailing parameters with defaults; existing parameters are never reordered
 // or removed. Trailing defaults keep old servers/clients wire-compatible.
 
-/// <summary>One person in a room. <see cref="AvatarUrl"/> is the OS avatar; Echo never surfaces dating
-/// profiles.</summary>
+/// <summary>One person in a room. <see cref="AvatarImage"/> is the OS avatar's bytes, inline the way party
+/// members carry theirs (JPEG, the always-renders fallback); <see cref="AvatarUrl"/> is a leftover that
+/// stays null. Echo never surfaces dating profiles.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record EchoMemberDto(
     Guid AccountId,
@@ -15,7 +16,8 @@ public sealed record EchoMemberDto(
     string? AvatarUrl,
     DateTimeOffset JoinedAtUtc,
     bool IsOwner,
-    string? FrameRef = null);
+    string? FrameRef = null,
+    byte[]? AvatarImage = null);
 
 /// <summary>One queued video. <see cref="Title"/> is null until a client resolves it;
 /// <see cref="Failed"/> marks an entry every client failed to play, so it renders as unavailable rather

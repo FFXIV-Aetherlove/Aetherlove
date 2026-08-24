@@ -114,6 +114,7 @@ internal static class SettingsEn
         ["settings.contributors_xivauth"] = "XIVAuth by KazWolfe",
         ["settings.contributors_punish"] = "Puni.sh",
         ["settings.contributors_dalamud"] = "The Dalamud project",
+        ["settings.contributors_vavenn"] = "Vavenn (Stacker's Modern mode)",
         ["settings.contributors_testers"] = "All the wonderful beta testers across Eorzea.",
 
         // added after update 1.4.0
@@ -260,5 +261,10 @@ internal static class SettingsEn
 
         // Timers (added after update 2.3.3)
         ["dtr.timers"] = "{0} {1}",
+        // text translation (added after update 2.4.0)
+        ["settings.section_translation"] = "Text translation",
+        ["settings.translation_enable"] = "Enable translations",
+        ["settings.translation_language"] = "Translate into",
+        ["settings.translation_search"] = "Search languages...",
     };
 }

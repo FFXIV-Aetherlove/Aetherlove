@@ -1,4 +1,4 @@
-namespace AetherLove.Services.Localization;
+﻿namespace AetherLove.Services.Localization;
 
 internal static class CommonEs
 {
@@ -181,5 +181,37 @@ internal static class CommonEs
         // added after update 2.2.3
         ["common.travel_teleport_with"] = "Teletransporte ({0})",
         ["common.travel_tooltip"] = "Viajar aquí con {0}",
+
+        // added after update 2.4.0
+        ["common.session_expired_title"] = "Tienes que iniciar sesión otra vez",
+        ["common.session_expired_body"] = "Tu sesión ha terminado, así que el teléfono ya no puede conectar con AetherOS. No es una caída: todo funciona, simplemente ya no sabe quién eres.",
+        ["common.session_expired_button"] = "Iniciar sesión de nuevo",
+        ["common.session_expired_hint"] = "El teléfono se reinicia y te lleva de vuelta a la pantalla de inicio de sesión.",
+    
+        // the file picker (added after update 2.4.0)
+        ["picker.quick_links"] = "Lugares",
+        ["picker.favorites"] = "Favoritos",
+        ["picker.drives"] = "Unidades",
+        ["picker.place_desktop"] = "Escritorio",
+        ["picker.place_documents"] = "Documentos",
+        ["picker.place_downloads"] = "Descargas",
+        ["picker.place_pictures"] = "Imágenes",
+        ["picker.place_screenshots"] = "Capturas del juego",
+        ["picker.search_hint"] = "Buscar en esta carpeta...",
+        ["picker.empty"] = "Esta carpeta está vacía.",
+        ["picker.open"] = "Abrir",
+        ["picker.nothing_selected"] = "Nada seleccionado",
+        ["picker.new_folder_hint"] = "Nombre de la carpeta...",
+        ["picker.new_folder_create"] = "Crear",
+        ["picker.show_hidden"] = "Archivos ocultos",
+        ["picker.sort_name"] = "Nombre",
+        ["picker.sort_date"] = "Fecha",
+        ["picker.sort_size"] = "Tamaño",
+        ["picker.tip_star"] = "Marcar o desmarcar esta carpeta como favorita (clic derecho en un favorito para quitarlo)",
+        ["picker.tip_edit_path"] = "Escribir una ruta",
+        ["picker.preview_loading"] = "Cargando vista previa...",
+        ["picker.save"] = "Guardar",
+        ["picker.file_name_hint"] = "Nombre del archivo...",
+        ["picker.selected_count"] = "{0} seleccionados",
     };
 }

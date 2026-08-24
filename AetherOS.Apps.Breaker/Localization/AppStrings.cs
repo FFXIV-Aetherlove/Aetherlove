@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace AetherOS.Apps.Breaker.Localization;
 
@@ -10,7 +10,7 @@ public static class AppStrings
         // added after update 2.1.3 (breaker)
         ["os.ark_subtitle"] = "Break every brick. Catch the capsules.",
         ["os.ark_play"] = "Play",
-        ["os.ark_high_scores"] = "High scores",
+        ["os.ark_high_scores"] = "My high scores",
         ["os.ark_best"] = "Best {0}",
         ["os.ark_score"] = "Score {0}",
         ["os.ark_level"] = "Level {0}",
@@ -23,13 +23,14 @@ public static class AppStrings
         ["os.ark_no_scores"] = "No scores yet. Go get one!",
         ["os.ark_paused"] = "Paused",
         ["os.ark_resume"] = "Resume",
+        ["os.ark_end_run"] = "End run",
     };
 
     private static readonly IReadOnlyDictionary<string, string> De = new Dictionary<string, string>
     {
         ["os.ark_subtitle"] = "Zerschlag jeden Stein. Fang die Kapseln.",
         ["os.ark_play"] = "Spielen",
-        ["os.ark_high_scores"] = "Bestenliste",
+        ["os.ark_high_scores"] = "Meine Bestwerte",
         ["os.ark_best"] = "Beste {0}",
         ["os.ark_score"] = "Punkte {0}",
         ["os.ark_level"] = "Level {0}",
@@ -42,13 +43,14 @@ public static class AppStrings
         ["os.ark_no_scores"] = "Noch keine Punkte. Auf geht's!",
         ["os.ark_paused"] = "Pause",
         ["os.ark_resume"] = "Weiter",
+        ["os.ark_end_run"] = "Lauf beenden",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Es = new Dictionary<string, string>
     {
         ["os.ark_subtitle"] = "Rompe cada ladrillo. Atrapa las cápsulas.",
         ["os.ark_play"] = "Jugar",
-        ["os.ark_high_scores"] = "Mejores puntuaciones",
+        ["os.ark_high_scores"] = "Mis récords",
         ["os.ark_best"] = "Mejor {0}",
         ["os.ark_score"] = "Puntos {0}",
         ["os.ark_level"] = "Nivel {0}",
@@ -61,13 +63,14 @@ public static class AppStrings
         ["os.ark_no_scores"] = "Aún no hay puntuaciones. ¡A por ellas!",
         ["os.ark_paused"] = "En pausa",
         ["os.ark_resume"] = "Continuar",
+        ["os.ark_end_run"] = "Terminar la partida",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Fr = new Dictionary<string, string>
     {
         ["os.ark_subtitle"] = "Cassez chaque brique. Attrapez les capsules.",
         ["os.ark_play"] = "Jouer",
-        ["os.ark_high_scores"] = "Meilleurs scores",
+        ["os.ark_high_scores"] = "Mes records",
         ["os.ark_best"] = "Record {0}",
         ["os.ark_score"] = "Score {0}",
         ["os.ark_level"] = "Niveau {0}",
@@ -80,13 +83,14 @@ public static class AppStrings
         ["os.ark_no_scores"] = "Pas encore de score. À vous de jouer !",
         ["os.ark_paused"] = "En pause",
         ["os.ark_resume"] = "Reprendre",
+        ["os.ark_end_run"] = "Terminer la partie",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Pt = new Dictionary<string, string>
     {
         ["os.ark_subtitle"] = "Quebre cada tijolo. Pegue as cápsulas.",
         ["os.ark_play"] = "Jogar",
-        ["os.ark_high_scores"] = "Melhores pontuações",
+        ["os.ark_high_scores"] = "Meus recordes",
         ["os.ark_best"] = "Recorde {0}",
         ["os.ark_score"] = "Pontos {0}",
         ["os.ark_level"] = "Nível {0}",
@@ -99,13 +103,14 @@ public static class AppStrings
         ["os.ark_no_scores"] = "Ainda sem pontuações. Vai lá!",
         ["os.ark_paused"] = "Pausado",
         ["os.ark_resume"] = "Continuar",
+        ["os.ark_end_run"] = "Encerrar a partida",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Ru = new Dictionary<string, string>
     {
         ["os.ark_subtitle"] = "Разбей все блоки. Лови капсулы.",
         ["os.ark_play"] = "Играть",
-        ["os.ark_high_scores"] = "Рекорды",
+        ["os.ark_high_scores"] = "Мои рекорды",
         ["os.ark_best"] = "Рекорд {0}",
         ["os.ark_score"] = "Очки {0}",
         ["os.ark_level"] = "Уровень {0}",
@@ -118,6 +123,7 @@ public static class AppStrings
         ["os.ark_no_scores"] = "Рекордов пока нет. Самое время!",
         ["os.ark_paused"] = "Пауза",
         ["os.ark_resume"] = "Продолжить",
+        ["os.ark_end_run"] = "Завершить игру",
     };
 
     public static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> Packs =

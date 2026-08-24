@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace AetherOS.Apps.Plappy.Localization;
 
@@ -10,7 +10,7 @@ public static class AppStrings
         // added after update 2.2.3 (plappy)
         ["os.plappy_subtitle"] = "Flap. Squeeze through. Don't clip a pillar.",
         ["os.plappy_play"] = "Play",
-        ["os.plappy_high_scores"] = "High scores",
+        ["os.plappy_high_scores"] = "My high scores",
         ["os.plappy_best"] = "Best {0}",
         ["os.plappy_score"] = "Score {0}",
         ["os.plappy_tier"] = "Tier {0}",
@@ -30,7 +30,7 @@ public static class AppStrings
     {
         ["os.plappy_subtitle"] = "Flattern. Durchschlüpfen. Bloß nicht anecken.",
         ["os.plappy_play"] = "Spielen",
-        ["os.plappy_high_scores"] = "Bestenliste",
+        ["os.plappy_high_scores"] = "Meine Bestwerte",
         ["os.plappy_best"] = "Beste {0}",
         ["os.plappy_score"] = "Punkte {0}",
         ["os.plappy_tier"] = "Stufe {0}",
@@ -50,7 +50,7 @@ public static class AppStrings
     {
         ["os.plappy_subtitle"] = "Aletea. Cuélate. No roces las columnas.",
         ["os.plappy_play"] = "Jugar",
-        ["os.plappy_high_scores"] = "Mejores puntuaciones",
+        ["os.plappy_high_scores"] = "Mis récords",
         ["os.plappy_best"] = "Mejor {0}",
         ["os.plappy_score"] = "Puntos {0}",
         ["os.plappy_tier"] = "Nivel {0}",
@@ -70,7 +70,7 @@ public static class AppStrings
     {
         ["os.plappy_subtitle"] = "Battez des ailes. Faufilez-vous. Évitez les piliers.",
         ["os.plappy_play"] = "Jouer",
-        ["os.plappy_high_scores"] = "Meilleurs scores",
+        ["os.plappy_high_scores"] = "Mes records",
         ["os.plappy_best"] = "Record {0}",
         ["os.plappy_score"] = "Score {0}",
         ["os.plappy_tier"] = "Palier {0}",
@@ -90,7 +90,7 @@ public static class AppStrings
     {
         ["os.plappy_subtitle"] = "Bata as asas. Passe no meio. Não encoste nos pilares.",
         ["os.plappy_play"] = "Jogar",
-        ["os.plappy_high_scores"] = "Melhores pontuações",
+        ["os.plappy_high_scores"] = "Meus recordes",
         ["os.plappy_best"] = "Recorde {0}",
         ["os.plappy_score"] = "Pontos {0}",
         ["os.plappy_tier"] = "Nível {0}",
@@ -110,7 +110,7 @@ public static class AppStrings
     {
         ["os.plappy_subtitle"] = "Маши крыльями. Пролетай в щель. Не задень столбы.",
         ["os.plappy_play"] = "Играть",
-        ["os.plappy_high_scores"] = "Рекорды",
+        ["os.plappy_high_scores"] = "Мои рекорды",
         ["os.plappy_best"] = "Рекорд {0}",
         ["os.plappy_score"] = "Очки {0}",
         ["os.plappy_tier"] = "Уровень {0}",

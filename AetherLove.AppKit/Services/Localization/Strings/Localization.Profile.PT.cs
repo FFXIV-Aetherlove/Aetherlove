@@ -58,7 +58,7 @@ internal static class ProfilePt
         // ProfileScreen - copy profile text (viewing others only)
         ["profile.copy_text"] = "Copiar texto do perfil",
         ["profile.copy_warning_title"] = "Aviso",
-        ["profile.copy_warning_body"] = "Você copiou o texto de outra pessoa. Tenha cuidado ao clicar ou acessar qualquer link que ele contenha; você faz isso por sua conta e risco.",
+        ["profile.copy_warning_body"] = "Você copiou o texto de outra pessoa. Tenha cuidado com os links que ele contém. Você os acessa por sua conta e risco.",
         ["profile.copy_warning_agree"] = "Entendi e concordo",
 
         // MyProfileScreen hub: stats + menu
@@ -104,7 +104,7 @@ internal static class ProfilePt
         ["profile.content_hint"] = "Selecione tudo o que se aplica.",
         ["profile.looking_for_hint"] = "Ser honesto ajuda a encontrar matches melhores.",
         ["profile.nsfw_lalafell"] = "Os recursos adultos e NSFW não estão disponíveis enquanto sua race estiver definida como Lalafell. Consulte os Termos de Serviço para mais detalhes.",
-        ["profile.nsfw_explainer"] = "NSFW significa \"Not Safe For Work\" (impróprio para o trabalho): conteúdo que contém nudez ou temas sexuais. Adira para ver e dar match com perfis NSFW.",
+        ["profile.nsfw_explainer"] = "NSFW significa \"Not Safe For Work\" (impróprio para o trabalho). O conteúdo NSFW tem nudez ou temas sexuais. Ative para ver perfis NSFW e dar match com eles.",
         ["profile.nsfw_optin"] = "Perfis NSFW: SIM",
         ["profile.favourite_job_tooltip"] = "O job ou papel que você mais curte. Digite para filtrar.",
         ["profile.favourite_ff_character_full"] = "Personagem Favorito de Final Fantasy",
@@ -146,7 +146,7 @@ internal static class ProfilePt
         ["profile.undo"] = "Desfazer",
         ["profile.main_must_be_sfw"] = "Sua foto de perfil principal PRECISA ser SFW. Enviar uma foto NSFW é motivo para suspensão ou exclusão da conta.",
         ["profile.sfw_or_nsfw"] = "Esta foto é SFW ou NSFW?",
-        ["profile.sfw_mismatch_warning"] = "Se nosso sistema detectar que você enviou conteúdo NSFW enquanto SFW está selecionado, sua foto ficará retida para moderação e você corre o risco de ter a conta suspensa.",
+        ["profile.sfw_mismatch_warning"] = "Nosso sistema verifica cada foto. Se você marcar uma foto NSFW como SFW, ela fica retida para moderação. Também podemos suspender sua conta.",
         ["profile.photo_ready"] = "Foto pronta, ainda não salva.",
         ["profile.replace"] = "Substituir",
         ["profile.photo_set"] = "Foto definida  ✓",
@@ -199,7 +199,7 @@ internal static class ProfilePt
         ["profile.sup_intro"] = "Obrigado por apoiar o AetherLove! Escolha um estilo para o seu nome e se quer mostrar o emblema de apoiador. Todos podem vê-los.",
         ["profile.sup_name_style"] = "Estilo do nome",
         ["profile.sup_show_badge"] = "Mostrar o meu estado de apoiador",
-        ["profile.sup_badge_hint"] = "Quando desligado, ninguém vê a tua estrela nem o teu emblema de apoiador: nem nos teus perfis, nem nos chats, nem nos hangouts, e a tua própria pré-visualização do perfil também os esconde. As tuas vantagens de apoiador continuam a funcionar. Aplica-se à conta inteira.",
+        ["profile.sup_badge_hint"] = "Desliga isto e ninguém vê a tua estrela nem o teu emblema de apoiador. Ficam escondidos nos teus perfis, nos chats, nos hangouts e na tua própria pré-visualização do perfil. As tuas vantagens de apoiador continuam a funcionar. Esta definição aplica-se à conta inteira.",
         ["profile.sup_stats_intro"] = "Informações exclusivas para apoiadores sobre como o seu perfil está indo pelo reino.",
         ["profile.sup_stat_likes_received"] = "Curtidas recebidas",
         ["profile.sup_stat_superlikes"] = "Superlikes recebidos",
@@ -232,11 +232,14 @@ internal static class ProfilePt
         ["profile.menu_holiday"] = "Modo férias",
         ["profile.holiday_toggle"] = "Modo férias ativado",
         ["profile.holiday_msg_label"] = "Mensagem de férias",
-        ["profile.holiday_msg_hint"] = "Enquanto o modo férias estiver ativo, quem vir o teu perfil vê um aviso de ausência com a tua mensagem, e os teus matches veem um marcador de ausência na tua foto.",
+        ["profile.holiday_msg_hint"] = "O modo férias mostra um aviso de ausência com a tua mensagem a quem vir o teu perfil. Os teus matches veem também um marcador de ausência na tua foto.",
         ["profile.holiday_save"] = "Guardar",
         ["profile.holiday_saved"] = "Guardado!",
         ["profile.holiday_active_banner"] = "MODO FÉRIAS ATIVO",
         ["profile.holiday_banner"] = "Este jogador tem o modo férias ativado: {0}",
         ["profile.holiday_banner_short"] = "Este jogador tem o modo férias ativado.",
+
+        // added after update 2.4.0
+        ["profile.region_min_hint"] = "Selecione pelo menos uma região.",
     };
 }

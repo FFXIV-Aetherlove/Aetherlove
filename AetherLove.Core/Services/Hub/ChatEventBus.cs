@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using AetherLove.Shared.Matching;
 using AetherLove.Shared.Messaging;
 
@@ -16,8 +16,10 @@ public sealed class ChatEventBus
     public event Action<MessagePinChangedPushDto>? PinChanged;
     public event Action<MessageDeletedPushDto>? MessageDeleted;
     public event Action<PeerKeysResetPushDto>? PeerKeysReset;
+    public event Action<ChatImageRemovedPushDto>? ChatImageRemoved;
 
     public void RaiseMessageReceived(MessageReceivedPushDto p) => MessageReceived?.Invoke(p);
+    public void RaiseChatImageRemoved(ChatImageRemovedPushDto p) => ChatImageRemoved?.Invoke(p);
     public void RaiseMessageRead(MessageReadPushDto p) => MessageRead?.Invoke(p);
     public void RaiseUnmatched(UnmatchedPushDto p) => Unmatched?.Invoke(p);
     public void RaiseBlockedByPeer(BlockedByPeerPushDto p) => BlockedByPeer?.Invoke(p);

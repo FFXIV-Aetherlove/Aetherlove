@@ -1,0 +1,31 @@
+{
+  "name": "Fox Ears",
+  "slot": "ears",
+  "tier": "premium",
+  "file": "",
+  "anchor": "earL",
+  "origin": [
+    0,
+    0
+  ],
+  "width": 0,
+  "height": 0,
+  "behind": true,
+  "ears": {
+    "nudge": [
+      -2.0,
+      -1.0
+    ],
+    "baseHalfWidth": 23.5,
+    "height": 74.67,
+    "bowOut": 0.12,
+    "bowIn": -0.18,
+    "lean": 9.0,
+    "inner": 0.5,
+    "floppy": 0.15,
+    "droop": 0.0,
+    "tuft": 0.0,
+    "tipWidth": 0.0,
+    "fur": 0.085
+  }
+}

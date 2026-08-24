@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using AetherLove.Services;
 using AetherLove.Services.Localization;
 using AetherLove.Shared;
+using AetherLove.Shared.Aetherling;
 using AetherLove.Shared.Store;
 using AetherLove.UI;
 using AetherOS.Sdk;
@@ -501,10 +502,12 @@ internal sealed class BagScreen(
             .ToArray();
     }
 
-    /// <summary>A consumable only earns a button when there is somewhere for it to go; crystals feed
-    /// the pet, a name tag does nothing yet.</summary>
+    /// <summary>A consumable only earns a button when there is somewhere for it to go: crystals feed the
+    /// pet, a name change opens its rename box.</summary>
     private static bool Actionable(StoreItemKind kind, string itemRef) =>
-        kind != StoreItemKind.AetherlingConsumable || itemRef.StartsWith("crystal-", StringComparison.Ordinal);
+        kind != StoreItemKind.AetherlingConsumable
+        || itemRef.StartsWith("crystal-", StringComparison.Ordinal)
+        || string.Equals(itemRef, AetherlingLimits.NameChangeRef, StringComparison.Ordinal);
 
     /// <summary>Kinds the success scene can act on: the two that equip themselves, plus the pet's
     /// food, whose action is to walk you to the mouth it was bought for.</summary>

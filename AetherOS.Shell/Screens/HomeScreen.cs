@@ -20,7 +20,7 @@ namespace AetherLove.Screens;
 /// that is not "move it" is a right-click: on a tile for its own actions, on empty space for adding things.
 /// The long-press that used to arm a wiggle mode was a touch idiom with no hover affordance, so nobody found
 /// it and it fired on any hesitant click.</para></summary>
-public sealed class HomeScreen
+public sealed partial class HomeScreen
 {
     private readonly OsShell _shell;
     private readonly WallpaperService _wallpapers;
@@ -131,11 +131,42 @@ public sealed class HomeScreen
     private static OsFolder? FindFolder(string? id) =>
         id == null ? null : UiHost.Configuration.Os.Folders.FirstOrDefault(f => f.Id == id);
 
-    public HomeScreen(OsShell shell, WallpaperService wallpapers, Os.NewAppOffer newApps)
+    public HomeScreen(OsShell shell, WallpaperService wallpapers, Os.NewAppOffer newApps,
+        Os.IOsTogether together, Os.ShareService share, Os.TogetherOnboarding partyIntro)
     {
         _shell = shell;
         _wallpapers = wallpapers;
         _newApps = newApps;
+        _together = together;
+        _partyIntro = partyIntro;
+        _partyCard = new Os.TogetherPartyCard(together, share, OpenPartyActivity)
+        {
+            // The first create or join teaches the feature before it does it; the explainer carries the
+            // action and runs it on its last page.
+            Intercept = pending => partyIntro.Show(pending),
+            OpenSettings = partyIntro.ShowSettings,
+        };
+    }
+
+    private readonly Os.IOsTogether _together;
+    private readonly Os.TogetherOnboarding _partyIntro;
+    private readonly Os.TogetherPartyCard _partyCard;
+
+    /// <summary>The party card's own confirm, drawn by the phone window over the whole page: an overlay
+    /// inside the widget page's clipped band would be cut off by it.</summary>
+    public void DrawPartyOverlays(System.Numerics.Vector2 contentTL, System.Numerics.Vector2 contentBR) =>
+        _partyCard.DrawKickConfirm(contentTL, contentBR);
+
+    /// <summary>One-tap into the party's activity: Echo joins by the room code so any member lands in the
+    /// watch room; anything else just opens the owning app.</summary>
+    private void OpenPartyActivity(Os.OsPartyActivity activity)
+    {
+        if (activity.AppId == "echo" && activity.Code is { Length: > 0 } code)
+        {
+            _shell.SendIntent("echo", AetherOS.Sdk.OsIntents.CreateRoomJoin(
+                AetherOS.Sdk.OsIntents.EchoJoin, activity.RefId, code));
+        }
+        _shell.OpenApp(activity.AppId);
     }
 
     /// <summary>Every tile the last frame drew, grid and dock together. The guided tour picks its examples
@@ -175,6 +206,36 @@ public sealed class HomeScreen
         }
         _openFolderId = null;
                 return true;
+    }
+
+    /// <summary>Whether the home screen is showing (or sliding towards) the widget page, which is what the
+    /// home button treats as somewhere to come back from.</summary>
+    public bool OnWidgetPage => _targetPage < 0 || _page < -0.5f;
+
+    /// <summary>What the home button does on the home screen itself, in order: leave an open folder, drop a
+    /// party confirm, close the party explainer, then come back from the widget page to the first home
+    /// page. False means there was nothing to leave.</summary>
+    public bool HandleHomePress()
+    {
+        if (CloseOpenFolder())
+        {
+            return true;
+        }
+        if (_partyCard.DismissConfirm())
+        {
+            return true;
+        }
+        if (_partyIntro.Active)
+        {
+            _partyIntro.Dismiss();
+            return true;
+        }
+        if (OnWidgetPage)
+        {
+            ShowPage(0);
+            return true;
+        }
+        return false;
     }
 
     /// <summary>Opens the given folder's overlay; unknown ids are ignored. Arcade is checked like any other
@@ -1385,16 +1446,29 @@ public sealed class HomeScreen
         // Right-click on empty home space opens the home context menu. Suppressed in edit mode, which has its
         // own Done pill, and suppressed over a tile: this fires on the press while a tile's own menu opens on
         // the release, so without the check the home menu flashed up first and was replaced a frame later.
-        if (_dragId == null && !_tileHovered && ImGui.IsItemClicked(ImGuiMouseButton.Right))
+        var onWidgets = _page < -0.5f;
+        if (_dragId == null && !_tileHovered && !WidgetDragActive && ImGui.IsItemClicked(ImGuiMouseButton.Right))
         {
-            // Remembered here rather than read when the menu is used: by then the popup owns the cursor.
-            var spot = DropTarget(layout);
-            _menuCell = spot is { InDock: false, Page: >= 0, Slot: >= 0 } ? (spot.Page, spot.Slot) : null;
-            ImGui.OpenPopup("##homeCtx");
+            if (onWidgets)
+            {
+                // The widget page is not a grid: adding an app or a folder there would put it somewhere the
+                // player is not looking, so it gets its own menu, and only while it has something to say.
+                if (!_widgetHovered && AnyHiddenWidgets)
+                {
+                    OpenWidgetMenu(null, ImGui.GetMousePos());
+                }
+            }
+            else
+            {
+                // Remembered here rather than read when the menu is used: by then the popup owns the cursor.
+                var spot = DropTarget(layout);
+                _menuCell = spot is { InDock: false, Page: >= 0, Slot: >= 0 } ? (spot.Page, spot.Slot) : null;
+                ImGui.OpenPopup("##homeCtx");
+            }
         }
         DrawHomeContextMenu();
 
-        if (ImGui.IsItemActivated())
+        if (ImGui.IsItemActivated() && !WidgetDragActive)
         {
             _draggingPages = true;
             _pageDragStartX = ImGui.GetMousePos().X;
@@ -1668,6 +1742,7 @@ public sealed class HomeScreen
             _widgetScroll -= wheel * Px(48f);
         }
         _widgetScroll = Math.Clamp(_widgetScroll, 0f, MathF.Max(0f, _widgetOverflow));
+        _widgetHovered = false;
 
         // A draw-list clip hides pixels and nothing else, so a card scrolled off the top would still be
         // holding an invisible button over the greeting. The cards check this band before submitting one.
@@ -1685,32 +1760,112 @@ public sealed class HomeScreen
         dl.AddText(new Vector2(o.X + padX, y), OsDraw.White(0.65f), FormatDate(DateTime.Now));
         y += ImGui.GetFontSize() + Px(18f);
 
-        y = DrawClockWidget(dl, o.X + padX, y, w);
-        y = DrawStatusWidget(dl, o.X + padX, y, w);
-        y = DrawNotifWidget(dl, o.X + padX, y, w);
-
-        foreach (var app in _shell.Apps)
+        _widgetRects.Clear();
+        var pastSlot = 0f;
+        foreach (var id in OrderedWidgetIds())
         {
-            if (!app.Available || _shell.IsAppRemoved(app.Id))
+            // The lifted card keeps its row open while it rides the cursor, so the page under it neither
+            // collapses nor jumps as the drop target moves.
+            if (id == _widgetDragId)
+            {
+                _widgetSlotTop = y;
+                y += _widgetDragSpan;
+                pastSlot = _widgetDragSpan;
+                continue;
+            }
+            var top0 = y;
+            y = DrawWidgetCard(dl, id, o.X + padX, y, w);
+            if (y <= top0)
             {
                 continue;
             }
-            var items = app.WidgetItems;
-            if (items.Count > 0)
+            // Recorded as if the lifted card were not on the page at all. The open row pushes everything
+            // under it down by a card, and measuring the drop against that would make a card dragged
+            // downwards need a whole extra card of travel before it moved a single row.
+            _widgetRects.Add((id, top0 - pastSlot, y - pastSlot));
+            if (!WidgetDragActive)
             {
-                y = DrawAppWidget(dl, o.X + padX, y, w, app, items);
+                HandleWidgetContext(id, new Vector2(o.X + padX, top0), new Vector2(o.X + padX + w, y));
+            }
+            if (_widgetPressId == id)
+            {
+                DrawWidgetHoldHint(dl, new Vector2(o.X + padX, top0), new Vector2(o.X + padX + w, y));
+            }
+            if (_widgetRevealId == id)
+            {
+                RevealWidgetRow(top0, y, bottom);
             }
         }
 
+        if (_widgetDragId is { } lifted)
+        {
+            DrawLiftedWidget(dl, lifted, o.X + padX, w);
+        }
+
         dl.PopClipRect();
+
+        // Outside the clip: the menu is allowed to hang past the band it was opened in, and it is submitted
+        // here so its rows come before the page-wide swipe button and keep their clicks.
+        DrawWidgetMenu(origin, avail);
 
         // Measured from what was actually drawn, so a card appearing or an app switching its widget off
         // changes the reach on the same frame rather than the next one.
         if (onThisPage)
         {
             _widgetOverflow = MathF.Max(0f, (y + _widgetScroll) - bottom + Px(12f));
+            UpdateWidgetDrag(bottom);
             DrawWidgetScrollHint(dl, origin, avail, bottom);
         }
+        else
+        {
+            CancelWidgetDrag();
+        }
+    }
+
+    /// <summary>One card by id, and the one place that knows which draw belongs to which widget. Returns the
+    /// bottom of the card, or the y it was given when the card had nothing to draw.</summary>
+    private float DrawWidgetCard(ImDrawListPtr dl, string id, float x, float y, float w)
+    {
+        switch (id)
+        {
+            case ClockWidgetId:
+                return DrawClockWidget(dl, x, y, w);
+            case StatusWidgetId:
+                return DrawStatusWidget(dl, x, y, w);
+            case NotificationsWidgetId:
+                return DrawNotifWidget(dl, x, y, w);
+            // The party lives here rather than on the notification shade, where nobody found it. Its own
+            // items are gated the way every other card on this page is: drawn while clipped, submitted only
+            // in band.
+            case PartyWidgetId:
+                _partyCard.InputLocked = _partyIntro.Active || WidgetMenuBlocking || WidgetDragActive
+                    || _partyCard.ConfirmOpen || y >= _widgetBandBottom || y + Px(220f) <= _widgetBandTop;
+                return _partyCard.Draw(dl, x, y, w);
+            default:
+                var app = _shell.Find(id);
+                if (app == null || !app.Available || _shell.IsAppRemoved(id))
+                {
+                    return y;
+                }
+                var items = app.WidgetItems;
+                return items.Count > 0 ? DrawAppWidget(dl, x, y, w, app, items) : y;
+        }
+    }
+
+    /// <summary>Scrolls a widget that was just put back into view. A page that has been arranged can be long,
+    /// and a card that comes back below the fold reads as one that never came back at all.</summary>
+    private void RevealWidgetRow(float top, float bottom, float bandBottom)
+    {
+        _widgetRevealId = null;
+        if (bottom > bandBottom)
+        {
+            _widgetScroll += bottom - bandBottom + Px(12f);
+        }
+        else if (top < _widgetBandTop)
+        {
+            _widgetScroll -= _widgetBandTop - top + Px(12f);
+        }
+        _widgetScroll = MathF.Max(0f, _widgetScroll);
     }
 
     /// <summary>A slim track down the right edge while the page has more than fits. The page is one long
@@ -1753,7 +1908,10 @@ public sealed class HomeScreen
             return y + h + Px(12f);
         }
 
-        // Action buttons claim their clicks first; the card's open target is submitted after them.
+        // Action buttons claim their clicks first; the card's open target is submitted after them. All of
+        // them stand down while the context menu is up, whose rows are submitted after this card and would
+        // otherwise lose their clicks to it (first-submitted-wins).
+        var live = !WidgetMenuBlocking && !WidgetDragActive;
         if (actions.Count > 0)
         {
             var gap = Px(14f);
@@ -1762,20 +1920,25 @@ public sealed class HomeScreen
             var cy = y + h - Px(8f) - actionR;
             for (var i = 0; i < actions.Count; i++)
             {
-                DrawWidgetAction(dl, app.Id, i, actions[i], new Vector2(cx, cy), actionR);
+                DrawWidgetAction(dl, app.Id, i, actions[i], new Vector2(cx, cy), actionR, live);
                 cx += actionR * 2f + gap;
             }
         }
 
-        ImGui.SetCursorScreenPos(tl);
-        if (ImGui.InvisibleButton($"##widget_{app.Id}", br - tl))
+        var hovered = false;
+        if (live)
         {
-            _shell.OpenApp(app.Id);
+            ImGui.SetCursorScreenPos(tl);
+            if (ImGui.InvisibleButton($"##widget_{app.Id}", br - tl))
+            {
+                _shell.OpenApp(app.Id);
+            }
+            hovered = ImGui.IsItemHovered();
         }
-        var hovered = ImGui.IsItemHovered();
 
         if (hovered)
         {
+            SharedUiHelpers.HandOnHover();
             dl.AddRect(tl, br, ThemeService.Current.AccentU32, Px(18f), ImDrawFlags.RoundCornersAll, Px(1.2f));
         }
 
@@ -1801,11 +1964,16 @@ public sealed class HomeScreen
     }
 
     private static void DrawWidgetAction(ImDrawListPtr dl, string appId, int index, OsWidgetAction action,
-        Vector2 center, float radius)
+        Vector2 center, float radius, bool live)
     {
-        ImGui.SetCursorScreenPos(center - new Vector2(radius, radius));
-        var clicked = ImGui.InvisibleButton($"##widgetAct_{appId}_{index}", new Vector2(radius * 2f, radius * 2f));
-        var hovered = ImGui.IsItemHovered();
+        var clicked = false;
+        var hovered = false;
+        if (live)
+        {
+            ImGui.SetCursorScreenPos(center - new Vector2(radius, radius));
+            clicked = ImGui.InvisibleButton($"##widgetAct_{appId}_{index}", new Vector2(radius * 2f, radius * 2f));
+            hovered = ImGui.IsItemHovered();
+        }
         if (hovered)
         {
             SharedUiHelpers.HandOnHover();

@@ -43,6 +43,8 @@ public sealed class SessionBootstrapper : IDisposable
     private readonly ScreenRouter _router;
     private readonly Chat.ChatCacheStore _chatCache;
     private readonly Hangouts.HangoutStateService _hangouts;
+    private readonly Together.TogetherStateService _together;
+    private readonly Together.WayfinderRunStateService _wayfinderRuns;
     private readonly Messenger.MessengerSyncService _messengerSync;
     private readonly Yapper.YapperDmCryptoService _yapperDmCrypto;
     private readonly SiblingBadgeStore _siblingBadges;
@@ -72,6 +74,8 @@ public sealed class SessionBootstrapper : IDisposable
         ScreenRouter router,
         Chat.ChatCacheStore chatCache,
         Hangouts.HangoutStateService hangouts,
+        Together.TogetherStateService together,
+        Together.WayfinderRunStateService wayfinderRuns,
         Messenger.MessengerSyncService messengerSync,
         Yapper.YapperDmCryptoService yapperDmCrypto,
         SiblingBadgeStore siblingBadges,
@@ -89,6 +93,8 @@ public sealed class SessionBootstrapper : IDisposable
         _router = router;
         _chatCache = chatCache;
         _hangouts = hangouts;
+        _together = together;
+        _wayfinderRuns = wayfinderRuns;
         _messengerSync = messengerSync;
         _yapperDmCrypto = yapperDmCrypto;
         _siblingBadges = siblingBadges;
@@ -195,6 +201,12 @@ public sealed class SessionBootstrapper : IDisposable
 
     /// <summary>True when signed in and Active but the server has no key bundle at all. A tombstoned acting
     /// profile (account with no live profiles) never matches; the profile picker handles that state.</summary>
+    /// <summary>True when the active profile has no key bundle and silent provisioning could not mint one
+    /// (no KEK, no sibling key, no account keypair, or a stale snapshot). Surfaced rather than swallowed:
+    /// the Love app reads it after a profile create and at chat-open, and sends the user to the recovery
+    /// screen, which is the only thing that can fix it. Cleared the moment a bundle exists.</summary>
+    public bool ProfileKeysPending { get; private set; }
+
     public bool NeedsEncryptionRecovery
     {
         get
@@ -750,7 +762,7 @@ public sealed class SessionBootstrapper : IDisposable
         {
             return;
         }
-        if (_keys.Kek is null && _keys.FindSiblingKey() is null)
+        if (_keys.Kek is null && _keys.FindSiblingKey() is null && _keys.AccountKeys is null)
         {
             return;
         }
@@ -759,6 +771,14 @@ public sealed class SessionBootstrapper : IDisposable
             var bundle = await _hub.GetMyKeyBundleAsync(ct).ConfigureAwait(false);
             if (bundle is null)
             {
+                return;
+            }
+            if (_keys.AccountKeys is { } accountKeys
+                && _crypto.UnwrapPrivateKey(bundle.EncryptedPrivateKey, bundle.WrapNonce,
+                    _crypto.DeriveProfileAccountWrapKey(accountKeys.PrivateKey, bundle.PublicKey)) is { } viaAccount)
+            {
+                _keys.Store(bundle.PublicKey, viaAccount);
+                _log.Debug("[SessionBootstrapper] Profile key unwrapped with the account keypair wrap.");
                 return;
             }
             if (_keys.Kek is { } kek
@@ -911,11 +931,16 @@ public sealed class SessionBootstrapper : IDisposable
         if (_lastConnection is not { HasKeyBundle: false } conn
             || conn.Status is ProfileLifecycle.Deleted or ProfileLifecycle.Banned)
         {
+            ProfileKeysPending = false;
             return;
         }
         var kek = _keys.Kek;
-        if (kek is null && _keys.FindSiblingKey() is null)
+        var accountKeys = _keys.AccountKeys;
+        if (kek is null && _keys.FindSiblingKey() is null && accountKeys is null)
         {
+            // The dead end this used to be: nothing on the device can wrap a new key. Say so.
+            ProfileKeysPending = true;
+            _log.Warning("[SessionBootstrapper] The profile has no key bundle and nothing on this device can provision one; the recovery screen must.");
             return;
         }
         try
@@ -947,8 +972,10 @@ public sealed class SessionBootstrapper : IDisposable
             {
                 kek = null;
             }
-            if (kek is null && sibling is null)
+            if (kek is null && sibling is null && accountKeys is null)
             {
+                ProfileKeysPending = true;
+                _log.Warning("[SessionBootstrapper] No usable KEK, sibling key or account keypair to wrap a new profile key; the recovery screen must.");
                 return;
             }
 
@@ -961,10 +988,14 @@ public sealed class SessionBootstrapper : IDisposable
                     _crypto.Encrypt(_crypto.DeriveSiblingWrapKey(sib.PrivateKey, pubKey), privKey);
             }
             // Without a KEK the canonical wrap fields carry the sibling wrap, so a later passphrase unlock
-            // fails the KEK attempt and falls through to the sibling chain.
+            // fails the KEK attempt and falls through to the sibling chain. With neither, they carry the
+            // ACCOUNT-keypair wrap (the only-profile-deleted case), which the unlock ladder also tries.
             var (wrapped, wrapNonce) = kek is not null
                 ? _crypto.WrapPrivateKey(privKey, kek)
-                : (siblingWrapped!, siblingNonce!);
+                : sibling is not null
+                    ? (siblingWrapped!, siblingNonce!)
+                    : _crypto.WrapPrivateKey(privKey,
+                        _crypto.DeriveProfileAccountWrapKey(accountKeys!.Value.PrivateKey, pubKey));
             var stamped = kek is not null ? kdf! : KdfParams.Unusable();
 
             await _hub.UploadKeyBundleAsync(new Shared.Messaging.KeyBundleDto(
@@ -976,11 +1007,13 @@ public sealed class SessionBootstrapper : IDisposable
                 .ConfigureAwait(false);
             _keys.Store(pubKey, privKey);
             _lastConnection = conn with { HasKeyBundle = true };
+            ProfileKeysPending = false;
             _log.Information("[SessionBootstrapper] Profile key bundle provisioned ({Mode}).",
-                kek is not null ? "account KEK" : "sibling profile wrap");
+                kek is not null ? "account KEK" : sibling is not null ? "sibling profile wrap" : "account keypair wrap");
         }
         catch (Exception ex)
         {
+            ProfileKeysPending = true;
             _log.Warning(ex, "[SessionBootstrapper] Auto-provisioning failed; the recovery gate will prompt.");
         }
     }
@@ -1006,10 +1039,44 @@ public sealed class SessionBootstrapper : IDisposable
         }
     }
 
+    /// <summary>Recovers the together-mode party after a login or plugin reload: stamps the local account
+    /// on the state service and pulls the live party if one exists. Best-effort, never fails the login.</summary>
+    private async Task SyncTogetherAsync(CancellationToken ct)
+    {
+        _together.OwnAccountId = _lastAccount?.AccountId;
+        try
+        {
+            var party = await _hub.GetMyTogetherPartyAsync(ct).ConfigureAwait(false);
+            if (party is not null)
+            {
+                _together.ApplySnapshot(party);
+                if (party.Activity?.AppId == "wayfinder"
+                    && await _hub.GetWayfinderPartyRunAsync(true, ct).ConfigureAwait(false) is { } run)
+                {
+                    _wayfinderRuns.ApplyRun(run);
+                }
+                else
+                {
+                    _wayfinderRuns.Clear();
+                }
+            }
+            else
+            {
+                _together.Clear();
+                _wayfinderRuns.Clear();
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.Warning(ex, "[SessionBootstrapper] Together party recovery failed; continuing without it.");
+        }
+    }
+
     private async Task SyncHangoutsAsync(AetherConnectionDto status, CancellationToken ct)
     {
         // Hangouts are account-level; the profile-id fallback only covers a failed account-info fetch.
         _hangouts.SetOwner(_lastAccount?.AccountId ?? status.ProfileId);
+        await SyncTogetherAsync(ct).ConfigureAwait(false);
         if (!status.HangoutsEnabled)
         {
             _hangouts.Clear();

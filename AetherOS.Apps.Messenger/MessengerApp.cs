@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -71,6 +71,8 @@ public sealed partial class MessengerApp : IAetherApp, IAppSettings
     private readonly AetherLove.Services.HangoutShareContext _hangoutShare;
 
     private IOsShell? _shell;
+    private readonly AetherLove.UI.TranslateUi _translate;
+    private long _translateVersion;
     private View _view = View.List;
     private Overlay _overlay = Overlay.None;
     private volatile string? _busyError;
@@ -101,6 +103,8 @@ public sealed partial class MessengerApp : IAetherApp, IAppSettings
     {
         _name = name;
         _caps = caps;
+        _translate = new AetherLove.UI.TranslateUi("messenger", caps.Translation,
+            () => _shell?.SendIntent("settings", OsIntents.CreateReturn(OsIntents.OpenTranslationSettings, Id)));
         _store = store;
         _sync = sync;
         _crypto = crypto;
@@ -181,6 +185,12 @@ public sealed partial class MessengerApp : IAetherApp, IAppSettings
         {
             uiAction();
         }
+        if (_translate.Version != _translateVersion)
+        {
+            _translateVersion = _translate.Version;
+            _msgContentH.Clear();
+            _msgRowH.Clear();
+        }
         if (_store.Version != _decryptCacheVersion)
         {
             _decryptCacheVersion = _store.Version;
@@ -258,6 +268,7 @@ public sealed partial class MessengerApp : IAetherApp, IAppSettings
         DrawImageComposeOverlay(contentTL, contentSize);
         DrawImageReportOverlay(contentTL, contentSize);
         DrawDataLimitsOverlay(contentTL, contentSize);
+        _translate.DrawConsentOverlay(ImGui.GetWindowPos(), ImGui.GetWindowSize());
         DrawImageViewer();
     }
 
@@ -289,11 +300,10 @@ public sealed partial class MessengerApp : IAetherApp, IAppSettings
             BeginShare(shared);
             return;
         }
-        // File uploads held back pre-release: the Photos-app attach round trip is disabled (see MessengerApp.Images).
-        // if (intent.Type == OsIntents.PhotoPicked && OsIntents.TryGetPath(intent, out var photoPath))
-        // {
-        //     OnPhotoPicked(photoPath);
-        // }
+        if (intent.Type == OsIntents.PhotoPicked && OsIntents.TryGetPath(intent, out var photoPath))
+        {
+            OnPhotoPicked(photoPath);
+        }
     }
 
     /// <summary>Opens the chat for a contact or group id (notification taps, deep links).</summary>

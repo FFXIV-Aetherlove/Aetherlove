@@ -171,7 +171,16 @@ internal static class HubErrorsDe
 
         // aetherling growth (added after update 2.3.4)
         ["huberror.aetherling_no_crystal"] = "Es ist kein Kristall dieser Art zum Verfüttern da.",
+        ["huberror.aetherling_no_rename"] = "Zum Umbenennen brauchst du eine Namensänderung aus dem Shop.",
+        ["huberror.aetherling_wheel_disabled"] = "Das Glücksrad ist gerade geschlossen.",
+        ["huberror.aetherling_wheel_spun"] = "Du hast heute schon gedreht. Komm nach dem Reset wieder.",
         ["huberror.aetherling_full"] = "Es ist ziemlich satt. Morgen hat es wieder Hunger.",
         ["huberror.aetherling_not_owned"] = "Das hat es nicht zum Anziehen.",
+        // together phase 2 (added after update 2.4.0)
+        ["huberror.wayfinder_run_exists"] = "Es läuft bereits eine Gruppenjagd.",
+        ["huberror.wayfinder_run_not_found"] = "Gerade läuft keine Gruppenjagd.",
+        ["huberror.wayfinder_run_wrong_world"] = "Du musst auf {0} sein, um mitzujagen.",
+        ["huberror.wayfinder_run_not_gathering"] = "Diese Jagd hat schon begonnen.",
+        ["huberror.wayfinder_run_too_few"] = "Es müssen erst mindestens zwei Jäger beitreten.",
     };
 }

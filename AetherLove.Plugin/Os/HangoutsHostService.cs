@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using AetherLove.Services;
@@ -37,6 +37,10 @@ public sealed class HangoutsHostService : AetherOS.Apps.Hangouts.IHangoutsHost
 
     public Task<HangoutSummaryDto> CreateHangoutAsync(CreateHangoutRequest req, CancellationToken ct = default) =>
         _hub.CreateHangoutAsync(req, ct);
+
+    public Task<HangoutSummaryDto> PublishTogetherPartyHangoutAsync(
+        Guid partyId, CreateHangoutRequest req, CancellationToken ct = default) =>
+        _hub.PublishTogetherPartyHangoutAsync(partyId, req, ct);
 
     public Task EndMyHangoutAsync(CancellationToken ct = default) =>
         _hub.EndMyHangoutAsync(ct);

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using AetherLove.Shared.Aetherling;
@@ -27,6 +27,17 @@ internal static class PetState
         }
         return fed >= perStage ? CoreAssets.Hatchling2Folder : CoreAssets.HatchlingFolder;
     }
+
+    /// <summary>The body for a rung of the growth ladder, for a creature whose snapshot this client will
+    /// never see: a party member's. Same ladder <see cref="FormFolder"/> walks, named by the number the
+    /// wire carries rather than by anything asset-shaped.</summary>
+    public static string FormFolderForStage(short stage) => stage switch
+    {
+        >= 3 => CoreAssets.AdultFolder,
+        2 => CoreAssets.Hatchling3Folder,
+        1 => CoreAssets.Hatchling2Folder,
+        _ => CoreAssets.HatchlingFolder,
+    };
 
     /// <summary>Time left on the growth feed gate, computed against the server's clock through
     /// the caller's stored offset; zero when feedable or grown.</summary>

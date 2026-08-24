@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using MessagePack;
 
 namespace AetherLove.Shared.Messenger;
@@ -179,7 +179,8 @@ public sealed record SendMessengerImageRequest(
     byte[]? CaptionCiphertext = null,
     byte[]? CaptionNonce = null,
     Guid? ReplyToMessageId = null,
-    // Only camera captures are accepted while file uploads (photo album / disk) are held back pre-release.
+    // Where the picture came from. Provenance only: a messenger attachment may be a capture, a library
+    // pick or a file off disk.
     bool FromCamera = false,
     // Sender-chosen lifetime in hours (see SupporterLimits.ImageTtlHourOptions); the server clamps it to the
     // sender's tier cap. Defaults to the free cap.
@@ -200,7 +201,9 @@ public sealed record MessengerStorageItemDto(
     Guid ImageId,
     long ByteSize,
     DateTimeOffset ExpiresAtUtc,
-    string ChatName);
+    string ChatName,
+    // A selfie sent in an AetherLove match chat: same account quota, different delete call.
+    bool IsLoveChat = false);
 
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record CreateMessengerGroupRequest(

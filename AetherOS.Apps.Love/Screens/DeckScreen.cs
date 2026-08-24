@@ -1007,7 +1007,7 @@ public partial class DeckScreen : IDisposable
             {
                 AddInfoSegment(genderIcon, genderFontPtr, genderW);
             }
-            var regionLabel = RegionLabel(profile.Region);
+            var regionLabel = RegionMaskLabel(profile.Region);
             if (!string.IsNullOrEmpty(regionLabel))
             {
                 AddInfoSegment(regionLabel, infoFontPtr, MainW(regionLabel));

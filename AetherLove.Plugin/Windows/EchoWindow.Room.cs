@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Numerics;
@@ -510,11 +510,13 @@ public sealed partial class EchoWindow
             }
         }
 
+        // The ring reaches past the disc, and this child has no padding, so the disc stands in from the edge.
         var avatarR = Px(13f);
+        var ringR = avatarR * AetherLove.UI.AvatarRings.Overhang;
         DrawIdentityCircle(dl, member.AccountId, member.DisplayName,
-            new Vector2(origin.X + Px(4f) + avatarR, origin.Y + rowH * 0.5f), avatarR, member.FrameRef);
+            new Vector2(origin.X + Px(4f) + ringR, origin.Y + rowH * 0.5f), avatarR, member.FrameRef, member.AvatarImage);
 
-        var textLeft = origin.X + Px(8f) + avatarR * 2f;
+        var textLeft = origin.X + Px(8f) + ringR * 2f;
         var name = mine
             ? string.Format(CultureInfo.CurrentCulture, Loc.T("echo.you"), member.DisplayName)
             : member.DisplayName;

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using AetherLove.Navigation;
@@ -26,7 +26,7 @@ public sealed class OsShell : IOsShell
     internal static readonly string[] NewAppIds =
         ["levemetes", "market", "realtor", "wayfinder", "yapper", "wallet", "snake", "stacker", "breaker",
          "meteor", "invaders", "muncher", "plappy", "doom", "sudoku", "groove", "echo", "store", "aetherling",
-         "notes", "calculator", "timers", "racooner", "skyswarm", "eordle"];
+         "notes", "calculator", "timers", "racooner", "skyswarm", "eordle", "together"];
 
     public bool IsNewApp(string appId) =>
         Array.IndexOf(NewAppIds, appId) >= 0 && !UiHost.Configuration.Os.SeenNewApps.Contains(appId);
@@ -225,6 +225,21 @@ public sealed class OsShell : IOsShell
     public void DeliverIntent(string targetAppId, OsIntent intent)
     {
         Find(targetAppId)?.OnIntent(intent);
+    }
+
+    /// <summary>The party join every invite surface routes through: joins by code and lands the user on the
+    /// widget page, where the party card lives.</summary>
+    public void JoinParty(string code)
+    {
+        if (code.Length == 0)
+        {
+            return;
+        }
+        // Resolved lazily for the same reason the tour is: the party bridge and the home screen both sit
+        // above this shell, and a ctor dependency on either is a cycle.
+        _services.GetRequiredService<IOsTogether>().Join(code);
+        GoHome();
+        _services.GetRequiredService<AetherLove.Screens.HomeScreen>().ShowPage(-1);
     }
 
     public void OpenApp(string appId)

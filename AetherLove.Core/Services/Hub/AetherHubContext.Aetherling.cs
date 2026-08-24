@@ -12,6 +12,37 @@ public sealed partial class AetherHubContext
     public async Task<AetherlingDto?> GetAetherlingAsync(CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync<AetherlingDto?>("GetAetherlingAsync", ct).ConfigureAwait(false);
 
+    public async Task<AetherlingWheelDto> GetAetherlingWheelAsync(CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<AetherlingWheelDto>("GetAetherlingWheelAsync", ct).ConfigureAwait(false);
+
+    public async Task<AetherlingWheelDto> SpinAetherlingWheelAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            return await (await ConnAsync(ct))
+                .InvokeAsync<AetherlingWheelDto>("SpinAetherlingWheelAsync", ct)
+                .ConfigureAwait(false);
+        }
+        catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl)
+        {
+            throw rl;
+        }
+    }
+
+    public async Task<AetherlingWheelDto> RevealAetherlingWheelAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            return await (await ConnAsync(ct))
+                .InvokeAsync<AetherlingWheelDto>("RevealAetherlingWheelAsync", ct)
+                .ConfigureAwait(false);
+        }
+        catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl)
+        {
+            throw rl;
+        }
+    }
+
     public async Task<AetherlingDto> PurchaseAethercoreAsync(CancellationToken ct = default)
     {
         try
@@ -71,6 +102,20 @@ public sealed partial class AetherHubContext
         }
     }
 
+    public async Task<AetherlingDto> RenameAetherlingAsync(string name, CancellationToken ct = default)
+    {
+        try
+        {
+            return await (await ConnAsync(ct))
+                .InvokeAsync<AetherlingDto>("RenameAetherlingAsync", name, ct)
+                .ConfigureAwait(false);
+        }
+        catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl)
+        {
+            throw rl;
+        }
+    }
+
     public async Task<AetherlingDto> FeedAetherlingAsync(short element, string? job, CancellationToken ct = default)
     {
         try
@@ -119,6 +164,36 @@ public sealed partial class AetherHubContext
         {
             return await (await ConnAsync(ct))
                 .InvokeAsync<AetherlingDto>("SetAetherlingLookAsync", look, ct)
+                .ConfigureAwait(false);
+        }
+        catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl)
+        {
+            throw rl;
+        }
+    }
+
+    /// <summary>Sending half of party pets: whether members of a party this account joins may see its
+    /// Aetherling.</summary>
+    public async Task<AetherlingDto> SetAetherlingPartySharingAsync(bool shares, CancellationToken ct = default)
+    {
+        try
+        {
+            return await (await ConnAsync(ct))
+                .InvokeAsync<AetherlingDto>("SetAetherlingPartySharingAsync", shares, ct)
+                .ConfigureAwait(false);
+        }
+        catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl)
+        {
+            throw rl;
+        }
+    }
+
+    public async Task<AetherlingDto> ReportAetherlingEmoteSightingAsync(string emoteKey, CancellationToken ct = default)
+    {
+        try
+        {
+            return await (await ConnAsync(ct))
+                .InvokeAsync<AetherlingDto>("ReportAetherlingEmoteSightingAsync", emoteKey, ct)
                 .ConfigureAwait(false);
         }
         catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl)

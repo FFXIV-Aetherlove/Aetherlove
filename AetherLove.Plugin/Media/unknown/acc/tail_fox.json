@@ -1,0 +1,41 @@
+{
+  "name": "Fox Tail",
+  "slot": "tail",
+  "tier": "premium",
+  "file": "",
+  "anchor": "tail",
+  "origin": [
+    0,
+    0
+  ],
+  "width": 0,
+  "height": 0,
+  "behind": true,
+  "tail": {
+    "nudge": [
+      -4.0,
+      1.33
+    ],
+    "dir": 213.0,
+    "curl": -88.0,
+    "len": 130.0,
+    "segs": 26,
+    "profile": [
+      0.0,
+      6.0,
+      0.22,
+      16.0,
+      0.52,
+      22.67,
+      0.8,
+      17.33,
+      1.0,
+      6.67
+    ],
+    "fur": 0.22,
+    "furStep": 3,
+    "tipFrac": 0.74,
+    "shade": 0.82,
+    "response": 1.0
+  }
+}

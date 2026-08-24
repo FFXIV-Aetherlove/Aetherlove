@@ -5,7 +5,7 @@ internal static class DeckEn
     public static readonly System.Collections.Generic.Dictionary<string, string> Strings = new()
     {
         ["deck.cooldown_heading"] = "You're all caught up!",
-        ["deck.cooldown_body"] = "AetherLove hands you a fresh batch of profiles every few hours, so everyone gets a fair look. Check back soon for new potential matches!",
+        ["deck.cooldown_body"] = "AetherLove gives you a new batch of profiles every few hours. That way everyone gets a fair chance. Check back soon for more potential matches!",
         ["deck.new_matches_ready"] = "New matches are ready!",
         ["deck.server_error"] = "Couldn't reach the server: {0}",
         ["deck.view_profile"] = "View profile",
@@ -60,14 +60,14 @@ internal static class DeckEn
         ["deck.superlike_tooltip"] = "Superlikes: {0}/{1} left",
         ["deck.superlike_cooldown"] = "New superlikes in {0}h:{1:00}m",
         ["deck.superlike_intro_title"] = "Superlike",
-        ["deck.superlike_intro"] = "A superlike tells someone they really caught your eye: your profile jumps straight to the top of their deck with a golden entrance. If they like you back, it's an instant match. {0} Closing this note won't use one up, so tap the star again when you're ready.",
+        ["deck.superlike_intro"] = "A superlike tells someone you really like them. Your profile jumps to the top of their deck with a golden entrance. If they like you back, you match right away. {0} Closing this note won't use a superlike, so tap the star again when you're ready.",
         ["deck.superlike_intro_daily"] = "You get {0} per day.",
         ["deck.superlike_intro_weekly"] = "You get 1 free superlike per week.",
         ["deck.superliked_you"] = "You've received a superlike!",
         ["deck.superliked_you_sub"] = "Like them back for an instant match.",
         ["deck.superlikes_waiting"] = "Superlikes waiting: {0}",
 
-        ["deck.superlike_supporter_pitch"] = "Supporters get more superlikes: a fresh set every single day, along with other fun extras such as extra photos, exclusive name styles, bonus statistics and more.",
+        ["deck.superlike_supporter_pitch"] = "Supporters get a fresh set of superlikes every day. They also get extra photos, exclusive name styles, bonus statistics and more.",
         ["deck.superlike_free_tooltip"] = "Your free superlike of the week",
         ["deck.superlike_weekly_cooldown"] = "Next free superlike in {0}d {1}h",
     };

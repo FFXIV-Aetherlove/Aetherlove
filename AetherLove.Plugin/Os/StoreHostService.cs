@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using AetherLove.Services;
@@ -89,6 +89,20 @@ public sealed class StoreHostService(
         catch (Exception ex)
         {
             Plugin.Log.Debug(ex, "[Store] Product fetch failed.");
+            return null;
+        }
+    }
+
+    public async Task<StoreProductDto?> GetStoreProductByRefAsync(
+        StoreItemKind kind, string itemRef, CancellationToken ct = default)
+    {
+        try
+        {
+            return await hubClient.GetStoreProductByRefAsync(kind, itemRef, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Debug(ex, "[Store] Product-by-ref fetch failed.");
             return null;
         }
     }

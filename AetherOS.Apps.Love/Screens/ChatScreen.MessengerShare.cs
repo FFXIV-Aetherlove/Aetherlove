@@ -1,4 +1,4 @@
-using System.Numerics;
+﻿using System.Numerics;
 using AetherLove.Services;
 using AetherLove.Services.Localization;
 using AetherLove.UI;
@@ -11,8 +11,8 @@ public partial class ChatScreen
 {
     private const float MessengerCardH = 76f;
 
-    /// <summary>A messenger invite rendered as a card; clicking opens the Messenger app's add-contact flow
-    /// prefilled with the inviter's friend code.</summary>
+    /// <summary>A messenger invite rendered as a card; clicking it sends the pair request there and then, so
+    /// accepting an invite is one tap and never a trip through another app with a code to retype.</summary>
     private void DrawMessengerInviteCard(DisplayedMessage msg, string code, float windowWidth, bool isGroupEnd)
     {
         var t = ThemeService.Current;
@@ -60,8 +60,7 @@ public partial class ChatScreen
 
         if (clicked && !msg.IsOwn)
         {
-            _shell.Shell?.SendIntent("messenger",
-                AetherOS.Sdk.OsIntents.CreateCode(AetherOS.Sdk.OsIntents.MessengerAdd, code));
+            SendMessengerPairRequest(code);
         }
 
         if (isGroupEnd)
@@ -85,4 +84,36 @@ public partial class ChatScreen
             ImGui.PopStyleVar();
         }
     }
+
+    /// <summary>Fires the contact request the card is for. An already-pending or already-paired code comes
+    /// back as an error the toast swallows: from the inviter's side the invitation stands either way.</summary>
+    private void SendMessengerPairRequest(string code)
+    {
+        if (_msgrInviteBusy)
+        {
+            return;
+        }
+        _msgrInviteBusy = true;
+        _ = System.Threading.Tasks.Task.Run(async () =>
+        {
+            try
+            {
+                await _hub.AddMessengerContactAsync(code).ConfigureAwait(false);
+                _uiActions.Enqueue(() => _msgrInviteToast = 4f);
+            }
+            catch (System.Exception ex)
+            {
+                UiHost.Log.Warning(ex, "[ChatScreen] messenger pair request failed.");
+                _uiActions.Enqueue(() => _shell.Shell?.SendIntent("messenger",
+                    AetherOS.Sdk.OsIntents.CreateCode(AetherOS.Sdk.OsIntents.MessengerAdd, code)));
+            }
+            finally
+            {
+                _msgrInviteBusy = false;
+            }
+        });
+    }
+
+    private volatile bool _msgrInviteBusy;
+    private float _msgrInviteToast;
 }

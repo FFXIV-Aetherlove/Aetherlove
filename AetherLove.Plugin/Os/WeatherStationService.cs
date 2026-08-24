@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using AetherOS.Apps.Weather;
@@ -114,13 +114,7 @@ public sealed class WeatherStationService : IWeatherStation, IDisposable
             return;
         }
         _weatherOverride = null;
-        var env = EnvManager.Instance();
-        if (env != null && _rates.Length > 0)
-        {
-            var unix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            env->ActiveWeather = PickWeather(CalculateForecastTarget(unix - unix % WindowRealSeconds));
-            env->TransitionTime = 0.5f;
-        }
+        NudgeEnvironment();
     }
 
     public unsafe TimeSpan EorzeaTime
@@ -149,14 +143,36 @@ public sealed class WeatherStationService : IWeatherStation, IDisposable
         }
     }
 
+    /// <summary>Hands the sky back to the real clock. Clearing the flag alone was not enough: the
+    /// environment keeps the lighting it last resolved and only recomputes when something makes it, so a
+    /// midday sky stayed bright at 23:20. Writing the real time into the override slot before dropping the
+    /// flag leaves nothing stale behind, and re-applying the forecast weather with a transition is what
+    /// actually forces the recompute.</summary>
     public unsafe void ClearTimeOverride()
     {
         _timeOverrideMinutes = null;
         var framework = Framework.Instance();
         if (framework != null)
         {
+            framework->ClientTime.EorzeaTimeOverride = framework->ClientTime.EorzeaTime;
             framework->ClientTime.IsEorzeaTimeOverridden = false;
         }
+        NudgeEnvironment();
+    }
+
+    /// <summary>Re-applies whatever weather should be running, which makes the environment resolve its
+    /// whole state again (lighting and sky included) instead of keeping what it last computed.</summary>
+    private unsafe void NudgeEnvironment()
+    {
+        var env = EnvManager.Instance();
+        if (env == null || _rates.Length == 0)
+        {
+            return;
+        }
+        var unix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        env->ActiveWeather = _weatherOverride
+            ?? PickWeather(CalculateForecastTarget(unix - unix % WindowRealSeconds));
+        env->TransitionTime = 0.5f;
     }
 
     private unsafe void OnFrameworkUpdate(IFramework _)

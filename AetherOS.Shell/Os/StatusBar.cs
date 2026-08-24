@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Numerics;
 using AetherLove.Services;
 using AetherLove.UI;
@@ -12,15 +12,17 @@ public sealed class StatusBar
 {
     private readonly OsShell _shell;
     private readonly NotificationShade _shade;
+    private readonly IOsTogether _together;
 
     private bool _dragging;
     private bool _dragEngaged;
     private float _dragStartY;
 
-    public StatusBar(OsShell shell, NotificationShade shade)
+    public StatusBar(OsShell shell, NotificationShade shade, IOsTogether together)
     {
         _shell = shell;
         _shade = shade;
+        _together = together;
     }
 
     public void Draw(Vector2 winPos, Vector2 winSize, bool connected)
@@ -61,6 +63,30 @@ public sealed class StatusBar
             IconDraw.AddCentered(dl, FontAwesomeIcon.Bell, Px(10f), bellC, Tint(tint, 0.9f));
             OsDraw.Badge(dl, bellC + new Vector2(Px(4.5f), -Px(4.5f)), count, 0.5f);
             x -= Px(10f);
+        }
+
+        // The together-mode state light: green people-with-count, the hotspot idiom. Part of the flowing
+        // right-to-left cluster so premium theme geometry never needs a new coordinate for it. A live
+        // party hunt makes it breathe so the run is legible from any screen.
+        if (_together.InParty)
+        {
+            var members = $"{_together.Members.Count}";
+            var membersSz = ImGui.CalcTextSize(members) * 0.68f;
+            var alpha = _together.Activity?.AppId == "wayfinder" && !AccessibilityService.ReduceMotion
+                ? 0.6f + 0.35f * MathF.Sin((float)ImGui.GetTime() * 3.2f)
+                : 0.95f;
+            var green = ImGui.ColorConvertFloat4ToU32(AetherLove.UI.UiColors.Party with { W = alpha });
+            x -= Px(6f) + membersSz.X;
+            dl.AddText(ImGui.GetFont(), ImGui.GetFontSize() * 0.68f,
+                new Vector2(x, centerY - membersSz.Y * 0.5f), green, members);
+            x -= Px(12f);
+            var partyIconC = new Vector2(x + Px(5f), centerY);
+            IconDraw.AddCentered(dl, FontAwesomeIcon.UserFriends, Px(10f), partyIconC, green);
+            if (_together.UnreadChat > 0)
+            {
+                OsDraw.Badge(dl, partyIconC + new Vector2(Px(5f), -Px(5f)), _together.UnreadChat, 0.5f);
+            }
+            x -= Px(4f);
         }
 
         // Clock: placed by the theme's align factor, clamped to clear the icon cluster and the left edge.

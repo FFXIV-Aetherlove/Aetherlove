@@ -48,7 +48,7 @@ public sealed class WalletApp : IAetherApp
         _currencies = new CurrenciesScreen(host, favorites);
         _earn = new EarnScreen(BackToSparks);
         _history = new HistoryScreen(host, BackToSparks);
-        _tour = new TourScreen(FinishTour);
+        _tour = new TourScreen(FinishTour, () => _sparks.Wallet);
     }
 
     public string Id => "wallet";

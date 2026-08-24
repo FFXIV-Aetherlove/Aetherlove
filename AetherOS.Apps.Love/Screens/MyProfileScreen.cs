@@ -44,7 +44,7 @@ public partial class MyProfileScreen
 
     private string _displayName = "";
     private string _bio = "";
-    private int _regionIdx;
+    private readonly bool[] _ownRegions = new bool[RegionValues.Length];
     private int _raceIdx;
     private int _genderIdx;
     private readonly bool[] _langSelected = new bool[Languages.Length];
@@ -239,8 +239,13 @@ public partial class MyProfileScreen
 
         _raceIdx = IndexOf(RaceValues, b.Race, fallback: 0);
         _genderIdx = IndexOf(GenderValues, b.Gender, fallback: 0);
+        MaskToBools(RegionValues, b.Region,
+            (a, m) => ((short)a & (short)m) != 0, _ownRegions);
         // "Prefer not to say" is retired: a profile still set to it falls back to NA and migrates off it on save.
-        _regionIdx = IndexOf(RegionValues, b.Region, fallback: 0);
+        if (!_ownRegions.Any(x => x))
+        {
+            _ownRegions[0] = true;
+        }
         _expansionIdx = IndexOf(ExpansionValues, b.FavoriteExpansion, fallback: 0);
         _jobComboIdx = IndexOf(JobValues, b.FavoriteJob, fallback: 0);
 
@@ -401,7 +406,7 @@ public partial class MyProfileScreen
         Bio: _bio,
         Race: RaceValues[Math.Clamp(_raceIdx, 0, RaceValues.Length - 1)],
         Gender: GenderValues[Math.Clamp(_genderIdx, 0, GenderValues.Length - 1)],
-        Region: RegionValues[Math.Clamp(_regionIdx, 0, RegionValues.Length - 1)],
+        Region: MaskOr(RegionValues, _ownRegions, (a, b) => (Region)((short)a | (short)b)),
         LanguageMask: MaskOr(LanguageValues, _langSelected, (a, b) => (Language)((short)a | (short)b)),
         ContentInterestMask: MaskOr(ContentInterestValues, _contentInterests, (a, b) => (ContentInterest)((int)a | (int)b)),
         LookingForMask: MaskOr(LookingForValues, _lookingFor, (a, b) => (LookingFor)((short)a | (short)b)),
@@ -549,7 +554,8 @@ public partial class MyProfileScreen
         ImGui.PushStyleColor(ImGuiCol.ButtonHovered, btnHover);
         ImGui.PushStyleColor(ImGuiCol.ButtonActive, t.ButtonActive);
         var saveDisabled = savingNow
-            || _displayName.Trim().Length < AetherLove.Shared.ProfileLimits.DisplayNameMinLength;
+            || _displayName.Trim().Length < AetherLove.Shared.ProfileLimits.DisplayNameMinLength
+            || !_ownRegions.Any(x => x);
         if (saveDisabled)
         {
             ImGui.BeginDisabled();
@@ -665,8 +671,11 @@ public partial class MyProfileScreen
         DrawSectionHeading(Loc.T("profile.heading_location"), t);
 
         DrawFieldLabel(Loc.T("profile.region"), t);
-        ImGui.SetNextItemWidth(Px(230f));
-        ImGui.Combo("##edRegion", ref _regionIdx, Regions, Regions.Length);
+        VenueFields.DrawPillToggleRow("edRegion", Regions, _ownRegions, ImGui.GetContentRegionAvail().X);
+        if (!_ownRegions.Any(x => x))
+        {
+            ImGui.TextColored(muted, Loc.T("profile.region_min_hint"));
+        }
         ImGui.Spacing();
 
         DrawSectionHeading(Loc.T("profile.heading_languages"), t);

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Numerics;
@@ -46,18 +46,22 @@ public sealed class ProfilePickerScreen
     /// <summary>Set when the picker was opened from Settings as an in-app switch; draws a back pill.</summary>
     public bool OpenedFromSettings { get; set; }
 
+    private readonly Action _openEncryptionRecovery;
+
     public ProfilePickerScreen(
         LoveRouter router,
         AetherHubContext hub,
         SessionBootstrapper bootstrap,
         KeyStorageService keys,
-        SettingsScreen settings)
+        SettingsScreen settings,
+        Action openEncryptionRecovery)
     {
         _router = router;
         _hub = hub;
         _bootstrap = bootstrap;
         _keys = keys;
         _settings = settings;
+        _openEncryptionRecovery = openEncryptionRecovery;
     }
 
     public void OnShow()
@@ -408,6 +412,13 @@ public sealed class ProfilePickerScreen
                     return;
                 }
                 await TryProvisionKeyBundleAsync().ConfigureAwait(false);
+                // Silent provisioning said it could not: the recovery screen is the only thing that can,
+                // and a profile without working encryption is not one to hand over quietly.
+                if (_bootstrap.ProfileKeysPending)
+                {
+                    _openEncryptionRecovery();
+                    return;
+                }
                 Enter(ProfileLifecycle.Onboarding);
             }
             catch (Exception ex)

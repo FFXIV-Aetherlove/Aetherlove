@@ -171,7 +171,16 @@ internal static class HubErrorsEn
 
         // aetherling growth (added after update 2.3.4)
         ["huberror.aetherling_no_crystal"] = "There is no crystal of that kind to give.",
+        ["huberror.aetherling_no_rename"] = "You need a Name change from the store to rename it.",
+        ["huberror.aetherling_wheel_disabled"] = "The wheel is closed right now.",
+        ["huberror.aetherling_wheel_spun"] = "You already spun today. Come back after the reset.",
         ["huberror.aetherling_full"] = "It is quite full. It will be hungry again tomorrow.",
         ["huberror.aetherling_not_owned"] = "It does not have that to wear.",
+        // together phase 2 (added after update 2.4.0)
+        ["huberror.wayfinder_run_exists"] = "A party hunt is already open.",
+        ["huberror.wayfinder_run_not_found"] = "There is no party hunt right now.",
+        ["huberror.wayfinder_run_wrong_world"] = "You need to be on {0} to join this hunt.",
+        ["huberror.wayfinder_run_not_gathering"] = "That hunt has already started.",
+        ["huberror.wayfinder_run_too_few"] = "At least two hunters need to join first.",
     };
 }

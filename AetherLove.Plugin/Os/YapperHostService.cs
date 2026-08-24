@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using AetherLove.Services.Auth;
@@ -15,14 +15,18 @@ public sealed class YapperHostService : IYapperHost
     private readonly AetherHubContext _hubClient;
     private readonly SessionBootstrapper _bootstrap;
     private readonly Services.Yapper.YapperDmCryptoService _dmCrypto;
+    private readonly Services.Messenger.MessengerStore _messengerStore;
 
     public YapperHostService(AetherHubContext hubClient, SessionBootstrapper bootstrap,
-        Services.Yapper.YapperNotificationRelay relay, Services.Yapper.YapperDmCryptoService dmCrypto)
+        Services.Yapper.YapperNotificationRelay relay, Services.Yapper.YapperDmCryptoService dmCrypto,
+        Services.Messenger.MessengerStore messengerStore)
     {
         _hubClient = hubClient;
         _bootstrap = bootstrap;
         _dmCrypto = dmCrypto;
+        _messengerStore = messengerStore;
         relay.NotificationReceived += payload => NotificationReceived?.Invoke(payload);
+        relay.DmImageRemoved += payload => DmImageRemoved?.Invoke(payload.ImageId);
         relay.DmReceived += payload => DmReceived?.Invoke(payload);
         relay.DmRead += payload => DmRead?.Invoke(payload);
         relay.DmReaction += payload => DmReaction?.Invoke(payload);
@@ -100,6 +104,32 @@ public sealed class YapperHostService : IYapperHost
 
     public Task<YapperMyProfileDto?> GetMyProfileAsync(CancellationToken ct = default)
         => _hubClient.GetMyYapperProfileAsync(ct);
+
+    public Task<AetherLove.Shared.Together.TogetherPartyCardDto?> GetPartyCardAsync(
+        Guid partyId, CancellationToken ct = default)
+        => _hubClient.GetTogetherPartyCardAsync(partyId, ct);
+
+    public string? MessengerCode => _messengerStore.Sync?.MyCode;
+
+    public Task AddMessengerContactAsync(string code, CancellationToken ct = default)
+        => _hubClient.AddMessengerContactAsync(code, ct);
+
+    public Task<YapperDmMessageDto> SendDmImageAsync(SendYapperDmImageRequest req, CancellationToken ct = default)
+        => _hubClient.SendYapperDmImageAsync(req, ct);
+
+    public Task<byte[]?> GetDmImageAsync(Guid imageId, CancellationToken ct = default)
+        => _hubClient.GetYapperDmImageAsync(imageId, ct);
+
+    public Task DeleteDmImageAsync(Guid imageId, CancellationToken ct = default)
+        => _hubClient.DeleteYapperDmImageAsync(imageId, ct);
+
+    public Task ReportDmImageAsync(Guid imageId, string reason, CancellationToken ct = default)
+        => _hubClient.ReportYapperDmImageAsync(imageId, reason, ct);
+
+    public Task<AetherLove.Shared.Messenger.MessengerStorageDto> GetDmImageStorageAsync(CancellationToken ct = default)
+        => _hubClient.GetYapperDmImageStorageAsync(ct);
+
+    public event Action<Guid>? DmImageRemoved;
 
     public Task<YapperHandleCheck> CheckHandleAsync(string handle, CancellationToken ct = default)
         => _hubClient.CheckYapperHandleAsync(handle, ct);

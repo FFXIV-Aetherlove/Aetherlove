@@ -230,6 +230,30 @@ internal static class ProfileFields
     internal static string RaceLabel(Race r) => LabelFor(RaceValues, Races, r, string.Empty);
     internal static string GenderLabel(Gender g) => LabelFor(GenderValues, Genders, g, string.Empty);
     internal static string RegionLabel(Region r) => LabelFor(RegionValues, Regions, r, string.Empty);
+
+    /// <summary>Short region codes, parallel to <see cref="RegionValues"/>. Locale-invariant like the FFXIV
+    /// datacenter names themselves.</summary>
+    private static readonly string[] RegionShortCodes = ["NA", "EU", "OCE", "JPN"];
+
+    /// <summary>Label for a profile's own region mask: the full localized label for a single region,
+    /// short codes joined with " / " for several, empty for none (legacy PreferNotToSay).</summary>
+    internal static string RegionMaskLabel(Region mask)
+    {
+        var single = RegionLabel(mask);
+        if (!string.IsNullOrEmpty(single))
+        {
+            return single;
+        }
+        var parts = new List<string>(RegionValues.Length);
+        for (var i = 0; i < RegionValues.Length; i++)
+        {
+            if (((short)RegionValues[i] & (short)mask) != 0)
+            {
+                parts.Add(RegionShortCodes[i]);
+            }
+        }
+        return string.Join(" / ", parts);
+    }
     internal static string ExpansionLabel(Expansion e) => LabelFor(ExpansionValues, Expansions, e, string.Empty);
 
     private static List<string>? _jobLabelsCache;

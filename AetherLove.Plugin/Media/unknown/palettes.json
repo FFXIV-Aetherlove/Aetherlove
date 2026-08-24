@@ -98,6 +98,20 @@
       "body": "#9A93B5",
       "accent": "#D6CFEA",
       "eye": "#2B2838"
+    },
+    {
+      "name": "Inferno",
+      "tier": "premium",
+      "body": "#171416",
+      "accent": "#D9281F",
+      "eye": "#B01C1C"
+    },
+    {
+      "name": "Seraph",
+      "tier": "premium",
+      "body": "#FFFBF2",
+      "accent": "#F0C24A",
+      "eye": "#8A6A2F"
     }
   ]
 }

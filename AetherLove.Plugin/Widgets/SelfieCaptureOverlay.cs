@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Numerics;
 using AetherLove.Services;
@@ -257,6 +257,9 @@ public sealed class SelfieCaptureOverlay : Window
                 _shotBoxW = _boxW;
                 _shotBoxH = BoxH;
                 _awaitingFrame = true;
+                // The creature records what it draws from here until the shot lands, so the picture can
+                // have it painted back in: it is an ImGui overlay and never reaches the backbuffer.
+                AetherOS.Apps.Aetherling.Rendering.PetFrameRecorder.Recording = true;
                 _capture.RequestCapture();
             }
             else if (overCancel)
@@ -328,7 +331,12 @@ public sealed class SelfieCaptureOverlay : Window
             var sy = h / viewport.Y;
             var crop = new Vector4(_shotBoxTL.X * sx, _shotBoxTL.Y * sy, _shotBoxW * sx, _shotBoxH * sy);
 
-            var png = ScreenCaptureService.EncodePng(px, w, h, fmt);
+            using var shot = ScreenCaptureService.Decode(px, w, h, fmt);
+            PetSelfieCompositor.Compose(shot,
+                AetherOS.Apps.Aetherling.Rendering.PetFrameRecorder.FrameQuads,
+                AetherOS.Apps.Aetherling.Rendering.PetFrameRecorder.FrameStrokes,
+                new Vector2(sx, sy));
+            var png = ScreenCaptureService.EncodePng(shot);
             Directory.CreateDirectory(TempDir);
             var path = Path.Combine(TempDir, $"selfie_{Guid.NewGuid():N}.png");
             File.WriteAllBytes(path, png);
@@ -350,6 +358,11 @@ public sealed class SelfieCaptureOverlay : Window
         Active = false;
         _onDone = null;
         _awaitingFrame = false;
+        // Whatever happened to the shot, the creature stops recording and the atlases go: both exist only
+        // for the length of one capture.
+        AetherOS.Apps.Aetherling.Rendering.PetFrameRecorder.Recording = false;
+        AetherOS.Apps.Aetherling.Rendering.PetFrameRecorder.Clear();
+        PetSelfieCompositor.Forget();
     }
 
     private static string TempDir => Path.Combine(Path.GetTempPath(), "AetherLoveSelfie");

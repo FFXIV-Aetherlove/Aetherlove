@@ -801,6 +801,14 @@
           "AetherOS.Sdk": "[1.0.0, )"
         }
       },
+      "aetheros.apps.together": {
+        "type": "Project",
+        "dependencies": {
+          "AetherLove.AppKit": "[1.0.0, )",
+          "AetherLove.Shared": "[1.0.0, )",
+          "AetherOS.Sdk": "[1.0.0, )"
+        }
+      },
       "aetheros.apps.voidinvaders": {
         "type": "Project",
         "dependencies": {

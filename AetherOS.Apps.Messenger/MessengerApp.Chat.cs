@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -838,7 +838,7 @@ public sealed partial class MessengerApp
             return;
         }
 
-        var parsed = ParsedMessage.Parse(text);
+        var parsed = ParsedMessage.Parse(decrypted ? _translate.Display(msg.Id, text) : text);
         var maxBubW = windowWidth * 0.72f;
         var padding = Px(12, 8);
         var drawList = ImGui.GetWindowDrawList();
@@ -1022,7 +1022,7 @@ public sealed partial class MessengerApp
             _undecryptedRows.Add(msg.Id);
         }
 
-        if (decrypted && CardRowHeight(text, needsDivider, isGroupEnd, lineH) is { } cardRow)
+        if (decrypted && CardRowHeight(text, needsDivider, isGroupEnd, lineH, windowWidth) is { } cardRow)
         {
             return cardRow;
         }
@@ -1030,7 +1030,7 @@ public sealed partial class MessengerApp
         float contentH;
         if (!decrypted || !_msgContentH.TryGetValue(msg.Id, out contentH))
         {
-            contentH = ParsedMessage.Parse(text).MeasureHeight(innerW);
+            contentH = ParsedMessage.Parse(decrypted ? _translate.Display(msg.Id, text) : text).MeasureHeight(innerW);
         }
 
         var bubbleH = MathF.Max(contentH, lineH) + padding.Y * 2f;
@@ -1721,6 +1721,10 @@ public sealed partial class MessengerApp
         {
             ImGui.CloseCurrentPopup();
             _caps.System.CopyToClipboard(ParsedMessage.Parse(text).PlainText);
+        }
+        if (text is not null)
+        {
+            _translate.DrawMenuItems(msg.Id, text);
         }
         if (msg.SenderAccountId == _store.MyAccountId
             && DrawIconMenuItem(FontAwesomeIcon.TrashAlt, Loc.T("chat.delete_message"), UiColors.MenuDanger))

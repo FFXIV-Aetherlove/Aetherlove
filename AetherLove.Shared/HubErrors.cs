@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.Text;
 
@@ -201,6 +201,26 @@ public static class HubErrors
     public const string EchoInvalidVideo = "echo_invalid_video";
     public const string EchoNameInvalid = "echo_name_invalid";
 
+    public const string TogetherDisabled = "together_disabled";
+    public const string TogetherPartyNotFound = "together_party_not_found";
+    /// <summary>Arg 0: the member cap.</summary>
+    public const string TogetherPartyFull = "together_party_full";
+    public const string TogetherNotHost = "together_not_host";
+    /// <summary>The caller was kicked from this party and cannot rejoin it.</summary>
+    public const string TogetherKicked = "together_kicked";
+    /// <summary>The caller already hosts a live party; ending it is the way to start another.</summary>
+    public const string TogetherLivePartyExists = "together_live_party_exists";
+    /// <summary>The caller is already in a party; leaving it is the way to join another.</summary>
+    public const string TogetherAlreadyInParty = "together_already_in_party";
+
+    public const string WayfinderRunExists = "wayfinder_run_exists";
+    public const string WayfinderRunNotFound = "wayfinder_run_not_found";
+    /// <summary>Arg 0: the host's world id. Join refused: the caller's attested world differs.</summary>
+    public const string WayfinderRunWrongWorld = "wayfinder_run_wrong_world";
+    public const string WayfinderRunNotGathering = "wayfinder_run_not_gathering";
+    /// <summary>A hunt needs the host plus at least one joined member.</summary>
+    public const string WayfinderRunTooFew = "wayfinder_run_too_few";
+
     public const string PatreonDisabled = "patreon_disabled";
     public const string PatreonAlreadyLinked = "patreon_already_linked";
     public const string PatreonNotLinked = "patreon_not_linked";
@@ -242,6 +262,12 @@ public static class HubErrors
     public const string AetherlingNameInvalid = "aetherling_name_invalid";
     /// <summary>No crystal of the requested element in the account's inventory.</summary>
     public const string AetherlingNoCrystal = "aetherling_no_crystal";
+    /// <summary>A rename was asked for with no Name change in the account's inventory.</summary>
+    public const string AetherlingNoRename = "aetherling_no_rename";
+    /// <summary>The daily wheel is switched off.</summary>
+    public const string AetherlingWheelDisabled = "aetherling_wheel_disabled";
+    /// <summary>Today's spin was already used and could not be returned.</summary>
+    public const string AetherlingWheelSpun = "aetherling_wheel_spun";
     /// <summary>Arg 0: adult feeds allowed per day. The appetite resets at UTC midnight.</summary>
     public const string AetherlingFull = "aetherling_full";
     /// <summary>The look names an item the account does not own.</summary>

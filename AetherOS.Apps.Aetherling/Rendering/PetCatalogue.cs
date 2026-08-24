@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -61,6 +61,17 @@ internal sealed class PetCatalogue
 
     public string AccessoryImagePath(AccessoryDef def) =>
         Path.GetFullPath(Path.Combine(AccessoryDirectory, def.File));
+
+    /// <summary>A code-drawn part's row thumbnail: <c>acc/thumbs/&lt;ref&gt;.png</c>, rendered by the vault's
+    /// store_render tool. Every other item's thumbnail is its own sprite, and a part has none.</summary>
+    public string AccessoryThumbPath(AccessoryDef def) =>
+        RefOf(def) is { Length: > 0 } itemRef
+            ? Path.GetFullPath(Path.Combine(AccessoryDirectory, "thumbs", itemRef + ".png"))
+            : string.Empty;
+
+    /// <summary>The far half of a wrap item, on the same terms: empty when there is none.</summary>
+    public string AccessoryBackPath(AccessoryDef def) =>
+        def.Back.Length == 0 ? string.Empty : Path.GetFullPath(Path.Combine(AccessoryDirectory, def.Back));
 
     public static PetCatalogue? Load()
     {

@@ -59,6 +59,14 @@ public sealed class MoodTracker
 
     /// <summary>Coming back after time away: the pet is found at rest, not still glowing from a
     /// lift nobody watched.</summary>
+    /// <summary>Mirrors another tracker, for a visiting companion that feels whatever its owner's own
+    /// creature feels rather than running warmth of its own.</summary>
+    public void CopyFrom(MoodTracker other)
+    {
+        _warmth = other._warmth;
+        _sinceLift = other._sinceLift;
+    }
+
     public void PrimeQuiet()
     {
         _warmth = 0f;

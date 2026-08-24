@@ -1,4 +1,4 @@
-using AetherLove.Services;
+﻿using AetherLove.Services;
 using AetherOS.Apps.Love;
 
 namespace AetherLove.Os;
@@ -8,11 +8,15 @@ namespace AetherLove.Os;
 public sealed class LoveHostService : ILoveHost
 {
     private readonly PulseService _pulse;
+    private readonly AetherLove.Navigation.ScreenRouter _router;
 
-    public LoveHostService(PulseService pulse)
+    public LoveHostService(PulseService pulse, AetherLove.Navigation.ScreenRouter router)
     {
         _pulse = pulse;
+        _router = router;
     }
 
     public void MarkActivity() => _pulse.MarkActivity();
+
+    public void OpenEncryptionRecovery() => _router.Navigate(AetherLove.Navigation.Screen.EncryptionRecovery);
 }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Security.Cryptography;
 using System.Text;
 using Org.BouncyCastle.Crypto.Agreement;
@@ -110,6 +110,29 @@ public sealed class CryptoService
     public byte[] DeriveAccountWrapKey(byte[] profilePrivateKey, byte[] accountPublicKey)
         => HKDF.DeriveKey(HashAlgorithmName.SHA256, profilePrivateKey, AesGcmKeyLength,
             SHA256.HashData(accountPublicKey), AccountWrapInfo);
+
+    private static readonly byte[] YapperWrapInfo =
+        Encoding.UTF8.GetBytes("AetherLove-yapper-dm-key-wrap-v1");
+
+    /// <summary>Wrap key for the yapper DM private key, derived from the ACCOUNT private key: an account
+    /// with no stored passphrase KEK (every account migrated from 1.x) can still provision and reopen its
+    /// yapper bundle on any device that holds the messenger account keypair. Its own info string keeps it
+    /// domain-separated from the other wrap derivations.</summary>
+    public byte[] DeriveYapperWrapKey(byte[] accountPrivateKey, byte[] yapperPublicKey)
+        => HKDF.DeriveKey(HashAlgorithmName.SHA256, accountPrivateKey, AesGcmKeyLength,
+            SHA256.HashData(yapperPublicKey), YapperWrapInfo);
+
+    private static readonly byte[] ProfileAccountWrapInfo =
+        Encoding.UTF8.GetBytes("AetherLove-profile-account-key-wrap-v1");
+
+    /// <summary>Wrap key for a NEW profile's private key, derived from the messenger ACCOUNT private key:
+    /// the bootstrap wrap for a device that holds neither a passphrase KEK nor a sibling profile key (the
+    /// player who deleted their only profile on a KEK-less account), which used to make silent
+    /// provisioning give up without a word. The first passphrase unlock converges it onto the KEK like
+    /// any other bundle. Its own info string keeps it domain-separated from every other wrap.</summary>
+    public byte[] DeriveProfileAccountWrapKey(byte[] accountPrivateKey, byte[] profilePublicKey)
+        => HKDF.DeriveKey(HashAlgorithmName.SHA256, accountPrivateKey, AesGcmKeyLength,
+            SHA256.HashData(profilePublicKey), ProfileAccountWrapInfo);
 
     private static readonly byte[] SiblingWrapInfo =
         Encoding.UTF8.GetBytes("AetherLove-sibling-profile-key-wrap-v1");

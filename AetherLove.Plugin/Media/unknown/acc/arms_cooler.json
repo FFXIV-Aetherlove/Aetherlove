@@ -1,0 +1,14 @@
+{
+  "name": "Palmshade Cooler",
+  "slot": "arms",
+  "tier": "seasonal",
+  "file": "arms_cooler.png",
+  "anchor": "handL",
+  "origin": [
+    51,
+    64
+  ],
+  "width": 64,
+  "height": 86,
+  "behind": false
+}

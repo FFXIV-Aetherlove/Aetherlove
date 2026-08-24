@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using AetherLove.Shared.Hangouts;
@@ -15,6 +15,11 @@ public interface IHangoutsHost
     Task<HangoutRsvpResultDto> SetHangoutRsvpAsync(Guid hangoutId, bool going, CancellationToken ct = default);
     Task<Guid> ReportHangoutAsync(ReportHangoutRequest req, CancellationToken ct = default);
     Task<HangoutSummaryDto> CreateHangoutAsync(CreateHangoutRequest req, CancellationToken ct = default);
+
+    /// <summary>Publishes the together party the caller hosts as an AetherParty hangout. The server forces
+    /// the category and verifies the party is live and hosted by this account.</summary>
+    Task<HangoutSummaryDto> PublishTogetherPartyHangoutAsync(
+        Guid partyId, CreateHangoutRequest req, CancellationToken ct = default);
     Task EndMyHangoutAsync(CancellationToken ct = default);
 
     /// <summary>Read-and-clear of the chat hangout-card deep link; polled at the start of every app frame.

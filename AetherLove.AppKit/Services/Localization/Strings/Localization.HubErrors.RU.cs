@@ -171,7 +171,16 @@ internal static class HubErrorsRu
 
         // aetherling growth (added after update 2.3.4)
         ["huberror.aetherling_no_crystal"] = "Кристаллов такого вида больше не осталось.",
+        ["huberror.aetherling_no_rename"] = "Чтобы сменить имя, нужна смена имени из магазина.",
+        ["huberror.aetherling_wheel_disabled"] = "Колесо сейчас закрыто.",
+        ["huberror.aetherling_wheel_spun"] = "Ты уже крутил колесо сегодня. Возвращайся после сброса.",
         ["huberror.aetherling_full"] = "Он сыт и доволен. Завтра снова проголодается.",
         ["huberror.aetherling_not_owned"] = "Ему нечего такого надеть.",
+        // together phase 2 (added after update 2.4.0)
+        ["huberror.wayfinder_run_exists"] = "Групповая охота уже открыта.",
+        ["huberror.wayfinder_run_not_found"] = "Сейчас групповой охоты нет.",
+        ["huberror.wayfinder_run_wrong_world"] = "Чтобы присоединиться к охоте, нужно быть на {0}.",
+        ["huberror.wayfinder_run_not_gathering"] = "Эта охота уже началась.",
+        ["huberror.wayfinder_run_too_few"] = "Сначала должны присоединиться хотя бы два охотника.",
     };
 }

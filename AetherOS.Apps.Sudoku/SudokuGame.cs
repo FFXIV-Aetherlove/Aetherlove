@@ -8,11 +8,13 @@ public enum SudokuOutcome
 {
     Playing,
     Solved,
-    OutOfTime,
     OutOfStrikes,
+    Abandoned,
 }
 
-/// <summary>A run: a ladder of grids climbing Easy to Insane, three strikes, and a clock per grid.
+/// <summary>A run: a ladder of grids climbing Easy to Insane, three strikes, and a clock per grid. The
+/// clock is score pressure, never a fail state: past the limit the grid stays solvable and still climbs
+/// the ladder, it just pays zero.
 ///
 /// The next grid is generated in the background while the current one is being played, because digging an
 /// Insane puzzle means thousands of uniqueness checks and doing that on the draw thread would hitch the
@@ -61,6 +63,24 @@ public sealed class SudokuGame
     public double SecondsLeft =>
         Math.Max(0.0, SudokuScoring.LimitFor(this.Difficulty) - this.PuzzleSeconds);
 
+    /// <summary>True once the current grid's clock has run out; it keeps playing but pays zero.</summary>
+    public bool IsOvertime =>
+        this.Puzzle != null && this.PuzzleSeconds >= SudokuScoring.LimitFor(this.Difficulty);
+
+    public double OvertimeSeconds =>
+        Math.Max(0.0, this.PuzzleSeconds - SudokuScoring.LimitFor(this.Difficulty));
+
+    /// <summary>The last cleared grid's score breakdown, for the between-grids receipt.</summary>
+    public PuzzleScore? LastAward { get; private set; }
+
+    /// <summary>True when the last cleared grid finished past its clock and therefore paid zero.</summary>
+    public bool LastWasOvertime { get; private set; }
+
+    /// <summary>Bumped on every strike so the UI can notice the moment; the cell that took it.</summary>
+    public int StrikeStamp { get; private set; }
+
+    public int LastStrikeCell { get; private set; } = -1;
+
     public int this[int cell] => this.board[cell];
 
     public bool IsGiven(int cell) => this.locked[cell];
@@ -76,6 +96,10 @@ public sealed class SudokuGame
         this.Peak = SudokuDifficulty.Easy;
         this.Outcome = SudokuOutcome.Playing;
         this.Puzzle = null;
+        this.LastAward = null;
+        this.LastWasOvertime = false;
+        this.StrikeStamp = 0;
+        this.LastStrikeCell = -1;
         this.pending = GenerateAsync(SudokuDifficulty.Easy);
     }
 
@@ -123,9 +147,14 @@ public sealed class SudokuGame
 
         this.RunSeconds += delta;
         this.PuzzleSeconds += delta;
-        if (this.PuzzleSeconds >= SudokuScoring.LimitFor(this.Difficulty))
+    }
+
+    /// <summary>Ends the run at the player's request; the score earned so far still submits.</summary>
+    public void Abandon()
+    {
+        if (this.Outcome == SudokuOutcome.Playing)
         {
-            this.Outcome = SudokuOutcome.OutOfTime;
+            this.Outcome = SudokuOutcome.Abandoned;
         }
     }
 
@@ -143,6 +172,8 @@ public sealed class SudokuGame
         {
             this.Strikes++;
             this.puzzleMistakes++;
+            this.StrikeStamp++;
+            this.LastStrikeCell = cell;
             if (this.Strikes >= MaxStrikes)
             {
                 this.Outcome = SudokuOutcome.OutOfStrikes;
@@ -202,8 +233,13 @@ public sealed class SudokuGame
         // Captured before the count moves on: Difficulty is derived from Solved, so reading it afterwards
         // would record the rung this clear UNLOCKED rather than the one it actually beat.
         var cleared = this.Difficulty;
-        var award = SudokuScoring.Score(cleared, this.PuzzleSeconds, this.puzzleMistakes, this.Integrity);
-        this.Score += award.Total;
+        // Overtime pays zero but the grid still counts: the clock costs points, never progress.
+        this.LastWasOvertime = this.PuzzleSeconds >= SudokuScoring.LimitFor(cleared);
+        var award = this.LastWasOvertime
+            ? (PuzzleScore?)null
+            : SudokuScoring.Score(cleared, this.PuzzleSeconds, this.puzzleMistakes, this.Integrity);
+        this.LastAward = award;
+        this.Score += award?.Total ?? 0;
         this.Solved++;
         if (cleared > this.Peak)
         {

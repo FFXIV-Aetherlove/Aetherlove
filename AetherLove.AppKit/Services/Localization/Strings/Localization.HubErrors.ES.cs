@@ -171,7 +171,16 @@ internal static class HubErrorsEs
 
         // aetherling growth (added after update 2.3.4)
         ["huberror.aetherling_no_crystal"] = "No queda ningún cristal de ese tipo para darle.",
+        ["huberror.aetherling_no_rename"] = "Para cambiarle el nombre necesitas un cambio de nombre de la tienda.",
+        ["huberror.aetherling_wheel_disabled"] = "La ruleta está cerrada ahora mismo.",
+        ["huberror.aetherling_wheel_spun"] = "Ya has girado hoy. Vuelve después del reinicio.",
         ["huberror.aetherling_full"] = "Está bastante lleno. Mañana volverá a tener hambre.",
         ["huberror.aetherling_not_owned"] = "No tiene eso para ponerse.",
+        // together phase 2 (added after update 2.4.0)
+        ["huberror.wayfinder_run_exists"] = "Ya hay una cacería en grupo abierta.",
+        ["huberror.wayfinder_run_not_found"] = "Ahora mismo no hay ninguna cacería en grupo.",
+        ["huberror.wayfinder_run_wrong_world"] = "Tienes que estar en {0} para unirte a esta cacería.",
+        ["huberror.wayfinder_run_not_gathering"] = "Esa cacería ya ha empezado.",
+        ["huberror.wayfinder_run_too_few"] = "Antes deben unirse al menos dos cazadores.",
     };
 }

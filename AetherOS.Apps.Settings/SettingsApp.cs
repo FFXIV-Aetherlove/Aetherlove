@@ -58,6 +58,10 @@ public sealed class SettingsApp : IAetherApp, IAppSettings
         {
             _screen.RequestWallpaperView();
         }
+        if (intent.Type == OsIntents.OpenTranslationSettings)
+        {
+            _screen.RequestLanguageView(OsIntents.TryGetReturnApp(intent, out var backTo) ? backTo : null);
+        }
         if (intent.Type == ShareIntent.Type && ShareIntent.TryUnwrap(intent, out var shared)
             && shared.Type == ShareTypes.Photo && shared.LocalPath is { Length: > 0 } path
             && _host.ApplyCustomFromFile(path))

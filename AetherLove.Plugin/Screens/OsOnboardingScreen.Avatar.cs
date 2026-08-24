@@ -1,4 +1,4 @@
-using System.Numerics;
+﻿using System.Numerics;
 using AetherLove.Services;
 using AetherLove.Services.Localization;
 using AetherLove.Shared;
@@ -7,14 +7,13 @@ using AetherLove.UI;
 using AetherLove.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.Textures;
 
 namespace AetherLove.Screens;
 
 public sealed partial class OsOnboardingScreen
 {
-    private readonly FileDialogManager _fileDialog = new();
+    private readonly AetherLove.Widgets.AetherFileDialogManager _fileDialog = new();
     private readonly ImageCropPopup _cropPopup = new();
 
     private string _avatarPath = string.Empty;

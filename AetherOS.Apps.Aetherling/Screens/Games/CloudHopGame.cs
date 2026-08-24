@@ -589,7 +589,7 @@ internal sealed class CloudHopGame : IPetGame
         {
             pose.CellIndex = GameScene.Cell(stage.Manifest, "hop", 0.75f);
         }
-        stage.Runtime.Draw(dl, ctx.Capabilities.Textures, bottom, petPx, pose);
+        stage.Runtime.Draw(dl, ctx.Capabilities.Textures, bottom, petPx, pose, props: false);
     }
 
     private void DrawFx(ImDrawListPtr dl, GameStage stage, float dt)

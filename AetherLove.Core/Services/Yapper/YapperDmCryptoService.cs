@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -12,10 +12,12 @@ using Dalamud.Plugin.Services;
 namespace AetherLove.Services.Yapper;
 
 /// <summary>Yapper DM E2EE: a dedicated X25519 keypair per yapper profile (so DM identity can't be
-/// correlated with dating profiles or the messenger), wrapped under the account passphrase KEK and
-/// provisioned silently, exactly like the messenger's account keypair. The unwrapped pair lives in
-/// memory for the session; a bundle the stored KEK can't open (passphrase reset elsewhere) is
-/// replaced with a fresh pair, making pre-reset DMs undecryptable placeholders by design.</summary>
+/// correlated with dating profiles or the messenger), provisioned silently, exactly like the messenger's
+/// account keypair. Wrapped under the account passphrase KEK when the device holds one, otherwise under a
+/// key derived from the messenger ACCOUNT keypair (every account migrated from 1.x has no stored KEK, and
+/// requiring one left those accounts on "keys are still being set up" forever, without a line of log). The
+/// unwrapped pair lives in memory for the session; a bundle neither secret can open (passphrase reset
+/// elsewhere) is replaced with a fresh pair, making pre-reset DMs undecryptable placeholders by design.</summary>
 public sealed class YapperDmCryptoService
 {
     private readonly CryptoService _crypto;
@@ -53,8 +55,11 @@ public sealed class YapperDmCryptoService
             return true;
         }
         var kek = _keys.Kek;
-        if (kek is null)
+        var account = _keys.AccountKeys;
+        if (kek is null && account is null)
         {
+            // Retried on every Yapper/DM open; the account keypair lands with the messenger sync.
+            _log.Debug("[YapperDmCrypto] No KEK and no account keypair yet; provisioning waits.");
             return false;
         }
         await _gate.WaitAsync(ct).ConfigureAwait(false);
@@ -65,20 +70,29 @@ public sealed class YapperDmCryptoService
                 return true;
             }
             var bundle = await _hub.GetYapperDmKeysAsync(ct).ConfigureAwait(false);
-            if (bundle is not null
-                && _crypto.UnwrapPrivateKey(bundle.EncryptedPrivateKey, bundle.WrapNonce, kek) is { } unwrapped)
+            if (bundle is not null && Unwrap(bundle, kek, account) is { } unwrapped)
             {
                 _pair = (bundle.PublicKey, unwrapped);
                 return true;
             }
+            // Only the KEK may retire an existing bundle: a KEK-less device that cannot open it is merely
+            // missing the passphrase, and replacing the pair from there would clobber the devices that
+            // hold it. It waits instead, exactly as it always did.
+            if (bundle is not null && kek is null)
+            {
+                _log.Debug("[YapperDmCrypto] Bundle exists but this device holds no KEK to open it; waiting.");
+                return false;
+            }
 
             var (pubKey, privKey) = _crypto.GenerateIdentityKeyPair();
-            var (wrapped, nonce) = _crypto.WrapPrivateKey(privKey, kek);
+            var wrapSecret = kek ?? _crypto.DeriveYapperWrapKey(account!.Value.PrivateKey, pubKey);
+            var (wrapped, nonce) = _crypto.WrapPrivateKey(privKey, wrapSecret);
             await _hub.PublishYapperDmKeysAsync(new YapperKeyBundleDto(pubKey, wrapped, nonce), ct)
                 .ConfigureAwait(false);
             _pair = (pubKey, privKey);
-            _log.Information("[YapperDmCrypto] Key bundle {Mode}.",
-                bundle is null ? "provisioned" : "replaced after failed unwrap");
+            _log.Information("[YapperDmCrypto] Key bundle {Mode} ({Wrap} wrap).",
+                bundle is null ? "provisioned" : "replaced after failed unwrap",
+                kek is not null ? "KEK" : "account-key");
             return true;
         }
         catch (Exception ex)
@@ -97,6 +111,24 @@ public sealed class YapperDmCryptoService
         {
             _gate.Release();
         }
+    }
+
+    /// <summary>Opens the bundle with whichever secret this device holds: the KEK first (the canonical
+    /// wrap), then the account-key derivation (the KEK-less wrap). Trying both also heals a device that
+    /// gained a passphrase after the bundle was published under the account key.</summary>
+    private byte[]? Unwrap(YapperKeyBundleDto bundle, byte[]? kek, (byte[] PublicKey, byte[] PrivateKey)? account)
+    {
+        if (kek is not null
+            && _crypto.UnwrapPrivateKey(bundle.EncryptedPrivateKey, bundle.WrapNonce, kek) is { } viaKek)
+        {
+            return viaKek;
+        }
+        if (account is { } acc)
+        {
+            var derived = _crypto.DeriveYapperWrapKey(acc.PrivateKey, bundle.PublicKey);
+            return _crypto.UnwrapPrivateKey(bundle.EncryptedPrivateKey, bundle.WrapNonce, derived);
+        }
+        return null;
     }
 
     private byte[]? PairwiseKey(byte[] peerPublicKey)

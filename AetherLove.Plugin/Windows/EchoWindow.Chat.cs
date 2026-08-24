@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -129,7 +129,8 @@ public sealed partial class EchoWindow
     {
         var dl = ImGui.GetWindowDrawList();
         var mine = line.AccountId == _myAccountId;
-        var parsed = ParsedMessage.Parse(line.Text);
+        var key = LineKey(line);
+        var parsed = ParsedMessage.Parse(_translate.Display(key, line.Text));
         var padding = Px(10f, 6f);
         var maxBubbleW = width * ChatBubbleWidthFactor;
         var innerW = maxBubbleW - padding.X * 2f;
@@ -159,8 +160,30 @@ public sealed partial class EchoWindow
         parsed.DrawWrapped($"##echoChatBody{slot}", innerW);
         ImGui.PopStyleColor();
 
+        // The bubble is draw-list output rather than one item, so the menu opens off a hand hit-test of
+        // its rect, the party chat's own shape: copy, then the translate entries.
+        if (ImGui.IsMouseHoveringRect(bubbleTL, bubbleTL + new Vector2(maxBubbleW, bubbleH))
+            && ImGui.IsMouseClicked(ImGuiMouseButton.Right))
+        {
+            _menuLine = key;
+            ImGui.OpenPopup("##echoLineMenu");
+        }
+        if (_menuLine == key && ImGui.BeginPopup("##echoLineMenu"))
+        {
+            if (SharedUiHelpers.DrawIconMenuItem(Dalamud.Interface.FontAwesomeIcon.Copy, Loc.T("chat.menu_copy_message")))
+            {
+                ImGui.CloseCurrentPopup();
+                _caps.System.CopyToClipboard(ParsedMessage.Parse(line.Text).PlainText);
+            }
+            _translate.DrawMenuItems(key, line.Text);
+            ImGui.EndPopup();
+        }
+
         ImGui.SetCursorScreenPos(new Vector2(origin.X, bubbleTL.Y + bubbleH + Px(5f)));
     }
+
+    /// <summary>A line has no id on the wire; sender plus stamp is unique enough for a translation key.</summary>
+    private static string LineKey(EchoChatLineDto line) => $"echo{line.AccountId:N}{line.AtUtc.UtcTicks}";
 
     private static void DrawDayDivider(DateTime date)
     {
@@ -311,6 +334,15 @@ public sealed partial class EchoWindow
         var text = _chatInput.Replace('\n', ' ').Trim();
         if (text.Length == 0 || !ParsedMessage.Parse(text).HasVisibleContent)
         {
+            return;
+        }
+        // Slash input mimics the game chat box, the way every other chat does: a known emote command
+        // runs on the character, anything else is dropped, and nothing reaches the room.
+        if (text.StartsWith('/'))
+        {
+            _caps.System.TryExecuteEmote(text);
+            _chatInput = string.Empty;
+            _reclaimChatFocus = true;
             return;
         }
         if (_state.CurrentRoomId is not { } roomId)

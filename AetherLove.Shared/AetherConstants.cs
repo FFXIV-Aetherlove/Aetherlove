@@ -1,4 +1,4 @@
-namespace AetherLove.Shared;
+﻿namespace AetherLove.Shared;
 
 /// <summary>Build-time constants shared between the plugin and the server.</summary>
 public static class AetherConstants

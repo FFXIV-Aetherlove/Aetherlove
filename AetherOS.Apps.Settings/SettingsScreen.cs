@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Threading.Tasks;
@@ -34,7 +34,7 @@ public sealed class SettingsScreen
         _caps = caps;
     }
 
-    private enum View { Hub, General, Language, Notifications, Audio, Appearance, Wallpaper, Profile, AvatarRing, Supporter, StaffNotices, Tos, Contributors, Developer }
+    private enum View { Hub, General, Language, Notifications, Audio, Appearance, Wallpaper, Profile, AvatarRing, Supporter, StaffNotices, Tos, Contributors, Developer, Party }
 
     private View _view = View.Hub;
 
@@ -75,12 +75,31 @@ public sealed class SettingsScreen
             _pendingWallpaperView = false;
             _view = View.Wallpaper;
         }
+        if (_pendingLanguageView)
+        {
+            _pendingLanguageView = false;
+            _view = View.Language;
+        }
+        else
+        {
+            _languageReturnApp = null;
+        }
     }
 
     private bool _pendingWallpaperView;
+    private bool _pendingLanguageView;
+    private string? _languageReturnApp;
 
     /// <summary>Deep-links the next open to the wallpaper page (a shared photo just became the wallpaper).</summary>
     public void RequestWallpaperView() => _pendingWallpaperView = true;
+
+    /// <summary>Deep-links the next open to the languages page (a right-clicked "translation settings").
+    /// <paramref name="returnApp"/> makes the page's back pill return to the text being translated.</summary>
+    public void RequestLanguageView(string? returnApp = null)
+    {
+        _pendingLanguageView = true;
+        _languageReturnApp = returnApp;
+    }
 
     /// <summary>Deep-links the next open straight to the supporter page (from a "become a supporter" pitch).
     /// <paramref name="returnApp"/> is the sending app's id; the supporter page's back pill then returns there
@@ -156,6 +175,9 @@ public sealed class SettingsScreen
                 break;
             case View.Developer:
                 DrawDeveloperPage();
+                break;
+            case View.Party:
+                DrawPartyPage();
                 break;
         }
     }
@@ -657,7 +679,7 @@ public sealed class SettingsScreen
 
     private void DrawLanguagePage()
     {
-        DrawSubpageBack();
+        DrawLanguageBack();
         DrawSubpageHeading(Loc.T("settings.menu_language"), PadX);
 
         var scrollH = ImGui.GetContentRegionAvail().Y;
@@ -677,11 +699,127 @@ public sealed class SettingsScreen
 
         ImGui.Spacing();
         ImGui.Spacing();
+        DrawSectionHeader(Loc.T("settings.section_translation"), PadX);
+        ImGui.Spacing();
+        DrawTranslationSection(winW);
+
+        ImGui.Spacing();
+        ImGui.Spacing();
         DrawSectionHeader(Loc.T("settings.section_time_format"), PadX);
         ImGui.Spacing();
         DrawTimeFormatRow(true, Loc.T("settings.time_24h"));
         DrawTimeFormatRow(false, Loc.T("settings.time_12h"));
         ImGui.Spacing();
+    }
+
+    /// <summary>The languages page's back pill: a "translation settings" deep link that carried a return
+    /// app goes back to that app (warm resume restores the translatable, back in context); a hub-opened
+    /// page goes to the hub.</summary>
+    private void DrawLanguageBack()
+    {
+        if (_languageReturnApp is not { } returnApp || _shell is null)
+        {
+            DrawSubpageBack();
+            return;
+        }
+        ImGui.Spacing();
+        ImGui.Spacing();
+        ImGui.SetCursorPosX(Px(PadX));
+        var destIcon = FontAwesomeIcon.Home;
+        foreach (var app in _shell.Apps)
+        {
+            if (app.Id == returnApp)
+            {
+                destIcon = app.Icon;
+                break;
+            }
+        }
+        if (DrawFloatingBackPill(ImGui.GetCursorScreenPos(), Loc.T("settings.back_arrow"), destIcon))
+        {
+            _languageReturnApp = null;
+            _view = View.Hub;
+            _shell.OpenApp(returnApp);
+        }
+        ImGui.Spacing();
+    }
+
+    private string _translationLangFilter = string.Empty;
+
+    /// <summary>The translation opt-in and the target language, one searchable dropdown over every
+    /// language the backend takes. The explainer under the toggle is the same consent text the inline
+    /// popup shows, so the setting and the popup describe one identical bargain.</summary>
+    private void DrawTranslationSection(float winW)
+    {
+        var os = UiHost.Configuration.OsSettings;
+
+        ImGui.SetCursorPosX(Px(PadX));
+        var enabled = os.TranslationsEnabled;
+        if (ImGui.Checkbox(Loc.T("settings.translation_enable"), ref enabled))
+        {
+            os.TranslationsEnabled = enabled;
+            UiHost.Configuration.Save();
+        }
+        SharedUiHelpers.HandOnHover();
+        ImGui.SetCursorPosX(Px(PadX));
+        ImGui.PushTextWrapPos(winW - Px(PadX));
+        ImGui.TextColored(new Vector4(0.60f, 0.60f, 0.60f, 1f), Loc.T("os.translate_consent_body"));
+        ImGui.PopTextWrapPos();
+        ImGui.Spacing();
+
+        ImGui.SetCursorPosX(Px(PadX));
+        ImGui.TextColored(new Vector4(0.85f, 0.85f, 0.85f, 1f), Loc.T("settings.translation_language"));
+        ImGui.SetCursorPosX(Px(PadX));
+        var current = AetherLove.Services.Translation.TranslationLanguages.DisplayName(os.TranslationLanguage);
+        ImGui.SetNextItemWidth(winW - Px(PadX) * 2f);
+        if (!enabled)
+        {
+            ImGui.BeginDisabled();
+        }
+        if (ImGui.BeginCombo("##trLangPick", current, ImGuiComboFlags.HeightLarge))
+        {
+            ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
+            if (ImGui.IsWindowAppearing())
+            {
+                _translationLangFilter = string.Empty;
+                ImGui.SetKeyboardFocusHere();
+            }
+            ImGui.InputTextWithHint("##trLangFilter", Loc.T("settings.translation_search"),
+                ref _translationLangFilter, 40);
+            ImGui.Separator();
+            var filter = _translationLangFilter.Trim();
+            using (var list = ImRaii.Child("##trLangList", new Vector2(0f, Px(220f)), false))
+            {
+                if (list)
+                {
+                    foreach (var language in AetherLove.Services.Translation.TranslationLanguages.Renderable)
+                    {
+                        if (filter.Length > 0 && !language.Matches(filter))
+                        {
+                            continue;
+                        }
+                        var selected = language.Code.Equals(os.TranslationLanguage, StringComparison.OrdinalIgnoreCase);
+                        if (ImGui.Selectable($"{language.NativeName}##trLang{language.Code}", selected))
+                        {
+                            os.TranslationLanguage = language.Code;
+                            UiHost.Configuration.Save();
+                            ImGui.CloseCurrentPopup();
+                        }
+                        SharedUiHelpers.HandOnHover();
+                        if (!string.Equals(language.NativeName, language.EnglishName, StringComparison.Ordinal))
+                        {
+                            ImGui.SameLine();
+                            ImGui.TextColored(new Vector4(0.55f, 0.55f, 0.55f, 1f), language.EnglishName);
+                        }
+                    }
+                }
+            }
+            ImGui.EndCombo();
+        }
+        SharedUiHelpers.HandOnHover();
+        if (!enabled)
+        {
+            ImGui.EndDisabled();
+        }
     }
 
     private static void DrawTimeFormatRow(bool is24h, string label)
@@ -739,6 +877,57 @@ public sealed class SettingsScreen
             () => UiHost.Configuration.EnableDtrEntry, v => UiHost.Configuration.EnableDtrEntry = v);
         ImGui.SameLine();
         HelpMarker(Loc.T("settings.show_dtr_count_tooltip"));
+        ImGui.Spacing();
+    }
+
+    /// <summary>AetherParty's own settings. The party lives in the shell rather than in an app, so this
+    /// reaches it through the host bridge; the same switches are on the widget's cog.</summary>
+    private void DrawPartyPage()
+    {
+        DrawSubpageBack();
+        DrawSubpageHeading(Loc.T("os.party_settings"), PadX);
+
+        var scrollH = ImGui.GetContentRegionAvail().Y;
+        PushScrollbarStyle();
+        using var scroll = ImRaii.Child("##osSettParty", new Vector2(0f, scrollH), false);
+        PopScrollbarStyle();
+        if (!scroll)
+        {
+            return;
+        }
+
+        var winW = ImGui.GetWindowSize().X;
+        ImGui.Spacing();
+        SettingCheckbox(PadX, Loc.T("os.party_intro_pets_show"),
+            () => _host.ShowPartyPets, v => _host.ShowPartyPets = v);
+        ImGui.SameLine();
+        HelpMarker(Loc.T("os.party_intro_pets_show_hint"));
+        ImGui.Spacing();
+
+        if (_host.HasPet)
+        {
+            SettingCheckbox(PadX, Loc.T("os.party_intro_pets_share"),
+                () => _host.ShareMyPet, v => _host.ShareMyPet = v);
+            ImGui.SameLine();
+            HelpMarker(Loc.T("os.party_intro_pets_share_hint"));
+            ImGui.Spacing();
+        }
+
+        if (!_host.ShowPartyPets || _host.PartyPetSizeCount <= 0)
+        {
+            return;
+        }
+        ImGui.Spacing();
+        ImGui.SetCursorPosX(Px(PadX));
+        ImGui.TextColored(new Vector4(0.70f, 0.70f, 0.70f, 1f), Loc.T("os.party_intro_pets_size"));
+        ImGui.SetCursorPosX(Px(PadX));
+        ImGui.SetNextItemWidth(winW - Px(PadX) * 2f);
+        var size = _host.PartyPetSize;
+        if (ImGui.SliderInt("##partyPetSize", ref size, 0, _host.PartyPetSizeCount - 1,
+                Loc.T($"os.party_pet_size_{Math.Clamp(size, 0, _host.PartyPetSizeCount - 1)}")))
+        {
+            _host.PartyPetSize = size;
+        }
         ImGui.Spacing();
     }
 
@@ -1300,6 +1489,7 @@ public sealed class SettingsScreen
             Loc.T("settings.contributors_xivauth"),
             Loc.T("settings.contributors_punish"),
             Loc.T("settings.contributors_dalamud"),
+            Loc.T("settings.contributors_vavenn"),
             Loc.T("settings.contributors_testers"),
         ];
 
@@ -2143,7 +2333,10 @@ public sealed class SettingsScreen
     /// app's own settings are the hub above, so it is excluded; the group hides entirely when nothing qualifies.</summary>
     private void DrawAppsGroup(OsAppContext ctx, float winW)
     {
-        var hasAny = false;
+        // AetherParty belongs in this group even though it is not an app: it is shell-owned, so it has no
+        // IAetherApp to be picked up by the loop below, and a settings-only app registration would put a
+        // tile on somebody's home screen for a thing that has no screen.
+        var hasAny = _host.PartyAvailable;
         foreach (var app in ctx.Shell.Apps)
         {
             if (HasHostedSettings(app))
@@ -2163,6 +2356,35 @@ public sealed class SettingsScreen
         var padX = Px(PadX);
         var rowH = Px(52f);
         var innerW = winW - padX * 2f;
+
+        if (_host.PartyAvailable)
+        {
+            ImGui.SetCursorPosX(padX);
+            var partyTL = ImGui.GetCursorScreenPos();
+            var partyBR = partyTL + new Vector2(innerW, rowH - Px(6f));
+            if (ImGui.InvisibleButton("##osApp_aetherparty", new Vector2(innerW, rowH - Px(6f))))
+            {
+                _view = View.Party;
+            }
+            var partyHovered = ImGui.IsItemHovered();
+            if (partyHovered)
+            {
+                SharedUiHelpers.HandOnHover();
+            }
+            dl.AddRectFilled(partyTL, partyBR, OsDrawShared.White(partyHovered ? 0.10f : 0.06f), Px(12f));
+            var partyTileSz = Px(32f);
+            var partyTileTL = partyTL + new Vector2(Px(10f), (rowH - Px(6f) - partyTileSz) * 0.5f);
+            var partyTileBR = partyTileTL + new Vector2(partyTileSz, partyTileSz);
+            OsDrawShared.RoundedGradient(dl, partyTileTL, partyTileBR, partyTileSz * 0.28f,
+                new Vector4(0.30f, 0.72f, 0.42f, 1f), new Vector4(0.16f, 0.44f, 0.28f, 1f));
+            IconDraw.AddCentered(dl, FontAwesomeIcon.UserFriends, partyTileSz * 0.46f,
+                (partyTileTL + partyTileBR) * 0.5f, OsDrawShared.White(1f));
+            dl.AddText(new Vector2(partyTileBR.X + Px(12f), partyTL.Y + (rowH - Px(6f) - ImGui.GetFontSize()) * 0.5f),
+                OsDrawShared.White(0.94f), Loc.T("os.party_title"));
+            IconDraw.AddCentered(dl, FontAwesomeIcon.ChevronRight, Px(11f),
+                new Vector2(partyBR.X - Px(16f), (partyTL.Y + partyBR.Y) * 0.5f), OsDrawShared.White(0.4f));
+            ImGui.SetCursorScreenPos(partyTL + new Vector2(-padX + Px(PadX), rowH));
+        }
 
         foreach (var app in ctx.Shell.Apps)
         {

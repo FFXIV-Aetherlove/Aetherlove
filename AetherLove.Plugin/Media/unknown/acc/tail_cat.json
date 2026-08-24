@@ -1,0 +1,39 @@
+{
+  "name": "Cat Tail",
+  "slot": "tail",
+  "tier": "premium",
+  "file": "",
+  "anchor": "tail",
+  "origin": [
+    0,
+    0
+  ],
+  "width": 0,
+  "height": 0,
+  "behind": true,
+  "tail": {
+    "nudge": [
+      -1.33,
+      0.0
+    ],
+    "dir": 207.0,
+    "curl": -150.0,
+    "len": 136.67,
+    "segs": 28,
+    "profile": [
+      0.0,
+      6.67,
+      0.5,
+      5.67,
+      0.88,
+      5.0,
+      1.0,
+      5.67
+    ],
+    "fur": 0.0,
+    "furStep": 3,
+    "tipFrac": 0.86,
+    "shade": 0.88,
+    "response": 1.35
+  }
+}

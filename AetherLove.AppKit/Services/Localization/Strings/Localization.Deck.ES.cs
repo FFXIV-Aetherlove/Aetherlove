@@ -5,7 +5,7 @@ internal static class DeckEs
     public static readonly System.Collections.Generic.Dictionary<string, string> Strings = new()
     {
         ["deck.cooldown_heading"] = "¡Estás al día!",
-        ["deck.cooldown_body"] = "AetherLove te ofrece una nueva tanda de perfiles cada pocas horas, para que todos tengan una oportunidad justa. ¡Vuelve pronto para ver nuevas coincidencias potenciales!",
+        ["deck.cooldown_body"] = "AetherLove te da una nueva tanda de perfiles cada pocas horas. Así todos tienen una oportunidad justa. ¡Vuelve pronto para ver más coincidencias potenciales!",
         ["deck.new_matches_ready"] = "¡Hay nuevas coincidencias listas!",
         ["deck.server_error"] = "No se pudo conectar con el servidor: {0}",
         ["deck.view_profile"] = "Ver perfil",
@@ -60,14 +60,14 @@ internal static class DeckEs
         ["deck.superlike_tooltip"] = "Superlikes: te quedan {0}/{1}",
         ["deck.superlike_cooldown"] = "Nuevos superlikes en {0}h:{1:00}m",
         ["deck.superlike_intro_title"] = "Superlike",
-        ["deck.superlike_intro"] = "Un superlike le dice a alguien que de verdad te ha llamado la atención: tu perfil aparece el primero de su baraja con una entrada dorada. Si te da like de vuelta, hacéis match al instante. {0} Cerrar este aviso no gasta ninguno, así que toca la estrella de nuevo cuando quieras usarlo.",
+        ["deck.superlike_intro"] = "Un superlike le dice a alguien que te gusta de verdad. Tu perfil salta al primer puesto de su baraja con una entrada dorada. Si te da like de vuelta, hacéis match al instante. {0} Cerrar este aviso no gasta ningún superlike, así que toca la estrella de nuevo cuando quieras usarlo.",
         ["deck.superlike_intro_daily"] = "Tienes {0} al día.",
         ["deck.superlike_intro_weekly"] = "Tienes 1 gratis a la semana.",
         ["deck.superliked_you"] = "¡Has recibido un superlike!",
         ["deck.superliked_you_sub"] = "Devuélvele el like para hacer match al instante.",
         ["deck.superlikes_waiting"] = "Superlikes pendientes: {0}",
 
-        ["deck.superlike_supporter_pitch"] = "Los Supporters reciben más superlikes: un lote nuevo cada día, además de otros extras como fotos adicionales, estilos de nombre exclusivos, estadísticas extra y más.",
+        ["deck.superlike_supporter_pitch"] = "Los Supporters reciben un lote nuevo de superlikes cada día. También reciben fotos adicionales, estilos de nombre exclusivos, estadísticas extra y más.",
         ["deck.superlike_free_tooltip"] = "Tu superlike gratis de la semana",
         ["deck.superlike_weekly_cooldown"] = "Próximo superlike gratis en {0}d {1}h",
     };

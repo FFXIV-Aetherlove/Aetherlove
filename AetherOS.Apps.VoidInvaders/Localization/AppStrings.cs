@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace AetherOS.Apps.VoidInvaders.Localization;
 
@@ -10,7 +10,7 @@ public static class AppStrings
         // added after update 2.1.3 (void invaders)
         ["os.invaders_subtitle"] = "Slide, shoot, survive.",
         ["os.invaders_play"] = "Play",
-        ["os.invaders_high_scores"] = "High scores",
+        ["os.invaders_high_scores"] = "My high scores",
         ["os.invaders_best"] = "Best {0}",
         ["os.invaders_score"] = "Score {0}",
         ["os.invaders_wave"] = "Wave {0}",
@@ -28,7 +28,7 @@ public static class AppStrings
     {
         ["os.invaders_subtitle"] = "Ausweichen, schießen, überleben.",
         ["os.invaders_play"] = "Spielen",
-        ["os.invaders_high_scores"] = "Bestenliste",
+        ["os.invaders_high_scores"] = "Meine Bestwerte",
         ["os.invaders_best"] = "Beste {0}",
         ["os.invaders_score"] = "Punkte {0}",
         ["os.invaders_wave"] = "Welle {0}",
@@ -46,7 +46,7 @@ public static class AppStrings
     {
         ["os.invaders_subtitle"] = "Muévete, dispara, sobrevive.",
         ["os.invaders_play"] = "Jugar",
-        ["os.invaders_high_scores"] = "Mejores puntuaciones",
+        ["os.invaders_high_scores"] = "Mis récords",
         ["os.invaders_best"] = "Mejor {0}",
         ["os.invaders_score"] = "Puntos {0}",
         ["os.invaders_wave"] = "Oleada {0}",
@@ -64,7 +64,7 @@ public static class AppStrings
     {
         ["os.invaders_subtitle"] = "Glissez, tirez, survivez.",
         ["os.invaders_play"] = "Jouer",
-        ["os.invaders_high_scores"] = "Meilleurs scores",
+        ["os.invaders_high_scores"] = "Mes records",
         ["os.invaders_best"] = "Record {0}",
         ["os.invaders_score"] = "Score {0}",
         ["os.invaders_wave"] = "Vague {0}",
@@ -82,7 +82,7 @@ public static class AppStrings
     {
         ["os.invaders_subtitle"] = "Deslize, atire, sobreviva.",
         ["os.invaders_play"] = "Jogar",
-        ["os.invaders_high_scores"] = "Melhores pontuações",
+        ["os.invaders_high_scores"] = "Meus recordes",
         ["os.invaders_best"] = "Recorde {0}",
         ["os.invaders_score"] = "Pontos {0}",
         ["os.invaders_wave"] = "Onda {0}",
@@ -100,7 +100,7 @@ public static class AppStrings
     {
         ["os.invaders_subtitle"] = "Двигайся, стреляй, выживай.",
         ["os.invaders_play"] = "Играть",
-        ["os.invaders_high_scores"] = "Рекорды",
+        ["os.invaders_high_scores"] = "Мои рекорды",
         ["os.invaders_best"] = "Рекорд {0}",
         ["os.invaders_score"] = "Очки {0}",
         ["os.invaders_wave"] = "Волна {0}",

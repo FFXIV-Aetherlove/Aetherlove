@@ -1,4 +1,5 @@
-using System;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -22,7 +23,7 @@ namespace AetherOS.Apps.Yapper.Screens;
 /// animated reaction chips with a quick-react context row, pin markers with the pinned bar, read receipts,
 /// emoji autocomplete, and the bottom-docked growing input with Enter-to-send (Ctrl+Enter for a newline).
 /// All content is E2E: ciphertext decrypts at render via the host.</summary>
-internal sealed class DmChatScreen
+internal sealed partial class DmChatScreen
 {
     private const float EntranceDuration = 0.3f;
     private const float FlashDuration = 3.0f;
@@ -38,6 +39,7 @@ internal sealed class DmChatScreen
         ["heart", "heart_eyes", "joy", "thumbsup", "fire", "cry"];
 
     private readonly IYapperHost _host;
+    private readonly IAppCapabilities _caps;
     private readonly DmStore _dms;
     private readonly YapperMediaCache _mediaCache;
     private readonly Func<Guid?> _myProfileId;
@@ -89,17 +91,34 @@ internal sealed class DmChatScreen
     private const float PinDropDuration = 0.32f;
 
     public DmChatScreen(IYapperHost host, DmStore dms, YapperMediaCache mediaCache,
-        Func<Guid?> myProfileId, Action back, Action<Guid> openProfile)
+        AetherLove.UI.TranslateUi translate, Func<Guid?> myProfileId, Action back, Action<Guid> openProfile,
+        IAppCapabilities caps)
     {
+        _caps = caps;
         _host = host;
         _dms = dms;
         _mediaCache = mediaCache;
+        _translate = translate;
         _myProfileId = myProfileId;
         _back = back;
         _openProfile = openProfile;
     }
 
+    private readonly AetherLove.UI.TranslateUi _translate;
+
     public Guid PeerId => _peerId;
+
+    /// <summary>Hands the Photos app a pick request; the app owns the round trip and calls back here.</summary>
+    internal Action<Action<string>>? PickFromPhotos { get; set; }
+
+    /// <summary>A party staged for the next opened chat. Sent as a join card the moment the DM keys and
+    /// the peer key are ready (both load asynchronously), which is why it cannot send from Open itself.</summary>
+    public (Guid PartyId, string Code)? PendingParty { get; set; }
+
+    private (Guid PartyId, string Code)? _pendingPartySend;
+    private string? _pendingMessengerSend;
+    private volatile bool _msgrInviteBusy;
+    private float _msgrInviteToast;
 
     public void Open(Guid peerProfileId)
     {
@@ -108,6 +127,8 @@ internal sealed class DmChatScreen
         _loaded = false;
         _olderCursor = null;
         _inputText = string.Empty;
+        _pendingPartySend = PendingParty;
+        PendingParty = null;
         _replyingToId = null;
         _chatError = null;
         _scrollToBottom = 1f;
@@ -203,9 +224,34 @@ internal sealed class DmChatScreen
             DrawPinnedBar(ctx, pinned[0], peerKey, pad, winW);
         }
 
+        // The staged invite goes the moment sending is actually possible; before that the input's own
+        // "keys are still being set up" line explains the wait.
+        if (_pendingPartySend is { } pendingParty && _loaded && CanSend(peerKey))
+        {
+            _pendingPartySend = null;
+            var stashedDraft = _inputText;
+            _inputText = AetherLove.Services.PartyShare.Compose(pendingParty.PartyId, pendingParty.Code);
+            SendCurrentInput(peerKey!);
+            _inputText = stashedDraft;
+        }
+
+        if (_pendingMessengerSend is { } pendingCode && _loaded && CanSend(peerKey))
+        {
+            _pendingMessengerSend = null;
+            var stashedDraft = _inputText;
+            _inputText = AetherLove.Services.MessengerShare.Compose(pendingCode);
+            SendCurrentInput(peerKey!);
+            _inputText = stashedDraft;
+        }
+
+        DrawToastBar(Loc.T("chat.msgr_request_sent"), ref _msgrInviteToast, "##yapDmInviteToast");
+        DrawToastBar(Loc.T("chat.report_submitted_toast"), ref _imageReportedToast, "##yapDmReportToast");
         DrawMessages(ctx, peer, peerKey, winW);
         DrawChatInput(peer, peerKey);
         _emojiPicker.Draw();
+        DrawImageComposeOverlay(peerKey);
+        DrawImageReportOverlay();
+        DrawImageViewer();
     }
 
     private void DrawHeader(OsAppContext ctx, YapAuthorDto? peer, float pad, float winW)
@@ -445,7 +491,24 @@ internal sealed class DmChatScreen
     {
         var mine = msg.SenderProfileId != _peerId;
         var text = DisplayText(peerKey, msg, out var decrypted);
-        var parsed = ParsedMessage.Parse(text);
+        if (msg.Image is not null && msg.DeletedAtUtc is null)
+        {
+            DrawImageMessage(msg, windowWidth, mine, isGroupEnd);
+            return;
+        }
+        if (decrypted && msg.DeletedAtUtc is null
+            && AetherLove.Services.PartyShare.TryParse(text, out var partyId, out var partyCode, out var invite))
+        {
+            DrawPartyCard(ctx, msg, partyId, partyCode, invite, windowWidth, mine, isGroupEnd);
+            return;
+        }
+        if (decrypted && msg.DeletedAtUtc is null
+            && AetherLove.Services.MessengerShare.TryParse(text, out var messengerCode))
+        {
+            DrawMessengerInviteCard(ctx, msg, messengerCode, windowWidth, mine, isGroupEnd);
+            return;
+        }
+        var parsed = ParsedMessage.Parse(decrypted ? _translate.Display(msg.Id, text) : text);
         var maxBubW = windowWidth * 0.72f;
         var padding = Px(12, 8);
         var drawList = ImGui.GetWindowDrawList();
@@ -541,6 +604,242 @@ internal sealed class DmChatScreen
         else
         {
             ImGui.SetCursorScreenPos(cursorPos + new Vector2(0, quoteH + bubbleH + reactionsH + Px(2f)));
+        }
+
+        if (fading)
+        {
+            ImGui.PopStyleVar();
+        }
+    }
+
+    private const float PartyCardH = 96f;
+
+    // One fetched card per party shared into a DM; a null value is the party being over, which is what the
+    // card says rather than offering a join that goes nowhere.
+    /// <summary>A messenger invite rendered as a card. Tapping it sends the pair request there and then, the
+    /// same one tap it is in an AetherLove match chat; only if that fails does it hand off to the app.</summary>
+    private void DrawMessengerInviteCard(OsAppContext ctx, YapperDmMessageDto msg, string code, float windowWidth,
+        bool mine, bool isGroupEnd)
+    {
+        var t = ThemeService.Current;
+        var dl = ImGui.GetWindowDrawList();
+        var cursorPos = ImGui.GetCursorScreenPos();
+        var cardW = windowWidth * 0.72f;
+        var cardH = Px(76f);
+
+        var (entryDy, entryAlpha) = MessageEntrance(msg.Id);
+        var fading = entryAlpha < 0.999f;
+        if (fading)
+        {
+            ImGui.PushStyleVar(ImGuiStyleVar.Alpha, entryAlpha * ImGui.GetStyle().Alpha);
+        }
+
+        var left = mine ? cursorPos.X + windowWidth - cardW - Px(10f) : cursorPos.X + Px(10f);
+        var tl = new Vector2(left, cursorPos.Y + entryDy);
+        var br = tl + new Vector2(cardW, cardH);
+
+        ImGui.SetCursorScreenPos(tl);
+        var clicked = ImGui.InvisibleButton($"##yapMsgrInvite{msg.Id:N}", new Vector2(cardW, cardH));
+        var hovered = ImGui.IsItemHovered();
+        if (hovered && !mine)
+        {
+            SharedUiHelpers.HandOnHover();
+        }
+
+        dl.AddRectFilled(tl, br, ImGui.GetColorU32(t.Accent with { W = 0.14f }), Px(14f));
+        dl.AddRect(tl, br, ImGui.GetColorU32(t.Accent with { W = hovered && !mine ? 0.90f : 0.55f }), Px(14f),
+            ImDrawFlags.None, Px(1.5f));
+
+        var iconR = Px(18f);
+        var iconC = new Vector2(tl.X + Px(14f) + iconR, (tl.Y + br.Y) * 0.5f);
+        dl.AddCircleFilled(iconC, iconR, ImGui.GetColorU32(t.Accent));
+        IconDraw.AddCentered(dl, FontAwesomeIcon.CommentDots, Px(16f), iconC, 0xFFFFFFFFu);
+
+        var textX = iconC.X + iconR + Px(12f);
+        var lineH = ImGui.GetTextLineHeight();
+        dl.AddText(new Vector2(textX, tl.Y + Px(12f)), 0xFFFFFFFFu, Loc.T("chat.msgr_card_title"));
+        dl.AddText(new Vector2(textX, tl.Y + Px(12f) + lineH + Px(2f)), ImGui.GetColorU32(t.Accent),
+            AetherLove.Services.MessengerShare.Display(code));
+        dl.AddText(ImGui.GetFont(), ImGui.GetFontSize() * 0.82f,
+            new Vector2(textX, tl.Y + Px(12f) + ((lineH + Px(2f)) * 2f)), UiColors.TextMuted,
+            Loc.T("chat.msgr_card_hint"));
+
+        if (clicked && !mine)
+        {
+            SendMessengerPairRequest(ctx, code);
+        }
+
+        if (isGroupEnd)
+        {
+            var timeStr = msg.SentAtUtc.LocalDateTime.ToString("HH:mm");
+            var tsz = ImGui.CalcTextSize(timeStr);
+            var tx = mine ? br.X - tsz.X : tl.X;
+            dl.AddText(new Vector2(tx, br.Y + Px(2f)),
+                ImGui.GetColorU32(new Vector4(0.75f, 0.75f, 0.75f, 0.4f)), timeStr);
+            ImGui.SetCursorScreenPos(cursorPos + new Vector2(0f, cardH + tsz.Y + Px(8f)));
+        }
+        else
+        {
+            ImGui.SetCursorScreenPos(cursorPos + new Vector2(0f, cardH + Px(2f)));
+        }
+
+        if (fading)
+        {
+            ImGui.PopStyleVar();
+        }
+    }
+
+    private void SendMessengerPairRequest(OsAppContext ctx, string code)
+    {
+        if (_msgrInviteBusy)
+        {
+            return;
+        }
+        _msgrInviteBusy = true;
+        var shell = ctx.Shell;
+        _ = System.Threading.Tasks.Task.Run(async () =>
+        {
+            try
+            {
+                await _host.AddMessengerContactAsync(code).ConfigureAwait(false);
+                _msgrInviteToast = 4f;
+            }
+            catch (Exception ex)
+            {
+                AetherLove.UiHost.Log.Warning(ex, "[YapperDm] messenger pair request failed.");
+                shell?.SendIntent("messenger", OsIntents.CreateCode(OsIntents.MessengerAdd, code));
+            }
+            finally
+            {
+                _msgrInviteBusy = false;
+            }
+        });
+    }
+
+    private readonly ConcurrentDictionary<Guid, AetherLove.Shared.Together.TogetherPartyCardDto?> _partyCards = new();
+    private readonly ConcurrentDictionary<Guid, byte> _partyCardFetches = new();
+
+    private void StartPartyCardFetch(Guid partyId)
+    {
+        if (_partyCards.ContainsKey(partyId) || !_partyCardFetches.TryAdd(partyId, 0))
+        {
+            return;
+        }
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                _partyCards[partyId] = await _host.GetPartyCardAsync(partyId).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                AetherLove.UiHost.Log.Warning(ex, $"[YapperDm] Party card fetch failed for {partyId}.");
+                _partyCards[partyId] = null;
+            }
+            finally
+            {
+                _partyCardFetches.TryRemove(partyId, out _);
+            }
+        });
+    }
+
+    /// <summary>A party invite in a DM: the sender's own words, then the party with a one-tap join, or a
+    /// plain "this party is over" once it has ended.</summary>
+    private void DrawPartyCard(OsAppContext ctx, YapperDmMessageDto msg, Guid partyId, string code,
+        string invite, float windowWidth, bool mine, bool isGroupEnd)
+    {
+        StartPartyCardFetch(partyId);
+        _partyCards.TryGetValue(partyId, out var card);
+        var known = _partyCards.ContainsKey(partyId);
+
+        var t = ThemeService.Current;
+        var dl = ImGui.GetWindowDrawList();
+        var cursorPos = ImGui.GetCursorScreenPos();
+        var cardW = windowWidth * 0.72f;
+        var messageH = invite.Length == 0
+            ? 0f
+            : ImGui.CalcTextSize(invite, false, cardW - Px(28f)).Y + Px(8f);
+        var cardH = Px(PartyCardH) + messageH;
+
+        var (entryDy, entryAlpha) = MessageEntrance(msg.Id);
+        var fading = entryAlpha < 0.999f;
+        if (fading)
+        {
+            ImGui.PushStyleVar(ImGuiStyleVar.Alpha, entryAlpha * ImGui.GetStyle().Alpha);
+        }
+
+        var left = mine ? cursorPos.X + windowWidth - cardW - Px(10) : cursorPos.X + Px(10);
+        var tl = new Vector2(left, cursorPos.Y + entryDy);
+        var br = tl + new Vector2(cardW, cardH);
+
+        ImGui.SetCursorScreenPos(tl);
+        var clicked = ImGui.InvisibleButton($"##yapPartyCard{msg.Id:N}", new Vector2(cardW, cardH));
+        var hovered = ImGui.IsItemHovered();
+        var live = card is not null;
+
+        dl.AddRectFilled(tl, br, ImGui.GetColorU32(live
+            ? t.Accent with { W = 0.12f }
+            : new Vector4(1f, 1f, 1f, 0.05f)), Px(14f));
+        dl.AddRect(tl, br, ImGui.GetColorU32(t.Accent with { W = live ? (hovered ? 0.90f : 0.55f) : 0.30f }),
+            Px(14f), ImDrawFlags.None, Px(1.5f));
+
+        var y = tl.Y + Px(12f);
+        if (invite.Length > 0)
+        {
+            ImGui.SetCursorScreenPos(new Vector2(tl.X + Px(14f), y));
+            ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + cardW - Px(28f));
+            ImGui.TextUnformatted(invite);
+            ImGui.PopTextWrapPos();
+            y += messageH;
+            dl.AddLine(new Vector2(tl.X + Px(14f), y - Px(4f)), new Vector2(br.X - Px(14f), y - Px(4f)),
+                ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f)));
+        }
+
+        IconDraw.AddCentered(dl, FontAwesomeIcon.UserFriends, Px(20f),
+            new Vector2(tl.X + Px(26f), y + Px(20f)),
+            ImGui.GetColorU32(live ? t.Accent : UiColors.Muted));
+
+        var textX = tl.X + Px(48f);
+        var textMaxW = br.X - textX - Px(12f);
+        if (card is { } party)
+        {
+            SharedUiHelpers.HandOnHover();
+            dl.AddText(new Vector2(textX, y + Px(6f)), 0xFFFFFFFFu,
+                TruncateToWidth(Loc.T("chat.party_card_title", party.HostName), textMaxW));
+            dl.AddText(new Vector2(textX, y + Px(25f)), ImGui.GetColorU32(t.Accent),
+                TruncateToWidth(Loc.T("chat.party_card_members", party.MemberCount, party.MaxMembers), textMaxW));
+            dl.AddText(new Vector2(tl.X + Px(14f), y + Px(48f)), UiColors.TextMuted,
+                TruncateToWidth(Loc.T("chat.party_card_join"), cardW - Px(28f)));
+            if (hovered)
+            {
+                ImGui.SetTooltip(Loc.T("chat.party_card_join"));
+            }
+            if (clicked)
+            {
+                ctx.Shell.JoinParty(code);
+            }
+        }
+        else
+        {
+            var text = known ? Loc.T("chat.party_card_over") : Loc.T("chat.party_card_loading");
+            dl.AddText(new Vector2(textX, y + Px(16f)), ImGui.GetColorU32(UiColors.Muted),
+                TruncateToWidth(text, textMaxW));
+        }
+
+        if (isGroupEnd)
+        {
+            var local = msg.SentAtUtc.LocalDateTime;
+            var seenSuffix = mine && msg.ReadByPeerAtUtc is not null ? Loc.T("chat.seen_suffix") : string.Empty;
+            var timeStr = local.ToString("HH:mm") + seenSuffix;
+            var timeSize = ImGui.CalcTextSize(timeStr);
+            var timeX = mine ? br.X - timeSize.X : tl.X;
+            ImGui.SetCursorScreenPos(new Vector2(timeX, br.Y + Px(2f)));
+            ImGui.TextColored(new Vector4(0.75f, 0.75f, 0.75f, 0.40f), timeStr);
+            ImGui.SetCursorScreenPos(cursorPos + new Vector2(0, cardH + timeSize.Y + Px(8f)));
+        }
+        else
+        {
+            ImGui.SetCursorScreenPos(cursorPos + new Vector2(0, cardH + Px(2f)));
         }
 
         if (fading)
@@ -1136,6 +1435,10 @@ internal sealed class DmChatScreen
             ImGui.CloseCurrentPopup();
             ImGui.SetClipboardText(ParsedMessage.Parse(text).PlainText);
         }
+        if (text is not null)
+        {
+            _translate.DrawMenuItems(msg.Id, text);
+        }
         if (mine && DrawIconMenuItem(FontAwesomeIcon.TrashAlt, Loc.T("chat.delete_message"), UiColors.MenuDanger))
         {
             ImGui.CloseCurrentPopup();
@@ -1339,13 +1642,74 @@ internal sealed class DmChatScreen
         ImGui.SetCursorScreenPos(new Vector2(tl.X, br.Y + Px(4f)));
     }
 
+    /// <summary>Confirmation that a tapped invite actually went out; the request itself is silent otherwise.</summary>
+    /// <summary>A green bar over the thread for a few seconds after something lands. The timer is passed by
+    /// reference and counted down here, so a toast is one field and one call.</summary>
+    private void DrawToastBar(string message, ref float timer, string id)
+    {
+        if (timer <= 0f)
+        {
+            return;
+        }
+        timer -= ImGui.GetIO().DeltaTime;
+        var alpha = Math.Clamp(timer / 4f, 0f, 1f);
+        ImGui.PushStyleColor(ImGuiCol.ChildBg, new Vector4(0.18f, 0.62f, 0.30f, alpha));
+        using (var bar = ImRaii.Child(id, new Vector2(ImGui.GetContentRegionAvail().X, Px(26f)), false))
+        {
+            if (bar.Success)
+            {
+                var sz = ImGui.CalcTextSize(message);
+                ImGui.SetCursorPosX((ImGui.GetContentRegionAvail().X - sz.X) * 0.5f);
+                ImGui.SetCursorPosY((Px(26f) - sz.Y) * 0.5f);
+                ImGui.TextColored(new Vector4(1f, 1f, 1f, alpha), message);
+            }
+        }
+        ImGui.PopStyleColor();
+        ImGui.Spacing();
+    }
+
+    private void DrawAttachMenu()
+    {
+        if (!ImGui.BeginPopup("##yapDmAttach"))
+        {
+            return;
+        }
+        if (DrawIconMenuItem(FontAwesomeIcon.Camera, Loc.T("chat.attach_selfie")))
+        {
+            ImGui.CloseCurrentPopup();
+            BeginSelfie();
+        }
+        if (DrawIconMenuItem(FontAwesomeIcon.Image, Loc.T("chat.attach_photos"), enabled: PickFromPhotos is not null))
+        {
+            ImGui.CloseCurrentPopup();
+            PickFromPhotos?.Invoke(OnPhotoPicked);
+        }
+        if (DrawIconMenuItem(FontAwesomeIcon.FolderOpen, Loc.T("chat.attach_file")))
+        {
+            ImGui.CloseCurrentPopup();
+            BeginDiskPick();
+        }
+        ImGui.Separator();
+        var code = _host.MessengerCode;
+        if (DrawIconMenuItem(FontAwesomeIcon.CommentDots, Loc.T("chat.menu_invite_messenger"),
+                enabled: code is { Length: > 0 }))
+        {
+            ImGui.CloseCurrentPopup();
+            if (code is { Length: > 0 })
+            {
+                _pendingMessengerSend = code;
+            }
+        }
+        ImGui.EndPopup();
+    }
+
     private void DrawChatInput(YapAuthorDto? peer, byte[]? peerKey)
     {
         var windowWidth = ImGui.GetWindowSize().X;
         const float EmojiBtn = 28f;
         const float SendBtn = 56f;
         const float Gap = 4f;
-        var inputWidth = windowWidth - Px(EmojiBtn) - Px(SendBtn) - Px(Gap * 3f);
+        var inputWidth = windowWidth - (Px(EmojiBtn) * 2f) - Px(SendBtn) - Px(Gap * 4f);
 
         ImGui.SetCursorPosY(ImGui.GetWindowSize().Y - InputBarHeight(peer, peerKey));
         DrawEmojiAutocompleteRow();
@@ -1355,6 +1719,17 @@ internal sealed class DmChatScreen
         DrawReplyComposeBar(peerKey);
 
         var buttonSize = ImGui.GetFrameHeight();
+        using (ImRaii.PushFont(UiBuilder.IconFont))
+        {
+            if (SharedUiHelpers.Button($"{FontAwesomeIcon.Plus.ToIconString()}##yapDmAttach",
+                    new Vector2(buttonSize, 0f)))
+            {
+                ImGui.OpenPopup("##yapDmAttach");
+            }
+        }
+        DrawAttachMenu();
+        ImGui.SameLine(0, Px(Gap));
+
         {
             var grinTex = AetherLove.UiHost.EmojiService.GetEmoji("grinning")?.GetWrapOrDefault();
             ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, Px(4f, 4f));

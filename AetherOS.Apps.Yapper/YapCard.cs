@@ -17,6 +17,7 @@ internal sealed class YapCard(
     IYapperHost host,
     YapperStore store,
     YapperMediaCache mediaCache,
+    AetherLove.UI.TranslateUi translate,
     Func<Guid?> myProfileId,
     Action<YapDto> openDetail,
     Action<YapDto> onReply,
@@ -106,8 +107,14 @@ internal sealed class YapCard(
                 ImGui.SetCursorPosX(contentX);
                 // The body renders in its own child, which sits above the whole-card target, so the text
                 // itself must carry the open action or tapping it goes nowhere.
-                Parse(live.Id, live.Text).DrawWrapped($"##yapBody{live.Id:N}", winW - pad - contentX,
+                Parse(live.Id, translate.Display(live.Id, live.Text)).DrawWrapped(
+                    $"##yapBody{live.Id:N}", winW - pad - contentX,
                     clickable ? () => openDetail(live) : null);
+                if (ImGui.BeginPopupContextItem($"##yapTrCtx{live.Id:N}", ImGuiPopupFlags.MouseButtonRight))
+                {
+                    translate.DrawMenuItems(live.Id, live.Text);
+                    ImGui.EndPopup();
+                }
             }
             DrawGallery(ctx, live, contentX, winW - contentX - pad);
             if (live.Embed is { } embed)

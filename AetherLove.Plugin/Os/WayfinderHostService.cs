@@ -24,14 +24,16 @@ public sealed class WayfinderHostService : IWayfinderHost
     private readonly SessionBootstrapper _bootstrap;
     private readonly IFramework _framework;
     private readonly CameraLibraryService _camera;
+    private readonly Services.Together.WayfinderRunStateService _runState;
 
     public WayfinderHostService(AetherHubContext hubClient, SessionBootstrapper bootstrap,
-        IFramework framework, CameraLibraryService camera)
+        IFramework framework, CameraLibraryService camera, Services.Together.WayfinderRunStateService runState)
     {
         _hubClient = hubClient;
         _bootstrap = bootstrap;
         _framework = framework;
         _camera = camera;
+        _runState = runState;
     }
 
     public async Task<WayfinderStateDto> GetStateAsync(CancellationToken ct = default) =>
@@ -150,7 +152,7 @@ public sealed class WayfinderHostService : IWayfinderHost
 
     private PositionSnapshot? _pendingWaypoint;
 
-    private sealed record PositionSnapshot(int TerritoryId, float X, float Y, float Z);
+    private sealed record PositionSnapshot(int TerritoryId, float X, float Y, float Z, int WorldId);
 
     private static PositionSnapshot? CapturePosition()
     {
@@ -160,6 +162,72 @@ public sealed class WayfinderHostService : IWayfinderHost
             return null;
         }
         var pos = player.Position;
-        return new PositionSnapshot((int)UiHost.ClientState.TerritoryType, pos.X, pos.Y, pos.Z);
+        return new PositionSnapshot((int)UiHost.ClientState.TerritoryType, pos.X, pos.Y, pos.Z,
+            (int)player.CurrentWorld.RowId);
     }
+
+    public WayfinderPartyRunDto? PartyRun => _runState.Run;
+
+    public void DismissPartyResults() => _runState.DismissIfResolved();
+
+    public async Task<WayfinderPartyRunDto> StartPartyGatherAsync(CancellationToken ct = default)
+    {
+        var position = await _framework.RunOnFrameworkThread(CapturePosition).ConfigureAwait(false)
+            ?? throw new InvalidOperationException("No player position available.");
+        var unlocked = await UnlockedThroughAsync().ConfigureAwait(false);
+        var run = await _hubClient.StartWayfinderPartyGatherAsync(position.WorldId, unlocked, ct).ConfigureAwait(false);
+        _runState.ApplyRun(run);
+        return run;
+    }
+
+    public async Task<WayfinderPartyRunDto> JoinPartyRunAsync(Guid runId, CancellationToken ct = default)
+    {
+        var position = await _framework.RunOnFrameworkThread(CapturePosition).ConfigureAwait(false)
+            ?? throw new InvalidOperationException("No player position available.");
+        var unlocked = await UnlockedThroughAsync().ConfigureAwait(false);
+        var run = await _hubClient.JoinWayfinderPartyRunAsync(runId, position.WorldId, unlocked, ct).ConfigureAwait(false);
+        _runState.ApplyRun(run);
+        return run;
+    }
+
+    public async Task<WayfinderPartyRunDto> BeginPartyRunAsync(Guid runId, CancellationToken ct = default)
+    {
+        var run = await _hubClient.BeginWayfinderPartyRunAsync(runId, ct).ConfigureAwait(false);
+        _runState.ApplyRun(run);
+        return run;
+    }
+
+    public async Task CancelPartyRunAsync(Guid runId, CancellationToken ct = default)
+    {
+        await _hubClient.CancelWayfinderPartyRunAsync(runId, ct).ConfigureAwait(false);
+        _runState.DismissIfResolved();
+    }
+
+    public async Task<WayfinderGroupSubmitResultDto> SubmitPartyAttemptAsync(Guid assignmentId, CancellationToken ct = default)
+    {
+        var position = await _framework.RunOnFrameworkThread(CapturePosition).ConfigureAwait(false)
+            ?? throw new InvalidOperationException("No player position available.");
+        var dto = new WayfinderGroupSubmitDto(
+            assignmentId, position.TerritoryId, position.X, position.Y, position.Z, position.WorldId);
+        return await _hubClient.SubmitWayfinderPartyAttemptAsync(dto, ct).ConfigureAwait(false);
+    }
+
+    public async Task<WayfinderPartyRunDto?> RefreshPartyRunAsync(CancellationToken ct = default)
+    {
+        var run = await _hubClient.GetWayfinderPartyRunAsync(true, ct).ConfigureAwait(false);
+        if (run is not null)
+        {
+            _runState.ApplyRun(run);
+        }
+        else
+        {
+            _runState.Clear();
+        }
+        return run;
+    }
+
+    public string? WorldName(int worldId) =>
+        UiHost.DataManager.GetExcelSheet<World>().GetRowOrDefault((uint)worldId) is { } world
+            ? world.Name.ExtractText()
+            : null;
 }

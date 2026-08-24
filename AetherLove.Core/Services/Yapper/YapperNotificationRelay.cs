@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using AetherLove.Shared.Yapper;
 
 namespace AetherLove.Services.Yapper;
@@ -19,6 +19,8 @@ public sealed class YapperNotificationRelay
 
     public event Action<YapperDmDeletedPushDto>? DmDeleted;
 
+    public event Action<YapperDmImageRemovedPushDto>? DmImageRemoved;
+
     public void Raise(YapperNotificationPushDto payload) => NotificationReceived?.Invoke(payload);
 
     public void RaiseDm(YapperDmPushDto payload) => DmReceived?.Invoke(payload);
@@ -30,4 +32,6 @@ public sealed class YapperNotificationRelay
     public void RaiseDmPinned(YapperDmPinPushDto payload) => DmPinned?.Invoke(payload);
 
     public void RaiseDmDeleted(YapperDmDeletedPushDto payload) => DmDeleted?.Invoke(payload);
+
+    public void RaiseDmImageRemoved(YapperDmImageRemovedPushDto payload) => DmImageRemoved?.Invoke(payload);
 }

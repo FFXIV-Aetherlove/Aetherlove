@@ -1,0 +1,31 @@
+{
+  "name": "Cat Ears",
+  "slot": "ears",
+  "tier": "premium",
+  "file": "",
+  "anchor": "earL",
+  "origin": [
+    0,
+    0
+  ],
+  "width": 0,
+  "height": 0,
+  "behind": true,
+  "ears": {
+    "nudge": [
+      0.67,
+      -2.67
+    ],
+    "baseHalfWidth": 18.0,
+    "height": 52.0,
+    "bowOut": 0.24,
+    "bowIn": -0.1,
+    "lean": 13.0,
+    "inner": 0.54,
+    "floppy": 0.2,
+    "droop": 0.0,
+    "tuft": 0.16,
+    "tipWidth": 0.0,
+    "fur": 0.05
+  }
+}

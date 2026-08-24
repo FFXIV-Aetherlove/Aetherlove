@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -77,29 +77,176 @@ public sealed class WalletHostService : IWalletHost, IDisposable
         (CurrencyIds.SeafarersCowrie, WalletCurrencySection.Field),
     ];
 
+    /// <summary>Where the per-character snapshots live in the wallet's own app storage.</summary>
+    private const string CharactersKey = "characters";
+
+    /// <summary>Inventory is not populated on the login event; the first capture waits this long.</summary>
+    private static readonly TimeSpan LoginCaptureDelay = TimeSpan.FromSeconds(20);
+
+    /// <summary>A logged-in character is re-captured on this cadence even when the wallet is never
+    /// opened, so an alt's remembered numbers are at most this stale.</summary>
+    private static readonly TimeSpan RecaptureEvery = TimeSpan.FromMinutes(10);
+
     private readonly AetherHubContext _hubClient;
     private readonly IFramework _framework;
+    private readonly AetherOS.Sdk.IAppStorage _storage;
     private readonly Dictionary<uint, ItemInfo> _itemInfo = new();
     private readonly Dictionary<uint, ISharedImmediateTexture?> _iconCache = new();
+    private readonly object _charactersGate = new();
+    private readonly Timer _captureTimer;
 
     private volatile List<uint>? _discovered;
     private int _discoveryStarted;
     private volatile int _snapshotVersion;
+    private volatile int _charactersVersion;
+    private volatile WalletCharacterIdentity? _current;
+    private volatile IReadOnlyList<WalletCharacterSnapshot> _characters;
+    private int _sampleFramesLeft;
 
     private readonly record struct ItemInfo(string Name, uint IconId, uint StackSize);
 
-    public WalletHostService(AetherHubContext hubClient, IFramework framework)
+    public WalletHostService(AetherHubContext hubClient, IFramework framework, AppStorageService storage)
     {
         _hubClient = hubClient;
         _framework = framework;
+        _storage = storage.For("wallet");
+        _characters = Load();
+        _captureTimer = new Timer(_ => _ = CaptureAsync(), null, Timeout.Infinite, Timeout.Infinite);
         Plugin.ClientState.Login += OnLogin;
         Plugin.ClientState.Logout += OnLogout;
+        _framework.Update += OnFrameworkUpdate;
+        if (Plugin.ClientState.IsLoggedIn)
+        {
+            ArmSampling();
+        }
     }
 
     public void Dispose()
     {
         Plugin.ClientState.Login -= OnLogin;
         Plugin.ClientState.Logout -= OnLogout;
+        _framework.Update -= OnFrameworkUpdate;
+        _captureTimer.Dispose();
+    }
+
+    public WalletCharacterIdentity? CurrentCharacter => _current;
+
+    public IReadOnlyList<WalletCharacterSnapshot> KnownCharacters => _characters;
+
+    public int CharactersVersion => _charactersVersion;
+
+    public void ForgetCharacter(ulong contentId)
+    {
+        lock (_charactersGate)
+        {
+            var kept = new List<WalletCharacterSnapshot>();
+            foreach (var c in _characters)
+            {
+                if (c.ContentId != contentId)
+                {
+                    kept.Add(c);
+                }
+            }
+            _characters = kept;
+            _storage.Set(CharactersKey, kept);
+            _charactersVersion++;
+        }
+    }
+
+    /// <summary>The player object is null on the login event itself, so identity is sampled on the
+    /// framework tick for a few frames after login until it answers.</summary>
+    private void ArmSampling()
+    {
+        _sampleFramesLeft = 600;
+        _captureTimer.Change(LoginCaptureDelay, RecaptureEvery);
+    }
+
+    private unsafe void OnFrameworkUpdate(IFramework framework)
+    {
+        if (_sampleFramesLeft <= 0)
+        {
+            return;
+        }
+        _sampleFramesLeft--;
+        var player = Plugin.ObjectTable.LocalPlayer;
+        var playerState = PlayerState.Instance();
+        var contentId = playerState != null ? playerState->ContentId : 0UL;
+        if (player is null || contentId == 0)
+        {
+            return;
+        }
+        var world = player.HomeWorld.ValueNullable?.Name.ExtractText() ?? string.Empty;
+        _current = new WalletCharacterIdentity(contentId, player.Name.TextValue, world);
+        _sampleFramesLeft = 0;
+    }
+
+    /// <summary>A login-time or periodic capture of whoever is logged in, independent of the wallet app
+    /// ever being opened, which is what makes an alt's numbers exist at all.</summary>
+    private async Task CaptureAsync()
+    {
+        try
+        {
+            if (!Plugin.ClientState.IsLoggedIn || _current is null)
+            {
+                return;
+            }
+            var rows = await ReadCurrenciesAsync().ConfigureAwait(false);
+            Remember(rows);
+        }
+        catch (Exception ex)
+        {
+            UiHost.Log.Debug(ex, "[Wallet] Background character capture failed.");
+        }
+    }
+
+    /// <summary>Folds a live read into the current character's remembered snapshot. Newest first, so
+    /// the strip's order is "who was played most recently" without any sorting at draw time.</summary>
+    private void Remember(IReadOnlyList<WalletCurrencyRow> rows)
+    {
+        if (_current is not { } who || rows.Count == 0)
+        {
+            return;
+        }
+        var stored = new List<WalletStoredCurrency>(rows.Count);
+        foreach (var row in rows)
+        {
+            stored.Add(WalletStoredCurrency.From(row));
+        }
+        var snapshot = new WalletCharacterSnapshot
+        {
+            ContentId = who.ContentId,
+            Name = who.Name,
+            World = who.World,
+            TakenAtUtc = DateTimeOffset.UtcNow,
+            Currencies = stored,
+        };
+        lock (_charactersGate)
+        {
+            var next = new List<WalletCharacterSnapshot>(_characters.Count + 1) { snapshot };
+            foreach (var c in _characters)
+            {
+                if (c.ContentId != who.ContentId)
+                {
+                    next.Add(c);
+                }
+            }
+            _characters = next;
+            _storage.Set(CharactersKey, next);
+            _charactersVersion++;
+        }
+    }
+
+    private IReadOnlyList<WalletCharacterSnapshot> Load()
+    {
+        try
+        {
+            return _storage.Get<List<WalletCharacterSnapshot>>(CharactersKey) ?? [];
+        }
+        catch (Exception ex)
+        {
+            UiHost.Log.Warning(ex, "[Wallet] Could not read the remembered characters.");
+            return [];
+        }
     }
 
     public async Task<SparkWalletDto?> GetSparkWalletAsync(CancellationToken ct = default)
@@ -136,7 +283,10 @@ public sealed class WalletHostService : IWalletHost, IDisposable
     {
         try
         {
-            return await _framework.RunOnFrameworkThread(BuildRows).ConfigureAwait(false);
+            var rows = await _framework.RunOnFrameworkThread(BuildRows).ConfigureAwait(false);
+            // Every live read is also the freshest possible snapshot of this character.
+            Remember(rows);
+            return rows;
         }
         catch (Exception ex)
         {
@@ -145,9 +295,19 @@ public sealed class WalletHostService : IWalletHost, IDisposable
         }
     }
 
-    private void OnLogin() => Invalidate();
+    private void OnLogin()
+    {
+        Invalidate();
+        ArmSampling();
+    }
 
-    private void OnLogout(int type, int code) => Invalidate();
+    private void OnLogout(int type, int code)
+    {
+        Invalidate();
+        _current = null;
+        _sampleFramesLeft = 0;
+        _captureTimer.Change(Timeout.Infinite, Timeout.Infinite);
+    }
 
     private void Invalidate() => _snapshotVersion++;
 

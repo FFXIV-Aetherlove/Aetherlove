@@ -1,4 +1,4 @@
-namespace AetherLove.Services.Localization;
+﻿namespace AetherLove.Services.Localization;
 
 internal static class CommonPt
 {
@@ -190,5 +190,37 @@ internal static class CommonPt
         // added after update 2.2.3
         ["common.travel_teleport_with"] = "Teleporte ({0})",
         ["common.travel_tooltip"] = "Viajar até aqui com {0}",
+
+        // added after update 2.4.0
+        ["common.session_expired_title"] = "Precisas de iniciar sessão outra vez",
+        ["common.session_expired_body"] = "A tua sessão terminou, por isso o telemóvel já não consegue chegar ao AetherOS. Não é uma falha: está tudo a funcionar, apenas já não sabe quem tu és.",
+        ["common.session_expired_button"] = "Iniciar sessão de novo",
+        ["common.session_expired_hint"] = "O telemóvel reinicia e leva-te de volta ao ecrã de início de sessão.",
+    
+        // the file picker (added after update 2.4.0)
+        ["picker.quick_links"] = "Locais",
+        ["picker.favorites"] = "Favoritos",
+        ["picker.drives"] = "Unidades",
+        ["picker.place_desktop"] = "Área de trabalho",
+        ["picker.place_documents"] = "Documentos",
+        ["picker.place_downloads"] = "Downloads",
+        ["picker.place_pictures"] = "Imagens",
+        ["picker.place_screenshots"] = "Capturas do jogo",
+        ["picker.search_hint"] = "Pesquisar nesta pasta...",
+        ["picker.empty"] = "Esta pasta está vazia.",
+        ["picker.open"] = "Abrir",
+        ["picker.nothing_selected"] = "Nada selecionado",
+        ["picker.new_folder_hint"] = "Nome da pasta...",
+        ["picker.new_folder_create"] = "Criar",
+        ["picker.show_hidden"] = "Arquivos ocultos",
+        ["picker.sort_name"] = "Nome",
+        ["picker.sort_date"] = "Data",
+        ["picker.sort_size"] = "Tamanho",
+        ["picker.tip_star"] = "Marcar ou desmarcar esta pasta como favorita (clique direito em um favorito para removê-lo)",
+        ["picker.tip_edit_path"] = "Digitar um caminho",
+        ["picker.preview_loading"] = "Carregando pré-visualização...",
+        ["picker.save"] = "Salvar",
+        ["picker.file_name_hint"] = "Nome do arquivo...",
+        ["picker.selected_count"] = "{0} selecionados",
     };
 }

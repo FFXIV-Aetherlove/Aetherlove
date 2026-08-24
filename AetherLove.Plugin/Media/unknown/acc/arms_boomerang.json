@@ -1,0 +1,14 @@
+{
+  "name": "Driftwood Boomerang",
+  "slot": "arms",
+  "tier": "seasonal",
+  "file": "arms_boomerang.png",
+  "anchor": "handL",
+  "origin": [
+    66,
+    66
+  ],
+  "width": 74,
+  "height": 73,
+  "behind": false
+}

@@ -11,3 +11,10 @@ public enum Region : short
     Japan = 8,
     PreferNotToSay = 16,
 }
+
+/// <summary>Mask constants for <see cref="Region"/>. A profile's own region is a nonzero mask of the
+/// selectable bits; PreferNotToSay is retired and rejected on write, kept declared only for legacy rows.</summary>
+public static class RegionBits
+{
+    public const short Selectable = (short)(Region.NorthAmerica | Region.Europe | Region.Oceania | Region.Japan);
+}

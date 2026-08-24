@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
@@ -36,6 +36,7 @@ public sealed partial class MessengerApp
     private const float CalendarCardH = 92f;
     private const float MarketCardH = 86f;
     private const float EchoCardH = 108f;
+    private const float PartyCardH = 96f;
 
     private sealed record VenueCardVisual(VenueCardDto? Card, ISharedImmediateTexture? Tex, bool LogoBackdrop);
 
@@ -48,6 +49,7 @@ public sealed partial class MessengerApp
     private readonly ConcurrentDictionary<Guid, NewsCardDto?> _newsCards = new();
     private readonly ConcurrentDictionary<Guid, LevemeteCardVisual> _levemeteCards = new();
     private readonly ConcurrentDictionary<Guid, EchoRoomCardDto?> _echoCards = new();
+    private readonly ConcurrentDictionary<Guid, AetherLove.Shared.Together.TogetherPartyCardDto?> _partyCards = new();
     private readonly ConcurrentDictionary<Guid, byte> _cardFetches = new();
 
     private ShareItem? _pendingShare;
@@ -60,7 +62,7 @@ public sealed partial class MessengerApp
 
     public IReadOnlyList<string> AcceptedShareTypes { get; } =
         [ShareTypes.Venue, ShareTypes.Hangout, ShareTypes.News, ShareTypes.CalendarEvent, ShareTypes.Levemete,
-         ShareTypes.MarketItem, ShareTypes.Echo];
+         ShareTypes.MarketItem, ShareTypes.Echo, ShareTypes.Party, ShareTypes.Photo];
 
     /// <summary>A share-sheet item landed on the messenger: the chat list enters share mode and the next
     /// tapped chat receives the composed card message.</summary>
@@ -80,6 +82,8 @@ public sealed partial class MessengerApp
         ShareTypes.Levemete when Guid.TryParse(item.RefId, out var adId) => LevemeteShare.Compose(adId),
         ShareTypes.MarketItem => MarketShare.TryComposeFromShareItem(item),
         ShareTypes.Echo when Guid.TryParse(item.RefId, out var roomId) => EchoShare.Compose(roomId, item.Subtitle),
+        ShareTypes.Party when item.Subtitle.Length > 0 && Guid.TryParse(item.RefId, out var partyId) =>
+            PartyShare.Compose(partyId, item.Subtitle),
         _ => null,
     };
 
@@ -106,6 +110,8 @@ public sealed partial class MessengerApp
             ShareTypes.CalendarEvent => FontAwesomeIcon.CalendarAlt,
             ShareTypes.MarketItem => FontAwesomeIcon.Coins,
             ShareTypes.Echo => FontAwesomeIcon.Film,
+            ShareTypes.Party => FontAwesomeIcon.UserFriends,
+            ShareTypes.Photo => FontAwesomeIcon.Image,
             _ => FontAwesomeIcon.Newspaper,
         };
         IconCentered(dl, icon, Px(13f), new Vector2(tl.X + Px(17f), (tl.Y + br.Y) * 0.5f),
@@ -133,9 +139,19 @@ public sealed partial class MessengerApp
         ImGui.Dummy(new Vector2(0f, Px(6f)));
     }
 
-    /// <summary>Sends the pending share into the tapped chat, then opens it.</summary>
+    /// <summary>Sends the pending share into the tapped chat, then opens it. A shared picture is not a
+    /// token: it opens the chat with the image compose up, the same popup the attach menu uses, so the
+    /// expiry and the storage tier get their say before anything uploads.</summary>
     private void SendPendingShareTo(ChatRow row)
     {
+        if (_pendingShare is { Type: ShareTypes.Photo } photo)
+        {
+            _pendingShare = null;
+            OpenChat(row.Id, row.Kind);
+            var epoch = ResolveOpenChat() is { Kind: MessengerChatKind.Group, Group: { } group } ? group.KeyEpoch : 0;
+            BeginImageCompose(row.Id, row.Kind, epoch, photo.LocalPath, WholeImage);
+            return;
+        }
         if (_pendingShare is not { } item || ComposeShareBody(item) is not { } body)
         {
             _pendingShare = null;
@@ -316,6 +332,32 @@ public sealed partial class MessengerApp
         });
     }
 
+    /// <summary>The party behind an invite card. A null answer is the party being over, which is exactly
+    /// what the card must say, so it is cached like any other result.</summary>
+    private void StartPartyCardFetch(Guid partyId)
+    {
+        if (_partyCards.ContainsKey(partyId) || !_cardFetches.TryAdd(partyId, 0))
+        {
+            return;
+        }
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                _partyCards[partyId] = await _hub.GetTogetherPartyCardAsync(partyId).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                AetherLove.UiHost.Log.Warning(ex, $"[MessengerApp] Party card fetch failed for {partyId}.");
+                _partyCards[partyId] = null;
+            }
+            finally
+            {
+                _cardFetches.TryRemove(partyId, out _);
+            }
+        });
+    }
+
     private void StartNewsCardFetch(Guid newsId)
     {
         if (_newsCards.ContainsKey(newsId) || !_cardFetches.TryAdd(newsId, 0))
@@ -400,7 +442,7 @@ public sealed partial class MessengerApp
         });
     }
 
-    private float? CardRowHeight(string text, bool needsDivider, bool isGroupEnd, float lineH)
+    private float? CardRowHeight(string text, bool needsDivider, bool isGroupEnd, float lineH, float windowWidth)
     {
         float? baseH = null;
         if (VenueShare.TryParse(text, out _))
@@ -434,6 +476,10 @@ public sealed partial class MessengerApp
         else if (EchoShare.TryParse(text, out _, out _))
         {
             baseH = Px(EchoCardH);
+        }
+        else if (PartyShare.TryParse(text, out _, out _, out var partyMessage))
+        {
+            baseH = Px(PartyCardH) + InviteMessageHeight(partyMessage, windowWidth);
         }
         if (baseH is not { } h)
         {
@@ -488,6 +534,11 @@ public sealed partial class MessengerApp
         if (EchoShare.TryParse(text, out var echoRoomId, out var echoCode))
         {
             DrawEchoCardMessage(message, echoRoomId, echoCode, windowWidth, isGroupEnd);
+            return true;
+        }
+        if (PartyShare.TryParse(text, out var partyId, out var partyCode, out var invite))
+        {
+            DrawPartyCardMessage(message, partyId, partyCode, invite, windowWidth, isGroupEnd);
             return true;
         }
         return false;
@@ -736,6 +787,86 @@ public sealed partial class MessengerApp
                 : Loc.T("chat.echo_card_loading");
             var textSz = ImGui.CalcTextSize(text);
             dl.AddText(tl + (new Vector2(cardW, cardH) - textSz) * 0.5f, ImGui.GetColorU32(UiColors.Muted), text);
+        }
+
+        EndCard(msg, tl, br, cursorPos, cardH, isGroupEnd, fading);
+    }
+
+    /// <summary>How much room the sender's own invitation text needs above the card body.</summary>
+    private static float InviteMessageHeight(string message, float windowWidth)
+    {
+        if (message.Length == 0)
+        {
+            return 0f;
+        }
+        var wrapW = (windowWidth * 0.72f) - Px(28f);
+        return ImGui.CalcTextSize(message, false, wrapW).Y + Px(8f);
+    }
+
+    /// <summary>A party invite: the sender's words, then the party it points at with a one-tap join. A party
+    /// that has ended renders as exactly that rather than as a button that goes nowhere.</summary>
+    private void DrawPartyCardMessage(MessengerMessageDto msg, Guid partyId, string code, string invite,
+        float windowWidth, bool isGroupEnd)
+    {
+        StartPartyCardFetch(partyId);
+        _partyCards.TryGetValue(partyId, out var card);
+        var known = _partyCards.ContainsKey(partyId);
+
+        var t = ThemeService.Current;
+        var dl = ImGui.GetWindowDrawList();
+        var messageH = InviteMessageHeight(invite, windowWidth);
+        var cardH = Px(PartyCardH) + messageH;
+        var (tl, br, clicked, hovered, fading, cursorPos) = BeginCard(msg, windowWidth, cardH, "msgrPartyCard");
+        var cardW = br.X - tl.X;
+        var live = card is not null;
+
+        dl.AddRectFilled(tl, br, ImGui.GetColorU32(live
+            ? t.Accent with { W = 0.12f }
+            : new Vector4(1f, 1f, 1f, 0.05f)), Px(14f));
+        dl.AddRect(tl, br, ImGui.GetColorU32(t.Accent with { W = live ? (hovered ? 0.90f : 0.55f) : 0.30f }),
+            Px(14f), ImDrawFlags.None, Px(1.5f));
+
+        var y = tl.Y + Px(12f);
+        if (invite.Length > 0)
+        {
+            ImGui.SetCursorScreenPos(new Vector2(tl.X + Px(14f), y));
+            ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + cardW - Px(28f));
+            ImGui.TextUnformatted(invite);
+            ImGui.PopTextWrapPos();
+            y += messageH;
+            dl.AddLine(new Vector2(tl.X + Px(14f), y - Px(4f)), new Vector2(br.X - Px(14f), y - Px(4f)),
+                ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f)));
+        }
+
+        IconDraw.AddCentered(dl, FontAwesomeIcon.UserFriends, Px(20f),
+            new Vector2(tl.X + Px(26f), y + Px(20f)),
+            ImGui.GetColorU32(live ? t.Accent : UiColors.Muted));
+
+        var textX = tl.X + Px(48f);
+        var textMaxW = br.X - textX - Px(12f);
+        if (card is { } party)
+        {
+            SharedUiHelpers.HandOnHover();
+            dl.AddText(new Vector2(textX, y + Px(6f)), 0xFFFFFFFFu,
+                TruncateToWidth(Loc.T("chat.party_card_title", party.HostName), textMaxW));
+            dl.AddText(new Vector2(textX, y + Px(25f)), ImGui.GetColorU32(t.Accent),
+                TruncateToWidth(Loc.T("chat.party_card_members", party.MemberCount, party.MaxMembers), textMaxW));
+            dl.AddText(new Vector2(tl.X + Px(14f), y + Px(48f)), UiColors.TextMuted,
+                TruncateToWidth(Loc.T("chat.party_card_join"), cardW - Px(28f)));
+            if (hovered)
+            {
+                ImGui.SetTooltip(Loc.T("chat.party_card_join"));
+            }
+            if (clicked)
+            {
+                _shell?.JoinParty(code);
+            }
+        }
+        else
+        {
+            var text = known ? Loc.T("chat.party_card_over") : Loc.T("chat.party_card_loading");
+            dl.AddText(new Vector2(textX, y + Px(16f)), ImGui.GetColorU32(UiColors.Muted),
+                TruncateToWidth(text, textMaxW));
         }
 
         EndCard(msg, tl, br, cursorPos, cardH, isGroupEnd, fading);

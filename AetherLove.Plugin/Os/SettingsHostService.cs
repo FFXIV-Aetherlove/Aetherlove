@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using AetherLove.Services;
 using AetherLove.Services.Auth;
@@ -25,12 +25,14 @@ public sealed class SettingsHostService : ISettingsHost
     private readonly AetherHubContext _hub;
     private readonly AetherOS.Sdk.IOsShell _shell;
     private readonly Services.Store.PremiumThemeService _premiumThemes;
+    private readonly IOsTogether _together;
 
     public SettingsHostService(WallpaperService wallpapers, OsAvatarCache osAvatar, SessionBootstrapper bootstrap,
         PatreonLinkFlow patreon, ChangelogWindow changelogWindow, AetherHubContext hub, AetherOS.Sdk.IOsShell shell,
-        Services.Store.PremiumThemeService premiumThemes)
+        Services.Store.PremiumThemeService premiumThemes, IOsTogether together)
     {
         _premiumThemes = premiumThemes;
+        _together = together;
         _wallpapers = wallpapers;
         _osAvatar = osAvatar;
         _bootstrap = bootstrap;
@@ -172,4 +174,30 @@ public sealed class SettingsHostService : ISettingsHost
         _shell.DismissByTag(Screens.StaffNoticeScreen.NotificationTag);
 
     public Task<AetherLove.Shared.Sparks.SparkStatusDto> GetSparkStatusAsync() => _hub.GetSparkStatusAsync();
+
+    // Not gated on the hub: the receiving switch and the size are local preferences, and a settings row
+    // that vanishes while offline reads as a missing feature.
+    public bool PartyAvailable => true;
+
+    public bool ShowPartyPets
+    {
+        get => _together.ShowPartyPets;
+        set => _together.ShowPartyPets = value;
+    }
+
+    public bool ShareMyPet
+    {
+        get => _together.ShareMyPet;
+        set => _together.ShareMyPet = value;
+    }
+
+    public bool HasPet => _together.HasPet;
+
+    public int PartyPetSize
+    {
+        get => _together.PartyPetSize;
+        set => _together.PartyPetSize = value;
+    }
+
+    public int PartyPetSizeCount => _together.PartyPetSizeCount;
 }

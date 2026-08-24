@@ -14,6 +14,9 @@ public interface IAppCapabilities
     /// <summary>Cached disk-image textures.</summary>
     ITextureCache Textures { get; }
 
+    /// <summary>Read-only view of the together-mode party; the shell owns all party mutations.</summary>
+    IPartyState Party { get; }
+
     /// <summary>Photo filters applied to disk images.</summary>
     IImageEffects Effects { get; }
 
@@ -31,6 +34,9 @@ public interface IAppCapabilities
 
     /// <summary>Sending the player somewhere in the world, when a transport plugin is installed.</summary>
     ITravelBridge Travel { get; }
+
+    /// <summary>Per-message text translation (opt-in; see <see cref="ITranslationBridge"/>).</summary>
+    ITranslationBridge Translation { get; }
 
     /// <summary>Persistent storage scoped to <paramref name="appId"/>: a private folder plus a JSON key-value
     /// store. Pass your own app id.</summary>

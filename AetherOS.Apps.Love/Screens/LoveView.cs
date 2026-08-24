@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Numerics;
 using AetherOS.Sdk;
 
@@ -64,6 +64,10 @@ public sealed class LoveRouter
 public sealed class LoveShell
 {
     public IOsShell? Shell { get; set; }
+
+    /// <summary>The host's door to the encryption recovery screen, stamped by the app at construction so
+    /// any screen that finds a keyless profile can send the user there.</summary>
+    public Action? OpenEncryptionRecovery { get; set; }
 
     private Action<string, Vector4>? _cameraReply;
 

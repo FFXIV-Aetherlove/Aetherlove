@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace AetherOS.Apps.Photos;
 
@@ -23,6 +23,8 @@ internal static class AppStrings
         ["os.photos_yesterday"] = "Yesterday",
         // added after update 2.0.1.0 (photos settings)
         ["os.photos_settings"] = "Photos settings",
+        ["os.photos_menu"] = "Menu",
+        ["os.photos_open_folder"] = "Open folder on disk",
         ["os.photos_settings_import"] = "Automatic imports",
         ["os.photos_auto_camera"] = "Photos you take with the Camera app",
         ["os.photos_auto_camera_hint"] = "Everything you shoot with the camera shutter is kept in your camera roll.",
@@ -51,6 +53,8 @@ internal static class AppStrings
         ["os.photos_yesterday"] = "Gestern",
         // added after update 2.0.1.0 (photos settings)
         ["os.photos_settings"] = "Foto-Einstellungen",
+        ["os.photos_menu"] = "Menü",
+        ["os.photos_open_folder"] = "Ordner auf der Festplatte öffnen",
         ["os.photos_settings_import"] = "Automatischer Import",
         ["os.photos_auto_camera"] = "Fotos, die du mit der Kamera-App machst",
         ["os.photos_auto_camera_hint"] = "Alles, was du mit dem Auslöser aufnimmst, bleibt in deinem Kamera-Album.",
@@ -79,6 +83,8 @@ internal static class AppStrings
         ["os.photos_yesterday"] = "Ayer",
         // added after update 2.0.1.0 (photos settings)
         ["os.photos_settings"] = "Ajustes de Fotos",
+        ["os.photos_menu"] = "Menú",
+        ["os.photos_open_folder"] = "Abrir la carpeta en el disco",
         ["os.photos_settings_import"] = "Importación automática",
         ["os.photos_auto_camera"] = "Fotos que haces con la app Cámara",
         ["os.photos_auto_camera_hint"] = "Todo lo que dispares con la cámara se guarda en tu carrete.",
@@ -107,6 +113,8 @@ internal static class AppStrings
         ["os.photos_yesterday"] = "Hier",
         // added after update 2.0.1.0 (photos settings)
         ["os.photos_settings"] = "Réglages de Photos",
+        ["os.photos_menu"] = "Menu",
+        ["os.photos_open_folder"] = "Ouvrir le dossier sur le disque",
         ["os.photos_settings_import"] = "Imports automatiques",
         ["os.photos_auto_camera"] = "Photos prises avec l'app Appareil photo",
         ["os.photos_auto_camera_hint"] = "Tout ce que vous prenez avec le déclencheur reste dans votre pellicule.",
@@ -135,6 +143,8 @@ internal static class AppStrings
         ["os.photos_yesterday"] = "Ontem",
         // added after update 2.0.1.0 (photos settings)
         ["os.photos_settings"] = "Configurações de Fotos",
+        ["os.photos_menu"] = "Menu",
+        ["os.photos_open_folder"] = "Abrir a pasta no disco",
         ["os.photos_settings_import"] = "Importação automática",
         ["os.photos_auto_camera"] = "Fotos que você tira no app Câmera",
         ["os.photos_auto_camera_hint"] = "Tudo o que você fotografar com o obturador fica no seu rolo da câmera.",
@@ -163,6 +173,8 @@ internal static class AppStrings
         ["os.photos_yesterday"] = "Вчера",
         // added after update 2.0.1.0 (photos settings)
         ["os.photos_settings"] = "Настройки Фото",
+        ["os.photos_menu"] = "Меню",
+        ["os.photos_open_folder"] = "Открыть папку на диске",
         ["os.photos_settings_import"] = "Автоматический импорт",
         ["os.photos_auto_camera"] = "Снимки, сделанные в приложении Камера",
         ["os.photos_auto_camera_hint"] = "Всё, что вы снимаете затвором камеры, остаётся в галерее снимков.",

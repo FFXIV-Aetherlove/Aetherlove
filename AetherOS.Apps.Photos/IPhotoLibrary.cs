@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace AetherOS.Apps.Photos;
@@ -40,4 +40,7 @@ public interface IPhotoLibrary
     /// <summary>Absolute path of the album's folder on disk, or null for an unknown album. Albums mirror onto
     /// disk as subfolders named after them.</summary>
     string? AlbumFolder(string albumId);
+
+    /// <summary>Absolute path of the library itself, the folder every album sits in.</summary>
+    string LibraryFolder { get; }
 }

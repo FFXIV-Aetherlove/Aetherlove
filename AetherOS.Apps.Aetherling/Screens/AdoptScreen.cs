@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,7 +11,7 @@ using Dalamud.Interface;
 
 namespace AetherOS.Apps.Aetherling.Screens;
 
-/// <summary>The way in. One button, one price, and not a word about what it buys.</summary>
+/// <summary>The way in: a sleeping Aethercore, one price, one button.</summary>
 internal sealed class AdoptScreen(IAetherlingHost host)
 {
     /// <summary>Sentinel for "not fetched yet", which the chip renders as an ellipsis. A wallet can never be
@@ -103,9 +103,8 @@ internal sealed class AdoptScreen(IAetherlingHost host)
         dl.AddCircleFilled(centre, radius, Look.U32(new Vector4(0.05f, 0.07f, 0.12f, 1f), fade), 48);
         dl.AddCircle(centre, radius, Look.U32(Look.Crystal, 0.10f * fade), 48, Px(1f));
 
-        var noise = Garble.Wrap(Garble.Block(4242, 6, 0.05f), 22);
-        Look.CentredBlock(dl, noise, origin.X + (size.X * 0.5f), origin.Y + (size.Y * 0.63f),
-            Look.U32(Look.Whisper, 0.5f * fade), 0.85f, ImGui.GetTextLineHeight());
+        Look.CentredWrapped(dl, ctx.Localize("os.aetherling_adopt_blurb"), origin.X + (size.X * 0.5f),
+            origin.Y + (size.Y * 0.63f), size.X - Px(64f), Look.U32(Look.Whisper, fade), 0.9f);
 
         // Sampled once: the chip and the button both judge affordability, and a fetch landing between them
         // would colour the price red under a button that still let you buy.

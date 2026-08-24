@@ -95,6 +95,27 @@ public sealed class LifestreamBridge : ITravelBridge
         }
     }
 
+    public bool GoToWorld(string world)
+    {
+        if (!IsAvailable || string.IsNullOrWhiteSpace(world))
+        {
+            return false;
+        }
+        try
+        {
+            // A bare world name is Lifestream's own world-travel command (/li <world>).
+            _execute.InvokeAction(world.Trim());
+            Plugin.Log.Debug("[LifestreamBridge] Sent world travel '{World}'.", world);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Warning(ex, "[LifestreamBridge] World travel request failed.");
+            _present = false;
+            return false;
+        }
+    }
+
     /// <summary>Lifestream matches districts against its own English alias list, whatever the game's language,
     /// so these are its short forms rather than anything the player sees.</summary>
     private static string? DistrictKeyword(TravelDistrict district) => district switch

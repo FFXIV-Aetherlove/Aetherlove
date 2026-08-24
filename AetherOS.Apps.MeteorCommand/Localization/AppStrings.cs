@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace AetherOS.Apps.MeteorCommand.Localization;
 
@@ -10,7 +10,7 @@ public static class AppStrings
         // added after update 2.1.3 (meteor command)
         ["os.meteor_subtitle"] = "Tap the sky. Save the towns.",
         ["os.meteor_play"] = "Play",
-        ["os.meteor_high_scores"] = "High scores",
+        ["os.meteor_high_scores"] = "My high scores",
         ["os.meteor_best"] = "Best {0}",
         ["os.meteor_score"] = "Score {0}",
         ["os.meteor_wave"] = "Wave {0}",
@@ -30,7 +30,7 @@ public static class AppStrings
     {
         ["os.meteor_subtitle"] = "Tippe in den Himmel. Rette die Städte.",
         ["os.meteor_play"] = "Spielen",
-        ["os.meteor_high_scores"] = "Bestenliste",
+        ["os.meteor_high_scores"] = "Meine Bestwerte",
         ["os.meteor_best"] = "Beste {0}",
         ["os.meteor_score"] = "Punkte {0}",
         ["os.meteor_wave"] = "Welle {0}",
@@ -50,7 +50,7 @@ public static class AppStrings
     {
         ["os.meteor_subtitle"] = "Toca el cielo. Salva los pueblos.",
         ["os.meteor_play"] = "Jugar",
-        ["os.meteor_high_scores"] = "Mejores puntuaciones",
+        ["os.meteor_high_scores"] = "Mis récords",
         ["os.meteor_best"] = "Mejor {0}",
         ["os.meteor_score"] = "Puntos {0}",
         ["os.meteor_wave"] = "Oleada {0}",
@@ -70,7 +70,7 @@ public static class AppStrings
     {
         ["os.meteor_subtitle"] = "Touchez le ciel. Sauvez les villes.",
         ["os.meteor_play"] = "Jouer",
-        ["os.meteor_high_scores"] = "Meilleurs scores",
+        ["os.meteor_high_scores"] = "Mes records",
         ["os.meteor_best"] = "Record {0}",
         ["os.meteor_score"] = "Score {0}",
         ["os.meteor_wave"] = "Vague {0}",
@@ -90,7 +90,7 @@ public static class AppStrings
     {
         ["os.meteor_subtitle"] = "Toque no céu. Salve as cidades.",
         ["os.meteor_play"] = "Jogar",
-        ["os.meteor_high_scores"] = "Melhores pontuações",
+        ["os.meteor_high_scores"] = "Meus recordes",
         ["os.meteor_best"] = "Recorde {0}",
         ["os.meteor_score"] = "Pontos {0}",
         ["os.meteor_wave"] = "Onda {0}",
@@ -110,7 +110,7 @@ public static class AppStrings
     {
         ["os.meteor_subtitle"] = "Бей по небу. Спасай города.",
         ["os.meteor_play"] = "Играть",
-        ["os.meteor_high_scores"] = "Рекорды",
+        ["os.meteor_high_scores"] = "Мои рекорды",
         ["os.meteor_best"] = "Рекорд {0}",
         ["os.meteor_score"] = "Очки {0}",
         ["os.meteor_wave"] = "Волна {0}",

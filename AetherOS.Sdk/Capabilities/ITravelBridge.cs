@@ -43,4 +43,8 @@ public interface ITravelBridge
     /// <summary>Asks the provider to travel to <paramref name="address"/>. Returns false when it was not
     /// handed over at all; success only means the request was accepted, never that the trip finished.</summary>
     bool GoTo(TravelAddress address);
+
+    /// <summary>Asks the provider to move the character to <paramref name="world"/> (world travel within the
+    /// data center). Same contract as <see cref="GoTo"/>: acceptance, not arrival.</summary>
+    bool GoToWorld(string world);
 }

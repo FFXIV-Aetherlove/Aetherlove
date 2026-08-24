@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -35,6 +35,7 @@ internal sealed class GsmtcBackend : IMediaBackend
     private volatile string? _systemCurrentId;
     private volatile bool _ready;
     private volatile bool _unavailable;
+    private volatile bool _disposed;
     private int _rebuilding;
     private int _starting;
     private long _tick;
@@ -72,9 +73,13 @@ internal sealed class GsmtcBackend : IMediaBackend
         {
             WinRtBootstrap.EnsureComWrappers();
             var manager = await GlobalSystemMediaTransportControlsSessionManager.RequestAsync();
+            if (_disposed)
+            {
+                return;
+            }
             _manager = manager;
-            manager.CurrentSessionChanged += (_, _) => ScheduleRebuild();
-            manager.SessionsChanged += (_, _) => ScheduleRebuild();
+            manager.CurrentSessionChanged += OnCurrentSessionChanged;
+            manager.SessionsChanged += OnSessionsChanged;
             _unavailable = false;
             _ready = true;
             _timer.Change(0, RebuildIntervalMillis);
@@ -91,8 +96,20 @@ internal sealed class GsmtcBackend : IMediaBackend
         }
     }
 
+    private void OnCurrentSessionChanged(
+        GlobalSystemMediaTransportControlsSessionManager sender, CurrentSessionChangedEventArgs args) =>
+        ScheduleRebuild();
+
+    private void OnSessionsChanged(
+        GlobalSystemMediaTransportControlsSessionManager sender, SessionsChangedEventArgs args) =>
+        ScheduleRebuild();
+
     private void ScheduleRebuild()
     {
+        if (_disposed)
+        {
+            return;
+        }
         if (Interlocked.CompareExchange(ref _rebuilding, 1, 0) != 0)
         {
             return;
@@ -117,7 +134,7 @@ internal sealed class GsmtcBackend : IMediaBackend
     private async Task RebuildAsync()
     {
         var manager = _manager;
-        if (manager is null)
+        if (manager is null || _disposed)
         {
             return;
         }
@@ -258,9 +275,21 @@ internal sealed class GsmtcBackend : IMediaBackend
             return existing.Version;
         }
 
+        // The whole plugin's texture provider goes with the unload, and GSMTC keeps handing us thumbnails
+        // for a moment after: creating one here would throw on a disposed provider.
+        if (_disposed)
+        {
+            return existing?.Version ?? 0;
+        }
+
         try
         {
             var wrap = await UiHost.TextureProvider.CreateFromImageAsync(bytes).ConfigureAwait(false);
+            if (_disposed)
+            {
+                wrap.Dispose();
+                return existing?.Version ?? 0;
+            }
             var version = (existing?.Version ?? 0) + 1;
             if (existing?.Wrap is not null)
             {
@@ -431,6 +460,19 @@ internal sealed class GsmtcBackend : IMediaBackend
 
     public void Dispose()
     {
+        _disposed = true;
+        if (_manager is { } manager)
+        {
+            try
+            {
+                manager.CurrentSessionChanged -= OnCurrentSessionChanged;
+                manager.SessionsChanged -= OnSessionsChanged;
+            }
+            catch (Exception)
+            {
+            }
+            _manager = null;
+        }
         _timer.Dispose();
         DetachDropped(_live, new Dictionary<string, GlobalSystemMediaTransportControlsSession>());
         _mixer.Dispose();

@@ -27,10 +27,12 @@ public partial class OnboardingScreen
         }
         for (int i = 0; i < _filterRegions.Length; i++)
         {
-            _filterRegions[i] = false;
+            _filterRegions[i] = i < _ownRegions.Length && _ownRegions[i];
         }
-        var ownRegion = _regionIdx < _filterRegions.Length ? _regionIdx : 0;
-        _filterRegions[ownRegion] = true;
+        if (!_filterRegions.Any(x => x))
+        {
+            _filterRegions[0] = true;
+        }
         for (int i = 0; i < _filterLanguages.Length; i++)
         {
             _filterLanguages[i] = i < _langSelected.Length && _langSelected[i];

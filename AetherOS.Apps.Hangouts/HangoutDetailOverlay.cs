@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -51,6 +51,10 @@ public sealed class HangoutDetailOverlay
 
     /// <summary>Wired by the app to the Echo deep link; takes the room id and its share code.</summary>
     public Action<Guid, string>? JoinWatchRoomHandler { get; set; }
+
+    /// <summary>Join the together party a card was published from, by code. Same shape as the watch-room
+    /// handler: the card carries a dead code once the party has ended, and the button disappears with it.</summary>
+    public Action<string>? JoinPartyHandler { get; set; }
 
     public void Open(HangoutSummaryDto hangout, bool fromChat = false)
     {
@@ -224,6 +228,14 @@ public sealed class HangoutDetailOverlay
             {
                 _open = false;
                 joinWatch(roomId, roomCode);
+            }));
+        }
+        if (h.PartyCode is { Length: > 0 } partyCode && JoinPartyHandler is { } joinParty)
+        {
+            buttons.Add(("Party", Loc.T("hangout.join_party"), false, () =>
+            {
+                _open = false;
+                joinParty(partyCode);
             }));
         }
         if (!isMine)

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -39,6 +39,7 @@ public sealed class MyHangoutView
     private readonly Action _back;
 
     private int _hgCategoryIdx = 3;
+    private int _hgCategoryZero;
     private string _hgDescription = "";
     private string _hgDataCenter = "";
     private string _hgWorld = "";
@@ -51,6 +52,11 @@ public sealed class MyHangoutView
     private bool _hgPublic = true;
     private volatile bool _hgSubmitting;
     private volatile string? _hgError;
+
+    /// <summary>Set when the form was opened from a party share: the next submit publishes THAT party rather
+    /// than creating a plain hangout. Cleared on submit, so a later ordinary create is never mistaken for
+    /// another publish.</summary>
+    public Guid? PendingPartyId { get; set; }
     private bool _hgEndArmed;
     private double _hgCopiedUntil;
 
@@ -68,7 +74,10 @@ public sealed class MyHangoutView
     {
         _hgError = null;
         _hgEndArmed = false;
-        if (_state.MyHangout is null && _hgDataCenter.Length == 0)
+        // A party publish arrives pre-answered: the category is the party's own and the party is wherever
+        // its host is standing, so the current world overwrites whatever the form remembered. The player
+        // writes a description and presses publish.
+        if (PendingPartyId is not null || (_state.MyHangout is null && _hgDataCenter.Length == 0))
         {
             var detected = VenueLocationDetector.Detect();
             if (detected.World.Length > 0)
@@ -125,8 +134,20 @@ public sealed class MyHangoutView
         DrawSectionHeading(Loc.T("hangout.section_what"), t);
         DrawFieldLabel(Loc.T("hangout.field_category"), t);
         ImGui.SetNextItemWidth(w);
-        var labels = HangoutCategories.CreatableLabels();
-        ImGui.Combo("##hgCat", ref _hgCategoryIdx, labels, labels.Length);
+        if (PendingPartyId is not null)
+        {
+            // The category is not a choice on a party publish; the server forces it anyway.
+            using (ImRaii.Disabled())
+            {
+                var partyLabel = HangoutCategories.Label(HangoutCategory.AetherParty);
+                ImGui.Combo("##hgCat", ref _hgCategoryZero, [partyLabel], 1);
+            }
+        }
+        else
+        {
+            var labels = HangoutCategories.CreatableLabels();
+            ImGui.Combo("##hgCat", ref _hgCategoryIdx, labels, labels.Length);
+        }
 
         ImGui.Spacing();
         DrawWarningBox(w, Loc.T("hangout.nsfw_warning"), UiColors.DangerBoxFill, UiColors.DangerBoxBorder);
@@ -289,6 +310,10 @@ public sealed class MyHangoutView
 
         _hgSubmitting = true;
         _hgError = null;
+        // A party publish keeps the whole ordinary form (world, duration, cap, visibility) and only swaps
+        // the call: the category is the server's to force, and every other rule is unchanged.
+        var party = PendingPartyId;
+        PendingPartyId = null;
         var req = new CreateHangoutRequest(
             Category: HangoutCategories.CreatableValues[Math.Clamp(_hgCategoryIdx, 0, HangoutCategories.CreatableValues.Length - 1)],
             Description: _hgDescription.Trim(),
@@ -304,7 +329,9 @@ public sealed class MyHangoutView
         {
             try
             {
-                var created = await _host.CreateHangoutAsync(req).ConfigureAwait(false);
+                var created = party is { } partyId
+                    ? await _host.PublishTogetherPartyHangoutAsync(partyId, req).ConfigureAwait(false)
+                    : await _host.CreateHangoutAsync(req).ConfigureAwait(false);
                 _state.SetMyHangout(created);
                 _hgDescription = "";
                 _hgLocation = "";

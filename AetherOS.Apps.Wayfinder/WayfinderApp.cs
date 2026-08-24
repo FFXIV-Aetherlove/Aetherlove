@@ -11,7 +11,7 @@ namespace AetherOS.Apps.Wayfinder;
 /// attempt trigger. Selfies never leave the device.</summary>
 public sealed class WayfinderApp : IAetherApp
 {
-    private enum View { Home, Challenge, Create, Tour }
+    private enum View { Home, Challenge, Create, Tour, Party }
 
     private readonly Func<string> _name;
     private readonly Func<bool> _available;
@@ -20,6 +20,7 @@ public sealed class WayfinderApp : IAetherApp
     private readonly ChallengeScreen _challenge;
     private readonly CreateScreen _create;
     private readonly TourScreen _tour;
+    private readonly PartyScreen _party;
     private View _view = View.Home;
     private bool _tourSeen;
     private bool _tourSeenLoaded;
@@ -30,10 +31,11 @@ public sealed class WayfinderApp : IAetherApp
         _available = available;
         _storage = caps.Storage("wayfinder");
         var history = new WayfinderHistory(_storage);
-        _home = new HomeScreen(host, history, OpenChallenge, OpenTour, OpenCreate);
+        _home = new HomeScreen(host, history, OpenChallenge, OpenTour, OpenCreate, OpenParty);
         _challenge = new ChallengeScreen(host, history, BackToHome);
         _create = new CreateScreen(host, BackToHome);
         _tour = new TourScreen(FinishTour);
+        _party = new PartyScreen(host, history, BackToHome);
     }
 
     public string Id => "wayfinder";
@@ -58,6 +60,10 @@ public sealed class WayfinderApp : IAetherApp
         {
             _home.OnShow();
         }
+        else if (_view == View.Party)
+        {
+            _party.OnShow();
+        }
     }
 
     public void Draw(OsAppContext ctx)
@@ -81,6 +87,9 @@ public sealed class WayfinderApp : IAetherApp
                 break;
             case View.Tour:
                 _tour.Draw(ctx);
+                break;
+            case View.Party:
+                _party.Draw(ctx);
                 break;
         }
     }
@@ -115,6 +124,12 @@ public sealed class WayfinderApp : IAetherApp
     {
         _view = View.Tour;
         _tour.OnShow();
+    }
+
+    private void OpenParty()
+    {
+        _view = View.Party;
+        _party.OnShow();
     }
 
     private void FinishTour()

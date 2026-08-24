@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
+using AetherLove.Services.Localization;
 using AetherLove.Shared.Aetherling;
 using AetherOS.Apps.Aetherling.Engine;
 using AetherOS.Apps.Aetherling.Screens;
@@ -14,37 +15,39 @@ using Dalamud.Interface;
 
 namespace AetherOS.Apps.Aetherling;
 
-/// <summary>An app that will not say what it is. It has a question mark for an icon, a name of "???", three
-/// screens of noise for an introduction, and one thing to buy.</summary>
+/// <summary>The Aetherling: an Aethercore to attune, and a creature to raise once it hatches. One thing to
+/// buy on the way in, and every page after that belongs to whatever came out.</summary>
 public sealed class AetherlingApp : IAetherApp
 {
     internal const string AppId = "aetherling";
 
-    private const string MysteryIconId = "unknown";
+    private const string CoreIconId = "lumi";
     private const string HatchedIconId = "unknown2";
 
-    private const string TourSeenKey = "tourSeen";
     private const string MutedKey = "bgmMuted";
     private const string SoundsMutedKey = "soundsMuted";
     private const string SoundVolumeKey = "soundVolume";
     private const string IntroSeenKey = "petIntroFor";
+    private const string WheelSeenKey = "wheelSeenFor";
     private const string FloatingKey = "floatingShow";
     private const string FloatingLockKey = "floatingLocked";
     private const string FloatingSizeKey = "floatingSize";
     private const string FloatingXKey = "floatingX";
     private const string FloatingYKey = "floatingY";
+    private const string LearnsEmotesKey = "learnsEmotes";
+    private const string WorldGlyphsKey = "worldGlyphs";
 
     private static readonly Vector4 TileTopColor = new(0.10f, 0.14f, 0.26f, 1f);
     private static readonly Vector4 TileBottomColor = new(0.04f, 0.05f, 0.10f, 1f);
 
-    private enum View { Onboarding, Adopt, Core, Pet, PetIntro, PetAbout, PetSettings, Wardrobe, AdultOnboarding, Games }
+    private enum View { Adopt, Core, Pet, PetIntro, PetAbout, PetSettings, Wardrobe, Emotes, AdultOnboarding, Games }
 
     private readonly Func<string> _name;
     private readonly Func<bool> _available;
     private readonly IAetherlingHost _host;
     private readonly IAppStorage _storage;
     private readonly PetRuntime _runtime = new();
-    private readonly OnboardingScreen _onboarding;
+    private readonly PetLiveliness _liveliness;
     private readonly AdoptScreen _adopt;
     private readonly CoreScreen _core;
     private readonly PetScreen _pet;
@@ -57,8 +60,6 @@ public sealed class AetherlingApp : IAetherApp
     private readonly FloatingPet _floating;
 
     private View _view = View.Adopt;
-    private bool _tourSeen;
-    private bool _tourSeenLoaded;
     private bool _refreshing;
     private AetherlingDto? _refreshed;
 
@@ -96,7 +97,6 @@ public sealed class AetherlingApp : IAetherApp
         _available = available;
         _host = host;
         _storage = caps.Storage(AppId);
-        _onboarding = new OnboardingScreen(FinishOnboarding);
         _adopt = new AdoptScreen(host);
         _core = new CoreScreen(host, host.StartBgm);
         _pet = new PetScreen(host, _runtime);
@@ -114,29 +114,13 @@ public sealed class AetherlingApp : IAetherApp
         SeedOwnedReactions();
 
         _pet.IntroRequested += OpenPetIntro;
-        _pet.AboutRequested += () =>
-        {
-            _petAbout.OnShow();
-            _view = View.PetAbout;
-        };
-        _pet.SettingsRequested += () => _view = View.PetSettings;
-        _pet.GamesRequested += () =>
-        {
-            _games.OnShow(_host.Snapshot);
-            _view = View.Games;
-        };
-        _games.BackRequested += () =>
-        {
-            _games.OnHide();
-            _pet.OnShow(_host.Snapshot, justBorn: false);
-            _view = View.Pet;
-        };
-        _games.MuteChanged += muted => _storage.Set(MutedKey, (bool?)muted);
+        _pet.WheelFirstOpened += () => _storage.Set(WheelSeenKey, IntroStamp());
         _pet.WardrobeRequested += () =>
         {
             _wardrobe.OnShow(_host.Snapshot);
             _view = View.Wardrobe;
         };
+        _games.MuteChanged += muted => _storage.Set(MutedKey, (bool?)muted);
         _pet.AdultingFinished += () =>
         {
             _adultOnboarding.OnShow(_host.Snapshot);
@@ -156,6 +140,19 @@ public sealed class AetherlingApp : IAetherApp
             _view = View.Pet;
             _pet.OnShow(_host.Snapshot, justBorn: false);
         };
+        _liveliness = new PetLiveliness(host, _runtime);
+        _runtime.OnTick = _liveliness.Tick;
+        _liveliness.LearnsEmotes = _storage.Get<bool?>(LearnsEmotesKey) ?? true;
+        _floating.WorldGlyphs = _storage.Get<bool?>(WorldGlyphsKey) ?? true;
+        _petSettings.LearnsEmotes = _liveliness.LearnsEmotes;
+        _petSettings.WorldGlyphs = _floating.WorldGlyphs;
+        _liveliness.EmoteLearned += key =>
+        {
+            if (Engine.EmoteChoreographies.Find(key) is { } learnedDef)
+            {
+                _pet.ShowToast(Loc.T("os.aetherling_emote_learned", learnedDef.Name));
+            }
+        };
         _petSettings.SettingsChanged += SaveFloatingSettings;
         _petSettings.RecentreRequested += _floating.Recentre;
         _floating.Moved += SaveFloatingPosition;
@@ -167,18 +164,38 @@ public sealed class AetherlingApp : IAetherApp
         _floating.StatusRequested += _host.OpenOnPhone;
         LoadFloatingSettings();
         _host.Overlay = _floating;
+        _host.InteractLab = new InteractLab(_runtime);
+        _host.PetRenderer = new PetRendererService(_host, _runtime);
+    }
+
+    /// <summary>The dev window's handle into the creature: the real runtime, gates forced open.</summary>
+    private sealed class InteractLab(PetRuntime runtime) : IAetherlingInteractLab
+    {
+        public void PlayEmote(string key, float amplitude)
+        {
+            if (Engine.EmoteChoreographies.Find(key) is { } def)
+            {
+                runtime.PlayEmote(def, amplitude, force: true);
+            }
+        }
+
+        public void ShowGlyph(string name, string? then, string element) =>
+            runtime.AuditionGlyph(name, then, element);
+
+        public string Status => runtime.Ready
+            ? $"ready, mood {runtime.Mood}, napping {runtime.Napping}, emote {runtime.CurrentEmote?.Key ?? "none"}"
+            : "runtime not loaded (open the app or the floating pet once)";
     }
 
     public string Id => AppId;
 
     public string Name => _name();
 
-    public FontAwesomeIcon Icon => FontAwesomeIcon.Question;
+    public FontAwesomeIcon Icon => FontAwesomeIcon.Gem;
 
-    /// <summary>The mystery until this account has hatched, then the creature. Both files are named for the
-    /// theme rather than the app, so the shipped art gives nothing away before the birth either.</summary>
+    /// <summary>The core until this account has hatched, then the creature it became.</summary>
     public ImTextureID? TileImage =>
-        AppIcons.Tile(_host.Snapshot is { HatchedAtUtc: not null } ? HatchedIconId : MysteryIconId);
+        AppIcons.Tile(_host.Snapshot is { HatchedAtUtc: not null } ? HatchedIconId : CoreIconId);
 
     public Vector4 TileTop => TileTopColor;
 
@@ -204,19 +221,11 @@ public sealed class AetherlingApp : IAetherApp
     {
         switch (intent.Type)
         {
-            case OsIntents.AetherlingReplayBirth:
-                _view = View.Core;
-                _core.OnShow(_host.Snapshot);
-                _core.ReplayBirth();
-                break;
             case OsIntents.AetherlingStatus:
                 if (_host.Snapshot is { HatchedAtUtc: not null })
                 {
                     _view = View.PetAbout;
                 }
-                break;
-            case OsIntents.AetherlingReset:
-                ForgetEverything();
                 break;
             case OsIntents.AetherlingFeed:
                 if (_host.Snapshot is { HatchedAtUtc: not null })
@@ -224,6 +233,14 @@ public sealed class AetherlingApp : IAetherApp
                     _view = View.Pet;
                     _pet.OnShow(_host.Snapshot, justBorn: false);
                     _pet.OpenFeeding();
+                }
+                break;
+            case OsIntents.AetherlingRename:
+                if (_host.Snapshot is { HatchedAtUtc: not null })
+                {
+                    _view = View.Pet;
+                    _pet.OnShow(_host.Snapshot, justBorn: false);
+                    _pet.OpenRename();
                 }
                 break;
         }
@@ -240,6 +257,7 @@ public sealed class AetherlingApp : IAetherApp
         // just bought is not in this app's copy of the inventory yet.
         _pet.RefreshInventory();
         _wardrobe.RefreshInventory();
+        _pet.RefreshWheel();
     }
 
     public void OnBackground()
@@ -290,14 +308,12 @@ public sealed class AetherlingApp : IAetherApp
         {
             _view = View.Pet;
             _pet.IntroSeen = _storage.Get<string>(IntroSeenKey) == IntroStamp();
+            _pet.WheelSeen = _storage.Get<string>(WheelSeenKey) == IntroStamp();
             _pet.OnShow(_host.Snapshot, justBorn: true);
         }
 
         switch (_view)
         {
-            case View.Onboarding:
-                _onboarding.Draw(ctx);
-                break;
             case View.Adopt:
                 _adopt.Draw(ctx, PriceHint);
                 break;
@@ -313,16 +329,17 @@ public sealed class AetherlingApp : IAetherApp
             case View.PetAbout:
                 if (_host.Snapshot is { } about)
                 {
-                    _petAbout.Draw(ctx, about, () => _view = View.Pet);
+                    _petAbout.Draw(ctx, about);
                 }
                 break;
             case View.PetSettings:
                 if (_host.Snapshot is { } settings)
                 {
-                    _petSettings.Draw(ctx, settings, () => _view = View.Pet);
+                    _petSettings.Draw(ctx, settings);
                 }
                 break;
             case View.Wardrobe:
+            case View.Emotes:
                 _wardrobe.Draw(ctx, () =>
                 {
                     _view = View.Pet;
@@ -337,6 +354,8 @@ public sealed class AetherlingApp : IAetherApp
                 break;
         }
 
+        DrawNav(ctx);
+
         // Anything that navigated off the games takes their music with it, intents included. A no-op when
         // there was none, which is every frame of the rest of the app.
         if (_view != View.Games)
@@ -348,11 +367,90 @@ public sealed class AetherlingApp : IAetherApp
 
         // No mute button once it is out: there is no loop to silence, and the toggle would restart one.
         // The games carry their own, because a run holds ImGui's active id and would kill this one.
-        if (_view is View.Onboarding or View.Adopt or View.Core)
+        if (_view is View.Adopt or View.Core)
         {
             DrawMute(ctx);
         }
     }
+
+    /// <summary>The app's only navigation. Drawn over whichever page is up, and left out of the pages that
+    /// are a moment rather than a place (the birth, the introduction, growing up) and of a live minigame,
+    /// which holds ImGui's active id and would leave every entry here structurally dead.</summary>
+    private void DrawNav(OsAppContext ctx)
+    {
+        if (_host.Snapshot is not { HatchedAtUtc: not null } core || !NavVisible)
+        {
+            return;
+        }
+
+        var origin = ImGui.GetWindowPos();
+        var size = ImGui.GetWindowSize();
+        var picked = PetNavBar.Draw(ctx, ImGui.GetWindowDrawList(),
+            new Vector2(origin.X + (size.X * 0.5f), origin.Y + size.Y - PetNavBar.Reserved),
+            CurrentNav, core.Adult is not null, core.Emotes is not null);
+        if (picked == PetNavAction.None)
+        {
+            return;
+        }
+
+        // Leaving the wardrobe with an unsaved look is how a device dresses half a pet: the page batches
+        // writes, so every exit through here has to push them first.
+        if (_view is View.Wardrobe or View.Emotes)
+        {
+            _wardrobe.Flush();
+        }
+
+        switch (picked)
+        {
+            case PetNavAction.Home:
+                _pet.OnShow(_host.Snapshot, justBorn: false);
+                _view = View.Pet;
+                break;
+            case PetNavAction.Games:
+                _games.OnShow(_host.Snapshot);
+                _view = View.Games;
+                break;
+            case PetNavAction.Wardrobe:
+                _wardrobe.OnShow(_host.Snapshot);
+                _view = View.Wardrobe;
+                break;
+            case PetNavAction.Emotes:
+                _wardrobe.OnShow(_host.Snapshot, WardrobeScreen.Face.Performance);
+                _view = View.Emotes;
+                break;
+            case PetNavAction.Stats:
+                _petAbout.OnShow();
+                _view = View.PetAbout;
+                break;
+            case PetNavAction.Settings:
+                _view = View.PetSettings;
+                break;
+            case PetNavAction.Help:
+                OpenPetIntro();
+                break;
+        }
+    }
+
+    /// <summary>The pages the bar belongs on. The games hub is one of them; a run and its leaderboard are
+    /// not, because a run owns the keyboard and the leaderboard sits over a run that is paused behind it.</summary>
+    private bool NavVisible => _view switch
+    {
+        View.Pet => !_pet.CeremonyRunning && !_pet.HoldingPage,
+        View.PetAbout or View.PetSettings or View.Wardrobe or View.Emotes => true,
+        View.Games => _games.AtHub,
+        _ => false,
+    };
+
+    private PetNavAction CurrentNav => _view switch
+    {
+        View.Pet => PetNavAction.Home,
+        View.Games => PetNavAction.Games,
+        View.Wardrobe => PetNavAction.Wardrobe,
+        View.Emotes => PetNavAction.Emotes,
+        View.PetAbout => PetNavAction.Stats,
+        View.PetSettings => PetNavAction.Settings,
+        _ => PetNavAction.None,
+    };
 
     /// <summary>What should be playing, decided from the state rather than fired at each transition. The
     /// loop used to be started and stopped from half a dozen places in the view resolver, which was already
@@ -387,31 +485,6 @@ public sealed class AetherlingApp : IAetherApp
     }
 
     private string PetName => _host.Snapshot?.PetName ?? AetherlingLimits.DefaultName;
-
-    /// <summary>Back to before any of it, for the staff reset. The stored settings go too: they were answers
-    /// to questions about a creature that no longer exists, and the next one asks them again.</summary>
-    private void ForgetEverything()
-    {
-        _floating.Enabled = false;
-        _floating.Locked = false;
-        _floating.Position = null;
-        _floating.SizeIndex = FloatingPet.DefaultSizeIndex;
-        _petSettings.FloatingEnabled = false;
-        _petSettings.FloatingLocked = false;
-        _petSettings.FloatingSize = FloatingPet.DefaultSizeIndex;
-        _petIntro.SizeIndex = FloatingPet.DefaultSizeIndex;
-        _pet.IntroSeen = false;
-        _storage.Set(IntroSeenKey, string.Empty);
-        _storage.Set(FloatingKey, (bool?)false);
-        _storage.Set(FloatingLockKey, (bool?)false);
-        _storage.Set(FloatingSizeKey, (int?)FloatingPet.DefaultSizeIndex);
-        _host.SoundsMuted = false;
-        _host.SoundVolume = IAetherlingHost.DefaultSoundVolume;
-        SaveSoundSettings();
-
-        _view = View.Adopt;
-        _adopt.OnShow();
-    }
 
     private void OpenPetIntro()
     {
@@ -474,6 +547,10 @@ public sealed class AetherlingApp : IAetherApp
         _storage.Set(FloatingKey, (bool?)_floating.Enabled);
         _storage.Set(FloatingLockKey, (bool?)_floating.Locked);
         _storage.Set(FloatingSizeKey, (int?)_floating.SizeIndex);
+        _liveliness.LearnsEmotes = _petSettings.LearnsEmotes;
+        _floating.WorldGlyphs = _petSettings.WorldGlyphs;
+        _storage.Set(LearnsEmotesKey, (bool?)_petSettings.LearnsEmotes);
+        _storage.Set(WorldGlyphsKey, (bool?)_petSettings.WorldGlyphs);
     }
 
     private void SaveSoundSettings()
@@ -496,25 +573,10 @@ public sealed class AetherlingApp : IAetherApp
 
     private void ResolveView(AetherlingDto? core)
     {
-        if (!_tourSeenLoaded)
-        {
-            _tourSeen = _storage.Get<bool?>(TourSeenKey) ?? false;
-            _tourSeenLoaded = true;
-        }
-
-        if (!_tourSeen)
-        {
-            if (_view != View.Onboarding)
-            {
-                _view = View.Onboarding;
-                _onboarding.OnShow();
-            }
-            return;
-        }
-
         if (core is { HatchedAtUtc: not null })
         {
             _pet.IntroSeen = _storage.Get<string>(IntroSeenKey) == IntroStamp();
+            _pet.WheelSeen = _storage.Get<string>(WheelSeenKey) == IntroStamp();
 
             // An adult that never finished its welcome resumes it: the sections restart, the
             // revealed cards stay revealed, which is the whole idempotency story.
@@ -529,7 +591,7 @@ public sealed class AetherlingApp : IAetherApp
             }
 
             if (_view is not (View.Pet or View.PetIntro or View.PetAbout or View.PetSettings or View.Wardrobe
-                or View.Games))
+                or View.Emotes or View.Games))
             {
                 _view = View.Pet;
                 _pet.OnShow(core, justBorn: false);
@@ -575,13 +637,6 @@ public sealed class AetherlingApp : IAetherApp
                 _refreshing = false;
             }
         });
-    }
-
-    private void FinishOnboarding()
-    {
-        _tourSeen = true;
-        _storage.Set(TourSeenKey, (bool?)true);
-        ResolveView(_host.Snapshot);
     }
 
     private void OnBought()

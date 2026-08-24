@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -49,6 +49,8 @@ public sealed class PhotoLibraryService : IPhotoLibrary
     {
         _libraryDir = storage.For("photos").Directory;
     }
+
+    public string LibraryFolder => _libraryDir;
 
     private string ManifestPath => Path.Combine(_libraryDir, "manifest.json");
 

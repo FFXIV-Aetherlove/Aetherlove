@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using AetherLove.Shared.Patreon;
@@ -109,4 +109,22 @@ public interface ISettingsHost
 
     /// <summary>The caller's spark wallet snapshot, for the hidden developer page.</summary>
     Task<SparkStatusDto> GetSparkStatusAsync();
+
+    /// <summary>Whether AetherParty is usable at all on this host; false hides its settings row. Party
+    /// surfaces belong to the shell, so Settings reaches them through here rather than through an app.</summary>
+    bool PartyAvailable => false;
+
+    /// <summary>Receiving half of party pets: whether the party's Aetherlings gather around your own.</summary>
+    bool ShowPartyPets { get => false; set { } }
+
+    /// <summary>Sending half: whether party members may see this account's own Aetherling. Only meaningful
+    /// for an account that has one, which <see cref="HasPet"/> answers.</summary>
+    bool ShareMyPet { get => false; set { } }
+
+    bool HasPet => false;
+
+    /// <summary>How big visiting Aetherlings stand, an index into the floating pet's size ladder.</summary>
+    int PartyPetSize { get => 0; set { } }
+
+    int PartyPetSizeCount => 0;
 }

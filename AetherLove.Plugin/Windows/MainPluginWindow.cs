@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Numerics;
 using AetherLove.Config;
 using AetherLove.Emoji;
@@ -29,12 +29,14 @@ public class MainPluginWindow : Window, IDisposable
     private readonly PassphraseUnlockScreen _passphraseUnlockScreen;
     private readonly EncryptionRecoveryScreen _encryptionRecoveryScreen;
     private readonly OfflineScreen _offlineScreen;
+    private readonly SessionExpiredScreen _sessionExpiredScreen;
     private readonly OutdatedScreen _outdatedScreen;
     private readonly NotificationCenter _notifications;
     private readonly OwnAvatarCache _ownAvatar;
     private readonly OsAvatarCache _osAvatar;
     private readonly Services.Auth.SessionBootstrapper _bootstrap;
     private readonly Services.Signal.AetherSignalService _signal;
+    private readonly Services.Auth.TokenService _tokens;
 
     private MiniWindow? _miniWindow;
 
@@ -62,6 +64,8 @@ public class MainPluginWindow : Window, IDisposable
         PassphraseUnlockScreen passphraseUnlockScreen,
         EncryptionRecoveryScreen encryptionRecoveryScreen,
         OfflineScreen offlineScreen,
+        SessionExpiredScreen sessionExpiredScreen,
+        Services.Auth.TokenService tokens,
         OutdatedScreen outdatedScreen,
         NotificationCenter notifications,
         OwnAvatarCache ownAvatar,
@@ -75,8 +79,11 @@ public class MainPluginWindow : Window, IDisposable
         Os.ShareSheet osShareSheet,
         Os.OsTour osTour,
         Os.NewAppOffer newAppOffer,
+        Os.TranslationOffer translationOffer,
+        Os.TogetherOnboarding partyIntro,
         Services.Sparks.SparkActivityReporter sparkActivity,
-        SkinPreviewWindow skinPreview
+        SkinPreviewWindow skinPreview,
+        PartyDockWindow partyDock
     ) : base("AetherLove##MainWindow",
              ImGuiWindowFlags.NoResize
            | ImGuiWindowFlags.NoScrollbar
@@ -99,6 +106,8 @@ public class MainPluginWindow : Window, IDisposable
         _passphraseUnlockScreen = passphraseUnlockScreen;
         _encryptionRecoveryScreen = encryptionRecoveryScreen;
         _offlineScreen = offlineScreen;
+        _sessionExpiredScreen = sessionExpiredScreen;
+        _tokens = tokens;
         _outdatedScreen = outdatedScreen;
         _notifications = notifications;
         _ownAvatar = ownAvatar;
@@ -112,11 +121,15 @@ public class MainPluginWindow : Window, IDisposable
         _osShareSheet = osShareSheet;
         _osTour = osTour;
         _newAppOffer = newAppOffer;
+        _translationOffer = translationOffer;
+        _partyIntro = partyIntro;
         _sparkActivity = sparkActivity;
         _skinPreview = skinPreview;
+        _partyDock = partyDock;
     }
     private readonly Services.Sparks.SparkActivityReporter _sparkActivity;
     private readonly SkinPreviewWindow _skinPreview;
+    private readonly PartyDockWindow _partyDock;
     private readonly Os.OsShell _osShell;
     private readonly Os.NotificationShade _osShade;
     private readonly Os.StatusBar _osStatusBar;
@@ -124,6 +137,8 @@ public class MainPluginWindow : Window, IDisposable
     private readonly Os.ShareSheet _osShareSheet;
     private readonly Os.OsTour _osTour;
     private readonly Os.NewAppOffer _newAppOffer;
+    private readonly Os.TranslationOffer _translationOffer;
+    private readonly Os.TogetherOnboarding _partyIntro;
 
     public void SetMiniWindow(MiniWindow mini) => _miniWindow = mini;
 
@@ -333,6 +348,16 @@ public class MainPluginWindow : Window, IDisposable
         _osShell.SendIntent("market", AetherOS.Sdk.OsIntents.CreateMarketItem(itemId));
     }
 
+    public void OpenToPhotoSettings()
+    {
+        if (_miniWindow != null)
+        {
+            _miniWindow.IsOpen = false;
+        }
+        IsOpen = true;
+        _osShell.SendIntent("photos", AetherOS.Sdk.OsIntents.Create(AetherOS.Sdk.OsIntents.PhotosOpenSettings));
+    }
+
     public void OpenToMyHangout()
     {
         if (_miniWindow != null)
@@ -491,6 +516,7 @@ public class MainPluginWindow : Window, IDisposable
 
         ModalHost.Instance?.SetAnchor(ImGui.GetWindowPos(), ImGui.GetWindowSize());
         _skinPreview.SetAnchor(ImGui.GetWindowPos(), ImGui.GetWindowSize());
+        _partyDock.SetAnchor(ImGui.GetWindowPos(), ImGui.GetWindowSize());
 
         _phoneShell.DrawBackground(ImGui.GetWindowPos(), ImGui.GetWindowSize());
 
@@ -511,6 +537,15 @@ public class MainPluginWindow : Window, IDisposable
             ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse);
 
         ImGui.PushTextWrapPos(contentW);
+
+        // A dead refresh token is not a connection problem, and the reconnect loop will never fix it: every
+        // retry re-refreshes, is rejected again, and the phone sits on "offline" for a session that ended.
+        // Route out of whatever is on screen, except the flows that are already about signing in.
+        if (_tokens.SessionExpired
+            && _router.Current is not (Screen.SessionExpired or Screen.Splash or Screen.Outdated))
+        {
+            _router.Navigate(Screen.SessionExpired);
+        }
 
         switch (_router.Current)
         {
@@ -547,6 +582,9 @@ public class MainPluginWindow : Window, IDisposable
             case Screen.Offline:
                 _offlineScreen.Draw();
                 break;
+            case Screen.SessionExpired:
+                _sessionExpiredScreen.Draw();
+                break;
             case Screen.Outdated:
                 _outdatedScreen.Draw();
                 break;
@@ -571,7 +609,9 @@ public class MainPluginWindow : Window, IDisposable
             _osStatusBar.Draw(ImGui.GetWindowPos(), ImGui.GetWindowSize(), _signal.IsConnected);
         }
 
-        if (_router.Current is Screen.Home || ShowsHomeIndicator(_router.Current))
+        // The home button outlives every app-side lock (see IAetherApp.LocksShell): an onboarding that
+        // hid it left anyone who opened the app by accident with no way out but making an account.
+        if (_router.Current is Screen.Home or Screen.App || ShowsHomeIndicator(_router.Current))
         {
             DrawHomeIndicator();
         }
@@ -655,6 +695,9 @@ public class MainPluginWindow : Window, IDisposable
             case Screen.Offline:
                 _offlineScreen.OnShow();
                 break;
+            case Screen.SessionExpired:
+                _sessionExpiredScreen.OnShow();
+                break;
             case Screen.Outdated:
                 _outdatedScreen.OnShow();
                 break;
@@ -700,6 +743,17 @@ public class MainPluginWindow : Window, IDisposable
         var hitSize = Px(button.HitSize.X * 2f, button.HitSize.Y);
         ImGui.SetCursorScreenPos(center - hitSize * 0.5f);
         var released = ImGui.InvisibleButton("##osHome", hitSize);
+        // A theme may place the button INSIDE the content rect, and every in-phone overlay is a child
+        // window covering that rect, which is a window above this one and takes the click whatever order
+        // things were submitted in. So the press is also read geometrically: the home button is the one
+        // control that must work while something is open over the screen, since leaving is its whole job.
+        var hitTL = center - (hitSize * 0.5f);
+        var hitBR = center + (hitSize * 0.5f);
+        var overButton = ImGui.IsMouseHoveringRect(hitTL, hitBR, false);
+        if (!released && overButton && ImGui.IsMouseReleased(ImGuiMouseButton.Left) && !ImGui.IsAnyItemActive())
+        {
+            released = true;
+        }
         // Under exclusive key capture (Doom mid-run) the hidden field reclaims the active id on the frame
         // after any press, so the release this button normally fires on can never land; fire on the press
         // instead for exactly those frames, leaving the capture itself untouched.
@@ -708,7 +762,7 @@ public class MainPluginWindow : Window, IDisposable
             GoHomeAnimated();
         }
 
-        var state = new HomeButtonState(ImGui.IsItemHovered(), ImGui.IsItemActive());
+        var state = new HomeButtonState(ImGui.IsItemHovered() || overButton, ImGui.IsItemActive());
         if (state.Hovered)
         {
             SharedUiHelpers.HandOnHover();
@@ -729,7 +783,7 @@ public class MainPluginWindow : Window, IDisposable
         }
         if (_router.Current == Screen.Home)
         {
-            _homeScreen.CloseOpenFolder();
+            _homeScreen.HandleHomePress();
             return;
         }
         var appId = _osShell.AppIdForScreen(_router.Current);
@@ -823,8 +877,12 @@ public class MainPluginWindow : Window, IDisposable
     {
         var offering = _newAppOffer.Active && _router.Current is Screen.Home && !_osTour.Active
             && !Os.OsBootIntro.Active && !Os.OsTransitions.Active;
+        // The translation offer waits for everything, the new-app offer included: two full-screen asks
+        // stacked on one boot would be noise, and the app offer is the older, rarer one.
+        var translationOffering = !offering && _translationOffer.Active && _router.Current is Screen.Home
+            && !_osTour.Active && !Os.OsBootIntro.Active && !Os.OsTransitions.Active;
         if (!Os.OsTransitions.Active && !_osShade.Visible && !Os.OsBootIntro.Active && !_osShareSheet.Visible
-            && !_osTour.Active && !offering)
+            && !_osTour.Active && !offering && !translationOffering && !_partyIntro.Active)
         {
             return;
         }
@@ -857,6 +915,18 @@ public class MainPluginWindow : Window, IDisposable
             if (offering)
             {
                 _newAppOffer.Draw(contentTL, contentBR);
+            }
+            else if (translationOffering)
+            {
+                _translationOffer.Draw(contentTL, contentBR);
+            }
+            else if (_partyIntro.Active)
+            {
+                _partyIntro.Draw(contentTL, contentBR);
+            }
+            else
+            {
+                _homeScreen.DrawPartyOverlays(contentTL, contentBR);
             }
         }
         ImGui.EndChild();

@@ -134,6 +134,9 @@ public sealed partial class EchoWindow : Window, IDisposable
     private int _frameHeight;
 
     private Guid _myAccountId;
+    private readonly AetherOS.Sdk.IAppCapabilities _caps;
+    private readonly TranslateUi _translate;
+    private string? _menuLine;
     private volatile bool _accountLookupBusy;
 
     private Guid _knownRoomId;
@@ -161,9 +164,13 @@ public sealed partial class EchoWindow : Window, IDisposable
         EchoSyncEngine sync,
         EchoHostLocator locator,
         AetherHubContext hub,
-        Configuration config) : base("Echo###AetherEcho",
+        Configuration config,
+        AetherOS.Sdk.IAppCapabilities caps,
+        Action openTranslationSettings) : base("Echo###AetherEcho",
         ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoDocking)
     {
+        _caps = caps;
+        _translate = new TranslateUi("echochat", caps.Translation, openTranslationSettings);
         _host = host;
         _state = state;
         _sync = sync;
@@ -299,6 +306,7 @@ public sealed partial class EchoWindow : Window, IDisposable
             DrawSidebar(t, new Vector2(sidebarX, origin.Y), new Vector2(narrow ? avail.X : sidebarW, avail.Y));
         }
 
+        _translate.DrawConsentOverlay(ImGui.GetWindowPos(), ImGui.GetWindowSize());
         PopWindowStyle();
     }
 
@@ -662,6 +670,18 @@ public sealed partial class EchoWindow : Window, IDisposable
         IsOpen = false;
     }
 
+    /// <summary>The phone was powered off with a room live: leave it and put the window away, the way the
+    /// party dock goes with the phone. Quiet when there is no room.</summary>
+    public void LeaveWithPhone()
+    {
+        if (_state.CurrentRoomId is null)
+        {
+            IsOpen = false;
+            return;
+        }
+        LeaveRoom();
+    }
+
     private void EndRoom()
     {
         if (_state.CurrentRoomId is not { } roomId)
@@ -929,16 +949,26 @@ public sealed partial class EchoWindow : Window, IDisposable
         return IdentityPalette[index];
     }
 
-    /// <summary>The initial circle standing in for an avatar; Echo has no avatar-URL loader in the plugin.</summary>
+    /// <summary>The OS avatar when the seat carries one, an initial on a colour disc when it does not, and
+    /// the ring over either.</summary>
     private static void DrawIdentityCircle(ImDrawListPtr dl, Guid accountId, string displayName,
-        Vector2 center, float radius, string? frameRef = null)
+        Vector2 center, float radius, string? frameRef = null, byte[]? avatar = null)
     {
-        var color = IdentityColor(accountId);
-        dl.AddCircleFilled(center, radius, ImGui.GetColorU32(color), 32);
-        var initial = string.IsNullOrWhiteSpace(displayName) ? "?" : displayName.Trim()[..1].ToUpperInvariant();
-        var glyphPx = radius * 1.1f;
-        var size = ImGui.CalcTextSize(initial) * (glyphPx / ImGui.GetFontSize());
-        dl.AddText(ImGui.GetFont(), glyphPx, center - size * 0.5f, 0xFF141414u, initial);
+        var tex = AetherLove.Services.InlineAvatarCache.Resolve("EchoAvatarCache", accountId, avatar)?.GetWrapOrDefault();
+        if (tex is not null)
+        {
+            dl.AddImageRounded(tex.Handle, center - new Vector2(radius), center + new Vector2(radius),
+                Vector2.Zero, Vector2.One, 0xFFFFFFFFu, radius, ImDrawFlags.RoundCornersAll);
+        }
+        else
+        {
+            var color = IdentityColor(accountId);
+            dl.AddCircleFilled(center, radius, ImGui.GetColorU32(color), 32);
+            var initial = string.IsNullOrWhiteSpace(displayName) ? "?" : displayName.Trim()[..1].ToUpperInvariant();
+            var glyphPx = radius * 1.1f;
+            var size = ImGui.CalcTextSize(initial) * (glyphPx / ImGui.GetFontSize());
+            dl.AddText(ImGui.GetFont(), glyphPx, center - size * 0.5f, 0xFF141414u, initial);
+        }
         AetherLove.UI.AvatarRings.Draw(dl, center, radius, frameRef);
     }
 

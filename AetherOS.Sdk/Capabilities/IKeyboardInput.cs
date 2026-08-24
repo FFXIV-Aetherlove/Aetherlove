@@ -29,6 +29,44 @@ public enum AppKey
     D7,
     Y,
     N,
+    Q,
+    R,
+    T,
+    U,
+    I,
+    O,
+    P,
+    F,
+    G,
+    H,
+    J,
+    K,
+    L,
+    Z,
+    X,
+    C,
+    V,
+    B,
+    D8,
+    D9,
+    D0,
+    Backspace,
+    Num0,
+    Num1,
+    Num2,
+    Num3,
+    Num4,
+    Num5,
+    Num6,
+    Num7,
+    Num8,
+    Num9,
+    NumAdd,
+    NumSub,
+    NumMul,
+    NumDiv,
+    NumDecimal,
+    NumEnter,
 }
 
 /// <summary>Live key state for apps that are driven by the keyboard (the arcade games).
@@ -44,6 +82,14 @@ public interface IKeyboardInput
 
     /// <summary>True on the frame the key goes down. Poll every frame or the edge is missed.</summary>
     bool WasPressed(AppKey key);
+
+    /// <summary>The first mapped key pressed this frame, for apps that offer optional rebinding. Capture
+    /// still applies: only call this while actively waiting for a bind, never on an idle menu.</summary>
+    bool TryGetPressedKey(out AppKey key)
+    {
+        key = default;
+        return false;
+    }
 
     /// <summary>True while a GAME text field owns the keyboard (the chat box is open). No keys are reaching
     /// the app at all in that state, so anything mid-run should pause rather than play itself out.</summary>

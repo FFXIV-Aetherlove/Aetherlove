@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,6 +20,11 @@ public interface IStoreHost
     Task<StoreProductPageDto?> GetStoreProductsAsync(StoreProductQueryDto query, CancellationToken ct = default);
 
     Task<StoreProductDto?> GetStoreProductAsync(Guid productId, CancellationToken ct = default);
+
+    /// <summary>One product by its identity (kind + ref) rather than its id, for a deep link that names
+    /// what it wants. Null when the caller cannot see it or it is not on sale.</summary>
+    Task<StoreProductDto?> GetStoreProductByRefAsync(
+        StoreItemKind kind, string itemRef, CancellationToken ct = default);
 
     Task<byte[]?> GetStoreProductImageAsync(Guid productId, CancellationToken ct = default);
 

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Numerics;
 using System.Threading;
@@ -11,7 +11,6 @@ using AetherLove.Shared;
 using AetherLove.UI;
 using AetherLove.Widgets;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.Utility.Raii;
 using static AetherLove.UI.OnboardingUi;
 
@@ -37,7 +36,7 @@ public partial class OnboardingScreen
     private OnboardingStep _step = OnboardingStep.Welcome;
     private bool _scrollToTop;
 
-    private readonly FileDialogManager _fileDialog = new();
+    private readonly AetherLove.Widgets.AetherFileDialogManager _fileDialog = new();
     private readonly ImageCropPopup _cropPopup = new();
     private readonly SfwImageGateModal _sfwGate = new();
     private int _pickerTarget; // -1 = avatar, 0-3 = photo slot
@@ -189,6 +188,7 @@ public partial class OnboardingScreen
         var canProceed = _step switch
         {
             OnboardingStep.Name => _displayName.Trim().Length >= AetherLove.Shared.ProfileLimits.DisplayNameMinLength,
+            OnboardingStep.Character => _ownRegions.Any(x => x),
             OnboardingStep.Languages => _langSelected.Any(x => x),
             OnboardingStep.LookingFor => _lookingFor.Any(x => x),
             OnboardingStep.ImageRules => _imageRulesScrolledToBottom,

@@ -1,0 +1,36 @@
+{
+  "name": "Antennae",
+  "slot": "ears",
+  "tier": "premium",
+  "file": "",
+  "anchor": "earL",
+  "origin": [
+    0,
+    0
+  ],
+  "width": 0,
+  "height": 0,
+  "behind": true,
+  "strands": {
+    "part": "antennae",
+    "seat": "earL",
+    "dir": -1.16,
+    "count": 2,
+    "len": 66,
+    "root": 4.6,
+    "spread": 17,
+    "taper": 0.42,
+    "stagger": 0.0,
+    "splay": 0.3,
+    "curl": 1.0,
+    "bulb": 1.6,
+    "amp": 0.1,
+    "waves": 0.55,
+    "speed": 0.12,
+    "segs": 9,
+    "drift": 0.12,
+    "driftSpeed": 0.05,
+    "swing": 0.55,
+    "mode": "flowing"
+  }
+}

@@ -84,21 +84,6 @@ internal sealed class CoreScreen(IAetherlingHost host, Action<float> tempo)
         return true;
     }
 
-    /// <summary>Plays the birth again from the top, changing nothing the server owns. The crystal is put
-    /// back on its last rung first, so a replay from the pet page still has something to break.</summary>
-    public void ReplayBirth()
-    {
-        if (_ceremony is null)
-        {
-            return;
-        }
-        _arrival = 1f;
-        _birthDone = false;
-        _ceremony.Restore(AetherlingStage.Kindling, ServerNow.UtcDateTime);
-        tempo(SpeedFor(AetherlingStage.Kindling));
-        _ceremony.BeginBirth(_reduceMotion);
-    }
-
     /// <summary>Set when the screen is entered straight from a purchase, which is the only time the long
     /// arrival plays.</summary>
     public void BeginArrival()

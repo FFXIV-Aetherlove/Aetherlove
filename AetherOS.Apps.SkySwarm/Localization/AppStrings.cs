@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace AetherOS.Apps.SkySwarm.Localization;
 
@@ -10,7 +10,7 @@ public static class AppStrings
         // added after update 2.3.3 (sky swarm)
         ["os.skyswarm_subtitle"] = "Weave, shoot, rescue.",
         ["os.skyswarm_play"] = "Play",
-        ["os.skyswarm_high_scores"] = "High scores",
+        ["os.skyswarm_high_scores"] = "My high scores",
         ["os.skyswarm_best"] = "Best {0}",
         ["os.skyswarm_score"] = "Score {0}",
         ["os.skyswarm_stage"] = "Stage {0}",
@@ -33,7 +33,7 @@ public static class AppStrings
         // added after update 2.3.3 (sky swarm)
         ["os.skyswarm_subtitle"] = "Ausweichen, schießen, retten.",
         ["os.skyswarm_play"] = "Spielen",
-        ["os.skyswarm_high_scores"] = "Bestenliste",
+        ["os.skyswarm_high_scores"] = "Meine Bestwerte",
         ["os.skyswarm_best"] = "Beste {0}",
         ["os.skyswarm_score"] = "Punkte {0}",
         ["os.skyswarm_stage"] = "Stufe {0}",
@@ -56,7 +56,7 @@ public static class AppStrings
         // added after update 2.3.3 (sky swarm)
         ["os.skyswarm_subtitle"] = "Esquiva, dispara, rescata.",
         ["os.skyswarm_play"] = "Jugar",
-        ["os.skyswarm_high_scores"] = "Mejores puntuaciones",
+        ["os.skyswarm_high_scores"] = "Mis récords",
         ["os.skyswarm_best"] = "Mejor {0}",
         ["os.skyswarm_score"] = "Puntos {0}",
         ["os.skyswarm_stage"] = "Fase {0}",
@@ -79,7 +79,7 @@ public static class AppStrings
         // added after update 2.3.3 (sky swarm)
         ["os.skyswarm_subtitle"] = "Esquivez, tirez, sauvez.",
         ["os.skyswarm_play"] = "Jouer",
-        ["os.skyswarm_high_scores"] = "Meilleurs scores",
+        ["os.skyswarm_high_scores"] = "Mes records",
         ["os.skyswarm_best"] = "Record {0}",
         ["os.skyswarm_score"] = "Score {0}",
         ["os.skyswarm_stage"] = "Niveau {0}",
@@ -102,7 +102,7 @@ public static class AppStrings
         // added after update 2.3.3 (sky swarm)
         ["os.skyswarm_subtitle"] = "Desvie, atire, resgate.",
         ["os.skyswarm_play"] = "Jogar",
-        ["os.skyswarm_high_scores"] = "Melhores pontuações",
+        ["os.skyswarm_high_scores"] = "Meus recordes",
         ["os.skyswarm_best"] = "Recorde {0}",
         ["os.skyswarm_score"] = "Pontos {0}",
         ["os.skyswarm_stage"] = "Fase {0}",
@@ -125,7 +125,7 @@ public static class AppStrings
         // added after update 2.3.3 (sky swarm)
         ["os.skyswarm_subtitle"] = "Уворачивайся, стреляй, спасай.",
         ["os.skyswarm_play"] = "Играть",
-        ["os.skyswarm_high_scores"] = "Рекорды",
+        ["os.skyswarm_high_scores"] = "Мои рекорды",
         ["os.skyswarm_best"] = "Рекорд {0}",
         ["os.skyswarm_score"] = "Очки {0}",
         ["os.skyswarm_stage"] = "Этап {0}",

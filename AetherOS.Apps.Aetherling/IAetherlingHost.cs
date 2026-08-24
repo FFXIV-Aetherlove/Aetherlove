@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using AetherLove.Shared.Aetherling;
@@ -7,10 +8,24 @@ using AetherOS.Sdk;
 
 namespace AetherOS.Apps.Aetherling;
 
+/// <summary>One party member's Aetherling, as much of it as this client needs to draw one. Read fresh from
+/// the host every frame and never stored: it is somebody else's pet, and the moment they leave the party or
+/// turn sharing off it simply stops being in the list.</summary>
+/// <param name="Stage">The rung of the growth ladder: 0-2 hatchling forms, 3 adult.</param>
+public sealed record AetherlingPartyPet(
+    Guid AccountId, short Stage, string Palette, IReadOnlyList<string> Accessories, string? Name);
+
 /// <summary>What the app needs from the plugin. Declared here and implemented over there, so the app never
 /// references the hub, the session or the audio stack.</summary>
 public interface IAetherlingHost
 {
+    /// <summary>The Aetherlings of the party this account is in, empty unless together mode has a party,
+    /// the owner turned the party-pet switch on, and the members themselves let theirs be seen.</summary>
+    IReadOnlyList<AetherlingPartyPet> PartyPets { get; }
+
+    /// <summary>How big those pets stand, an index into <c>FloatingPet.SizeScales</c>.</summary>
+    int PartyPetSize { get; }
+
     /// <summary>The core as of the last login or call, without a round trip. Null means the account has
     /// never bought one, which is the state almost everybody is in.</summary>
     AetherlingDto? Snapshot { get; }
@@ -21,9 +36,17 @@ public interface IAetherlingHost
     /// <summary>Where the ceremony sheets live, so the app can hand paths to the texture cache.</summary>
     string AssetRoot { get; }
 
+    /// <summary>The app's interact-lab hooks, parked here at startup for the dev window. Null until the
+    /// app exists; the lab shows "no app" rather than caring why.</summary>
+    IAetherlingInteractLab? InteractLab { get; set; }
+
     /// <summary>The floating pet, handed over once at startup. The app cannot open a window over the game
     /// itself, and the host has no business knowing what is being drawn in it.</summary>
     IAetherlingOverlay? Overlay { get; set; }
+
+    /// <summary>Draws creatures for other apps, handed over at startup the way the overlay is. Null until
+    /// the app exists; a surface reads it per frame and draws nothing while it is null.</summary>
+    IPetRenderer? PetRenderer { get; set; }
 
     /// <summary>Textures for anything drawn outside the phone: the app's own draws get theirs from the frame
     /// context, which does not exist out there.</summary>
@@ -35,6 +58,10 @@ public interface IAetherlingHost
     /// <summary>Brings the phone up full size on this app, restoring it from the minimised bubble if that is
     /// where it is. The floating creature lives outside the phone, so its menu needs a way back in.</summary>
     void OpenOnPhone();
+
+    /// <summary>Renames a pet that has already been named, spending one Name change from the store. The
+    /// free first naming goes through <c>NameAsync</c> and costs nothing.</summary>
+    Task<AetherlingDto> RenameAsync(string name, CancellationToken ct = default);
 
     /// <summary>Re-reads the core. Null on a failure as well as on "no core", because the app treats both
     /// the same way: it shows the way in.</summary>
@@ -68,6 +95,17 @@ public interface IAetherlingHost
     /// <summary>Scratches one of the three adulting cards; the reveal is the grant.</summary>
     Task<AetherlingDto> RevealScratchAsync(short slot, CancellationToken ct = default);
 
+    /// <summary>Today's wheel for this account: wedges, whether it was spun, the result if so. Null when the
+    /// server could not be reached.</summary>
+    Task<AetherlingWheelDto?> GetWheelAsync(CancellationToken ct = default);
+
+    /// <summary>Spins today's wheel. The server rolls, picks and grants; the refusal (not grown, switched
+    /// off) is thrown. A day already spun comes back as that spin rather than an error.</summary>
+    Task<AetherlingWheelDto> SpinWheelAsync(CancellationToken ct = default);
+
+    /// <summary>Marks today's prize as scratched. Bookkeeping: the prize landed at the spin.</summary>
+    Task<AetherlingWheelDto> RevealWheelAsync(CancellationToken ct = default);
+
     /// <summary>Stamps the adult onboarding done, so a reinstall never replays it.</summary>
     Task<AetherlingDto> CompleteOnboardingAsync(CancellationToken ct = default);
 
@@ -79,6 +117,32 @@ public interface IAetherlingHost
     /// never watched; empty is a gap in knowledge and never a change.</summary>
     string CurrentJobAbbreviation { get; }
 
+    /// <summary>The Emote sheet row id of the player's OWN last emote, 0 when none has been seen this
+    /// session. Read, never watched, like the job: the host samples the game's emote state on its own
+    /// tick and nothing here subscribes to anything.</summary>
+    uint LastEmoteRowId { get; }
+
+    /// <summary>The game Emote sheet's row for a text command ("/wave"), or 0 when the game has no such
+    /// command. Asked once per learnable at startup so the watching layer never carries hand-copied row
+    /// ids, which is how the prototype ended up with three wrong ones.</summary>
+    uint EmoteRowForCommand(string command);
+
+    /// <summary>Monotonic count of emotes seen, so a repeated emote is a new sighting. The app reacts to
+    /// this moving, never to the row id alone.</summary>
+    long LastEmoteSequence { get; }
+
+    /// <summary>One sighting of a watchable emote, by catalog key. The server owns the meter and the
+    /// unlock; null when the report could not be made, which the app treats as "still charming, no
+    /// progress".</summary>
+    Task<AetherlingDto?> ReportEmoteSightingAsync(string emoteKey, CancellationToken ct = default);
+
+    /// <summary>The zone's active weather id, 0 when unknown. For the creature's ambient chatter only;
+    /// nothing here forecasts.</summary>
+    byte CurrentWeatherId { get; }
+
+    /// <summary>The current territory id, 0 when not in a zone.</summary>
+    uint TerritoryId { get; }
+
     /// <summary>Turns a hub exception into a line the player can read, already localized.</summary>
     string DescribeError(Exception ex);
 
@@ -87,8 +151,10 @@ public interface IAetherlingHost
     void StartBgm(float speed);
 
     /// <summary>Starts a minigame's loop, named by its file under the plugin's bgm folder. Rides the same
-    /// mute and the same duck as the ceremony's loop, and replaces whatever was playing.</summary>
-    void StartGameBgm(string fileName);
+    /// mute and the same duck as the ceremony's loop, and replaces whatever was playing. Calling it again
+    /// with the same file and a new speed only retunes: speed is tape speed, so pitch and tempo rise
+    /// together.</summary>
+    void StartGameBgm(string fileName, float speed = 1f);
 
     /// <summary>Stops the loop and gives the game its music back.</summary>
     void StopBgm();

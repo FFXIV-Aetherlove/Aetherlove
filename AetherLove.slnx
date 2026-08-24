@@ -110,6 +110,9 @@
   <Project Path="AetherOS.Apps.Timers/AetherOS.Apps.Timers.csproj">
     <Platform Project="x64" />
   </Project>
+  <Project Path="AetherOS.Apps.Together/AetherOS.Apps.Together.csproj">
+    <Platform Project="x64" />
+  </Project>
   <Project Path="AetherOS.Apps.VoidInvaders/AetherOS.Apps.VoidInvaders.csproj">
     <Platform Project="x64" />
   </Project>

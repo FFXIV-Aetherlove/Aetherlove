@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using AetherLove.Config;
@@ -18,16 +18,19 @@ public sealed class PulseService : IDisposable
     private readonly Configuration _config;
     private readonly AetherHubContext _hub;
     private readonly NotificationDispatcher _notifier;
+    private readonly AetherLove.Services.Signal.AetherSignalService _signal;
 
     private CancellationTokenSource? _cts;
     private DateTimeOffset _sessionStartUtc;
     private bool _activityDirty;
 
-    public PulseService(Configuration config, AetherHubContext hub, NotificationDispatcher notifier)
+    public PulseService(Configuration config, AetherHubContext hub, NotificationDispatcher notifier,
+        AetherLove.Services.Signal.AetherSignalService signal)
     {
         _config = config;
         _hub = hub;
         _notifier = notifier;
+        _signal = signal;
     }
 
     public void Start()
@@ -99,7 +102,7 @@ public sealed class PulseService : IDisposable
 
     private async Task TickAsync(CancellationToken ct)
     {
-        if (!PhonePower.IsOn)
+        if (!PhonePower.IsOn || !_signal.IsConnected)
         {
             return;
         }

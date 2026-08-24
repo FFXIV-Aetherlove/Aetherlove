@@ -361,7 +361,6 @@ public sealed class BreakerApp : IAetherApp
                 PowerKind.Wide => "W",
                 PowerKind.Multi => "M",
                 PowerKind.Slow => "S",
-                PowerKind.Life => "L",
                 _ => "P",
             };
             var size = ImGui.CalcTextSize(letter);
@@ -467,6 +466,16 @@ public sealed class BreakerApp : IAetherApp
         {
             this.lastFrameTime = ImGui.GetTime();
             this.paused = false;
+        }
+        // Ending from pause is the same terminal as losing the last ball: the run so far is submitted
+        // honestly, never discarded.
+        if (RetroLcd.Button("##brkEndRun", ctx.Localize("os.ark_end_run"),
+            boardTL + new Vector2((boardW - buttonW) * 0.5f, (boardH * 0.5f) + buttonH + ctx.Px(10f)),
+            new Vector2(buttonW, buttonH), ctx.Px(4f), filled: false))
+        {
+            this.paused = false;
+            this.view = View.GameOver;
+            FinishRun();
         }
     }
 
