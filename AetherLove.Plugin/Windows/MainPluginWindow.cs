@@ -725,6 +725,10 @@ public class MainPluginWindow : Window, IDisposable
         return !app.LocksShell;
     }
 
+    /// <summary>Whether the current mouse press began on the home pill with no popup open, which is what
+    /// entitles the geometric fallback below to treat the matching release as a click.</summary>
+    private bool _homePillPressArmed;
+
     private void DrawHomeIndicator()
     {
         var winPos = ImGui.GetWindowPos();
@@ -747,12 +751,28 @@ public class MainPluginWindow : Window, IDisposable
         // window covering that rect, which is a window above this one and takes the click whatever order
         // things were submitted in. So the press is also read geometrically: the home button is the one
         // control that must work while something is open over the screen, since leaving is its whole job.
+        //
+        // Geometric means blind, so the fallback is anchored to its own PRESS, and only a press made with
+        // no popup open arms it. A popup handles its clicks itself, closes on the release, and by the time
+        // this runs the active id is already cleared, so a release-only test cannot tell "clicked the pill"
+        // from "clicked a context-menu row that happened to sit over the pill": that was a right-click menu
+        // low on the market list closing the whole app on "Copy item name".
         var hitTL = center - (hitSize * 0.5f);
         var hitBR = center + (hitSize * 0.5f);
         var overButton = ImGui.IsMouseHoveringRect(hitTL, hitBR, false);
-        if (!released && overButton && ImGui.IsMouseReleased(ImGuiMouseButton.Left) && !ImGui.IsAnyItemActive())
+        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        {
+            _homePillPressArmed = overButton
+                && !ImGui.IsPopupOpen(string.Empty, ImGuiPopupFlags.AnyPopupId | ImGuiPopupFlags.AnyPopupLevel);
+        }
+        if (!released && _homePillPressArmed && overButton
+            && ImGui.IsMouseReleased(ImGuiMouseButton.Left) && !ImGui.IsAnyItemActive())
         {
             released = true;
+        }
+        if (!ImGui.IsMouseDown(ImGuiMouseButton.Left))
+        {
+            _homePillPressArmed = false;
         }
         // Under exclusive key capture (Doom mid-run) the hidden field reclaims the active id on the frame
         // after any press, so the release this button normally fires on can never land; fire on the press
