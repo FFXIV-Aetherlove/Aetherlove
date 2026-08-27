@@ -1026,6 +1026,13 @@ public sealed class SessionBootstrapper : IDisposable
         try
         {
             _lastAccount = await _hub.GetAccountInfoAsync(ct).ConfigureAwait(false);
+            if (_lastAccount is { } fetched)
+            {
+                // Stamped here as well as in the together sync, so a later refresh repairs a session that
+                // started without an account snapshot. Everything that asks "am I the host" or "which of
+                // these party members is me" reads this one field.
+                _together.OwnAccountId = fetched.AccountId;
+            }
             if (_lastAccount is { ProfileCount: > 1 })
             {
                 var list = await _hub.ListProfilesAsync(ct).ConfigureAwait(false);
@@ -1043,7 +1050,18 @@ public sealed class SessionBootstrapper : IDisposable
     /// on the state service and pulls the live party if one exists. Best-effort, never fails the login.</summary>
     private async Task SyncTogetherAsync(CancellationToken ct)
     {
-        _together.OwnAccountId = _lastAccount?.AccountId;
+        // The account snapshot is best-effort, and a session that misses it once used to spend its whole
+        // life without knowing its own account id: the party's own member is then nobody, so the host is
+        // told they are not the host and their own Lumi joins the huddle as a stranger. One retry, and the
+        // old id is kept rather than blanked when even that fails.
+        if (_lastAccount is null)
+        {
+            await FetchAccountInfoAsync(ct).ConfigureAwait(false);
+        }
+        if (_lastAccount?.AccountId is { } ownAccountId)
+        {
+            _together.OwnAccountId = ownAccountId;
+        }
         try
         {
             var party = await _hub.GetMyTogetherPartyAsync(ct).ConfigureAwait(false);

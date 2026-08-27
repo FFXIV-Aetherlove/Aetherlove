@@ -444,9 +444,12 @@ internal sealed class LumiLinkGame : IPetGame
             case Phase.Sway:
                 if ((reduce || _phaseT >= SwaySeconds * 0.5f) && _theme != _nextTheme)
                 {
-                    // A new level is a new board: nothing minted carries over.
+                    // A new level is a new board, but the specials standing on the old one were earned:
+                    // they are read off before it goes and laid onto random tiles of the new one.
+                    var carried = _board.Specials();
                     _theme = _nextTheme;
                     _board.Reset(_rng);
+                    _board.Scatter(carried);
                     _queue.Clear();
                     _pops.Clear();
                     _hint = null;

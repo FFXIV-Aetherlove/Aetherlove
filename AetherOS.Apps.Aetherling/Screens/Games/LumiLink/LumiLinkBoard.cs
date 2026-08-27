@@ -108,6 +108,59 @@ internal sealed class LumiLinkBoard
         while (!HasMove());
     }
 
+    /// <summary>Every special standing on the board right now. A level change reads these off the old board
+    /// so what the player earned can be laid onto the new one.</summary>
+    public List<Special> Specials()
+    {
+        var carried = new List<Special>();
+        for (var c = 0; c < Columns; c++)
+        {
+            for (var r = 0; r < Rows; r++)
+            {
+                if (_cells[c, r] is { Special: not Special.None } piece)
+                {
+                    carried.Add(piece.Special);
+                }
+            }
+        }
+        return carried;
+    }
+
+    /// <summary>Lays specials onto plain tiles picked at random, one each. The tile keeps the picture it was
+    /// dealt; only what it does when it clears changes. Anything the board has no plain tile left for is
+    /// dropped, which cannot happen at the sizes this board runs at.</summary>
+    public void Scatter(IReadOnlyList<Special> specials)
+    {
+        if (specials.Count == 0)
+        {
+            return;
+        }
+
+        var plain = new List<(int Col, int Row)>();
+        for (var c = 0; c < Columns; c++)
+        {
+            for (var r = 0; r < Rows; r++)
+            {
+                if (_cells[c, r] is { Special: Special.None })
+                {
+                    plain.Add((c, r));
+                }
+            }
+        }
+
+        foreach (var special in specials)
+        {
+            if (plain.Count == 0)
+            {
+                return;
+            }
+            var pick = _rng.Next(plain.Count);
+            var (col, row) = plain[pick];
+            plain.RemoveAt(pick);
+            _cells[col, row]!.Special = special;
+        }
+    }
+
     /// <summary>A kind that makes no line of three with what is already placed to the left and above.</summary>
     private int KindAvoidingMatch(int col, int row)
     {

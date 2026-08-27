@@ -210,7 +210,7 @@ internal sealed partial class PetScreen(IAetherlingHost host, PetRuntime pet)
 
         DrawCheer(ctx, dl, origin, size, dt);
 
-        if (!core.NameChosen && !_namingOpen && _settle >= 1f)
+        if (NameChipVisible)
         {
             DrawNameChip(ctx, dl, origin, size, core);
         }

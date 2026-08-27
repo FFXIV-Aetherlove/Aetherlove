@@ -109,7 +109,19 @@ internal sealed partial class PetScreen
     /// <summary>Whether something on the page owns it: the arrival, the naming card, an unopened ticket,
     /// or a growing-up. The stage runs full height while one of those is up and its whole-card target is
     /// submitted first, so a nav bar drawn over it would be structurally dead as well as in the way.</summary>
-    public bool HoldingPage => _core is not { } core || !ModesAvailable(core) || Ticket.Visible || WheelOpen;
+    public bool HoldingPage =>
+        _core is not { } core || !ModesAvailable(core) || Ticket.Visible || WheelOpen || FootChipVisible;
+
+    /// <summary>The naming chip, for a creature that was born without one. It is the whole reason an owner
+    /// who skipped the card can still reach it.</summary>
+    private bool NameChipVisible => _core is { NameChosen: false } && !_namingOpen && _settle >= 1f;
+
+    /// <summary>Either chip that stands in the page's foot. They are drawn on the nav bar's own row, so
+    /// while one is up the page is held and the bar stands down: two things on one row is one of them
+    /// unreadable and, since the bar submits later, unclickable too.</summary>
+    private bool FootChipVisible =>
+        NameChipVisible
+        || (!_namingOpen && !Ticket.Visible && _settle >= 1f && UnclaimedTicketSlot() is not null);
 
     private bool ModesAvailable(AetherlingDto core) =>
         IntroSeen && !_namingOpen && !RenameOverlayOpen && _arrive >= 1f && _settle >= 1f && core.Growth is not null;
