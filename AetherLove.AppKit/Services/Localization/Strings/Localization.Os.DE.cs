@@ -570,5 +570,8 @@ internal static class OsDe
         ["echo.live_needs_player_title"] = "Live-Streams brauchen einen neueren Player",
         ["echo.live_needs_player_body"] = "Dieser Player kann keine Live-Streams abspielen. Normale Videos funktionieren weiterhin.",
         ["echo.live_needs_player_update"] = "Ein neuerer Player ist bereit. Jetzt installieren, um Live-Streams zu sehen.",
+        // added after update 2.6.0 (echo minimize)
+        ["echo.minimize"] = "Minimieren",
+        ["echo.restore"] = "Echo öffnen",
     };
 }

@@ -570,5 +570,8 @@ internal static class OsEs
         ["echo.live_needs_player_title"] = "Las emisiones en vivo necesitan un reproductor más nuevo",
         ["echo.live_needs_player_body"] = "Este reproductor no puede reproducir emisiones en vivo. Los vídeos normales siguen funcionando.",
         ["echo.live_needs_player_update"] = "Hay un reproductor más nuevo. Instálalo para ver emisiones en vivo.",
+        // added after update 2.6.0 (echo minimize)
+        ["echo.minimize"] = "Minimizar",
+        ["echo.restore"] = "Abrir Echo",
     };
 }

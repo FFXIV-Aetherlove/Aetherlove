@@ -570,5 +570,8 @@ internal static class OsEn
         ["echo.live_needs_player_title"] = "Live streams need a newer player",
         ["echo.live_needs_player_body"] = "This player cannot play live streams. Ordinary videos still work.",
         ["echo.live_needs_player_update"] = "A newer player is ready. Install it to watch live streams.",
+        // added after update 2.6.0 (echo minimize)
+        ["echo.minimize"] = "Minimize",
+        ["echo.restore"] = "Open Echo",
     };
 }

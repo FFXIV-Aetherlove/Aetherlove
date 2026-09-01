@@ -570,5 +570,8 @@ internal static class OsRu
         ["echo.live_needs_player_title"] = "Для эфиров нужен новый плеер",
         ["echo.live_needs_player_body"] = "Этот плеер не может воспроизводить прямые эфиры. Обычные видео работают.",
         ["echo.live_needs_player_update"] = "Новый плеер готов. Установите его, чтобы смотреть эфиры.",
+        // added after update 2.6.0 (echo minimize)
+        ["echo.minimize"] = "Свернуть",
+        ["echo.restore"] = "Открыть Echo",
     };
 }

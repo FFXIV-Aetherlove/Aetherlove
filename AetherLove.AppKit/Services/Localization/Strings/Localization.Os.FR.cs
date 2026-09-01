@@ -570,5 +570,8 @@ internal static class OsFr
         ["echo.live_needs_player_title"] = "Les directs demandent un lecteur plus récent",
         ["echo.live_needs_player_body"] = "Ce lecteur ne peut pas lire les directs. Les vidéos normales fonctionnent toujours.",
         ["echo.live_needs_player_update"] = "Un lecteur plus récent est prêt. Installez-le pour regarder les directs.",
+        // added after update 2.6.0 (echo minimize)
+        ["echo.minimize"] = "Réduire",
+        ["echo.restore"] = "Ouvrir Echo",
     };
 }

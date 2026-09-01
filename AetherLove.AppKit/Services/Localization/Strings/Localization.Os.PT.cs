@@ -570,5 +570,8 @@ internal static class OsPt
         ["echo.live_needs_player_title"] = "As transmissões em direto precisam de um leitor mais recente",
         ["echo.live_needs_player_body"] = "Este leitor não consegue reproduzir transmissões em direto. Os vídeos normais continuam a funcionar.",
         ["echo.live_needs_player_update"] = "Está pronto um leitor mais recente. Instala-o para ver transmissões em direto.",
+        // added after update 2.6.0 (echo minimize)
+        ["echo.minimize"] = "Minimizar",
+        ["echo.restore"] = "Abrir o Echo",
     };
 }

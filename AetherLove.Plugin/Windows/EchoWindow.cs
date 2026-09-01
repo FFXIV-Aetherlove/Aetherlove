@@ -165,6 +165,37 @@ public sealed partial class EchoWindow : Window, IDisposable
 
     private float _savedFontGlobalScale = 1f;
 
+    /// <summary>Dalamud's collapse is off: a collapsed window skips Draw, and Draw is where the room's
+    /// events are drained and the sync ticks, so a collapsed Echo silently stopped following its room.
+    /// Minimising is the window's own (<see cref="Minimize"/>), and it keeps ticking.</summary>
+    private const ImGuiWindowFlags FullFlags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse
+        | ImGuiWindowFlags.NoDocking | ImGuiWindowFlags.NoCollapse;
+
+    private const ImGuiWindowFlags BubbleFlags = ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize
+        | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoDocking
+        | ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoFocusOnAppearing;
+
+    private const float BubbleSide = 64f;
+    private const float BubbleDragThreshold = 5f;
+    private const string BubbleLogoFile = "echo.png";
+
+    private bool _minimized;
+    private bool _bubbleEntering;
+    private bool _restorePending;
+    private Vector2 _restoreSize;
+    private Vector2 _restorePos;
+    private Vector2? _bubblePos;
+    private bool _bubbleMouseDown;
+    private Vector2 _bubbleMouseDownPos;
+    private Vector2 _bubbleWindowPosAtDown;
+    private bool _bubbleDragged;
+    private Dalamud.Interface.Textures.ISharedImmediateTexture? _bubbleLogo;
+    private bool _bubbleLogoLoaded;
+
+    /// <summary>True while the window is drawn as the logo bubble. The room, the host and the sync all
+    /// carry on underneath; only the picture is put away.</summary>
+    public bool Minimized => _minimized;
+
     public EchoWindow(
         EchoHostClient host,
         EchoStateService state,
@@ -173,8 +204,7 @@ public sealed partial class EchoWindow : Window, IDisposable
         AetherHubContext hub,
         Configuration config,
         AetherOS.Sdk.IAppCapabilities caps,
-        Action openTranslationSettings) : base("Echo###AetherEcho",
-        ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoDocking)
+        Action openTranslationSettings) : base("Echo###AetherEcho", FullFlags)
     {
         _caps = caps;
         _translate = new TranslateUi("echochat", caps.Translation, openTranslationSettings);
@@ -208,6 +238,7 @@ public sealed partial class EchoWindow : Window, IDisposable
     public void OpenSolo(string videoRef)
     {
         IsOpen = true;
+        Restore();
         _kickedRoomName = null;
         _sync.Enabled = false;
         _sync.Reset();
@@ -251,6 +282,7 @@ public sealed partial class EchoWindow : Window, IDisposable
     public void OpenRoom()
     {
         IsOpen = true;
+        Restore();
         _kickedRoomName = null;
         _soloVideoId = null;
         _soloIsLive = false;
@@ -262,13 +294,53 @@ public sealed partial class EchoWindow : Window, IDisposable
 
     public override void PreDraw()
     {
-        SizeConstraints = new WindowSizeConstraints
+        if (_minimized)
         {
-            MinimumSize = Px(MinWindowW, MinWindowH),
-            MaximumSize = new Vector2(MaxWindowSide, MaxWindowSide),
-        };
-        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Px(10f, 10f));
-        ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, Px(WindowRounding));
+            var side = Px(BubbleSide);
+            Flags = BubbleFlags;
+            SizeConstraints = new WindowSizeConstraints { MinimumSize = new Vector2(side), MaximumSize = new Vector2(side) };
+            Size = new Vector2(side);
+            SizeCondition = ImGuiCond.Always;
+            if (_bubbleEntering)
+            {
+                // Placed once, where the window's corner was (or where the bubble last sat); after that
+                // the bubble is dragged by hand, so the position is left to ImGui.
+                Position = _bubblePos;
+                PositionCondition = ImGuiCond.Always;
+                _bubbleEntering = false;
+            }
+            else
+            {
+                Position = null;
+            }
+            ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Vector2.Zero);
+            ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, side * 0.5f);
+        }
+        else
+        {
+            Flags = FullFlags;
+            SizeConstraints = new WindowSizeConstraints
+            {
+                MinimumSize = Px(MinWindowW, MinWindowH),
+                MaximumSize = new Vector2(MaxWindowSide, MaxWindowSide),
+            };
+            if (_restorePending)
+            {
+                // Back to exactly where it was, for one frame; then the window is the user's again.
+                Size = _restoreSize;
+                SizeCondition = ImGuiCond.Always;
+                Position = _restorePos;
+                PositionCondition = ImGuiCond.Always;
+                _restorePending = false;
+            }
+            else
+            {
+                SizeCondition = ImGuiCond.FirstUseEver;
+                Position = null;
+            }
+            ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Px(10f, 10f));
+            ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, Px(WindowRounding));
+        }
         // Dalamud's global font scale would double-scale a UI already sized in Px; pinned last so no fallible
         // PreDraw code runs between the pin and PostDraw's restore.
         FontDiagnostics.Sample("EchoWindow.PreDraw/before-pin");
@@ -291,6 +363,48 @@ public sealed partial class EchoWindow : Window, IDisposable
         ReleaseFrame();
         _transportAlpha = 0f;
         _transportIdle = 0f;
+        _minimized = false;
+        _bubbleEntering = false;
+        _restorePending = false;
+        _bubbleMouseDown = false;
+    }
+
+    /// <summary>Puts the picture away and leaves the room running: the window becomes a logo bubble that
+    /// keeps draining events and ticking the sync. Called from inside Draw, where the window rect is live.</summary>
+    private void Minimize()
+    {
+        _restorePos = ImGui.GetWindowPos();
+        _restoreSize = ImGui.GetWindowSize();
+        _bubblePos ??= _restorePos;
+        _minimized = true;
+        _bubbleEntering = true;
+        _bubbleMouseDown = false;
+    }
+
+    /// <summary>Brings the full window back at the size and place it was minimised from.</summary>
+    public void Restore()
+    {
+        if (!_minimized)
+        {
+            return;
+        }
+        _minimized = false;
+        _restorePending = true;
+        _bubbleMouseDown = false;
+    }
+
+    /// <summary>Everything that keeps the window in step with its room, split from the drawing so the
+    /// bubble runs it too: the hub's callbacks, the room's events, the sync's clock, and the error timer.</summary>
+    private void TickEngine()
+    {
+        while (_uiActions.TryDequeue(out var action))
+        {
+            action();
+        }
+        _state.DrainEvents();
+        _sync.Tick(DateTimeOffset.UtcNow);
+        EnsureAccountId();
+        TickError();
     }
 
     public override void Draw()
@@ -298,15 +412,13 @@ public sealed partial class EchoWindow : Window, IDisposable
         using var bodyFont = UiFonts.Body?.Push();
         var t = ThemeService.Current;
 
-        while (_uiActions.TryDequeue(out var action))
+        TickEngine();
+        if (_minimized)
         {
-            action();
+            DrawBubble(t);
+            return;
         }
-        _state.DrainEvents();
-        _sync.Tick(DateTimeOffset.UtcNow);
         PullFrame();
-        EnsureAccountId();
-        TickError();
 
         DrawWindowBorder(t);
         PushWindowStyle(t);
@@ -326,6 +438,17 @@ public sealed partial class EchoWindow : Window, IDisposable
             ? (narrow ? 0f : avail.X - sidebarW - Px(PanelGap))
             : avail.X;
 
+        if (room is null)
+        {
+            var btn = Px(26f);
+            if (DrawIconButton("##echoMinimizeSolo", origin + new Vector2(stageW - btn - Px(8f), Px(8f)), btn,
+                    FontAwesomeIcon.WindowMinimize, 0xFFAAAAAAu, Loc.T("echo.minimize")))
+            {
+                Minimize();
+                PopWindowStyle();
+                return;
+            }
+        }
         if (stageW >= Px(MinStageW))
         {
             DrawStage(t, origin, new Vector2(stageW, avail.Y));
@@ -348,6 +471,96 @@ public sealed partial class EchoWindow : Window, IDisposable
         _state.Kicked -= OnKicked;
         _host.Stop();
         ReleaseFrame();
+    }
+
+    /// <summary>The minimised window: a disc in the theme's accent with the Echo logo inside, the party
+    /// chat chip's shape. Tap to restore, drag to move; a live indicator when something is playing.</summary>
+    private void DrawBubble(ThemeDefinition t)
+    {
+        var dl = ImGui.GetWindowDrawList();
+        var pos = ImGui.GetWindowPos();
+        var size = ImGui.GetWindowSize();
+        var c = pos + (size * 0.5f);
+        var r = size.X * 0.5f;
+        var mouse = ImGui.GetMousePos();
+        var hovered = ImGui.IsWindowHovered() && Vector2.Distance(mouse, c) <= r;
+
+        dl.AddCircleFilled(c, r, ImGui.ColorConvertFloat4ToU32(new Vector4(0.06f, 0.06f, 0.1f, hovered ? 0.96f : 0.88f)), 40);
+        EnsureBubbleLogo();
+        if (_bubbleLogo?.GetWrapOrDefault() is { } logo)
+        {
+            var inset = r * 0.16f;
+            dl.AddImageRounded(logo.Handle, c - new Vector2(r - inset), c + new Vector2(r - inset),
+                Vector2.Zero, Vector2.One, 0xFFFFFFFFu, r - inset, ImDrawFlags.RoundCornersAll);
+        }
+        else
+        {
+            IconDraw.AddCentered(dl, FontAwesomeIcon.Play, r * 0.8f, c, t.AccentU32);
+        }
+        dl.AddCircle(c, r, t.AccentWithAlpha(hovered ? 0.95f : 0.6f), 40, Px(2f));
+        if (_host.Alive && _state.Room?.Playback is { IsPlaying: true })
+        {
+            var dot = c + new Vector2(r * 0.68f, -r * 0.68f);
+            dl.AddCircleFilled(dot, Px(5f), ImGui.ColorConvertFloat4ToU32(UiColors.Party), 12);
+        }
+
+        if (hovered)
+        {
+            HandOnHover();
+            ImGui.SetTooltip(Loc.T("echo.restore"));
+        }
+
+        // A tap restores; anything past the threshold is a drag, the mini phone's rule.
+        if (hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        {
+            _bubbleMouseDown = true;
+            _bubbleMouseDownPos = mouse;
+            _bubbleWindowPosAtDown = pos;
+            _bubbleDragged = false;
+        }
+        if (_bubbleMouseDown && ImGui.IsMouseDown(ImGuiMouseButton.Left))
+        {
+            var delta = mouse - _bubbleMouseDownPos;
+            if (!_bubbleDragged && (MathF.Abs(delta.X) > BubbleDragThreshold || MathF.Abs(delta.Y) > BubbleDragThreshold))
+            {
+                _bubbleDragged = true;
+            }
+            if (_bubbleDragged)
+            {
+                ImGui.SetWindowPos(_bubbleWindowPosAtDown + delta);
+            }
+        }
+        if (_bubbleMouseDown && ImGui.IsMouseReleased(ImGuiMouseButton.Left))
+        {
+            _bubbleMouseDown = false;
+            _bubblePos = ImGui.GetWindowPos();
+            if (!_bubbleDragged)
+            {
+                Restore();
+            }
+        }
+    }
+
+    private void EnsureBubbleLogo()
+    {
+        if (_bubbleLogoLoaded)
+        {
+            return;
+        }
+        _bubbleLogoLoaded = true;
+        try
+        {
+            var dir = Path.GetDirectoryName(Plugin.PluginInterface.AssemblyLocation.FullName) ?? "";
+            var path = Path.Combine(dir, "Media", "appicons", BubbleLogoFile);
+            if (File.Exists(path))
+            {
+                _bubbleLogo = Plugin.TextureProvider.GetFromFile(path);
+            }
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Warning(ex, "[Echo] Could not load the bubble logo.");
+        }
     }
 
     private void DrawWindowBorder(ThemeDefinition t)
@@ -388,6 +601,13 @@ public sealed partial class EchoWindow : Window, IDisposable
                 FontAwesomeIcon.Columns, _sidebarOpen ? t.AccentU32 : 0xFFAAAAAAu, Loc.T("echo.toggle_panel")))
         {
             _sidebarOpen = !_sidebarOpen;
+        }
+
+        x -= btn + Px(6f);
+        if (DrawIconButton("##echoMinimize", new Vector2(x, centerY - btn * 0.5f), btn,
+                FontAwesomeIcon.WindowMinimize, 0xFFAAAAAAu, Loc.T("echo.minimize")))
+        {
+            Minimize();
         }
 
         var owner = room.OwnerAccountId == _myAccountId;
