@@ -83,6 +83,9 @@
   <Project Path="AetherOS.Apps.Plappy/AetherOS.Apps.Plappy.csproj">
     <Platform Project="x64" />
   </Project>
+  <Project Path="AetherOS.Apps.Racer/AetherOS.Apps.Racer.csproj">
+    <Platform Project="x64" />
+  </Project>
   <Project Path="AetherOS.Apps.Racooner/AetherOS.Apps.Racooner.csproj">
     <Platform Project="x64" />
   </Project>
@@ -126,6 +129,9 @@
     <Platform Project="x64" />
   </Project>
   <Project Path="AetherOS.Apps.Yapper/AetherOS.Apps.Yapper.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="AetherOS.PetKit/AetherOS.PetKit.csproj">
     <Platform Project="x64" />
   </Project>
   <Project Path="AetherOS.Sdk/AetherOS.Sdk.csproj">

@@ -57,5 +57,8 @@ internal static class NotificationsRu
 
         // added after update 2.3.4
         ["notif.realtor_estate"] = "{0}: без визитов домой уже {2} дн. Личный дом сносят после 45 дней отсутствия, так что остаётся примерно {1} дн.",
+
+        // added after update 2.5.3
+        ["notif.realtor_entry_results"] = "Итоги лотереи объявлены. Загляни и проверь, выиграл ли ты участок {0}, район {1}, {2}.",
     };
 }

@@ -32,8 +32,12 @@ internal sealed class ItemListScreen
 {
     private const float PadX = 16f;
 
+    /// <summary><paramref name="Added"/> is a newness rank, higher being newer, normalised at build time:
+    /// the watchlist inserts at the front and a selection appends, so the raw index means the opposite
+    /// thing in each and the screen must not have to know which.</summary>
     private readonly record struct Row(
-        uint Id, string Name, ushort Icon, byte Rarity, long MinPrice, double Velocity, int? WorldId);
+        uint Id, string Name, ushort Icon, byte Rarity, long MinPrice, double Velocity, int? WorldId,
+        int Added = 0);
 
     /// <summary>World names by id, resolved on the draw thread and kept: the list asks for the same handful
     /// of worlds on every frame, and the sheet lookup is not free.</summary>
@@ -51,6 +55,10 @@ internal sealed class ItemListScreen
         Price,
         Server,
         Name,
+
+        /// <summary>Newest first. Only the lists the player fills themselves offer it; a showcase list
+        /// nobody added to has no such date to sort by.</summary>
+        Added,
     }
 
     private ItemListKind _kind;
@@ -97,7 +105,7 @@ internal sealed class ItemListScreen
         _rows = null;
         _confirmDelete = false;
         _addQuery = "";
-        _sort = SortMode.Price;
+        _sort = RememberedSort();
         _showNewList = false;
         _newListName = "";
         _entrance.Arm();
@@ -108,6 +116,33 @@ internal sealed class ItemListScreen
     {
         _entrance.Arm();
         StartFetch();
+    }
+
+    /// <summary>Whether this list is one the player fills, which is the only kind with an added-on date
+    /// to sort by.</summary>
+    private bool HasAddedOrder => _kind is ItemListKind.Watchlist or ItemListKind.Selection;
+
+    /// <summary>The key this list's sort is remembered under. A selection is its own list, so it keeps its
+    /// own pick rather than sharing one with every other selection.</summary>
+    private string SortKey => _kind == ItemListKind.Selection
+        ? $"selection:{_selectionId:N}"
+        : _kind.ToString();
+
+    /// <summary>The sort to open with: whatever was last picked here, or newest-first for a list the
+    /// player fills and the dearest first for a showcase.</summary>
+    private SortMode RememberedSort()
+    {
+        var fallback = HasAddedOrder ? SortMode.Added : SortMode.Price;
+        if (_store.SortFor(SortKey) is not { } stored)
+        {
+            return fallback;
+        }
+        var mode = (SortMode)stored;
+        if (!Enum.IsDefined(mode) || (mode == SortMode.Added && !HasAddedOrder))
+        {
+            return fallback;
+        }
+        return mode;
     }
 
     private string Title => _kind switch
@@ -198,16 +233,21 @@ internal sealed class ItemListScreen
         }
         var agg = await _data.GetAggregatedAsync(scopes.DataCenter, ids, CancellationToken.None).ConfigureAwait(false);
         var rows = new List<Row>(ids.Count);
-        foreach (var id in ids)
+        for (var i = 0; i < ids.Count; i++)
         {
+            var id = ids[i];
             if (!_index.TryGet(id, out var entry))
             {
                 continue;
             }
             agg.TryGetValue(id, out var result);
+
+            // The watchlist puts the newest at the front and a selection at the back; both become a rank
+            // where higher is newer, so one ordering serves the screen.
+            var added = kind == ItemListKind.Watchlist ? ids.Count - 1 - i : i;
             rows.Add(new Row(id, entry.Name, entry.Icon, entry.Rarity,
                 BestMinPrice(result, MarketScopeKind.DataCenter), Velocity(result, MarketScopeKind.DataCenter),
-                CheapestWorldId(result, MarketScopeKind.DataCenter)));
+                CheapestWorldId(result, MarketScopeKind.DataCenter), added));
         }
         if (kind == ItemListKind.NewPatch)
         {
@@ -629,6 +669,7 @@ internal sealed class ItemListScreen
                 .ThenBy(r => WorldName(r.WorldId), StringComparer.OrdinalIgnoreCase)
                 .ThenBy(r => r.Name, StringComparer.OrdinalIgnoreCase)],
             SortMode.Name => [.. rows.OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase)],
+            SortMode.Added => [.. rows.OrderByDescending(r => r.Added)],
             _ => [.. rows.OrderByDescending(r => r.MinPrice)],
         };
         return _sortedCache;
@@ -650,8 +691,20 @@ internal sealed class ItemListScreen
             new Vector2(origin.X + iconSize * 0.5f, origin.Y + chipH * 0.5f), ImGui.GetColorU32(UiColors.Hint));
         var x = origin.X + iconSize + Px(10f);
 
-        string[] labels = [Loc.T("os.market_sort_price"), Loc.T("os.market_sort_server"), Loc.T("os.market_sort_name")];
-        for (var i = 0; i < 3; i++)
+        string[] labels = HasAddedOrder
+            ? [
+                Loc.T("os.market_sort_added"), Loc.T("os.market_sort_price"),
+                Loc.T("os.market_sort_server"), Loc.T("os.market_sort_name"),
+            ]
+            : [Loc.T("os.market_sort_price"), Loc.T("os.market_sort_server"), Loc.T("os.market_sort_name")];
+
+        // Newest-first leads on a list the player fills, so the chips read in the order they are wanted;
+        // the mode each chip carries is looked up rather than being its own index.
+        SortMode[] modes = HasAddedOrder
+            ? [SortMode.Added, SortMode.Price, SortMode.Server, SortMode.Name]
+            : [SortMode.Price, SortMode.Server, SortMode.Name];
+
+        for (var i = 0; i < labels.Length; i++)
         {
             var labelSz = ImGui.CalcTextSize(labels[i]);
             var chipW = labelSz.X + Px(24f);
@@ -659,7 +712,7 @@ internal sealed class ItemListScreen
             var clicked = ImGui.InvisibleButton($"##marketSort{i}", new Vector2(chipW, chipH));
             HandOnHover();
             var hovered = ImGui.IsItemHovered();
-            var selected = (int)_sort == i;
+            var selected = _sort == modes[i];
             var tl = ImGui.GetItemRectMin();
             var fill = selected
                 ? t.Accent with { W = 0.55f }
@@ -674,7 +727,8 @@ internal sealed class ItemListScreen
                 ImGui.GetColorU32(selected ? new Vector4(1f, 1f, 1f, 0.98f) : UiColors.Hint), labels[i]);
             if (clicked)
             {
-                _sort = (SortMode)i;
+                _sort = modes[i];
+                _store.SetSortFor(SortKey, (int)_sort);
             }
             x += chipW + Px(6f);
         }

@@ -29,7 +29,7 @@ internal static class StoreUi
 
     public const float BackPillHeight = 30f;
 
-    /// <summary>The header's back control: one capsule carrying a chevron and the store bag, so the way out
+    /// <summary>The header's back control: one capsule carrying a chevron and the store's own glyph, so the way out
     /// is a single obvious target at the top of the screen rather than a lone glyph floating over the art.
     /// Returns its width so the caller can set the title beside it.</summary>
     public static bool BackPill(Vector2 pos, string tooltip, FontAwesomeIcon icon, out float width)

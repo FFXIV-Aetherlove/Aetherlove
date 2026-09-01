@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.Numerics;
 using AetherLove.Services;
@@ -69,7 +69,7 @@ public sealed partial class MessengerApp
         SettingCheckbox(SettingsPadX, Loc.T("os.msgr_notify_request"),
             () => config.Messenger.NotifyRequest, v => config.Messenger.NotifyRequest = v);
         SettingCheckbox(SettingsPadX, Loc.T("os.msgr_dtr"),
-            () => config.Messenger.EnableDtrEntry, v => config.Messenger.EnableDtrEntry = v);
+            () => _caps.ServerBar("messenger").AppEnabled, v => _caps.ServerBar("messenger").AppEnabled = v);
 
         ImGui.Spacing();
         ImGui.Spacing();

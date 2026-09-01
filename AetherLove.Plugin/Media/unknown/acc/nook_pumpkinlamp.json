@@ -1,0 +1,14 @@
+{
+  "name": "Pumpkin Lantern",
+  "slot": "nook",
+  "tier": "seasonal",
+  "file": "nook_pumpkinlamp.png",
+  "anchor": "body",
+  "origin": [
+    115,
+    -20
+  ],
+  "width": 231,
+  "height": 130,
+  "behind": true
+}

@@ -144,6 +144,13 @@ public sealed partial class EchoWindow : Window, IDisposable
     private string? _kickedRoomName;
     private string? _soloVideoId;
 
+    /// <summary>Which service the solo video plays from.</summary>
+    private EchoMediaSource _soloSource;
+
+    /// <summary>Whether the solo video is a broadcast. A room reads this off the queued entry, which every
+    /// member shares; solo has no entry, so the window asks YouTube itself once per open.</summary>
+    private volatile bool _soloIsLive;
+
     private bool _sidebarOpen = true;
     private bool _confirmEndRoom;
     private SidebarPane _pane = SidebarPane.Playlist;
@@ -204,18 +211,40 @@ public sealed partial class EchoWindow : Window, IDisposable
         _kickedRoomName = null;
         _sync.Enabled = false;
         _sync.Reset();
-        if (!EchoVideoIds.TryParse(videoRef, out var videoId))
+        if (!EchoMediaRefs.TryParse(videoRef, out var soloSource, out var videoId))
         {
             _soloVideoId = null;
             RaiseError(Loc.T("echo.bad_link"));
             return;
         }
         _soloVideoId = videoId;
+        _soloSource = soloSource;
+        // A Twitch channel is a broadcast by definition, so it needs no lookup; a YouTube id does.
+        _soloIsLive = EchoMediaRefs.IsAlwaysLive(soloSource, videoId);
+        if (soloSource == EchoMediaSource.YouTube)
+        {
+            ResolveSoloLive(videoId);
+        }
         if (!EnsureHostStarted())
         {
             return;
         }
-        _host.Load(videoId, 0d);
+        _host.Load(videoId, 0d, EchoMediaRefs.WireName(soloSource));
+    }
+
+    /// <summary>Asks whether the solo video is broadcasting, off the draw thread. The answer only decides a
+    /// badge and whether resuming jumps to the front, so an unreadable page leaves it playing as an ordinary
+    /// video rather than failing anything.</summary>
+    private void ResolveSoloLive(string videoId)
+    {
+        _ = Task.Run(async () =>
+        {
+            var live = await EchoYouTube.IsLiveAsync(videoId).ConfigureAwait(false);
+            if (live is true && string.Equals(_soloVideoId, videoId, StringComparison.Ordinal))
+            {
+                _soloIsLive = true;
+            }
+        });
     }
 
     /// <summary>Opens the window onto the room the state service is already in.</summary>
@@ -224,6 +253,7 @@ public sealed partial class EchoWindow : Window, IDisposable
         IsOpen = true;
         _kickedRoomName = null;
         _soloVideoId = null;
+        _soloIsLive = false;
         _sidebarOpen = true;
         _sync.Enabled = true;
         _sync.Reset();
@@ -479,6 +509,20 @@ public sealed partial class EchoWindow : Window, IDisposable
                 Loc.T("echo.retry"), RestartHost);
         }
 
+        // A live stream is H.264 with AAC audio, which a playback host built without proprietary codecs
+        // cannot decode. Say that plainly rather than letting it surface as a nameless player error, and
+        // offer the update when one is waiting.
+        if (LiveNeedsANewerPlayer())
+        {
+            return UpdateAvailable?.Invoke() == true
+                ? new StageNotice(FontAwesomeIcon.CloudDownloadAlt, ThemeService.Current.AccentLight,
+                    Loc.T("echo.live_needs_player_title"), Loc.T("echo.live_needs_player_update"),
+                    Loc.T("echo.runtime_install"), () => InstallRequested?.Invoke())
+                : new StageNotice(FontAwesomeIcon.Tv, UiColors.Amber,
+                    Loc.T("echo.live_needs_player_title"), Loc.T("echo.live_needs_player_body"),
+                    SkipLabel(), SkipCurrent);
+        }
+
         if (_host.LastState?.Error is not { } code)
         {
             return null;
@@ -509,6 +553,25 @@ public sealed partial class EchoWindow : Window, IDisposable
                 Loc.T("echo.retry"), RestartHost),
         };
     }
+
+    /// <summary>True when what is on the stage is a broadcast and this player has no decoder for it. In a
+    /// room the sync engine has already refused to fail the entry on everyone's behalf; solo has no entry,
+    /// so the same question is asked of the video the window was opened on.</summary>
+    /// <summary>True when a broadcast on the stage actually FAILED in this player; the sync engine has
+    /// already refused to fail the entry for the whole room. Never decided from capability probing:
+    /// MediaSource.isTypeSupported answered false inside the game-launched host while that same host was
+    /// visibly decoding the stream, so the only trustworthy signal is a real playback error.</summary>
+    private bool LiveNeedsANewerPlayer()
+    {
+        if (_state.CurrentRoomId is null)
+        {
+            return _soloIsLive && _host.LastState is { Ready: true, Error: not null };
+        }
+        return _sync.UndecodableEntryId != Guid.Empty;
+    }
+
+    /// <summary>Whether a newer playback host is published and waiting to be installed.</summary>
+    public Func<bool>? UpdateAvailable { get; set; }
 
     private string SkipLabel() => Loc.T(_state.CurrentRoomId is null ? "echo.close" : "echo.skip");
 
@@ -634,6 +697,18 @@ public sealed partial class EchoWindow : Window, IDisposable
     private static string WatchPageUrl() =>
         new Uri(new Uri(AetherConstants.ServerBaseUrl), WatchPagePath).ToString();
 
+    /// <summary>Moves a running player onto a freshly installed build; a closed window needs nothing, the
+    /// next open resolves the new exe by itself. The installer completes on a worker thread, so the
+    /// restart is queued onto the draw thread.</summary>
+    public void RestartHostAfterUpdate()
+    {
+        if (!IsOpen && !_host.Alive)
+        {
+            return;
+        }
+        _uiActions.Enqueue(RestartHost);
+    }
+
     private void RestartHost()
     {
         _host.Stop();
@@ -642,7 +717,7 @@ public sealed partial class EchoWindow : Window, IDisposable
         EnsureHostStarted();
         if (_state.CurrentRoomId is null && _soloVideoId is { } videoId)
         {
-            _host.Load(videoId, 0d);
+            _host.Load(videoId, 0d, EchoMediaRefs.WireName(_soloSource));
         }
     }
 

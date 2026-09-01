@@ -1,0 +1,14 @@
+{
+  "name": "Cheek Race Stripes",
+  "slot": "facialhair",
+  "tier": "seasonal",
+  "file": "face_racestripes.png",
+  "anchor": "face",
+  "origin": [
+    75,
+    -31
+  ],
+  "width": 150,
+  "height": 24,
+  "behind": false
+}

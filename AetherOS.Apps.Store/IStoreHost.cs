@@ -38,6 +38,14 @@ public interface IStoreHost
 
     Task<long?> GetSparkBalanceAsync(CancellationToken ct = default);
 
+    /// <summary>The boosts the account holds and every venue or ad it could spend one on. Null on any hub
+    /// failure, like the other reads here.</summary>
+    Task<MyBoostsDto?> GetMyBoostsAsync(CancellationToken ct = default);
+
+    /// <summary>Spends one boost. Unlike the reads, this throws so the sheet can show the exact refusal.</summary>
+    Task<BoostResultDto> ApplyBoostAsync(
+        BoostTarget target, Guid targetId, BoostStyle style, CancellationToken ct = default);
+
     /// <summary>Opens a second phone-shaped window beside the real one showing a skin the user is
     /// considering. The image is fetched from the server, which bakes the watermark in: the app never
     /// holds a clean copy of a frame nobody has bought. A theme's wallpaper arrives already composed

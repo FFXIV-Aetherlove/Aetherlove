@@ -241,6 +241,16 @@ public static class HubErrors
     /// <summary>Two same-instant checkouts collided twice; the client should simply retry.</summary>
     public const string StoreConflict = "store_conflict";
 
+    /// <summary>The account holds no boost of the kind the target needs.</summary>
+    public const string BoostNoneOwned = "boost_none_owned";
+    /// <summary>No such venue or ad, or it is not the caller's.</summary>
+    public const string BoostTargetNotFound = "boost_target_not_found";
+    /// <summary>Arg 0: the maximum days a boost window may reach.</summary>
+    public const string BoostCapReached = "boost_cap_reached";
+    public const string BoostStyleInvalid = "boost_style_invalid";
+    /// <summary>The venue or ad exists but is not on the board yet, so a boost would burn on nothing.</summary>
+    public const string BoostTargetNotLive = "boost_target_not_live";
+
     public const string AetherlingDisabled = "aetherling_disabled";
     /// <summary>The account already has an Aethercore; there is only ever one.</summary>
     public const string AetherlingExists = "aetherling_exists";
@@ -272,6 +282,25 @@ public static class HubErrors
     public const string AetherlingFull = "aetherling_full";
     /// <summary>The look names an item the account does not own.</summary>
     public const string AetherlingNotOwned = "aetherling_not_owned";
+
+    public const string LumiRaceDisabled = "lumirace_disabled";
+    /// <summary>Racing needs a hatched Aetherling.</summary>
+    public const string LumiRaceNoPet = "lumirace_no_pet";
+    /// <summary>The Aetherling is hatched but has not grown up: racing is adults only.</summary>
+    public const string LumiRaceNotAdult = "lumirace_not_adult";
+    /// <summary>Arg 0: races allowed per UTC day.</summary>
+    /// <summary>Arg 0: whole minutes still to wait.</summary>
+    public const string LumiRaceGated = "lumirace_gated";
+    /// <summary>No pack with that id belongs to the caller.</summary>
+    public const string LumiRacePackNone = "lumirace_pack_none";
+    /// <summary>The party already has a race gathering or running.</summary>
+    public const string LumiRaceRunExists = "lumirace_run_exists";
+    public const string LumiRaceRunNotFound = "lumirace_run_not_found";
+    public const string LumiRaceRunNotGathering = "lumirace_not_gathering";
+    /// <summary>A party race needs at least two eligible joined members.</summary>
+    public const string LumiRaceRunTooFew = "lumirace_too_few";
+    /// <summary>The course the caller asked for is not one of the offers on the board.</summary>
+    public const string LumiRaceNoOffer = "lumirace_no_offer";
 
     /// <summary>Builds the wire payload. Args are serialized invariant-culture; they must not contain '|'.</summary>
     public static string Format(string code, params object?[] args)

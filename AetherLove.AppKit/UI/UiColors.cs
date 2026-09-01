@@ -120,6 +120,9 @@ internal static class UiColors
     internal const uint YouTubeRed = 0xFF0000FFu;
     internal const uint YouTubeRedHover = 0xFF4D4DFFu;
 
+    /// <summary>Translucent fill behind the LIVE badge on a broadcast, under <see cref="YouTubeRed"/> text.</summary>
+    internal const uint LiveBadgeFill = 0x400000FFu;
+
     /// <summary>Translucent fill for a caution/notice callout box - amber/orange at ~25% alpha.</summary>
     internal const uint WarningBoxFill = 0x402080FFu;
 

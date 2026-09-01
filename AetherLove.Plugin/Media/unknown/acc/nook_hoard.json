@@ -1,0 +1,14 @@
+{
+  "name": "Glimmering Hoard",
+  "slot": "nook",
+  "tier": "seasonal",
+  "file": "nook_hoard.png",
+  "anchor": "body",
+  "origin": [
+    115,
+    -26
+  ],
+  "width": 231,
+  "height": 124,
+  "behind": true
+}

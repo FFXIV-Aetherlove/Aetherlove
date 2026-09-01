@@ -226,6 +226,8 @@ internal static class OsEn
         ["os.profile_edit_title"] = "Edit profile",
         ["os.profile_save"] = "Save",
         // home right-click menu (added after update 2.0.0)
+        ["os.home_menu_lock_icons"] = "Lock icons",
+        ["os.home_menu_unlock_icons"] = "Unlock icons",
         ["os.home_menu_wallpaper"] = "Change wallpaper",
         // news app tile rename (added after update 2.0.0)
         ["os.app_news_tile"] = "News",
@@ -290,7 +292,7 @@ internal static class OsEn
         ["echo.close"] = "Close",
         // playlist
         ["echo.add"] = "Add",
-        ["echo.add_hint"] = "Paste a YouTube link",
+        ["echo.add_hint"] = "Paste a YouTube or Twitch link",
         ["echo.added_by"] = "Added by {0}",
         ["echo.added_by_unknown"] = "Added by someone who left",
         ["echo.remove"] = "Remove",
@@ -368,6 +370,7 @@ internal static class OsEn
         ["os.app_racooner"] = "Racooner",
         ["os.app_skyswarm"] = "Sky Swarm",
         ["os.app_eordle"] = "Eordle",
+        ["os.app_racer"] = "Lumi Racer",
 
         // echo playback settings (added after update 2.2.3)
         ["echo.settings_tip"] = "Playback settings",
@@ -423,6 +426,7 @@ internal static class OsEn
         ["os.app_racooner_about"] = "Catch what falls and get it home to the dens.",
         ["os.app_skyswarm_about"] = "Fly through the swarm for as long as you can hold on.",
         ["os.app_eordle_about"] = "One Eorzean word a day, six guesses.",
+        ["os.app_racer_about"] = "Enter your Lumi in races and win sparks and prizes.",
 
         // together mode (added after update 2.4.0)
         ["os.party_title"] = "AetherParty",
@@ -445,6 +449,7 @@ internal static class OsEn
         ["os.party_invite_message"] = "{0} invites you to a party! Open the phone's widget page and join with code {1}.",
         ["os.party_activity_echo"] = "Watch party live",
         ["os.party_activity_wayfinder"] = "Party hunt live",
+        ["os.party_activity_racer"] = "Lumi race live",
         ["os.party_activity_generic"] = "Activity in progress",
         ["os.party_activity_open"] = "Open",
         ["os.party_chat_title"] = "Party chat",
@@ -516,6 +521,54 @@ internal static class OsEn
         ["os.party_kick_go"] = "Remove",
         ["os.party_chat_joined"] = "{0} joined the party",
         ["os.party_chat_wayfinder"] = "{0} started a Wayfinder hunt. Tap to join.",
+        ["os.party_chat_racer"] = "{0} started a Lumi race. Tap to join.",
         ["os.party_chat_echo"] = "{0} opened an Echo room. Tap to join.",
+
+        // listing boosts (added after update 2.5.2)
+        ["os.boost_boosted"] = "Boosted",
+        ["os.boost_featured"] = "Featured",
+        ["os.boost_left"] = "Boosted, {0} left",
+        ["os.boost_left_count"] = "You have {0} left.",
+        ["os.boost_none"] = "You have no boosts. Get one in the Store.",
+        ["os.boost_go"] = "Boost",
+        ["os.boost_confirm_venue"] = "Boost this venue?",
+        ["os.boost_confirm_ad"] = "Boost this ad?",
+        ["os.boost_confirm_body"] = "It goes to the top of the list for 5 days. Pick the effect it wears.",
+        ["os.boost_confirm_extend"] = "It is boosted for {0} more. This adds 5 days on top. Pick the effect it wears.",
+        ["os.boost_style_0"] = "Aurora",
+        ["os.boost_style_1"] = "Ember",
+        ["os.boost_style_2"] = "Prism",
+        ["os.boost_style_3"] = "Starlight",
+        ["os.boost_venue_action"] = "Boost this venue",
+        ["os.boost_ad_action"] = "Boost this ad",
+        ["os.boost_get"] = "Get a boost",
+        ["os.boost_shelf"] = "Your boosts",
+        ["os.boost_pick"] = "Pick what to boost",
+        ["os.boost_no_targets"] = "You have no live venue or ad to boost yet.",
+        ["os.boost_done"] = "Boosted for {0}.",
+        ["os.boost_venues"] = "Venues",
+        ["os.boost_ads"] = "Ads",
+
+        // echo playlist import (added after update 2.5.3)
+        ["echo.playlist_confirm"] = "Add all {0} videos in this playlist?",
+        ["echo.playlist_capped"] = "This playlist has {0} videos. Add the first {1}?",
+        ["echo.playlist_add_all"] = "Add all",
+        ["echo.playlist_add_one"] = "Add this video",
+        ["echo.playlist_reading"] = "Reading the playlist...",
+        ["echo.playlist_failed"] = "Echo could not read that playlist. Try the video link instead.",
+        ["echo.playlist_added"] = "Added {0} videos.",
+        ["os.echo_home_watch_playlist"] = "Playlists only work in a room. Start or join a room first.",
+
+        // phone shell menu (added after update 2.5.3)
+        ["os.phone_menu_exit"] = "Turn the phone off",
+        ["os.phone_menu_minimize"] = "Minimise the phone",
+        ["os.phone_menu_open"] = "Open the phone",
+        ["os.phone_menu_lock"] = "Lock the position",
+        ["os.phone_menu_unlock"] = "Unlock the position",
+        // echo live streams (added after update 2.5.3)
+        ["echo.live"] = "LIVE",
+        ["echo.live_needs_player_title"] = "Live streams need a newer player",
+        ["echo.live_needs_player_body"] = "This player cannot play live streams. Ordinary videos still work.",
+        ["echo.live_needs_player_update"] = "A newer player is ready. Install it to watch live streams.",
     };
 }

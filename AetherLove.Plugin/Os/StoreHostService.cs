@@ -236,4 +236,21 @@ public sealed class StoreHostService(
             return null;
         }
     }
+
+    public async Task<MyBoostsDto?> GetMyBoostsAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            return await hubClient.GetMyBoostsAsync(ct).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Debug(ex, "[Store] Boost fetch failed.");
+            return null;
+        }
+    }
+
+    public Task<BoostResultDto> ApplyBoostAsync(
+        BoostTarget target, Guid targetId, BoostStyle style, CancellationToken ct = default) =>
+        hubClient.ApplyBoostAsync(target, targetId, style, ct);
 }

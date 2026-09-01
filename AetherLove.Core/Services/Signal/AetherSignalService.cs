@@ -664,15 +664,19 @@ public sealed class AetherSignalService : IAsyncDisposable
         hub.On<Shared.Together.TogetherActivityChangedDto>("TogetherActivityChanged", state.ApplyActivityChanged);
         hub.On<Shared.Together.TogetherChatLineDto>("TogetherChat", state.ApplyChat);
         hub.On<Shared.Wayfinder.WayfinderPartyRunDto>("WayfinderPartyRunChanged", runState.ApplyRun);
+        var raceRunState = _services.GetRequiredService<Services.Together.LumiRaceRunStateService>();
+        hub.On<Shared.Racing.LumiRacePartyRunDto>("LumiRaceRunChanged", raceRunState.ApplyRun);
         hub.On<Shared.Together.TogetherPartyEndedDto>("TogetherPartyEnded", push =>
         {
             state.ApplyPartyEnded(push);
             runState.Clear();
+            raceRunState.Clear();
         });
         hub.On<Shared.Together.TogetherKickedDto>("TogetherKicked", push =>
         {
             state.ApplyKicked(push);
             runState.Clear();
+            raceRunState.Clear();
         });
 
         hub.Reconnected += connectionId =>

@@ -69,7 +69,7 @@ public sealed class LevemetesApp : IAetherApp
         }
         else
         {
-            _myAds.Draw();
+            _myAds.Draw(ctx.Shell);
         }
     }
 

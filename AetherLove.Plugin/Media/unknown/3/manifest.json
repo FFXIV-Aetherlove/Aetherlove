@@ -1502,5 +1502,32 @@
     ]
   },
   "mouthScale": 0.9,
-  "lineColor": "#262230"
+  "lineColor": "#262230",
+  "fit": {
+    "glasses": {
+      "dy": -28
+    },
+    "facialhair": {
+      "dy": -16
+    },
+    "Moonfire Hachimaki": {
+      "dy": -14
+    }
+  },
+  "wrapSeat": {
+    "cx": 128,
+    "cy": 224,
+    "rx": 70,
+    "ry": 7,
+    "rot": 0,
+    "sink": 3
+  },
+  "headSeat": {
+    "cx": 128,
+    "cy": 127,
+    "rx": 57,
+    "ry": 12,
+    "rot": 0,
+    "sink": 0
+  }
 }

@@ -1,0 +1,14 @@
+{
+  "name": "Aether Crystal",
+  "slot": "arms",
+  "tier": "seasonal",
+  "file": "arms_crystal.png",
+  "anchor": "handL",
+  "origin": [
+    61,
+    78
+  ],
+  "width": 72,
+  "height": 104,
+  "behind": false
+}

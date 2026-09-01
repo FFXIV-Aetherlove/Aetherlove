@@ -393,4 +393,51 @@ internal sealed class SetupScreen
 
     private static string FormatMegabytes(long bytes, CultureInfo culture) =>
         (bytes / BytesPerMegabyte).ToString("0.#", culture);
+
+    /// <summary>The mandatory update gate, shown by the app in place of everything else while a newer
+    /// playback host is published: the same hero and progress the onboarding download shows, with a retry
+    /// pill on failure and no way past. The install starts itself, so this only ever renders progress.</summary>
+    public void DrawUpdateGate(OsAppContext ctx)
+    {
+        var install = _host.InstallState;
+        var winW = ImGui.GetWindowSize().X;
+        ImGui.Dummy(new Vector2(0f, Px(26f)));
+        DrawHero("echo_setup_runtime", FontAwesomeIcon.CloudDownloadAlt, Loc.T("os.echo_update_title"),
+            Loc.T("os.echo_update_body"), 30f);
+        ImGui.Dummy(new Vector2(0f, Px(14f)));
+        switch (install.Phase)
+        {
+            case EchoInstallPhase.Downloading:
+                DrawProgressBar(ctx, install.Progress);
+                DrawCenteredParagraph(
+                    Loc.T("os.echo_setup_progress_mb",
+                        FormatMegabytes(install.BytesDone, ctx.Culture),
+                        FormatMegabytes(install.BytesTotal, ctx.Culture)),
+                    winW - Px(48f), UiColors.Body);
+                break;
+            case EchoInstallPhase.Verifying:
+            case EchoInstallPhase.Extracting:
+                DrawProgressBar(ctx, 1f);
+                DrawCenteredParagraph(
+                    Loc.T(install.Phase == EchoInstallPhase.Verifying
+                        ? "os.echo_setup_phase_verifying"
+                        : "os.echo_setup_phase_extracting"),
+                    winW - Px(48f), UiColors.Body);
+                break;
+            case EchoInstallPhase.Failed:
+                DrawInfoCallout(install.FailureReason is { Length: > 0 } reason
+                    ? Loc.T("os.echo_setup_failed_reason", reason)
+                    : Loc.T("os.echo_setup_phase_failed"), UiColors.Danger, FontAwesomeIcon.ExclamationTriangle);
+                ImGui.Dummy(new Vector2(0f, Px(14f)));
+                if (DrawPrimaryButton(Loc.T("echo.retry"), enabled: true))
+                {
+                    _host.BeginInstall();
+                }
+                break;
+            default:
+                DrawProgressBar(ctx, 0f);
+                DrawCenteredParagraph(Loc.T("os.echo_setup_phase_starting"), winW - Px(48f), UiColors.Body);
+                break;
+        }
+    }
 }

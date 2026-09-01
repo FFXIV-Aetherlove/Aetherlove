@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Numerics;
 using AetherLove.Services;
@@ -115,9 +115,10 @@ internal static class OnboardingUi
     /// <summary>Word-wraps <paramref name="text"/> to <paramref name="maxWidth"/> and centres every line, at the
     /// phone-scaled body size (the default ImGui font ignores the phone scale, so it reads tiny when the phone is
     /// scaled up).</summary>
-    public static void DrawCenteredParagraph(string text, float maxWidth, Vector4 color)
+    public static void DrawCenteredParagraph(string text, float maxWidth, Vector4 color,
+        Dalamud.Interface.ManagedFontAtlas.IFontHandle? font = null)
     {
-        using (UiFonts.H3?.Push())
+        using ((font ?? UiFonts.H3)?.Push())
         {
             var winW = ImGui.GetWindowSize().X;
             var words = text.Replace('\n', ' ').Split(' ', StringSplitOptions.RemoveEmptyEntries);

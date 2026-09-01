@@ -1,0 +1,14 @@
+{
+  "name": "Marathon Sweatband",
+  "slot": "head",
+  "tier": "seasonal",
+  "file": "head_sweatband.png",
+  "anchor": "head",
+  "origin": [
+    75,
+    -4
+  ],
+  "width": 150,
+  "height": 26,
+  "behind": false
+}

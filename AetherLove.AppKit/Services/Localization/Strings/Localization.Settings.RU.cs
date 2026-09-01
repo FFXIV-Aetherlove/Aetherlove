@@ -109,7 +109,8 @@ internal static class SettingsRu
 
         // added after update 1.4.0
         ["settings.lock_position"] = "Зафиксировать положение",
-        ["settings.lock_position_caption"] = "Зафиксировав положение, вы не сможете перемещать телефон (окно приложения и виджет): они останутся на месте.",
+        ["settings.lock_position_caption"] = "Если закрепить положение, телефон нельзя будет двигать: он останется на месте.",
+        ["settings.lock_mini_position"] = "Зафиксировать положение мини",
 
         // added after update 1.4.3
         ["settings.show_during_gpose"] = "Показывать телефон во время GPose",
@@ -182,6 +183,18 @@ internal static class SettingsRu
         ["settings.enable_aetherlove_notifications"] = "Включить уведомления AetherLove",
         ["settings.menu_nsfw"] = "Настройки NSFW",
         // DTR server-info-bar entries (added after update 1.5.1)
+        ["settings.enable_aetherlove_notifications_hint"] = "Главный переключатель. Выключен — и все объявления, окна и звуки AetherLove ниже замолкают.",
+        ["settings.announce_messages_chat_hint"] = "Пишет строку в игровой чат, когда кто-то присылает тебе сообщение.",
+        ["settings.announce_matches_chat_hint"] = "Пишет строку в игровой чат, когда у тебя новый мэтч.",
+        ["settings.popup_messages_hint"] = "Показывает небольшое окно, когда кто-то присылает тебе сообщение.",
+        ["settings.popup_matches_hint"] = "Показывает небольшое окно, когда у тебя новый мэтч.",
+        ["settings.section_serverbar"] = "Панель сведений о сервере",
+        ["settings.serverbar_love_app"] = "Показывать AetherLove на панели сервера",
+        ["settings.serverbar_love_app_hint"] = "Ставит счётчики непрочитанного рядом с именем сервера в верхней части экрана.",
+        ["settings.serverbar_chats"] = "Счётчик непрочитанных чатов",
+        ["settings.serverbar_chats_hint"] = "Показывает, в скольких чатах есть непрочитанные сообщения.",
+        ["settings.serverbar_matches"] = "Счётчик новых мэтчей",
+        ["settings.serverbar_matches_hint"] = "Показывает, сколько новых мэтчей тебя ждёт.",
         ["dtr.chats"] = "Чаты",
         ["dtr.matches"] = "Пары",
         ["dtr.news"] = "Новости",

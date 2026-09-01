@@ -1,0 +1,14 @@
+{
+  "name": "Chestnut Beret",
+  "slot": "head",
+  "tier": "seasonal",
+  "file": "head_beret.png",
+  "anchor": "head",
+  "origin": [
+    70,
+    44
+  ],
+  "width": 150,
+  "height": 70,
+  "behind": false
+}

@@ -10,6 +10,7 @@ using AetherLove.Services;
 using AetherLove.Services.Localization;
 using AetherLove.Shared.Levemetes;
 using AetherLove.Shared.Profile.Enums;
+using AetherLove.Shared.Store;
 using AetherLove.UI;
 using AetherOS.Sdk;
 using Dalamud.Bindings.ImGui;
@@ -202,7 +203,7 @@ public partial class LevemetesScreen
 
     private void CacheBrowseTextures(LevemetesBrowseDto dto)
     {
-        foreach (var ad in dto.Ads)
+        foreach (var ad in dto.Ads.Concat(dto.Featured ?? []))
         {
             _coverTex[ad.Id] = ad.CoverWebp is { Length: > 0 }
                 ? AvatarDiskCache.Store(LevemetesCacheDir, $"cover_{ad.Id:N}", ad.CoverWebp)
@@ -398,14 +399,15 @@ public partial class LevemetesScreen
     {
         var listW = ImGui.GetContentRegionAvail().X;
         var ads = browse.Ads.Where(MatchesSearch).ToList();
+        var featured = (browse.Featured ?? []).Where(MatchesSearch).ToList();
 
-        if (browse.Ads.Length == 0)
+        if (browse.Ads.Length == 0 && (browse.Featured?.Length ?? 0) == 0)
         {
             ImGui.Dummy(new Vector2(1f, Px(40f)));
             DrawEmptyState();
             return;
         }
-        if (ads.Count == 0)
+        if (ads.Count == 0 && featured.Count == 0)
         {
             ImGui.Dummy(new Vector2(1f, Px(30f)));
             DrawCenteredMuted(Loc.T("os.leve_no_search_results"));
@@ -413,6 +415,16 @@ public partial class LevemetesScreen
         }
 
         ImGui.Dummy(new Vector2(1f, Px(2f)));
+        if (featured.Count > 0)
+        {
+            DrawSectionPill(Loc.T("os.boost_featured"),
+                BoostFx.KeyColor((BoostStyle)featured[0].BoostStyle), FontAwesomeIcon.Bolt);
+            foreach (var ad in featured)
+            {
+                DrawAdCard(ad, listW);
+            }
+            ImGui.Spacing();
+        }
         foreach (var ad in ads)
         {
             DrawAdCard(ad, listW);
@@ -571,6 +583,11 @@ public partial class LevemetesScreen
         {
             dl.AddText(new Vector2(textX, y), ImGui.GetColorU32(UiColors.Subtle),
                 TruncateToWidth(price, textMaxW));
+        }
+
+        if (BoostRules.IsActive(ad.BoostedUntilUtc, DateTimeOffset.UtcNow))
+        {
+            BoostFx.Draw(dl, tl, br, Px(10f), (BoostStyle)ad.BoostStyle);
         }
 
         if (clicked)

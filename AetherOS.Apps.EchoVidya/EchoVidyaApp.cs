@@ -100,6 +100,7 @@ public sealed class EchoVidyaApp : IAetherApp
     {
         EnsureAccount();
         ResyncRoom();
+        _host.CheckForUpdate();
         _home.OnShow();
         _room.OnShow();
     }
@@ -125,6 +126,15 @@ public sealed class EchoVidyaApp : IAetherApp
         if (_view == View.Setup)
         {
             _setup.Draw(ctx);
+            return;
+        }
+
+        // A published playback host that is not the installed one blocks the whole app, the way the
+        // onboarding download does: the install has already started itself, this only shows it. Nobody
+        // reaches a video and discovers mid-queue that their player is outdated.
+        if (_host.UpdatePending)
+        {
+            _setup.DrawUpdateGate(ctx);
             return;
         }
 

@@ -1,0 +1,14 @@
+{
+  "name": "Aero Moustache",
+  "slot": "facialhair",
+  "tier": "seasonal",
+  "file": "facialhair_aeromoustache.png",
+  "anchor": "face",
+  "origin": [
+    50,
+    -44
+  ],
+  "width": 101,
+  "height": 26,
+  "behind": false
+}

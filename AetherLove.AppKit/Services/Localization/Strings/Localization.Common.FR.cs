@@ -110,6 +110,7 @@ internal static class CommonFr
         ["common.close_plugin_tip"] = "Astuce : utilisez plutôt le bouton Réduire en bas pour garder la petite bulle flottante visible avec son badge de notification.",
         ["common.close_plugin_dont_ask"] = "Ne plus afficher cette fenêtre",
         ["common.close"] = "Fermer",
+        ["common.back"] = "Retour",
 
         // Save-error modal
         ["common.save_error_title"] = "Une erreur s'est produite",

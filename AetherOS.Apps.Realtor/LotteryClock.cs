@@ -131,6 +131,12 @@ public sealed class LotteryClock
         }
     }
 
+    /// <summary>When the running phase began. Anything captured before this belongs to an earlier cycle,
+    /// which is how a lottery entry the player never saw resolve is recognised as stale.</summary>
+    public DateTimeOffset? PhaseStartedAt => Current is { } now
+        ? now.Until - (now.Phase == PaissaLottoPhase.Accepting ? AcceptingLength : ResultsLength)
+        : null;
+
     private void Load()
     {
         if (_loaded)

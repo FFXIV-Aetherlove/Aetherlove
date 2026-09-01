@@ -119,6 +119,7 @@ internal static class CommonDe
         ["common.close_plugin_tip"] = "Tipp: Nutze stattdessen die Minimieren-Schaltfläche unten, damit die kleine schwebende Blase mit ihrem Benachrichtigungsabzeichen sichtbar bleibt.",
         ["common.close_plugin_dont_ask"] = "Dieses Pop-up nicht mehr anzeigen",
         ["common.close"] = "Schließen",
+        ["common.back"] = "Zurück",
 
         // Save-error modal
         ["common.save_error_title"] = "Etwas ist schiefgelaufen",

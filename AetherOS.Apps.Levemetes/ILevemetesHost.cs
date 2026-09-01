@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AetherLove.Shared.Levemetes;
 using AetherLove.Shared.Profile;
+using AetherLove.Shared.Store;
 
 namespace AetherOS.Apps.Levemetes;
 
@@ -37,6 +38,13 @@ public interface ILevemetesHost
     Task AddContactAsync(Guid adId, CancellationToken ct = default);
 
     Task ReportAdAsync(Guid adId, string reason, CancellationToken ct = default);
+
+    /// <summary>The boosts the account holds, for the editor's boost row. Null on any hub failure, which the
+    /// row reads as "none" and offers the store link instead.</summary>
+    Task<MyBoostsDto?> GetMyBoostsAsync(CancellationToken ct = default);
+
+    Task<BoostResultDto> ApplyBoostAsync(
+        BoostTarget target, Guid targetId, BoostStyle style, CancellationToken ct = default);
 
     /// <summary>Read-and-clear of a pending deep link (chat card click or share intent).</summary>
     (Guid AdId, string? ReturnApp)? TakePendingOpen();

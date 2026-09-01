@@ -6,6 +6,7 @@ using AetherLove.Services.Auth;
 using AetherLove.Services.Hub;
 using AetherLove.Shared.Places;
 using AetherLove.Shared.Profile;
+using AetherLove.Shared.Store;
 using AetherOS.Apps.Places;
 
 namespace AetherLove.Os;
@@ -61,6 +62,22 @@ public sealed class PlacesHostService : IPlacesHost
 
     public Task<MyVenueDto> RemoveVenueImageAsync(Guid venueId, bool banner, short slot = 1, CancellationToken ct = default) =>
         _hubClient.RemoveVenueImageAsync(venueId, banner, slot, ct);
+
+    public async Task<MyBoostsDto?> GetMyBoostsAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            return await _hubClient.GetMyBoostsAsync(ct).ConfigureAwait(false);
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    public Task<BoostResultDto> ApplyBoostAsync(
+        BoostTarget target, Guid targetId, BoostStyle style, CancellationToken ct = default) =>
+        _hubClient.ApplyBoostAsync(target, targetId, style, ct);
 
     public bool NsfwEnabled => _bootstrap.LastConnection?.NsfwEnabled ?? false;
 

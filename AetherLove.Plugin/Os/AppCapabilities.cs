@@ -19,11 +19,14 @@ public sealed class AppCapabilities : IAppCapabilities
 {
     private readonly ImagePickerService _images;
     private readonly AppStorageService _storage;
+    private readonly ServerBarService _serverBar;
 
     public AppCapabilities(SelfieCaptureOverlay selfie, ImageRequirementsModal imageReqModal, ShareService share,
         AppStorageService storage, AudioService audio, Services.Together.TogetherStateService togetherState,
-        Services.Translation.TranslationService translation, Config.Configuration config)
+        Services.Translation.TranslationService translation, Config.Configuration config,
+        ServerBarService serverBar)
     {
+        _serverBar = serverBar;
         Audio = audio;
         Camera = new CameraService(selfie);
         _images = new ImagePickerService(imageReqModal);
@@ -51,6 +54,8 @@ public sealed class AppCapabilities : IAppCapabilities
     public ITranslationBridge Translation { get; }
 
     public IAppStorage Storage(string appId) => _storage.For(appId);
+
+    public AetherOS.Sdk.IServerBar ServerBar(string appId) => _serverBar.For(appId);
 
     /// <summary>Whether an app is holding exclusive keyboard capture this frame. Shell controls that fire on
     /// release must adapt while this is live: the hidden capture field takes the active id back on the frame

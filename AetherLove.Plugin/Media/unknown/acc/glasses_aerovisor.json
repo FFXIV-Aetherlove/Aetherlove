@@ -1,0 +1,14 @@
+{
+  "name": "Aero Visor",
+  "slot": "glasses",
+  "tier": "seasonal",
+  "file": "glasses_aerovisor.png",
+  "anchor": "face",
+  "origin": [
+    68,
+    9
+  ],
+  "width": 137,
+  "height": 74,
+  "behind": false
+}

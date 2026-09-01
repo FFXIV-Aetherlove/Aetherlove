@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 using AetherLove.Shared.Aetherling;
 using AetherLove.Shared.Store;
 using AetherLove.UI;
-using AetherOS.Apps.Aetherling.Engine;
-using AetherOS.Apps.Aetherling.Rendering;
+using AetherOS.PetKit.Engine;
+using AetherOS.PetKit.Rendering;
 using AetherOS.Apps.Aetherling.Ui;
 using AetherOS.Sdk;
 using Dalamud.Bindings.ImGui;
@@ -58,6 +58,9 @@ internal sealed partial class PetScreen
 
     private ReactionTicketOverlay? _ticket;
 
+    /// <summary>A won form, on its way to the wardrobe with the page's blessing.</summary>
+    public event Action<string>? WardrobeFormRequested;
+
     private ReactionTicketOverlay BuildTicket()
     {
         var overlay = new ReactionTicketOverlay(host, pet);
@@ -66,6 +69,7 @@ internal sealed partial class PetScreen
             AdoptCore(dto);
             RefreshInventory();
         };
+        overlay.WearRequested += shellRef => WardrobeFormRequested?.Invoke(shellRef);
         return overlay;
     }
 

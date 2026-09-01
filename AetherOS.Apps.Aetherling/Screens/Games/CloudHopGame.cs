@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using AetherLove.Shared.Arcade;
-using AetherOS.Apps.Aetherling.Rendering;
+using AetherOS.PetKit.Rendering;
 using AetherOS.Apps.Aetherling.Ui;
 using AetherOS.Sdk;
 using Dalamud.Bindings.ImGui;

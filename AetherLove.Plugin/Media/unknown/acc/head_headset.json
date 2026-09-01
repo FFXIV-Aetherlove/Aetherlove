@@ -1,0 +1,14 @@
+{
+  "name": "Headphones",
+  "slot": "head",
+  "tier": "seasonal",
+  "file": "head_headset.png",
+  "anchor": "head",
+  "origin": [
+    70,
+    32
+  ],
+  "width": 150,
+  "height": 96,
+  "behind": false
+}

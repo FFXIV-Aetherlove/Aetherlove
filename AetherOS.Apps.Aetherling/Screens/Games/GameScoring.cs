@@ -71,4 +71,36 @@ internal static class GameScoring
     public const int LumiLinkPowerMeterPoints = 2_500;
     public const int LumiLinkMaxPointsPerSecond = 20_000;
     public const int LumiLinkMaxCascade = 40;
+
+    // Gyre. A pop pays by group size, multiplied by the cascade depth (capped); a gap-back slam pays its
+    // own bonus because it is the skill move. Points come only from chain pops and catches, so the server
+    // bounds a score by ELAPSED TIME: the richest legal second is an Earth quake resolving into a full
+    // cascade, and no honest run chains those. Stage clears cannot outpace the surge draining the
+    // shortest chain (MinSecondsPerStage), and the ladder ends at stage 20, the endless Core. Metric1 is
+    // the highest stage reached, Metric2 the deepest cascade, bounded by MaxCascade.
+    public const int GyreMatch3 = 50;
+    public const int GyrePerExtraMarble = 25;
+    public const int GyreCascadeCap = 8;
+    public const int GyreGapSlamBonus = 100;
+    public const int GyrePowerupCatch = 50;
+    public const int GyreStageClearBonus = 500;
+    public const int GyreTimeBonusPerSecond = 15;
+    public const int GyreHpRegainEvery = 50_000;
+    public const int GyreHpRegain = 3;
+    public const int GyreMaxHp = 10;
+    public const float GyreShotSpeed = 1400f;
+    public const float GyreAimSeconds = 10f;
+    public const float GyreSlowSeconds = 8f;
+    public const float GyreRecoilUnits = 400f;
+    public const int GyreShatterShots = 3;
+    public const int GyreNeedleShots = 3;
+    public const float GyreDoubleSeconds = 8f;
+    public const int GyreFireTorchCount = 12;
+    public const float GyreIceFreezeSeconds = 10f;
+    public const float GyreWindShoveUnits = 700f;
+    public const int GyrePowerMeterPoints = 2_500;
+    public const int GyreMaxPointsPerSecond = 15_000;
+    public const int GyreMaxCascade = 12;
+    public const double GyreMinSecondsPerStage = 12.0;
+    public const int GyreMaxStage = 20;
 }

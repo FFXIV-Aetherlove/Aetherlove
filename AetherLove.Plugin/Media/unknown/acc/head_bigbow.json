@@ -1,0 +1,14 @@
+{
+  "name": "Dream Bow",
+  "slot": "head",
+  "tier": "seasonal",
+  "file": "head_bigbow.png",
+  "anchor": "head",
+  "origin": [
+    68,
+    44
+  ],
+  "width": 150,
+  "height": 74,
+  "behind": false
+}

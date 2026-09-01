@@ -57,5 +57,8 @@ internal static class NotificationsEn
 
         // added after update 2.3.4
         ["notif.realtor_estate"] = "{0}: {2} days without going home. A private estate is demolished after 45 days away, so that leaves about {1}.",
+
+        // added after update 2.5.3
+        ["notif.realtor_entry_results"] = "The lottery results are out. Go and see if you won Plot {0}, Ward {1}, {2}.",
     };
 }

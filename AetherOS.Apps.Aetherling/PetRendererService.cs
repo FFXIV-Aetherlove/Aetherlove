@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using AetherOS.Apps.Aetherling.Engine;
+using AetherOS.PetKit.Engine;
 using AetherOS.Sdk;
 using Dalamud.Bindings.ImGui;
 
@@ -24,15 +24,17 @@ internal sealed class PetRendererService(IAetherlingHost host, PetRuntime own) :
     private readonly List<Guid> _stale = [];
 
     public void Draw(ImDrawListPtr dl, Guid key, Vector2 bottomCentre, float size,
-        short stage, string palette, IReadOnlyList<string> accessories, bool reduceMotion)
+        short stage, string palette, IReadOnlyList<string> accessories, bool reduceMotion,
+        string shell = "")
     {
         if (!_companions.TryGetValue(key, out var companion))
         {
             companion = new Companion();
             companion.Runtime.SuppressNook = true;
+            companion.Runtime.SetPhaseSeed(key.ToString());
             _companions[key] = companion;
         }
-        var folder = PetState.FormFolderForStage(stage);
+        var folder = PetState.FormFolderForStage(stage, shell);
         if (companion.Folder != folder)
         {
             companion.Folder = folder;
@@ -58,6 +60,7 @@ internal sealed class PetRendererService(IAetherlingHost host, PetRuntime own) :
         {
             return false;
         }
+        own.SetPhaseSeed(core.PetName ?? "own");
         own.EnsureLoaded(host.AssetRoot, PetState.FormFolder(core));
         own.ApplyLook(core);
         if (!own.Ready)

@@ -376,7 +376,10 @@ internal sealed class SparksScreen
         SparkAction.AetherlingGame => FontAwesomeIcon.Gamepad,
         SparkAction.ArcadeWeeklyFirst or SparkAction.ArcadeWeeklySecond or SparkAction.ArcadeWeeklyThird =>
             FontAwesomeIcon.Trophy,
+        SparkAction.RaceFinished or SparkAction.RacePartyBonus => FontAwesomeIcon.FlagCheckered,
+        SparkAction.RaceFirst or SparkAction.RaceSecond or SparkAction.RaceThird => FontAwesomeIcon.Medal,
         SparkAction.AdminAdjust => FontAwesomeIcon.Wrench,
+        SparkAction.StaffGift => FontAwesomeIcon.Gift,
         _ => FontAwesomeIcon.Question,
     };
 
@@ -403,10 +406,16 @@ internal sealed class SparksScreen
         SparkAction.AetherlingAdopt => Loc.T("os.wallet_action_aetherling_adopt"),
         SparkAction.AetherlingAttune => Loc.T("os.wallet_action_aetherling_attune"),
         SparkAction.AetherlingGame => Loc.T("os.wallet_action_aetherling_game_plain"),
+        SparkAction.RaceFinished => Loc.T("os.wallet_action_race_finished"),
+        SparkAction.RaceFirst => Loc.T("os.wallet_action_race_first"),
+        SparkAction.RaceSecond => Loc.T("os.wallet_action_race_second"),
+        SparkAction.RaceThird => Loc.T("os.wallet_action_race_third"),
+        SparkAction.RacePartyBonus => Loc.T("os.wallet_action_race_party"),
         SparkAction.ArcadeWeeklyFirst => Loc.T("os.wallet_action_arcade_weekly_first"),
         SparkAction.ArcadeWeeklySecond => Loc.T("os.wallet_action_arcade_weekly_second"),
         SparkAction.ArcadeWeeklyThird => Loc.T("os.wallet_action_arcade_weekly_third"),
         SparkAction.AdminAdjust => Loc.T("os.wallet_action_admin_adjust"),
+        SparkAction.StaffGift => Loc.T("os.wallet_action_staff_gift"),
         _ => Loc.T("os.wallet_action_unknown"),
     };
 

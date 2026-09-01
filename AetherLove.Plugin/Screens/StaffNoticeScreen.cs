@@ -168,8 +168,10 @@ public sealed class StaffNoticeScreen
             ImGui.PushStyleColor(ImGuiCol.ButtonActive, t.ButtonActive);
             ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
 
-            var btnLabel = _submitting ? Loc.T("common.acknowledging") : Loc.T("common.staff_notice_ack");
-            if (_submitting)
+            // Read once: the click sets the flag, so re-reading it ends a disabled scope never begun.
+            var submitting = _submitting;
+            var btnLabel = submitting ? Loc.T("common.acknowledging") : Loc.T("common.staff_notice_ack");
+            if (submitting)
             {
                 ImGui.BeginDisabled();
             }
@@ -177,7 +179,7 @@ public sealed class StaffNoticeScreen
             {
                 StartAcknowledge();
             }
-            if (_submitting)
+            if (submitting)
             {
                 ImGui.EndDisabled();
             }

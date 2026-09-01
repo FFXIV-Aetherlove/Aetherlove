@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
-using AetherOS.Apps.Aetherling.Engine;
+using AetherOS.PetKit.Engine;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 
@@ -156,10 +156,11 @@ internal sealed class PartyHuddle(IAetherlingHost host)
         {
             companion = new Companion();
             companion.Runtime.SuppressNook = true;
+            companion.Runtime.SetPhaseSeed(pet.AccountId.ToString());
             _companions[pet.AccountId] = companion;
         }
 
-        var folder = PetState.FormFolderForStage(pet.Stage);
+        var folder = PetState.FormFolderForStage(pet.Stage, pet.Shell);
         if (companion.Folder != folder)
         {
             companion.Folder = folder;

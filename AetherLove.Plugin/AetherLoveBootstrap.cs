@@ -54,6 +54,7 @@ public sealed class AetherLoveBootstrap : IHostedService
     private readonly Os.TimerScheduleService _timerSchedule;
     private readonly Os.RetainerFleetService _retainerFleet;
     private readonly Services.TimersDtrService _timersDtr;
+    private readonly Os.ServerBarService _serverBar;
     private readonly TomestoneEmoteService _tomestoneEmote;
     private readonly ScreenCaptureService _capture;
     private readonly Services.Hangouts.HangoutStateService _hangoutState;
@@ -103,6 +104,7 @@ public sealed class AetherLoveBootstrap : IHostedService
         Os.TimerScheduleService timerSchedule,
         Os.RetainerFleetService retainerFleet,
         Services.TimersDtrService timersDtr,
+        Os.ServerBarService serverBar,
         TomestoneEmoteService tomestoneEmote,
         ScreenCaptureService capture,
         Widgets.SelfieCaptureOverlay selfieOverlay,
@@ -165,6 +167,7 @@ public sealed class AetherLoveBootstrap : IHostedService
         _timerSchedule = timerSchedule;
         _retainerFleet = retainerFleet;
         _timersDtr = timersDtr;
+        _serverBar = serverBar;
     }
 
     private readonly Os.OsShell _osShell;
@@ -231,6 +234,7 @@ public sealed class AetherLoveBootstrap : IHostedService
         _retainerFleet.Start();
         _tomestoneEmote.Start(() => _mainWindow.IsOpen && _mainWindow.IsPhoneFocused);
         _capture.Initialize();
+        _serverBar.Initialize(_mainWindow);
         _dtrBar.Initialize();
         _grooveDtr.Initialize();
         _timersDtr.Initialize();
@@ -309,6 +313,7 @@ public sealed class AetherLoveBootstrap : IHostedService
         _dtrBar.Shutdown();
         _grooveDtr.Shutdown();
         _timersDtr.Shutdown();
+        _serverBar.Shutdown();
         _grooveAutoMute.Shutdown();
         Widgets.SelfieCaptureOverlay.PurgeTempFiles();
 
@@ -355,6 +360,10 @@ public sealed class AetherLoveBootstrap : IHostedService
             {
                 _appsResolved = true;
                 _ = _osShell.Apps;
+            }
+            else
+            {
+                _osShell.SyncExternalApps();
             }
 
             // Outside the window system on purpose: the floating creature opens its own window, sized and

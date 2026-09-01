@@ -27,10 +27,16 @@ public sealed record LevemeteSummaryDto(
     int ReviewCount,
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset BumpedAtUtc,
-    string? Price);
+    string? Price,
+    DateTimeOffset? BoostedUntilUtc = null,
+    short BoostStyle = 0);
 
+/// <summary>The board. Boosted ads ride <see cref="Featured"/> and are absent from <see cref="Ads"/>:
+/// the board is a flat list with no time anchor, so lifting one out of it leaves no hole.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
-public sealed record LevemetesBrowseDto(LevemeteSummaryDto[] Ads);
+public sealed record LevemetesBrowseDto(
+    LevemeteSummaryDto[] Ads,
+    LevemeteSummaryDto[]? Featured = null);
 
 /// <summary>One carousel photo. NSFW slots ship with the flag so the client blurs until revealed.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
@@ -99,7 +105,9 @@ public sealed record MyLevemeteDto(
     string? TextFlagReason,
     MyLevemetePhotoDto[] Photos,
     string? Price,
-    string? Discord);
+    string? Discord,
+    DateTimeOffset? BoostedUntilUtc = null,
+    short BoostStyle = 0);
 
 /// <summary>Per-slot moderation mirror for the owner's editor.</summary>
 [MessagePackObject(keyAsPropertyName: true)]

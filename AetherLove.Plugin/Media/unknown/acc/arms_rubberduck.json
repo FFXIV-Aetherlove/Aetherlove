@@ -1,0 +1,14 @@
+{
+  "name": "Debug Duck",
+  "slot": "arms",
+  "tier": "seasonal",
+  "file": "arms_rubberduck.png",
+  "anchor": "handL",
+  "origin": [
+    69,
+    86
+  ],
+  "width": 80,
+  "height": 100,
+  "behind": false
+}

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -28,6 +28,7 @@ public class SettingsScreen
     private readonly Services.Chat.ChatCacheStore _chatCache;
     private readonly LoveShell _shell;
     private readonly SessionBootstrapper _bootstrap;
+    private readonly IServerBar _serverBar;
 
     private enum View { Hub, Notifications, Nsfw, ChatColors, ConfirmDelete, Deleting }
 
@@ -71,7 +72,8 @@ public class SettingsScreen
                           TokenService tokens,
                           Services.Chat.ChatCacheStore chatCache,
                           LoveShell shell,
-                          SessionBootstrapper bootstrap)
+                          SessionBootstrapper bootstrap,
+        IAppCapabilities caps)
     {
         _router = router;
         _hubClient = hubClient;
@@ -80,6 +82,7 @@ public class SettingsScreen
         _chatCache = chatCache;
         _shell = shell;
         _bootstrap = bootstrap;
+        _serverBar = caps.ServerBar("aetherlove");
     }
 
     /// <summary>Deep-links a "become a supporter" pitch to the supporter page in the AetherOS Settings app.
@@ -298,29 +301,62 @@ public class SettingsScreen
 
     private void DrawAetherLoveNotifications(float winW)
     {
-        SettingCheckbox(PadX, Loc.T("settings.enable_aetherlove_notifications"),
-            () => UiHost.Configuration.AetherLoveNotificationsEnabled,
+        var master = UiHost.Configuration.AetherLoveNotificationsEnabled;
+        ToggleRow(winW, "##loveNotifMaster", Loc.T("settings.enable_aetherlove_notifications"),
+            Loc.T("settings.enable_aetherlove_notifications_hint"), master,
             v => UiHost.Configuration.AetherLoveNotificationsEnabled = v);
-        ImGui.Spacing();
 
-        ImGui.BeginDisabled(!UiHost.Configuration.AetherLoveNotificationsEnabled);
-
-        SettingCheckbox(PadX, Loc.T("settings.announce_messages_chat"),
-            () => UiHost.Configuration.NotifyChatOnMessage,
+        ImGui.BeginDisabled(!master);
+        ToggleRow(winW, "##loveNotifChatMsg", Loc.T("settings.announce_messages_chat"),
+            Loc.T("settings.announce_messages_chat_hint"), UiHost.Configuration.NotifyChatOnMessage,
             v => UiHost.Configuration.NotifyChatOnMessage = v);
-        SettingCheckbox(PadX, Loc.T("settings.announce_matches_chat"),
-            () => UiHost.Configuration.NotifyChatOnMatch,
+        ToggleRow(winW, "##loveNotifChatMatch", Loc.T("settings.announce_matches_chat"),
+            Loc.T("settings.announce_matches_chat_hint"), UiHost.Configuration.NotifyChatOnMatch,
             v => UiHost.Configuration.NotifyChatOnMatch = v);
-        SettingCheckbox(PadX, Loc.T("settings.popup_messages"),
-            () => UiHost.Configuration.NotifyPopupOnMessage,
+        ToggleRow(winW, "##loveNotifPopupMsg", Loc.T("settings.popup_messages"),
+            Loc.T("settings.popup_messages_hint"), UiHost.Configuration.NotifyPopupOnMessage,
             v => UiHost.Configuration.NotifyPopupOnMessage = v);
-        SettingCheckbox(PadX, Loc.T("settings.popup_matches"),
-            () => UiHost.Configuration.NotifyPopupOnMatch,
+        ToggleRow(winW, "##loveNotifPopupMatch", Loc.T("settings.popup_matches"),
+            Loc.T("settings.popup_matches_hint"), UiHost.Configuration.NotifyPopupOnMatch,
             v => UiHost.Configuration.NotifyPopupOnMatch = v);
-
         ImGui.EndDisabled();
 
         DrawPulseOptOut(winW);
+
+        ImGui.Dummy(new Vector2(winW, Px(10f)));
+        SectionLabel(Loc.T("settings.section_serverbar"), ThemeService.Current.Accent);
+        ToggleRow(winW, "##loveDtrApp", Loc.T("settings.serverbar_love_app"),
+            Loc.T("settings.serverbar_love_app_hint"), _serverBar.AppEnabled,
+            v => _serverBar.AppEnabled = v);
+        ImGui.BeginDisabled(!_serverBar.AppEnabled);
+        ToggleRow(winW, "##loveDtrChats", Loc.T("settings.serverbar_chats"),
+            Loc.T("settings.serverbar_chats_hint"), ChatsEntry.Enabled, v => ChatsEntry.Enabled = v);
+        ToggleRow(winW, "##loveDtrMatches", Loc.T("settings.serverbar_matches"),
+            Loc.T("settings.serverbar_matches_hint"), MatchesEntry.Enabled, v => MatchesEntry.Enabled = v);
+        ImGui.EndDisabled();
+    }
+
+    /// <summary>The app's two bar entries, re-asked by id only: the empty title and label leave what
+    /// the publishing service registered untouched, and this page just reaches the toggles.</summary>
+    private IServerBarEntry ChatsEntry => _serverBar.Entry("chats", "", "");
+
+    private IServerBarEntry MatchesEntry => _serverBar.Entry("matches", "", "");
+
+    /// <summary>A switch row over its explanation, the Groove settings shape.</summary>
+    private static void ToggleRow(float winW, string id, string label, string hint, bool value,
+        Action<bool> apply)
+    {
+        ImGui.SetCursorPosX(Px(PadX));
+        if (DrawToggleSwitch(id, label, value))
+        {
+            apply(!value);
+            UiHost.Configuration.Save();
+        }
+        ImGui.SetCursorPosX(Px(PadX));
+        ImGui.PushTextWrapPos(winW - Px(PadX));
+        ImGui.TextColored(UiColors.Hint, hint);
+        ImGui.PopTextWrapPos();
+        ImGui.Dummy(new Vector2(0f, Px(8f)));
     }
 
     private void DrawChatColorsPage(float winW)

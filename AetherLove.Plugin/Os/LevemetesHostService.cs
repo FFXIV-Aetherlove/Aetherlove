@@ -79,6 +79,23 @@ public sealed class LevemetesHostService : ILevemetesHost
     public Task ReportAdAsync(Guid adId, string reason, CancellationToken ct = default) =>
         _hubClient.ReportLevemeteAdAsync(adId, reason, ct);
 
+    public async Task<AetherLove.Shared.Store.MyBoostsDto?> GetMyBoostsAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            return await _hubClient.GetMyBoostsAsync(ct).ConfigureAwait(false);
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    public Task<AetherLove.Shared.Store.BoostResultDto> ApplyBoostAsync(
+        AetherLove.Shared.Store.BoostTarget target, Guid targetId, AetherLove.Shared.Store.BoostStyle style,
+        CancellationToken ct = default) =>
+        _hubClient.ApplyBoostAsync(target, targetId, style, ct);
+
     public (Guid AdId, string? ReturnApp)? TakePendingOpen()
     {
         var pending = _shareCtx.PendingOpenLevemeteId;

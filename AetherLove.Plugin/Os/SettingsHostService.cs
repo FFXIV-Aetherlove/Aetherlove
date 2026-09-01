@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using AetherLove.Services;
 using AetherLove.Services.Auth;
@@ -26,13 +27,15 @@ public sealed class SettingsHostService : ISettingsHost
     private readonly AetherOS.Sdk.IOsShell _shell;
     private readonly Services.Store.PremiumThemeService _premiumThemes;
     private readonly IOsTogether _together;
+    private readonly ServerBarService _serverBar;
 
     public SettingsHostService(WallpaperService wallpapers, OsAvatarCache osAvatar, SessionBootstrapper bootstrap,
         PatreonLinkFlow patreon, ChangelogWindow changelogWindow, AetherHubContext hub, AetherOS.Sdk.IOsShell shell,
-        Services.Store.PremiumThemeService premiumThemes, IOsTogether together)
+        Services.Store.PremiumThemeService premiumThemes, IOsTogether together, ServerBarService serverBar)
     {
         _premiumThemes = premiumThemes;
         _together = together;
+        _serverBar = serverBar;
         _wallpapers = wallpapers;
         _osAvatar = osAvatar;
         _bootstrap = bootstrap;
@@ -200,4 +203,22 @@ public sealed class SettingsHostService : ISettingsHost
     }
 
     public int PartyPetSizeCount => _together.PartyPetSizeCount;
+    public IReadOnlyList<SettingsServerBarEntry> ServerBarEntries =>
+        [.. _serverBar.Entries.Select(e => new SettingsServerBarEntry(e.AppId, e.EntryId, e.LabelKey))];
+
+    public bool GetServerBarEnabled(string appId, string? entryId) => entryId is null
+        ? _serverBar.IsAppEnabled(appId)
+        : _serverBar.IsEntryEnabled(appId, entryId);
+
+    public void SetServerBarEnabled(string appId, string? entryId, bool on)
+    {
+        if (entryId is null)
+        {
+            _serverBar.SetAppEnabled(appId, on);
+        }
+        else
+        {
+            _serverBar.SetEntryEnabled(appId, entryId, on);
+        }
+    }
 }

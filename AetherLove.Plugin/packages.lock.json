@@ -548,6 +548,7 @@
         "dependencies": {
           "AetherLove.AppKit": "[1.0.0, )",
           "AetherLove.Shared": "[1.0.0, )",
+          "AetherOS.PetKit": "[1.0.0, )",
           "AetherOS.Sdk": "[1.0.0, )"
         }
       },
@@ -728,6 +729,15 @@
           "AetherOS.Sdk": "[1.0.0, )"
         }
       },
+      "aetheros.apps.racer": {
+        "type": "Project",
+        "dependencies": {
+          "AetherLove.AppKit": "[1.0.0, )",
+          "AetherLove.Shared": "[1.0.0, )",
+          "AetherOS.PetKit": "[1.0.0, )",
+          "AetherOS.Sdk": "[1.0.0, )"
+        }
+      },
       "aetheros.apps.racooner": {
         "type": "Project",
         "dependencies": {
@@ -844,6 +854,13 @@
         "dependencies": {
           "AetherLove.AppKit": "[1.0.0, )",
           "AetherLove.Core": "[1.0.0, )",
+          "AetherLove.Shared": "[1.0.0, )",
+          "AetherOS.Sdk": "[1.0.0, )"
+        }
+      },
+      "aetheros.petkit": {
+        "type": "Project",
+        "dependencies": {
           "AetherLove.Shared": "[1.0.0, )",
           "AetherOS.Sdk": "[1.0.0, )"
         }

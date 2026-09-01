@@ -39,6 +39,11 @@ public sealed class BgmPlayer : IDisposable
     private byte[]? track;
     private Voice? current;
     private float speed = 1f;
+    private float levelScale = 1f;
+
+    /// <summary>The owner's own level, kept apart from the track's so a bar dragged during a
+    /// minigame cannot wipe the softer level that minigame asked to play at.</summary>
+    private float volume = 1f;
     private bool muted;
     private bool disposed;
 
@@ -54,8 +59,9 @@ public sealed class BgmPlayer : IDisposable
     }
 
     /// <summary>Starts the ogg at <paramref name="path"/> on loop, fading in. Always restarts from the top,
-    /// so a caller that wants to keep the current playhead should call <see cref="SetSpeed"/> instead.</summary>
-    public void Play(string path, float speed)
+    /// so a caller that wants to keep the current playhead should call <see cref="SetSpeed"/> instead.
+    /// <paramref name="levelScale"/> scales the fixed under-the-game level, for a theme meant softer still.</summary>
+    public void Play(string path, float speed, float levelScale = 1f)
     {
         byte[] bytes;
         try
@@ -75,6 +81,7 @@ public sealed class BgmPlayer : IDisposable
                 return;
             }
             this.speed = Math.Clamp(speed, MinSpeed, MaxSpeed);
+            this.levelScale = Math.Clamp(levelScale, 0f, 1f);
             var voice = TryCreateVoice(bytes, this.speed, 0L);
             if (voice == null)
             {
@@ -83,7 +90,7 @@ public sealed class BgmPlayer : IDisposable
             RetireLocked(this.current, FadeSeconds);
             this.track = bytes;
             this.current = voice;
-            voice.Ramp.FadeTo(this.muted ? 0f : Level, FadeSeconds);
+            voice.Ramp.FadeTo(this.muted ? 0f : Level * this.levelScale * this.volume, FadeSeconds);
         }
     }
 
@@ -109,7 +116,28 @@ public sealed class BgmPlayer : IDisposable
             }
             RetireLocked(this.current, CrossfadeSeconds);
             this.current = voice;
-            voice.Ramp.FadeTo(this.muted ? 0f : Level, CrossfadeSeconds);
+            voice.Ramp.FadeTo(this.muted ? 0f : Level * this.levelScale * this.volume, CrossfadeSeconds);
+        }
+    }
+
+    /// <summary>The owner's own level, 0 to 1, ramped rather than stepped so a dragged bar slides
+    /// instead of clicking. It multiplies <see cref="Level"/> the same way the one handed to
+    /// <see cref="Play"/> does, so a caller may set it before a track or during one; the two are the
+    /// same number and the last one to arrive wins.</summary>
+    public void SetLevelScale(float scale)
+    {
+        lock (this.gate)
+        {
+            var clamped = Math.Clamp(scale, 0f, 1f);
+            if (this.disposed || Math.Abs(this.volume - clamped) < 0.001f)
+            {
+                return;
+            }
+            this.volume = clamped;
+            if (!this.muted)
+            {
+                this.current?.Ramp.FadeTo(Level * this.levelScale * this.volume, MuteFadeSeconds);
+            }
         }
     }
 
@@ -123,15 +151,17 @@ public sealed class BgmPlayer : IDisposable
                 return;
             }
             this.muted = muted;
-            this.current?.Ramp.FadeTo(muted ? 0f : Level, MuteFadeSeconds);
+            this.current?.Ramp.FadeTo(muted ? 0f : Level * this.levelScale * this.volume, MuteFadeSeconds);
         }
     }
 
-    public void Stop()
+    /// <summary>Stops the loop, fading over <paramref name="seconds"/>. A scene that ends on its own
+    /// beat wants its own fade, and the default is the one every other caller already got.</summary>
+    public void Stop(double seconds = FadeSeconds)
     {
         lock (this.gate)
         {
-            RetireLocked(this.current, FadeSeconds);
+            RetireLocked(this.current, seconds);
             this.current = null;
         }
     }
@@ -333,13 +363,18 @@ public sealed class BgmPlayer : IDisposable
 
         public WaveFormat WaveFormat => source.WaveFormat;
 
+        /// <summary>Ramps to <paramref name="target"/> over <paramref name="seconds"/>. The step covers the
+        /// distance actually being travelled: a step of one-per-fade crosses FULL SCALE in that time, so a
+        /// track playing at 0.3 reached silence in a third of the seconds it was given, and a five second
+        /// fade-out was heard as one.</summary>
         public void FadeTo(float target, double seconds)
         {
             var frames = Math.Max(1.0, seconds * this.WaveFormat.SampleRate);
             lock (this.gate)
             {
                 this.target = Math.Clamp(target, 0f, 1f);
-                this.step = (float)(1.0 / frames);
+                var distance = MathF.Max(MathF.Abs(this.target - this.gain), 0.0001f);
+                this.step = (float)(distance / frames);
             }
         }
 

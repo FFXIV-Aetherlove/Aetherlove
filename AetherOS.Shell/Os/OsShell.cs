@@ -18,15 +18,19 @@ public sealed class OsShell : IOsShell
     private IAetherApp[]? _apps;
     private IAetherApp[] _external = [];
     private IAetherApp[] _all = [];
+    private string[] _externalLive = [];
+    private string[] _externalDormant = [];
+    private long _externalCheckedAt;
 
     private const int MaxNotifications = 40;
+    private const int ExternalPollMs = 1000;
 
     /// <summary>Apps whose home tile carries the red "new" badge until first opened. Edit per release when a
     /// new app ships; stale ids in users' <see cref="OsConfig.SeenNewApps"/> drop out harmlessly.</summary>
     internal static readonly string[] NewAppIds =
         ["levemetes", "market", "realtor", "wayfinder", "yapper", "wallet", "snake", "stacker", "breaker",
          "meteor", "invaders", "muncher", "plappy", "doom", "sudoku", "groove", "echo", "store", "aetherling",
-         "notes", "calculator", "timers", "racooner", "skyswarm", "eordle", "together"];
+         "notes", "calculator", "timers", "racooner", "skyswarm", "eordle", "together", "racer"];
 
     public bool IsNewApp(string appId) =>
         Array.IndexOf(NewAppIds, appId) >= 0 && !UiHost.Configuration.Os.SeenNewApps.Contains(appId);
@@ -119,15 +123,60 @@ public sealed class OsShell : IOsShell
     {
         var wanted = UiHost.Configuration.Os.ExternalApps;
         var installed = UiHost.PluginInterface.InstalledPlugins
-            .Where(p => p.IsLoaded)
             .GroupBy(p => p.InternalName)
             .ToDictionary(g => g.Key, g => g.First());
-        _external = wanted
-            .Where(installed.ContainsKey)
+        _externalLive = wanted
+            .Where(name => installed.TryGetValue(name, out var p) && p.IsLoaded)
+            .ToArray();
+        _externalDormant = wanted
+            .Where(name => installed.TryGetValue(name, out var p) && !p.IsLoaded)
+            .Select(name => ExternalApp.IdPrefix + name)
+            .ToArray();
+        _externalCheckedAt = Environment.TickCount64;
+        _external = _externalLive
             .Select(name => (IAetherApp)new ExternalApp(name, installed[name].Name))
             .ToArray();
         _all = BuiltInApps().Concat(_external).ToArray();
     }
+
+    /// <summary>Rebuilds the wrappers when the set of loaded plugins behind them has changed since the last
+    /// look, so a plugin that finishes loading after AetherOS did (a patch-day update, a manual enable) gets
+    /// its tile back in the same session instead of waiting for the next one. Polled from the draw thread
+    /// rather than driven by Dalamud's plugin-list event, which raises on its own thread while the draw
+    /// thread is walking these arrays.</summary>
+    public void SyncExternalApps()
+    {
+        var now = Environment.TickCount64;
+        if (now - _externalCheckedAt < ExternalPollMs)
+        {
+            return;
+        }
+        _externalCheckedAt = now;
+        var wanted = UiHost.Configuration.Os.ExternalApps;
+        if (wanted.Count == 0 && _externalLive.Length == 0)
+        {
+            return;
+        }
+        var loaded = new HashSet<string>(
+            UiHost.PluginInterface.InstalledPlugins.Where(p => p.IsLoaded).Select(p => p.InternalName),
+            StringComparer.Ordinal);
+        if (!wanted.Where(loaded.Contains).SequenceEqual(_externalLive, StringComparer.Ordinal))
+        {
+            RefreshExternalApps();
+        }
+    }
+
+    /// <summary>Home-screen ids for external apps whose plugin is still installed but is not loaded right now.
+    /// They hold their cell rather than reading as an empty one: a plugin waiting to be updated after a game
+    /// patch is momentarily unavailable, not gone, and a cell that reads as free is a cell the next new app
+    /// lands on. A plugin that is genuinely uninstalled is not listed and does lose its cell.</summary>
+    public IReadOnlyList<string> DormantExternalIds() => _externalDormant;
+
+    /// <summary>Whether this plugin is currently wearing a tile, for the add-apps sheet: an entry left in config
+    /// by a plugin that was unloaded when AetherOS last looked is not "added" from the player's side, and marking
+    /// it so leaves a row that neither adds nor removes.</summary>
+    public bool HasExternalApp(string internalName) =>
+        _externalLive.Contains(internalName, StringComparer.Ordinal);
 
     public void AddExternalApp(string internalName)
     {

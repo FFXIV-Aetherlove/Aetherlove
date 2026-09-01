@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace AetherOS.Sdk;
@@ -90,9 +90,22 @@ public class OsConfig
     /// <summary>InternalNames of other Dalamud plugins pinned to the home screen.</summary>
     public List<string> ExternalApps { get; set; } = new();
 
+    /// <summary>Whether the grid is pinned: tiles still open, and every other verb in the right-click
+    /// menu still works, but nothing can be dragged out of its cell, its folder or the dock.</summary>
+    public bool IconsLocked { get; set; }
+
     /// <summary>Ids of built-in apps the user removed from the home screen. They stay registered so deep links
     /// keep working, but they own no tile, widget, share entry, badge or notification until they are added back.</summary>
     public List<string> RemovedApps { get; set; } = new();
+
+    /// <summary>Server-bar toggles the player switched OFF: an app id silences every entry that app
+    /// owns, an "appId/entryId" key silences one line. Absence means on, so a newly registered entry
+    /// defaults to visible (ADR 21).</summary>
+    public List<string> ServerBarDisabled { get; set; } = new();
+
+    /// <summary>App ids whose pre-capability "show on the bar" switch has been carried into
+    /// <see cref="ServerBarDisabled"/> once; after that the central store rules.</summary>
+    public List<string> ServerBarSeeded { get; set; } = new();
 
     /// <summary>Skips the confirm popup when removing an app.</summary>
     public bool SkipRemoveAppConfirm { get; set; }

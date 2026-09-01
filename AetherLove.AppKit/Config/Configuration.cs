@@ -248,8 +248,22 @@ public class Configuration : IPluginConfiguration
     /// <summary>Minimised-bubble size preset; Medium is the bubble's authored (current) size.</summary>
     public PhoneScalePreset MiniPhoneSize { get; set; } = PhoneScalePreset.Medium;
 
-    /// <summary>When set, the user can't drag either phone window; a programmatic recenter still works.</summary>
+    /// <summary>When set, the user can't drag the phone; a programmatic recenter still works.</summary>
     public bool LockPhonePosition { get; set; } = false;
+
+    /// <summary>The bubble's own lock, and null until somebody sets it: one setting used to pin both
+    /// windows, so an install that had locked the phone keeps a locked bubble until it says otherwise.
+    /// Read <see cref="LockMiniPosition"/> rather than this.</summary>
+    public bool? LockMiniPositionSet { get; set; }
+
+    /// <summary>When set, the user can't drag the minimised bubble. It keeps its own position, so it
+    /// keeps its own lock.</summary>
+    [Newtonsoft.Json.JsonIgnore]
+    public bool LockMiniPosition
+    {
+        get => LockMiniPositionSet ?? LockPhonePosition;
+        set => LockMiniPositionSet = value;
+    }
 
     /// <summary>Chat-bubble colour overrides; null means "use the theme default".</summary>
     public Vector4? OwnChatBg { get; set; }

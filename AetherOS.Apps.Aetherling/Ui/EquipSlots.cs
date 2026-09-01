@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using AetherLove.UI;
-using AetherOS.Apps.Aetherling.Engine;
+using AetherOS.PetKit.Engine;
 using AetherOS.Sdk;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -11,7 +11,8 @@ namespace AetherOS.Apps.Aetherling.Ui;
 
 /// <summary>The equipment strip: one socket per place something can go, showing what is in it. It is a
 /// view, not a rule. The engine deliberately lets a halo sit over a hat (<c>AccessoryDef.Displaces</c>
-/// only conflicts arms in the same hand), so a socket can hold several things at once and says so with a
+/// conflicts one-per-slot only where two items would draw through each other: banners, ears, tails,
+/// wraps, nooks, and arms per hand), so a head socket can hold several things at once and says so with a
 /// count rather than refusing the second one.</summary>
 internal static class EquipSlots
 {
@@ -21,10 +22,16 @@ internal static class EquipSlots
     internal readonly record struct SlotDef(string Key, string NameKey, FontAwesomeIcon Icon,
         Action<ImDrawListPtr, Vector2, float, uint>? Paint = null);
 
+    /// <summary>The shell socket's key. Not an accessory slot: it picks the body itself, and the
+    /// wardrobe resolves it against the shell inventory rather than the accessory catalogue.</summary>
+    public const string ShellSlot = "shell";
+
     /// <summary>Every place, in the order they read down a body. Shown whether or not the player owns
-    /// anything for them: an empty socket is how you learn the socket exists.</summary>
+    /// anything for them: an empty socket is how you learn the socket exists. The shell first: it is
+    /// the body everything after it goes on.</summary>
     public static readonly IReadOnlyList<SlotDef> All =
     [
+        new(ShellSlot, "os.aetherling_slot_shell", FontAwesomeIcon.Shapes, PaintTrueform),
         new("head", "os.aetherling_slot_head", FontAwesomeIcon.HatWizard),
         new("glasses", "os.aetherling_slot_glasses", FontAwesomeIcon.Glasses),
         new("facialhair", "os.aetherling_slot_facialhair", FontAwesomeIcon.Smile),
@@ -35,6 +42,14 @@ internal static class EquipSlots
         new(AccessoryDef.ArmsSlot, "os.aetherling_slot_arms", FontAwesomeIcon.Khanda),
         new(AccessoryDef.BannerSlot, "os.aetherling_slot_banner", FontAwesomeIcon.Flag),
     ];
+
+    /// <summary>The forms socket wears the plain Lumi: the creature's own outline says "this is where the
+    /// body is picked" in a way no icon-font shape can. Drawn a little under the socket's full side, since
+    /// a body pressed against the corners reads as clipped.</summary>
+    private static void PaintTrueform(ImDrawListPtr dl, Vector2 centre, float side, uint colour)
+    {
+        ShellPreview.PaintOutline(dl, string.Empty, centre, side * 0.92f, colour);
+    }
 
     /// <summary>The ears: two triangles leaning outboard. Every animal on the shelf wears a triangle on its
     /// head, antennae included, and no one of them may stand for the rest (the socket held a cat).</summary>
@@ -69,14 +84,31 @@ internal static class EquipSlots
 
         var root = 0.105f * scale * side;
         var tip = 0.022f * scale * side;
+
+        // One watertight strip, not stamped capsules: stamps overlap, overlapped translucent
+        // fills stack, and a glyph dimmed to 0.22 read as lit next to its single-draw neighbours.
+        Span<Vector2> leftEdge = stackalloc Vector2[25];
+        Span<Vector2> rightEdge = stackalloc Vector2[25];
+        for (var i = 0; i < n; i++)
+        {
+            var d = spine[Math.Min(n - 1, i + 1)] - spine[Math.Max(0, i - 1)];
+            var len = d.Length();
+            var nrm = len < 1e-4f ? new Vector2(0f, 1f) : new Vector2(-d.Y, d.X) / len;
+            var r = root + ((tip - root) * (i / (float)(n - 1)));
+            var p = centre + (spine[i] * scale * side);
+            leftEdge[i] = p + (nrm * r);
+            rightEdge[i] = p - (nrm * r);
+        }
+
+        var flags = dl.Flags;
+        dl.Flags &= ~ImDrawListFlags.AntiAliasedFill;
         for (var i = 0; i < n - 1; i++)
         {
-            var u0 = i / (float)(n - 1);
-            var u1 = (i + 1) / (float)(n - 1);
-            var a = centre + (spine[i] * scale * side);
-            var b = centre + (spine[i + 1] * scale * side);
-            Capsule(dl, a, root + ((tip - root) * u0), b, root + ((tip - root) * u1), colour);
+            dl.AddTriangleFilled(leftEdge[i], leftEdge[i + 1], rightEdge[i], colour);
+            dl.AddTriangleFilled(leftEdge[i + 1], rightEdge[i + 1], rightEdge[i], colour);
         }
+
+        dl.Flags = flags;
     }
 
     private static void Curve(Span<Vector2> into, ref int n, Vector2 p0, Vector2 p1, Vector2 p2, int steps,
@@ -90,20 +122,6 @@ internal static class EquipSlots
             var c = t * t;
             into[n++] = (p0 * a) + (p1 * b) + (p2 * c);
         }
-    }
-
-    private static void Capsule(ImDrawListPtr dl, Vector2 a, float ra, Vector2 b, float rb, uint colour)
-    {
-        dl.AddCircleFilled(a, ra, colour, 16);
-        dl.AddCircleFilled(b, rb, colour, 16);
-        var d = b - a;
-        var len = d.Length();
-        if (len < 0.5f)
-        {
-            return;
-        }
-        var normal = new Vector2(-d.Y, d.X) / len;
-        dl.AddQuadFilled(a + (normal * ra), b + (normal * rb), b - (normal * rb), a - (normal * ra), colour);
     }
 
     /// <summary>What the strip needs to place its sockets at a given width. Sockets keep a fixed side and
@@ -163,7 +181,9 @@ internal static class EquipSlots
             {
                 HandOnHover();
                 var tip = ctx.Localize(slot.NameKey);
-                if (worn > 0)
+                // The count is what a socket holding several things says; Forms holds exactly one body
+                // always, so a "worn 1" under it only ever states the obvious.
+                if (worn > 0 && slot.Key != ShellSlot)
                 {
                     tip += $"\n{ctx.Localize("os.aetherling_wardrobe_worn")} {worn.ToString(ctx.Culture)}";
                 }

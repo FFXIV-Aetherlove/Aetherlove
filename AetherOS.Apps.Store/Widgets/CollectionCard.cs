@@ -11,7 +11,7 @@ using Dalamud.Interface;
 namespace AetherOS.Apps.Store;
 
 /// <summary>An editorial shelf as one opaque card: the collection's banner with its eyebrow and headline
-/// over a scrim, then a row per pick with art, name and a price pill that drops it straight in the bag.
+/// over a scrim, then a row per pick with art, name and a price pill that drops it straight in the cart.
 /// Modelled on the App Store's curated lists.</summary>
 internal static class CollectionCard
 {
@@ -19,10 +19,10 @@ internal static class CollectionCard
     private const float BannerH = 116f;
     private const float RowH = 54f;
 
-    internal sealed record Result(Guid? OpenProduct, StoreProductDto? AddToBag);
+    internal sealed record Result(Guid? OpenProduct, StoreProductDto? AddToCart);
 
     public static Result Draw(
-        OsAppContext ctx, StoreCollectionDto collection, StoreMediaCache media, StoreBag bag, float winW)
+        OsAppContext ctx, StoreCollectionDto collection, StoreMediaCache media, StoreCart cart, float winW)
     {
         var dl = ImGui.GetWindowDrawList();
         var cardW = winW - Px(PadX) * 2f;
@@ -41,9 +41,9 @@ internal static class CollectionCard
         {
             var product = collection.Products[i];
             var rowTl = new Vector2(tl.X, y);
-            var result = DrawRow(ctx, dl, product, media, bag, rowTl, cardW, i, collection.Products.Length);
+            var result = DrawRow(ctx, dl, product, media, cart, rowTl, cardW, i, collection.Products.Length);
             open ??= result.OpenProduct;
-            add ??= result.AddToBag;
+            add ??= result.AddToCart;
             y += Px(RowH);
         }
 
@@ -86,13 +86,13 @@ internal static class CollectionCard
     }
 
     private static Result DrawRow(
-        OsAppContext ctx, ImDrawListPtr dl, StoreProductDto product, StoreMediaCache media, StoreBag bag,
+        OsAppContext ctx, ImDrawListPtr dl, StoreProductDto product, StoreMediaCache media, StoreCart cart,
         Vector2 tl, float cardW, int index, int count)
     {
         var art = Px(38f);
         var center = tl + new Vector2(Px(16f) + art * 0.5f, Px(RowH) * 0.5f);
         var owned = product.MaxPerAccount is { } max && product.OwnedQuantity >= max;
-        var inBag = bag.QuantityOf(product.Id) > 0;
+        var inCart = cart.QuantityOf(product.Id) > 0;
 
         // The pill is submitted before the row, so the first-submitted-wins rule gives it the click.
         var pillW = Px(66f);
@@ -100,9 +100,9 @@ internal static class CollectionCard
         var pillTl = new Vector2(tl.X + cardW - Px(16f) - pillW, tl.Y + (Px(RowH) - pillH) * 0.5f);
         ImGui.SetCursorScreenPos(pillTl);
         var pillPressed = ImGui.InvisibleButton($"##collAdd{product.Id:N}", new Vector2(pillW, pillH))
-            && !owned && !inBag;
+            && !owned && !inCart;
         var pillHovered = ImGui.IsItemHovered();
-        if (pillHovered && !owned && !inBag)
+        if (pillHovered && !owned && !inCart)
         {
             HandOnHover();
         }
@@ -142,7 +142,7 @@ internal static class CollectionCard
             new Vector2(textX, tl.Y + Px(RowH) * 0.5f + Px(1f)), ImGui.GetColorU32(UiColors.Hint),
             OsDrawShared.Ellipsize(sub, 0.85f, textW));
 
-        DrawPill(dl, pillTl, pillW, pillH, product, owned, inBag, pillHovered);
+        DrawPill(dl, pillTl, pillW, pillH, product, owned, inCart, pillHovered);
 
         if (index < count - 1)
         {
@@ -155,14 +155,14 @@ internal static class CollectionCard
 
     private static void DrawPill(
         ImDrawListPtr dl, Vector2 tl, float w, float h, StoreProductDto product,
-        bool owned, bool inBag, bool hovered)
+        bool owned, bool inCart, bool hovered)
     {
         var label = owned
             ? Loc.T("os.store_owned")
-            : inBag
-                ? Loc.T("os.store_in_bag")
+            : inCart
+                ? Loc.T("os.store_in_cart")
                 : product.DiscountedPriceSparks.ToString("N0");
-        var enabled = !owned && !inBag;
+        var enabled = !owned && !inCart;
         dl.AddRectFilled(tl, tl + new Vector2(w, h),
             enabled ? OsDrawShared.White(hovered ? 0.22f : 0.14f) : OsDrawShared.White(0.06f), h * 0.5f);
 

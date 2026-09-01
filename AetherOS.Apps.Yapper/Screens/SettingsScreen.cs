@@ -46,9 +46,15 @@ internal sealed class SettingsScreen
     private volatile YapperUserRowDto[]? _blocked;
     private volatile YapperUserRowDto[]? _muted;
     private volatile bool _listsLoading;
+
+    /// <summary>Set on the first fetch attempt, success or not: the hub asks for the lists every frame
+    /// until they arrive, and an offline account must not turn that into a request per frame.</summary>
+    private volatile bool _listsTried;
     private volatile bool _deleting;
     private volatile string? _deleteError;
-    private DateTime _shownAt = DateTime.MinValue;
+    /// <summary>The frame this screen last drew on. IAppSettings has no enter hook, so a gap here is
+    /// the only signal that the OS Settings app opened this body afresh.</summary>
+    private int _lastFrame = -2;
     private readonly AetherLove.Widgets.RingPickerUi _ringPicker = new();
     private bool _ringInit;
 
@@ -67,19 +73,12 @@ internal sealed class SettingsScreen
 
     public void OnShow()
     {
-        _renameHandle = _me()?.Handle ?? string.Empty;
-        _renameError = null;
-        _editName = _me()?.DisplayName ?? string.Empty;
-        _editBio = _me()?.Bio ?? string.Empty;
-        _profileError = null;
+        _lastFrame = ImGui.GetFrameCount();
         _deleteError = null;
-        _shownAt = DateTime.UtcNow;
-        _ringInit = false;
         if (_view != View.Deleted)
         {
             Navigate(View.Hub, forward: false);
         }
-        RefreshLists();
     }
 
     /// <summary>The in-app page (profile gear); its back pill returns to the profile.</summary>
@@ -90,6 +89,20 @@ internal sealed class SettingsScreen
 
     private void Navigate(View view, bool forward = true)
     {
+        if (view == View.Profile)
+        {
+            var me = _me();
+            _renameHandle = me?.Handle ?? string.Empty;
+            _editName = me?.DisplayName ?? string.Empty;
+            _editBio = me?.Bio ?? string.Empty;
+            _renameError = null;
+            _profileError = null;
+            _ringInit = false;
+        }
+        if (view is View.Muted or View.Blocked)
+        {
+            RefreshLists();
+        }
         _view = view;
         _slideFrom = forward ? 1f : -1f;
         _slideStartedAt = ImGui.GetTime();
@@ -97,9 +110,12 @@ internal sealed class SettingsScreen
 
     private void DrawShell(OsAppContext ctx, Action? hostBack, FontAwesomeIcon backIcon)
     {
-        if (_view != View.Deleted && (DateTime.UtcNow - _shownAt).TotalSeconds > 30)
+        var frame = ImGui.GetFrameCount();
+        var reentered = frame - _lastFrame > 1;
+        _lastFrame = frame;
+        if (reentered && _view is not (View.Deleted or View.Hub))
         {
-            OnShow();
+            Navigate(View.Hub, forward: false);
         }
         if (_view == View.Deleted)
         {
@@ -179,6 +195,10 @@ internal sealed class SettingsScreen
         }
         ImGui.Spacing();
 
+        if (!_listsTried)
+        {
+            RefreshLists();
+        }
         DrawIdentityCard(ctx, me, winW);
         ImGui.Spacing();
         ImGui.Spacing();
@@ -714,6 +734,7 @@ internal sealed class SettingsScreen
             return;
         }
         _listsLoading = true;
+        _listsTried = true;
         _ = Task.Run(async () =>
         {
             try

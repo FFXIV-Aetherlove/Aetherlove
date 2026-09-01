@@ -1,0 +1,14 @@
+{
+  "name": "Maple Leaf Clip",
+  "slot": "head",
+  "tier": "seasonal",
+  "file": "head_mapleclip.png",
+  "anchor": "head",
+  "origin": [
+    36,
+    44
+  ],
+  "width": 100,
+  "height": 70,
+  "behind": false
+}

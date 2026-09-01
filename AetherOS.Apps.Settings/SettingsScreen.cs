@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Threading.Tasks;
@@ -877,6 +878,45 @@ public sealed class SettingsScreen
             () => UiHost.Configuration.EnableDtrEntry, v => UiHost.Configuration.EnableDtrEntry = v);
         ImGui.SameLine();
         HelpMarker(Loc.T("settings.show_dtr_count_tooltip"));
+        ImGui.Spacing();
+        DrawServerBarToggles();
+    }
+
+    /// <summary>Per-app and per-entry switches for every line any app has registered on the server
+    /// info bar, grouped under the master toggle. An app with one entry gets one row; an app with
+    /// several gets its own row plus an indented row per entry, so a player can keep the chat count
+    /// and drop the match count.</summary>
+    private void DrawServerBarToggles()
+    {
+        var entries = _host.ServerBarEntries;
+        if (entries.Count == 0)
+        {
+            return;
+        }
+
+        ImGui.BeginDisabled(!UiHost.Configuration.EnableDtrEntry);
+        var groups = entries.GroupBy(e => e.AppId, StringComparer.Ordinal)
+            .OrderBy(g => Loc.T($"os.app_{g.Key}"), StringComparer.CurrentCultureIgnoreCase);
+        foreach (var group in groups)
+        {
+            var appId = group.Key;
+            SettingCheckbox(PadX + 12f, Loc.T($"os.app_{appId}"),
+                () => _host.GetServerBarEnabled(appId, null),
+                v => _host.SetServerBarEnabled(appId, null, v));
+            if (group.Count() <= 1)
+            {
+                continue;
+            }
+            ImGui.BeginDisabled(!_host.GetServerBarEnabled(appId, null));
+            foreach (var entry in group)
+            {
+                SettingCheckbox(PadX + 30f, Loc.T(entry.LabelKey),
+                    () => _host.GetServerBarEnabled(appId, entry.EntryId),
+                    v => _host.SetServerBarEnabled(appId, entry.EntryId, v));
+            }
+            ImGui.EndDisabled();
+        }
+        ImGui.EndDisabled();
         ImGui.Spacing();
     }
 
@@ -2085,6 +2125,14 @@ public sealed class SettingsScreen
         if (ImGui.Checkbox(Loc.T("settings.lock_position"), ref locked))
         {
             cfg.LockPhonePosition = locked;
+            cfg.Save();
+        }
+
+        ImGui.SetCursorPosX(Px(PadX));
+        var miniLocked = cfg.LockMiniPosition;
+        if (ImGui.Checkbox(Loc.T("settings.lock_mini_position"), ref miniLocked))
+        {
+            cfg.LockMiniPosition = miniLocked;
             cfg.Save();
         }
     }

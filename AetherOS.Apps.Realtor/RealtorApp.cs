@@ -224,6 +224,13 @@ public sealed class RealtorApp : IAetherApp, IAppSettings
         {
             return;
         }
+        // An entry from a cycle that has already resolved is not a live bid. The results-phase watcher
+        // normally clears it, but it cannot run for a player who was away for that whole phase.
+        if (_home.LotteryPhaseStart is { } started && entry.CapturedAt < started)
+        {
+            _lottery.Clear();
+            return;
+        }
 
         var winW = ImGui.GetWindowSize().X;
         var pad = ctx.Px(10f);

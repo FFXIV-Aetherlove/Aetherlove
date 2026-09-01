@@ -34,6 +34,8 @@ public sealed class MiniWindow : Window, IDisposable
 
     private const string LogoFileName = "logo_mini.png";
 
+    private const string MenuId = "##miniPhoneMenu";
+
     private bool _mouseDownOnWindow;
     private Vector2 _mouseDownPos;
     private Vector2 _windowPosAtDown;
@@ -164,12 +166,18 @@ public sealed class MiniWindow : Window, IDisposable
 
     /// <summary>What the bubble counts: every app's own unread model plus the OS badges laid on top, the same
     /// sum the home screen's tiles show. It deliberately does NOT read <see cref="NotificationCenter"/>, which
-    /// only ever knew about AetherLove and so left the messenger, Yapper and everything since uncounted.</summary>
+    /// only ever knew about AetherLove and so left the messenger, Yapper and everything since uncounted.
+    /// An app taken off the home screen keeps running and keeps its own count, so it is skipped here: the
+    /// bubble must not announce something the player has no tile for.</summary>
     private int TotalBadge()
     {
         var total = 0;
         foreach (var app in _osShell.Apps)
         {
+            if (_osShell.IsAppRemoved(app.Id))
+            {
+                continue;
+            }
             total += System.Math.Max(0, app.Badge) + System.Math.Max(0, _osShell.OsBadge(app.Id));
         }
         return total;
@@ -273,6 +281,12 @@ public sealed class MiniWindow : Window, IDisposable
             return;
         }
 
+        if (ImGui.IsWindowHovered() && ImGui.IsMouseClicked(ImGuiMouseButton.Right))
+        {
+            OsMenu.Open(MenuId);
+        }
+        DrawMenu();
+
         // <=5px movement counts as a tap (restore), anything more is a drag.
         if (!iconHovered && !transportHovered
             && ImGui.IsWindowHovered() && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
@@ -292,7 +306,7 @@ public sealed class MiniWindow : Window, IDisposable
                 _dragThresholdMet = true;
             }
 
-            if (_dragThresholdMet && !Plugin.Configuration.LockPhonePosition)
+            if (_dragThresholdMet && !Plugin.Configuration.LockMiniPosition)
             {
                 ImGui.SetWindowPos(_windowPosAtDown + delta);
             }
@@ -306,6 +320,39 @@ public sealed class MiniWindow : Window, IDisposable
                 IsOpen = false;
             }
             _mouseDownOnWindow = false;
+        }
+    }
+
+    /// <summary>The bubble's own menu, the phone's three answers as they read from out here: it is already
+    /// minimised, so the middle row opens it instead. The lock is the bubble's, not the phone's: the two
+    /// windows keep their own positions, so pinning one has never meant pinning the other.</summary>
+    private void DrawMenu()
+    {
+        var locked = Plugin.Configuration.LockMiniPosition;
+        var rows = new OsMenu.MenuRow[]
+        {
+            new(FontAwesomeIcon.PowerOff, Loc.T("os.phone_menu_exit")),
+            new(FontAwesomeIcon.MobileAlt, Loc.T("os.phone_menu_open")),
+            new(locked ? FontAwesomeIcon.LockOpen : FontAwesomeIcon.Lock,
+                Loc.T(locked ? "os.phone_menu_unlock" : "os.phone_menu_lock")),
+        };
+
+        // The first two close the window the popup belongs to, so they land after the menu is done drawing.
+        switch (OsMenu.Draw(MenuId, rows))
+        {
+            case 0:
+                _mouseDownOnWindow = false;
+                _main.RequestClose();
+                break;
+            case 1:
+                _mouseDownOnWindow = false;
+                _main.Restore();
+                IsOpen = false;
+                break;
+            case 2:
+                Plugin.Configuration.LockMiniPosition = !locked;
+                Plugin.Configuration.Save();
+                break;
         }
     }
 

@@ -1,0 +1,14 @@
+{
+  "name": "Mulled Cider",
+  "slot": "arms",
+  "tier": "seasonal",
+  "file": "arms_cidermug.png",
+  "anchor": "handL",
+  "origin": [
+    61,
+    74
+  ],
+  "width": 80,
+  "height": 100,
+  "behind": false
+}

@@ -1,0 +1,14 @@
+{
+  "name": "Tinfoil Hat",
+  "slot": "head",
+  "tier": "seasonal",
+  "file": "head_tinfoil.png",
+  "anchor": "head",
+  "origin": [
+    70,
+    64
+  ],
+  "width": 150,
+  "height": 92,
+  "behind": false
+}

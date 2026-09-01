@@ -420,7 +420,8 @@ public class MainPluginWindow : Window, IDisposable
 
         var appHoldsDrags = _router.Current == Screen.App
             && _osShell.ActiveSurfaceApp is { LocksWindowDrag: true };
-        if (Plugin.Configuration.LockPhonePosition || appHoldsDrags)
+        if (Plugin.Configuration.LockPhonePosition || appHoldsDrags
+            || AetherLove.Widgets.VolumeBar.HoldsWindowDrag)
         {
             Flags |= ImGuiWindowFlags.NoMove;
         }
@@ -487,6 +488,8 @@ public class MainPluginWindow : Window, IDisposable
         _savedFontGlobalScale = FontScalePin.Pin();
         FontDiagnostics.Sample("MainWindow.PreDraw/after-pin");
     }
+
+    private const string BezelMenuId = "##phoneBezelMenu";
 
     private static float BezelLeft => ThemeService.Current.BezelLeft;
     private static float BezelRight => ThemeService.Current.BezelRight;
@@ -600,7 +603,7 @@ public class MainPluginWindow : Window, IDisposable
         if (Os.FlatBatteryOverlay.Active)
         {
             DrawFlatBatteryOverlay();
-            HandleBezelDoubleClickMinimize();
+            HandleBezelInput();
             return;
         }
 
@@ -624,7 +627,7 @@ public class MainPluginWindow : Window, IDisposable
 
         DrawOsOverlays();
 
-        HandleBezelDoubleClickMinimize();
+        HandleBezelInput();
     }
 
     /// <summary>Fades the incoming screen in from the splash's navy after the startup splash advances. The
@@ -1134,16 +1137,30 @@ public class MainPluginWindow : Window, IDisposable
         }
     }
 
-    /// <summary>Ignores double-clicks over the content area or any bezel widget so it never steals input.</summary>
-    private void HandleBezelDoubleClickMinimize()
+    /// <summary>The shell's own input: double-click to minimise, right-click for the shell menu. Both
+    /// ignore the content area and any bezel widget so neither steals input meant for the screen.</summary>
+    private void HandleBezelInput()
     {
-        if (!ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left))
+        if (OnBezel())
         {
-            return;
+            if (ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left))
+            {
+                Minimize();
+                return;
+            }
+            if (ImGui.IsMouseClicked(ImGuiMouseButton.Right))
+            {
+                OsMenu.Open(BezelMenuId);
+            }
         }
+        DrawBezelMenu();
+    }
+
+    private bool OnBezel()
+    {
         if (!ImGui.IsWindowHovered() || ImGui.IsAnyItemHovered())
         {
-            return;
+            return false;
         }
 
         var winPos = ImGui.GetWindowPos();
@@ -1154,12 +1171,36 @@ public class MainPluginWindow : Window, IDisposable
         var contentBR = winPos + new Vector2(winSize.X - Px(BezelRight), winSize.Y - Px(BezelBottom));
         var inContent = mouse.X >= contentTL.X && mouse.X <= contentBR.X
                      && mouse.Y >= contentTL.Y && mouse.Y <= contentBR.Y;
-        if (inContent)
-        {
-            return;
-        }
+        return !inContent;
+    }
 
-        Minimize();
+    /// <summary>What the shell can do without going through the screen: the same three answers the bezel
+    /// already holds (the close cross, the double-click, the setting), where the hand already is.</summary>
+    private void DrawBezelMenu()
+    {
+        var locked = Plugin.Configuration.LockPhonePosition;
+        var rows = new OsMenu.MenuRow[]
+        {
+            new(FontAwesomeIcon.PowerOff, Loc.T("os.phone_menu_exit")),
+            new(FontAwesomeIcon.WindowMinimize, Loc.T("os.phone_menu_minimize")),
+            new(locked ? FontAwesomeIcon.LockOpen : FontAwesomeIcon.Lock,
+                Loc.T(locked ? "os.phone_menu_unlock" : "os.phone_menu_lock")),
+        };
+
+        // The first two close the window the popup belongs to, so they land after the menu is done drawing.
+        switch (OsMenu.Draw(BezelMenuId, rows))
+        {
+            case 0:
+                RequestClose();
+                break;
+            case 1:
+                Minimize();
+                break;
+            case 2:
+                Plugin.Configuration.LockPhonePosition = !locked;
+                Plugin.Configuration.Save();
+                break;
+        }
     }
 
     /// <summary>Powering the phone off, which means off: the hub connection goes with it, so no pushes, no

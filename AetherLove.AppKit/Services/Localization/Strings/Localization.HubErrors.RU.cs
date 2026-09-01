@@ -182,5 +182,22 @@ internal static class HubErrorsRu
         ["huberror.wayfinder_run_wrong_world"] = "Чтобы присоединиться к охоте, нужно быть на {0}.",
         ["huberror.wayfinder_run_not_gathering"] = "Эта охота уже началась.",
         ["huberror.wayfinder_run_too_few"] = "Сначала должны присоединиться хотя бы два охотника.",
+        ["huberror.lumirace_disabled"] = "Забеги сейчас отключены.",
+        ["huberror.lumirace_no_pet"] = "Чтобы участвовать в забегах, нужен вылупившийся эфирёнок.",
+        ["huberror.lumirace_not_adult"] = "Этерлинг побежит, когда вырастет. Продолжай его кормить.",
+        ["huberror.lumirace_gated"] = "Следующий забег откроется через {0} мин.",
+        ["huberror.lumirace_pack_none"] = "Открывать нечего.",
+        ["huberror.lumirace_run_exists"] = "Групповой забег уже открыт.",
+        ["huberror.lumirace_run_not_found"] = "Сейчас нет группового забега.",
+        ["huberror.lumirace_not_gathering"] = "Этот забег уже начался.",
+        ["huberror.lumirace_too_few"] = "Сначала должны присоединиться хотя бы два участника.",
+        ["huberror.lumirace_no_offer"] = "Этих забегов больше нет. Открой страницу заново, и появятся три новых.",
+
+        // listing boosts (added after update 2.5.2)
+        ["huberror.boost_none_owned"] = "У тебя нет продвижения для этого. Возьми одно в магазине.",
+        ["huberror.boost_target_not_found"] = "Это не твоё.",
+        ["huberror.boost_cap_reached"] = "Больше дней добавить нельзя. Продвижение длится максимум {0} дней.",
+        ["huberror.boost_style_invalid"] = "Выбери один из четырёх эффектов.",
+        ["huberror.boost_target_not_live"] = "Это пока не опубликовано. Продвинь, когда будет активно.",
     };
 }

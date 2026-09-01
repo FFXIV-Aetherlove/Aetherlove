@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using AetherLove.Shared.EchoVidya;
@@ -84,11 +85,47 @@ public sealed partial class AetherHubContext
         catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl) { throw rl; }
     }
 
+    /// <summary>Reports whether an entry is broadcasting right now, as read from YouTube when it was queued
+    /// or as the player found it at load. Any member may report it; a report that changes nothing is dropped
+    /// server-side.</summary>
+    public async Task SetEchoEntryLiveAsync(Guid roomId, Guid entryId, bool isLive, CancellationToken ct = default)
+    {
+        try
+        {
+            await (await ConnAsync(ct)).InvokeAsync("SetEchoEntryLiveAsync", roomId, entryId, isLive, ct)
+                .ConfigureAwait(false);
+        }
+        catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl) { throw rl; }
+    }
+
+    /// <summary>Queues a whole playlist in one call. The client read the videos itself, so this is the only
+    /// request an import costs; the server clamps to whatever room is left and returns how many landed.</summary>
+    public async Task<int> AddEchoPlaylistEntriesAsync(Guid roomId, IReadOnlyList<EchoPlaylistImportItem> items,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            return await (await ConnAsync(ct)).InvokeAsync<int>("AddEchoPlaylistEntriesAsync", roomId, items, ct)
+                .ConfigureAwait(false);
+        }
+        catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl) { throw rl; }
+    }
+
     public async Task RemoveEchoPlaylistEntryAsync(Guid roomId, Guid entryId, CancellationToken ct = default)
     {
         try
         {
             await (await ConnAsync(ct)).InvokeAsync("RemoveEchoPlaylistEntryAsync", roomId, entryId, ct).ConfigureAwait(false);
+        }
+        catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl) { throw rl; }
+    }
+
+    /// <summary>Moves a queued entry to a position in the queue. Sent once, when a drag is let go.</summary>
+    public async Task MoveEchoPlaylistEntryAsync(Guid roomId, Guid entryId, int toIndex, CancellationToken ct = default)
+    {
+        try
+        {
+            await (await ConnAsync(ct)).InvokeAsync("MoveEchoPlaylistEntryAsync", roomId, entryId, toIndex, ct).ConfigureAwait(false);
         }
         catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl) { throw rl; }
     }

@@ -11,6 +11,9 @@ namespace AetherOS.Apps.Settings;
 /// <summary>The account snapshot the Settings user card renders; null when no account is signed in.</summary>
 public sealed record SettingsAccount(string OsDisplayName, string? CharacterName, string? HomeWorld);
 
+/// <summary>One line an app has registered on the server info bar, for the toggle list.</summary>
+public sealed record SettingsServerBarEntry(string AppId, string EntryId, string LabelKey);
+
 /// <summary>App-side mirror of the plugin's Patreon link-flow state, so the supporter page can drive it without a
 /// plugin reference.</summary>
 public enum SupporterFlowState
@@ -127,4 +130,16 @@ public interface ISettingsHost
     int PartyPetSize { get => 0; set { } }
 
     int PartyPetSizeCount => 0;
+
+    /// <summary>Every line any app has registered on the server info bar, for the per-app and
+    /// per-entry toggles under the master switch. Grouped by app id.</summary>
+    IReadOnlyList<SettingsServerBarEntry> ServerBarEntries => [];
+
+    /// <summary>Reads one server-bar toggle: the app's own with a null <paramref name="entryId"/>,
+    /// one entry's otherwise.</summary>
+    bool GetServerBarEnabled(string appId, string? entryId) => true;
+
+    void SetServerBarEnabled(string appId, string? entryId, bool on)
+    {
+    }
 }

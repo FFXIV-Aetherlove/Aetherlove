@@ -60,7 +60,7 @@ public sealed class PlacesApp : IAetherApp
         }
         else
         {
-            _myVenues.Draw();
+            _myVenues.Draw(ctx.Shell);
         }
     }
 

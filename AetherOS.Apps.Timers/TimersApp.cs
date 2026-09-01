@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Numerics;
@@ -29,6 +29,7 @@ public sealed partial class TimersApp : IAetherApp
 
     private enum View { Main, Reminders, Tour }
 
+    private readonly IAppCapabilities _caps;
     private readonly Func<string> _name;
     private readonly ITimersHost _host;
     private readonly ITimersRetainers _retainers;
@@ -50,6 +51,7 @@ public sealed partial class TimersApp : IAetherApp
         _name = name;
         _host = host;
         _retainers = retainers;
+        _caps = caps;
         _storage = caps.Storage("timers");
         _shell = shell;
         _tour = new Screens.TourScreen(FinishTour);

@@ -1,4 +1,4 @@
-namespace AetherLove.Emoji;
+﻿namespace AetherLove.Emoji;
 
 internal static class EmojiCategories
 {
@@ -85,7 +85,7 @@ internal static class EmojiCategories
             "BLEHHHH", "Bob", "brainrot", "BROTHER", "btongue", "buffillee", "catBlush", "CatChest",
             "CatCozy", "catScream", "CAUGHT", "Clueless", "Concerned", "confusedCat", "Considering", "cooked",
             "D_", "D4", "DAYUM", "ddx", "DEI", "Despair", "Despairge", "Developer",
-            "DogO", "DolanW", "dongerj", "Doro", "dxd", "eShrug", "fat", "FeelsOldMan",
+            "DogO", "DolanW", "dongerj", "dxd", "eShrug", "fat", "FeelsOldMan",
             "Flirt", "flushE", "FlushedCat", "FRICK", "FUCK", "FUCKINGINVINCIBLE", "ganyUH", "Gregory",
             "GunL", "GunR", "HandsUp", "happE", "hehe_01FYQE", "HEHE_01GGQA", "hesRight", "hesTuh",
             "HOLY", "Horsen", "Houthis", "HUH", "HUHA", "HUHH", "ICANT", "james",
@@ -103,6 +103,18 @@ internal static class EmojiCategories
             "WeirdCat", "WeirdChad", "WeirdChamp", "weirdChamp_01F6QG", "well_", "wellwellwell", "WHOMEGALUL", "WiseTree",
             "Wokege", "WOW", "WTFF", "XDD", "xdd_01FF3R", "xdd666", "xddbriish", "xddICANT",
             "xddPirate", "xddShrug", "xddTree", "XINEMA", "yuh",
+        ]),
+
+        new("doro", "Doro",
+        [
+            "Doro", "doroapproves", "dorobored", "dorobrow", "dorobrowb", "dorocalvary",
+            "dorochipichapa", "dorochokehold", "dorocloseb", "dorocry", "dorocryb", "doroderp",
+            "dorodriftb", "doroflex", "dorogasp", "dorohacker", "dorojump", "dorokek",
+            "dorolick", "dorolicklips", "dorolonga", "dorolongb", "dorolookaway", "doromatis",
+            "dorooiia", "doropatfast", "doroping", "doroplot", "doropray", "doropression",
+            "dororeee", "dorosob", "dorospin", "dorosurprised", "dorothink", "dorothumbs",
+            "dorotwerk", "dorovibe", "dorowall", "dorowashing", "dorowhat", "dorowhatb",
+            "dorowhip", "doroxd", "dorozzz",
         ]),
 
         new("people", "People & Body",

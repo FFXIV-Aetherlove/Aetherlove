@@ -112,6 +112,146 @@
       "body": "#FFFBF2",
       "accent": "#F0C24A",
       "eye": "#8A6A2F"
+    },
+    {
+      "name": "Polepos",
+      "tier": "seasonal",
+      "body": "#EB6E56",
+      "accent": "#FFFDF6",
+      "eye": "#2E273C"
+    },
+    {
+      "name": "Slipstream",
+      "tier": "seasonal",
+      "body": "#6FB8D8",
+      "accent": "#F6CA5C",
+      "eye": "#1F4A63"
+    },
+    {
+      "name": "Formula",
+      "tier": "seasonal",
+      "body": "#D8433A",
+      "accent": "#FFFDF6",
+      "eye": "#2A2530"
+    },
+    {
+      "name": "Turbo",
+      "tier": "seasonal",
+      "body": "#F6D02F",
+      "accent": "#1E1A22",
+      "eye": "#FFFDF6"
+    },
+    {
+      "name": "Neon",
+      "tier": "seasonal",
+      "body": "#8FE23A",
+      "accent": "#1E1A22",
+      "eye": "#FFFDF6"
+    },
+    {
+      "name": "Retro",
+      "tier": "seasonal",
+      "body": "#4A9C96",
+      "accent": "#F2E4BC",
+      "eye": "#4A342A"
+    },
+    {
+      "name": "Trailblazer",
+      "tier": "seasonal",
+      "body": "#D8A85E",
+      "accent": "#9ED87F",
+      "eye": "#5A4632"
+    },
+    {
+      "name": "Campfire",
+      "tier": "seasonal",
+      "body": "#F6CA5C",
+      "accent": "#FFD98E",
+      "eye": "#7A5430"
+    },
+    {
+      "name": "Grasstop",
+      "tier": "seasonal",
+      "body": "#7BC46A",
+      "accent": "#8A6F4D",
+      "eye": "#3A5A2E"
+    },
+    {
+      "name": "Oreglint",
+      "tier": "seasonal",
+      "body": "#9FE0EE",
+      "accent": "#B9B4C2",
+      "eye": "#2F6B7A"
+    },
+    {
+      "name": "Dreamhouse",
+      "tier": "seasonal",
+      "body": "#F49AC8",
+      "accent": "#FFFDF6",
+      "eye": "#B03A78"
+    },
+    {
+      "name": "Bubblegum",
+      "tier": "seasonal",
+      "body": "#F6C1DC",
+      "accent": "#F49AC8",
+      "eye": "#8E3A66"
+    },
+    {
+      "name": "Maplefall",
+      "tier": "seasonal",
+      "body": "#C25438",
+      "accent": "#E8A04C",
+      "eye": "#4A2A1E"
+    },
+    {
+      "name": "Crystal",
+      "tier": "seasonal",
+      "body": "#6FB8D8",
+      "accent": "#CFEFF7",
+      "eye": "#1F4A63"
+    },
+    {
+      "name": "Gilded",
+      "tier": "seasonal",
+      "body": "#E8B84A",
+      "accent": "#FFF2C8",
+      "eye": "#7A5410"
+    },
+    {
+      "name": "Darkmode",
+      "tier": "seasonal",
+      "body": "#3A3448",
+      "accent": "#9ED87F",
+      "eye": "#1E1A28"
+    },
+    {
+      "name": "Terminal",
+      "tier": "seasonal",
+      "body": "#9ED87F",
+      "accent": "#2E273C",
+      "eye": "#1E3C1E"
+    },
+    {
+      "name": "Stonks",
+      "tier": "seasonal",
+      "body": "#9ED87F",
+      "accent": "#FFFDF6",
+      "eye": "#2E4A2E"
+    },
+    {
+      "name": "Muchwow",
+      "tier": "seasonal",
+      "body": "#F6CA5C",
+      "accent": "#FFFDF6",
+      "eye": "#8A6F2E"
+    },
+    {
+      "name": "Harvestide",
+      "tier": "seasonal",
+      "body": "#D8894A",
+      "accent": "#F6CA5C",
+      "eye": "#5A3A1E"
     }
   ]
 }

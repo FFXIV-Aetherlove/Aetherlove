@@ -1,18 +1,21 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Numerics;
 using AetherLove.Os;
 using AetherLove.Services;
 using AetherLove.Services.Localization;
 using AetherLove.UI;
+using AetherLove.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 
 namespace AetherLove.Screens;
 
-/// <summary>The widget page's own context menu, drawn by hand rather than through an ImGui popup: the stock
-/// popup is a grey box with a grey chevron on a phone that is neither. It fades and lifts into place after a
-/// beat, its rows arrive one after another, and the flyout slides out of the parent's edge.</summary>
+/// <summary>The widget page's own context menu. The card and the rows are the shared <see cref="OsMenu"/>
+/// (this page is where that look was drawn first); the placement is this page's own, because the menu has to
+/// be submitted before the page-wide swipe button to keep its rows clickable, which a popup cannot do. It
+/// fades and lifts into place after a beat, its rows arrive one after another, and the flyout slides out of
+/// the parent's edge.</summary>
 public sealed partial class HomeScreen
 {
     /// <summary>How long the press is held before anything appears. A menu that snaps up the instant the
@@ -24,9 +27,7 @@ public sealed partial class HomeScreen
     private const float SubOpenSeconds = 0.16f;
     private const float SubCloseSeconds = 0.35f;
 
-    private const float MenuRowHeight = 38f;
-    private const float MenuIconColumn = 30f;
-    private const float MenuCorner = 14f;
+    private static float MenuRowHeight => OsMenu.RowHeight;
 
     private readonly List<MenuRow> _menuRows = [];
     private readonly List<MenuRow> _menuSubRows = [];
@@ -207,70 +208,20 @@ public sealed partial class HomeScreen
             && mouse.Y >= panel.Y && mouse.Y <= panel.Y + height);
     }
 
-    /// <summary>The card the rows sit on: a soft drop shadow, the phone's own dark glass, and a hairline in
-    /// the theme accent.</summary>
-    private static void DrawMenuPanel(ImDrawListPtr dl, Vector2 tl, Vector2 size, float ease)
-    {
-        var br = tl + size;
-        var radius = Px(MenuCorner);
-        for (var i = 4; i >= 1; i--)
-        {
-            var spread = Px(2f) * i;
-            dl.AddRectFilled(tl - new Vector2(spread, spread - Px(1f)), br + new Vector2(spread, spread),
-                OsDraw.Black(0.10f * ease * (1f - ((i - 1) / 4f))), radius + spread);
-        }
-        dl.AddRectFilled(tl, br, ImGui.ColorConvertFloat4ToU32(new Vector4(0.09f, 0.08f, 0.12f, 0.98f * ease)), radius);
-        dl.AddRectFilled(tl, new Vector2(br.X, tl.Y + (size.Y * 0.5f)),
-            OsDraw.White(0.035f * ease), radius, ImDrawFlags.RoundCornersTop);
-        dl.AddRect(tl, br, ThemeService.Current.AccentWithAlpha(0.32f * ease),
-            radius, ImDrawFlags.RoundCornersAll, Px(1f));
-    }
+    private static void DrawMenuPanel(ImDrawListPtr dl, Vector2 tl, Vector2 size, float ease) =>
+        OsMenu.Panel(dl, tl, size, ease);
 
-    /// <summary>One row, hover highlight included. Returns whether the cursor is on it.</summary>
-    private static bool DrawMenuRow(ImDrawListPtr dl, MenuRow row, Vector2 tl, float width, float ease, string id)
-    {
-        var height = Px(MenuRowHeight);
-        ImGui.SetCursorScreenPos(tl);
-        ImGui.InvisibleButton(id, new Vector2(width, height));
-        var hovered = ImGui.IsItemHovered();
-        if (hovered)
-        {
-            SharedUiHelpers.HandOnHover();
-        }
-
-        var inset = Px(4f);
-        if (hovered && ease > 0.5f)
-        {
-            dl.AddRectFilled(tl + new Vector2(inset, Px(1f)), tl + new Vector2(width - inset, height - Px(1f)),
-                ThemeService.Current.AccentWithAlpha(0.22f * ease), Px(9f));
-        }
-
-        // Text and icon slide in from the left a couple of pixels behind the panel, which is what gives the
-        // rows their cascade.
-        var slide = (1f - ease) * Px(8f);
-        var iconC = new Vector2(tl.X + Px(MenuIconColumn * 0.5f) + slide, tl.Y + (height * 0.5f));
-        IconDraw.AddCentered(dl, row.Icon, Px(14f), iconC, OsDraw.White((hovered ? 0.98f : 0.72f) * ease));
-        var labelSize = ImGui.GetFontSize() * 1.08f;
-        dl.AddText(ImGui.GetFont(), labelSize,
-            new Vector2(tl.X + Px(MenuIconColumn) + slide, tl.Y + ((height - labelSize) * 0.5f)),
-            OsDraw.White((hovered ? 0.98f : 0.86f) * ease), row.Label);
-
-        if (row.HasFlyout)
-        {
-            IconDraw.AddCentered(dl, FontAwesomeIcon.ChevronRight, Px(9f),
-                new Vector2(tl.X + width - Px(14f), tl.Y + (height * 0.5f)), OsDraw.White(0.55f * ease));
-        }
-        return hovered;
-    }
+    private static bool DrawMenuRow(ImDrawListPtr dl, MenuRow row, Vector2 tl, float width, float ease, string id) =>
+        OsMenu.Row(dl, new OsMenu.MenuRow(row.Icon, row.Label, row.HasFlyout), tl, width, ease, id);
 
     private static float MenuWidth(List<MenuRow> rows)
     {
-        var text = 0f;
-        foreach (var row in rows)
+        var shared = new OsMenu.MenuRow[rows.Count];
+        for (var i = 0; i < rows.Count; i++)
         {
-            text = MathF.Max(text, (ImGui.CalcTextSize(row.Label).X * 1.08f) + (row.HasFlyout ? Px(20f) : 0f));
+            shared[i] = new OsMenu.MenuRow(rows[i].Icon, rows[i].Label, rows[i].HasFlyout);
         }
-        return MathF.Max(Px(150f), text + Px(MenuIconColumn) + Px(24f));
+        return OsMenu.MeasureWidth(shared);
     }
 
     /// <summary>Keeps the panel inside the phone: a menu opened near an edge grows the other way rather than

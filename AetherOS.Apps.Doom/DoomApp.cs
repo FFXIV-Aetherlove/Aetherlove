@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
@@ -23,6 +23,7 @@ public sealed class DoomApp : IAetherApp
     private const string IntroSeenKey = "intro_seen";
     private const string RunSecondsForReward = "run_seconds";
     private const string MutedKey = "muted";
+    private const string VolumeKey = "volume";
 
     /// <summary>A run has to be a real go at it before it earns sparks; opening and closing the app does not.</summary>
     private const double RewardedRunSeconds = 60.0;
@@ -55,6 +56,7 @@ public sealed class DoomApp : IAetherApp
     private double runSeconds;
     private bool paused;
     private bool muted;
+    private float volume = 1f;
 
     public DoomApp(Func<string> name, IAppCapabilities capabilities, AetherLove.Os.IArcadeRewards rewards)
     {
@@ -100,6 +102,7 @@ public sealed class DoomApp : IAetherApp
         if (this.runtime is { } engine)
         {
             engine.Muted = this.muted;
+            engine.Volume = this.volume;
         }
 
         // The app is a singleton, so the loaded-once state survives closing it. Re-arm the card on every
@@ -171,6 +174,7 @@ public sealed class DoomApp : IAetherApp
         this.stateLoaded = true;
         this.view = !AlwaysShowIntro && this.storage.Get<bool>(IntroSeenKey) ? View.Splash : View.Intro;
         this.muted = this.storage.Get<bool>(MutedKey);
+        this.volume = this.storage.Get<float?>(VolumeKey) ?? 1f;
     }
 
     private static string MediaDirectory =>
@@ -189,6 +193,7 @@ public sealed class DoomApp : IAetherApp
         }
 
         this.runtime.Muted = this.muted;
+        this.runtime.Volume = this.volume;
         this.runSeconds = 0.0;
         this.paused = false;
         this.lastFrameTime = ImGui.GetTime();
@@ -269,11 +274,14 @@ public sealed class DoomApp : IAetherApp
             ctx.Shell.GoHomeToFolder(IOsShell.ArcadeFolderId);
         }
 
+        var menuChip = winPos + new Vector2(winSize.X - ctx.Px(42f), ctx.Px(12f));
         if (DoomChrome.Key(this.muted ? FontAwesomeIcon.VolumeMute : FontAwesomeIcon.VolumeUp,
-            winPos + new Vector2(winSize.X - ctx.Px(42f), ctx.Px(12f)), ctx.Px(30f)))
+            menuChip, ctx.Px(30f)))
         {
             ToggleMute(this.runtime);
         }
+
+        DrawVolumeBar(dl, "doomMenu", menuChip, ctx.Px(30f), this.runtime);
 
         var soundLabel = ctx.Localize(this.muted ? "os.doom_sound_off" : "os.doom_sound_on");
         var soundSize = ImGui.CalcTextSize(soundLabel);
@@ -396,11 +404,14 @@ public sealed class DoomApp : IAetherApp
         // the host parks in the window's top-left corner.
         var x = winPos.X + winSize.X - padX - key;
 
+        var soundChip = new Vector2(x, keyY);
         if (DoomChrome.Key(this.muted ? FontAwesomeIcon.VolumeMute : FontAwesomeIcon.VolumeUp,
-            new Vector2(x, keyY), key))
+            soundChip, key))
         {
             ToggleMute(engine);
         }
+
+        DrawVolumeBar(dl, "doomCabinet", soundChip, key, engine);
         x -= key + gap;
 
         if (!this.paused && DoomChrome.Key(FontAwesomeIcon.Pause, new Vector2(x, keyY), key))
@@ -428,6 +439,30 @@ public sealed class DoomApp : IAetherApp
         if (engine != null)
         {
             engine.Muted = this.muted;
+        }
+    }
+
+    /// <summary>The level under whichever speaker key is on screen. The cabinet's own gain, so it
+    /// carries the music and every gunshot together, which is what a Doom volume means.</summary>
+    private void DrawVolumeBar(ImDrawListPtr dl, string id, Vector2 chipTl, float side, DoomRuntime? engine)
+    {
+        var barMuted = this.muted;
+        var level = this.volume;
+        if (!AetherLove.Widgets.VolumeBar.Draw(id, dl, chipTl, new Vector2(side, side), ref barMuted, ref level,
+            0xFFB7C6FFu, 0x50FFFFFFu, 0xFFE8ECFFu, AetherLove.UI.UiScale.S))
+        {
+            return;
+        }
+
+        this.volume = level;
+        this.storage.Set(VolumeKey, (float?)level);
+        if (engine != null)
+        {
+            engine.Volume = level;
+        }
+        if (barMuted != this.muted)
+        {
+            ToggleMute(engine);
         }
     }
 

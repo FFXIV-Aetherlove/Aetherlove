@@ -121,7 +121,8 @@ internal static class SettingsDe
 
         // added after update 1.4.0
         ["settings.lock_position"] = "Position sperren",
-        ["settings.lock_position_caption"] = "Wenn du die Position sperrst, kannst du das Telefon (groß und mini) nicht mehr bewegen; sie bleiben an ihrem Platz.",
+        ["settings.lock_position_caption"] = "Wenn du die Position sperrst, kannst du das Telefon nicht mehr bewegen; es bleibt an seinem Platz.",
+        ["settings.lock_mini_position"] = "Mini-Position sperren",
 
         // added after update 1.4.3
         ["settings.show_during_gpose"] = "Telefon während der Gruppenpose anzeigen",
@@ -194,6 +195,18 @@ internal static class SettingsDe
         ["settings.enable_aetherlove_notifications"] = "AetherLove-Benachrichtigungen aktivieren",
         ["settings.menu_nsfw"] = "NSFW-Einstellungen",
         // DTR server-info-bar entries (added after update 1.5.1)
+        ["settings.enable_aetherlove_notifications_hint"] = "Der Hauptschalter. Aus macht jede AetherLove-Ansage, jedes Popup und jeden Ton darunter stumm.",
+        ["settings.announce_messages_chat_hint"] = "Schreibt eine Zeile in deinen Spielchat, wenn dir jemand schreibt.",
+        ["settings.announce_matches_chat_hint"] = "Schreibt eine Zeile in deinen Spielchat, wenn du ein Match hast.",
+        ["settings.popup_messages_hint"] = "Zeigt ein kleines Popup, wenn dir jemand schreibt.",
+        ["settings.popup_matches_hint"] = "Zeigt ein kleines Popup, wenn du ein Match hast.",
+        ["settings.section_serverbar"] = "Serverinfoleiste",
+        ["settings.serverbar_love_app"] = "AetherLove in der Serverinfoleiste zeigen",
+        ["settings.serverbar_love_app_hint"] = "Setzt deine ungelesenen Zähler neben den Servernamen oben am Bildschirm.",
+        ["settings.serverbar_chats"] = "Zähler für ungelesene Chats",
+        ["settings.serverbar_chats_hint"] = "Zeigt, in wie vielen Chats ungelesene Nachrichten liegen.",
+        ["settings.serverbar_matches"] = "Zähler für neue Matches",
+        ["settings.serverbar_matches_hint"] = "Zeigt, wie viele neue Matches auf dich warten.",
         ["dtr.chats"] = "Chats",
         ["dtr.matches"] = "Matches",
         ["dtr.news"] = "News",

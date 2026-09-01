@@ -4,7 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using AetherLove.Shared.Aetherling;
 using AetherLove.UI;
-using AetherOS.Apps.Aetherling.Engine;
+using AetherOS.PetKit.Engine;
+using AetherOS.PetKit.Rendering.LineArt;
 using AetherOS.Apps.Aetherling.Ui;
 using AetherOS.Sdk;
 using Dalamud.Bindings.ImGui;
@@ -22,6 +23,12 @@ internal sealed class ReactionTicketOverlay(IAetherlingHost host, PetRuntime pet
     /// <summary>Earned-reaction cards live at this plus the element, matching the server's own base.</summary>
     public const short SlotBase = 10;
 
+    /// <summary>And the two earned-shell milestones, one slot range each, same shape.</summary>
+    public const short ShellSlotBase = 20;
+
+    public const short ShellSlot2Base = 30;
+
+    private readonly LineCanvas _preview = new();
     private ScratchCard? _card;
     private AetherlingDto? _core;
     private short _slot = -1;
@@ -38,11 +45,24 @@ internal sealed class ReactionTicketOverlay(IAetherlingHost host, PetRuntime pet
     /// the account owns; the reaction is live from that moment.</summary>
     public event Action<AetherlingDto>? Revealed;
 
-    /// <summary>The element a ticket's slot stands for, or None when the slot is not a reaction card.</summary>
-    public static AetherlingElement ElementFor(short slot) =>
-        slot > SlotBase && slot <= SlotBase + (short)AetherlingElement.Water
-            ? (AetherlingElement)(slot - SlotBase)
-            : AetherlingElement.None;
+    /// <summary>Raised with the shell just won when the owner takes the button up on it. A flourish
+    /// needs nowhere to go (it is live the moment it is granted), but a form is a thing to put ON,
+    /// so its ticket ends in the wardrobe with the form already worn.</summary>
+    public event Action<string>? WearRequested;
+
+    /// <summary>The element a ticket's slot stands for, whichever of the three ranges it sits in, or
+    /// None when the slot is not an earned ticket at all.</summary>
+    public static AetherlingElement ElementFor(short slot) => slot switch
+    {
+        > SlotBase and <= SlotBase + (short)AetherlingElement.Water => (AetherlingElement)(slot - SlotBase),
+        > ShellSlotBase and <= ShellSlotBase + (short)AetherlingElement.Water => (AetherlingElement)(slot - ShellSlotBase),
+        > ShellSlot2Base and <= ShellSlot2Base + (short)AetherlingElement.Water => (AetherlingElement)(slot - ShellSlot2Base),
+        _ => AetherlingElement.None,
+    };
+
+    /// <summary>True for a ticket whose prize is a shell rather than a flourish: the copy and the
+    /// revealed face both branch on it.</summary>
+    public static bool IsShellSlot(short slot) => slot > ShellSlotBase;
 
     public void Open(AetherlingDto core, short slot)
     {
@@ -110,7 +130,8 @@ internal sealed class ReactionTicketOverlay(IAetherlingHost host, PetRuntime pet
             y += ImGui.GetTextLineHeight() + Px(4f);
         }
         var body = string.Format(
-            ctx.Localize("os.aetherling_ticket_body"), name,
+            ctx.Localize(IsShellSlot(_slot) ? "os.aetherling_ticket_body_shell" : "os.aetherling_ticket_body"),
+            name,
             element is { } def ? ctx.Localize(Elements.NameKey(def)) : string.Empty);
         y += Look.CentredWrapped(dl, body, centreX, y, panelW - Px(28f), Look.U32(Look.Body, 0.9f * ease), 0.88f)
             * Look.LineStep(0.88f);
@@ -131,7 +152,15 @@ internal sealed class ReactionTicketOverlay(IAetherlingHost host, PetRuntime pet
         var buttonSize = new Vector2(cardW, Px(34f));
         if (revealed && DrawDone(ctx, dl, buttonTl, buttonSize, accent, ease))
         {
+            var won = IsShellSlot(_slot) && (dto?.PrizeRefs ?? []).Length > 0 ? dto!.PrizeRefs![0] : null;
+
+            // Closed before the hand-off, so the wardrobe opens on a clear page rather than under
+            // a ticket that is still fading.
             Close();
+            if (won is not null)
+            {
+                WearRequested?.Invoke(won);
+            }
             return;
         }
 
@@ -159,19 +188,22 @@ internal sealed class ReactionTicketOverlay(IAetherlingHost host, PetRuntime pet
         }
         var br = tl + size;
         dl.AddRectFilled(tl, br, Look.U32(accent, (hovered ? 0.85f : 0.7f) * ease), size.Y * 0.5f);
-        Look.Centred(dl, ctx.Localize("os.aetherling_ticket_done"), tl.X + (size.X * 0.5f),
+        var label = IsShellSlot(_slot) ? "os.aetherling_ticket_wear" : "os.aetherling_ticket_done";
+        Look.Centred(dl, ctx.Localize(label), tl.X + (size.X * 0.5f),
             tl.Y + ((size.Y - ImGui.GetTextLineHeight()) * 0.5f), Look.U32(Look.Void, 0.95f * ease));
         return pressed;
     }
 
-    /// <summary>The face: the kind of thing before it is scratched, its own name after. A flourish has no
-    /// sprite to show, so the element's crystal stands in for it.</summary>
+    /// <summary>The face: the kind of thing before it is scratched, its own name after. A won form draws
+    /// its own portrait, the same little outline the wardrobe rows show; a flourish has no shape to draw,
+    /// so an icon in the element's colour stands in for it.</summary>
     private void DrawFace(
         OsAppContext ctx, ImDrawListPtr dl, Vector2 tl, Vector2 size, AetherlingScratchCardDto? dto, Vector4 accent)
     {
         var centreX = tl.X + (size.X * 0.5f);
-        Look.Centred(dl, ctx.Localize("os.aetherling_ticket_kind"), centreX, tl.Y + Px(10f),
-            Look.U32(Look.Whisper, 0.7f), 0.8f);
+        Look.Centred(dl,
+            ctx.Localize(IsShellSlot(_slot) ? "os.aetherling_ticket_kind_shell" : "os.aetherling_ticket_kind"),
+            centreX, tl.Y + Px(10f), Look.U32(Look.Whisper, 0.7f), 0.8f);
         if (dto?.RevealedAtUtc is null)
         {
             return;
@@ -179,10 +211,18 @@ internal sealed class ReactionTicketOverlay(IAetherlingHost host, PetRuntime pet
 
         var itemRef = (dto.PrizeRefs ?? []).Length > 0 ? dto.PrizeRefs![0] : string.Empty;
         var art = size.Y - Px(34f);
-        var artCentre = new Vector2(tl.X + Px(16f) + (art * 0.5f), tl.Y + Px(28f) + (art * 0.5f));
-        IconDraw.AddCentered(dl, FontAwesomeIcon.Star, art * 0.5f, artCentre, Look.U32(accent, 0.95f));
+        var artTl = new Vector2(tl.X + Px(16f), tl.Y + Px(28f));
+        var artCentre = artTl + new Vector2(art * 0.5f, art * 0.5f);
+        var drawn = IsShellSlot(_slot) && ShellPreview.Draw(dl, _preview, itemRef, artTl, art);
+        if (!drawn)
+        {
+            IconDraw.AddCentered(dl, IsShellSlot(_slot) ? FontAwesomeIcon.Shapes : FontAwesomeIcon.Star,
+                art * 0.5f, artCentre, Look.U32(accent, 0.95f));
+        }
 
-        var label = ReactionDef.Find(itemRef)?.Name ?? itemRef;
+        var label = IsShellSlot(_slot)
+            ? Ui.ShellCatalog.Find(itemRef)?.Name ?? itemRef
+            : ReactionDef.Find(itemRef)?.Name ?? itemRef;
         var labelX = tl.X + Px(24f) + art;
         Look.LeftWrapped(dl, label, labelX, tl.Y + (size.Y * 0.5f) - Px(6f),
             tl.X + size.X - Px(14f) - labelX, Look.U32(Look.CrystalPale), 1.0f);

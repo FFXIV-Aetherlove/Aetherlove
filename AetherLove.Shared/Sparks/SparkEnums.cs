@@ -116,4 +116,23 @@ public enum SparkAction : short
 
     /// <summary>Third Wayfinder find of the spark week.</summary>
     WayfinderFindThird = 27,
+
+    /// <summary>Finished a Lumi race; credited server-side at resolve, RefId is the race.</summary>
+    RaceFinished = 28,
+
+    /// <summary>The player's Lumi placed first in a race; RefId is the race.</summary>
+    RaceFirst = 29,
+
+    /// <summary>The player's Lumi placed second in a race; RefId is the race.</summary>
+    RaceSecond = 30,
+
+    /// <summary>The player's Lumi placed third in a race; RefId is the race.</summary>
+    RaceThird = 31,
+
+    /// <summary>Flat bonus for racing in an Aetherparty with at least one other member; RefId is the race.</summary>
+    RacePartyBonus = 32,
+
+    /// <summary>A staff mass-gift credited outside the earning system; RefId is derived from the gift
+    /// batch and the account so a rerun books at most once. The wallet shows it as "Gift from Staff".</summary>
+    StaffGift = 33,
 }

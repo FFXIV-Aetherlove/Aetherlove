@@ -7,6 +7,7 @@
   <ItemGroup>
     <Reference Include="Dalamud.Bindings.ImGui" Private="false" />
     <ProjectReference Include="..\AetherOS.Sdk\AetherOS.Sdk.csproj" />
+    <ProjectReference Include="..\AetherOS.PetKit\AetherOS.PetKit.csproj" />
     <ProjectReference Include="..\AetherLove.AppKit\AetherLove.AppKit.csproj" />
     <ProjectReference Include="..\AetherLove.Shared\AetherLove.Shared.csproj" />
   </ItemGroup>

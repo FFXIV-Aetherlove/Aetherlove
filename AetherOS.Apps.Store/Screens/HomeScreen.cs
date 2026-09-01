@@ -17,8 +17,8 @@ namespace AetherOS.Apps.Store;
 /// cards, and a picture menu of categories to close. Deliberately dense; the shop should feel like walking
 /// into the Gold Saucer.</summary>
 internal sealed class HomeScreen(
-    StoreState state, StoreMediaCache media, StoreBag bag, IAppStorage storage,
-    Action<Guid> openDetail, Action<BrowseScreen.Seed> openBrowse, Action addedToBag)
+    StoreState state, StoreMediaCache media, StoreCart cart, IAppStorage storage,
+    Action<Guid> openDetail, Action<BrowseScreen.Seed> openBrowse, Action addedToCart, Action openBoosts)
 {
     private const float PadX = 16f;
     private const float CardW = 120f;
@@ -61,6 +61,7 @@ internal sealed class HomeScreen(
         }
 
         DrawSupporterCard(ctx, winW, front.SupporterDiscountPercent);
+        DrawBoostsCard(winW);
 
         var section = 0;
         WithReveal(ctx, section++, () =>
@@ -122,11 +123,11 @@ internal sealed class HomeScreen(
             var pinned = collection;
             WithReveal(ctx, section++, () =>
             {
-                var result = CollectionCard.Draw(ctx, pinned, media, bag, winW);
-                if (result.AddToBag is { } product)
+                var result = CollectionCard.Draw(ctx, pinned, media, cart, winW);
+                if (result.AddToCart is { } product)
                 {
-                    bag.Add(product.Id, 1);
-                    addedToBag();
+                    cart.Add(product.Id, 1);
+                    addedToCart();
                 }
                 else if (result.OpenProduct is { } id)
                 {
@@ -192,6 +193,45 @@ internal sealed class HomeScreen(
         }
         HandOnHover();
 
+        ImGui.SetCursorPos(new Vector2(cursorBefore.X, cursorBefore.Y + cardH + Px(10f)));
+    }
+
+    /// <summary>A one-line way into the boosts sheet, shown only while the account is actually holding one.
+    /// A boost is bought here and spent on something in another app, so the shop owes the shortcut.</summary>
+    private void DrawBoostsCard(float winW)
+    {
+        var boosts = state.Boosts;
+        var owned = (boosts?.VenueBoosts ?? 0) + (boosts?.LevemeteBoosts ?? 0);
+        if (owned <= 0)
+        {
+            return;
+        }
+
+        var dl = ImGui.GetWindowDrawList();
+        var pad = Px(PadX);
+        var w = winW - pad * 2f;
+        var cardH = Px(38f);
+        var accent = BoostFx.KeyColor(BoostStyle.Aurora);
+        var cursorBefore = ImGui.GetCursorPos();
+        var tl = ImGui.GetCursorScreenPos() + new Vector2(pad, 0f);
+        var br = tl + new Vector2(w, cardH);
+
+        ImGui.SetCursorScreenPos(tl);
+        var clicked = ImGui.InvisibleButton("##storeBoostsCard", new Vector2(w, cardH));
+        HandOnHover();
+
+        dl.AddRectFilled(tl, br, ImGui.GetColorU32(accent with { W = 0.16f }), Px(10f));
+        dl.AddRect(tl, br, ImGui.GetColorU32(accent with { W = 0.45f }), Px(10f), ImDrawFlags.None, Px(1f));
+        IconDraw.AddCentered(dl, FontAwesomeIcon.Bolt, Px(12f),
+            new Vector2(tl.X + Px(18f), (tl.Y + br.Y) * 0.5f), ImGui.GetColorU32(accent));
+        var text = $"{Loc.T("os.boost_shelf")} · {owned}";
+        dl.AddText(new Vector2(tl.X + Px(34f), (tl.Y + br.Y) * 0.5f - ImGui.GetTextLineHeight() * 0.5f),
+            ImGui.GetColorU32(UiColors.Body), text);
+
+        if (clicked)
+        {
+            openBoosts();
+        }
         ImGui.SetCursorPos(new Vector2(cursorBefore.X, cursorBefore.Y + cardH + Px(10f)));
     }
 

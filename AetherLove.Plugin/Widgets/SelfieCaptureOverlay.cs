@@ -259,7 +259,7 @@ public sealed class SelfieCaptureOverlay : Window
                 _awaitingFrame = true;
                 // The creature records what it draws from here until the shot lands, so the picture can
                 // have it painted back in: it is an ImGui overlay and never reaches the backbuffer.
-                AetherOS.Apps.Aetherling.Rendering.PetFrameRecorder.Recording = true;
+                AetherOS.PetKit.Rendering.PetFrameRecorder.Recording = true;
                 _capture.RequestCapture();
             }
             else if (overCancel)
@@ -333,8 +333,8 @@ public sealed class SelfieCaptureOverlay : Window
 
             using var shot = ScreenCaptureService.Decode(px, w, h, fmt);
             PetSelfieCompositor.Compose(shot,
-                AetherOS.Apps.Aetherling.Rendering.PetFrameRecorder.FrameQuads,
-                AetherOS.Apps.Aetherling.Rendering.PetFrameRecorder.FrameStrokes,
+                AetherOS.PetKit.Rendering.PetFrameRecorder.FrameQuads,
+                AetherOS.PetKit.Rendering.PetFrameRecorder.FrameStrokes,
                 new Vector2(sx, sy));
             var png = ScreenCaptureService.EncodePng(shot);
             Directory.CreateDirectory(TempDir);
@@ -360,8 +360,8 @@ public sealed class SelfieCaptureOverlay : Window
         _awaitingFrame = false;
         // Whatever happened to the shot, the creature stops recording and the atlases go: both exist only
         // for the length of one capture.
-        AetherOS.Apps.Aetherling.Rendering.PetFrameRecorder.Recording = false;
-        AetherOS.Apps.Aetherling.Rendering.PetFrameRecorder.Clear();
+        AetherOS.PetKit.Rendering.PetFrameRecorder.Recording = false;
+        AetherOS.PetKit.Rendering.PetFrameRecorder.Clear();
         PetSelfieCompositor.Forget();
     }
 

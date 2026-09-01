@@ -119,7 +119,8 @@ internal static class SettingsEn
 
         // added after update 1.4.0
         ["settings.lock_position"] = "Lock position",
-        ["settings.lock_position_caption"] = "By locking the position you will be unable to move the phone (large and mini), they will be stuck in place.",
+        ["settings.lock_position_caption"] = "By locking the position you will be unable to move the phone, it will be stuck in place.",
+        ["settings.lock_mini_position"] = "Lock mini position",
 
         // added after update 1.4.3
         ["settings.show_during_gpose"] = "Show the phone during group pose",
@@ -192,6 +193,18 @@ internal static class SettingsEn
         ["settings.enable_aetherlove_notifications"] = "Enable AetherLove notifications",
         ["settings.menu_nsfw"] = "NSFW settings",
         // DTR server-info-bar entries (added after update 1.5.1)
+        ["settings.enable_aetherlove_notifications_hint"] = "The main switch. Off silences every AetherLove announcement, popup and sound below.",
+        ["settings.announce_messages_chat_hint"] = "Prints a line in your game chat when someone messages you.",
+        ["settings.announce_matches_chat_hint"] = "Prints a line in your game chat when you match with someone.",
+        ["settings.popup_messages_hint"] = "Shows a small popup on screen when someone messages you.",
+        ["settings.popup_matches_hint"] = "Shows a small popup on screen when you match with someone.",
+        ["settings.section_serverbar"] = "Server info bar",
+        ["settings.serverbar_love_app"] = "Show AetherLove on the server info bar",
+        ["settings.serverbar_love_app_hint"] = "Puts your unread counts next to the server name at the top of the screen.",
+        ["settings.serverbar_chats"] = "Unread chats counter",
+        ["settings.serverbar_chats_hint"] = "Shows how many chats have unread messages.",
+        ["settings.serverbar_matches"] = "New matches counter",
+        ["settings.serverbar_matches_hint"] = "Shows how many new matches are waiting for you.",
         ["dtr.chats"] = "Chats",
         ["dtr.matches"] = "Matches",
         ["dtr.news"] = "News",

@@ -25,15 +25,17 @@ public sealed partial class GrooveApp : IAetherApp, IAppSettings
     private readonly Func<string> _name;
     private readonly IGrooveHost _host;
     private readonly GrooveSettings _settings;
+    private readonly IServerBar _serverBar;
     private readonly EntranceAnimation _entrance = new();
     private View _view = View.Player;
     private bool _sourcesOpen;
 
-    public GrooveApp(Func<string> name, IGrooveHost host, GrooveSettings settings)
+    public GrooveApp(Func<string> name, IGrooveHost host, GrooveSettings settings, IAppCapabilities caps)
     {
         _name = name;
         _host = host;
         _settings = settings;
+        _serverBar = caps.ServerBar("groove");
     }
 
     public string Id => "groove";

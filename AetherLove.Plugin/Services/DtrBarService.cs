@@ -1,50 +1,54 @@
-using System;
+﻿using System;
 using AetherLove.Config;
+using AetherLove.Os;
 using AetherLove.Services.Localization;
 using AetherLove.Windows;
-using Dalamud.Game.Gui.Dtr;
-using Dalamud.Game.Text.SeStringHandling;
+using AetherOS.Sdk;
 using Dalamud.Plugin.Services;
 
 namespace AetherLove.Services;
 
-/// <summary>Publishes unread counts to the DTR bar (chats, matches, news); updates when counts change.</summary>
+/// <summary>Publishes the four unread counts (chats, matches, news, messenger unread) to the server
+/// info bar through <see cref="ServerBarService"/> (ADR 21). This service only counts; every gate,
+/// the toggles included, belongs to the bar service.</summary>
 public sealed class DtrBarService
 {
     private const double PollSeconds = 0.25;
 
-    private readonly IDtrBar _dtrBar;
     private readonly NotificationCenter _notifications;
     private readonly SiblingBadgeStore _siblingBadges;
     private readonly Os.NewsHostService _news;
     private readonly Messenger.MessengerStore _messenger;
     private readonly Configuration _config;
     private readonly MainPluginWindow _mainWindow;
+    private readonly ServerBarService _serverBar;
 
     private sealed class Category
     {
+        public required string AppId { get; init; }
+        public required string EntryId { get; init; }
         public required string Title { get; init; }
         public required string LabelKey { get; init; }
         public required Func<int> Count { get; init; }
         public required Action Open { get; init; }
-        public IDtrBarEntry? Entry;
+        public IServerBarEntry? Entry;
         public int LastCount = -1;
-        public bool LastShown;
     }
 
     private Category[] _categories = [];
     private double _accum;
 
-    public DtrBarService(IDtrBar dtrBar, NotificationCenter notifications, SiblingBadgeStore siblingBadges,
-        Os.NewsHostService news, Messenger.MessengerStore messenger, Configuration config, MainPluginWindow mainWindow)
+    public DtrBarService(NotificationCenter notifications, SiblingBadgeStore siblingBadges,
+        Os.NewsHostService news, Messenger.MessengerStore messenger, Configuration config,
+        MainPluginWindow mainWindow, ServerBarService serverBar)
     {
-        _dtrBar = dtrBar;
         _notifications = notifications;
         _siblingBadges = siblingBadges;
         _news = news;
         _messenger = messenger;
         _config = config;
         _mainWindow = mainWindow;
+        _serverBar = serverBar;
     }
 
     /// <summary>Account-wide totals: the active profile's live counts plus the inactive siblings'.</summary>
@@ -57,23 +61,25 @@ public sealed class DtrBarService
         {
             return;
         }
+        _serverBar.SeedLegacyToggle("messenger", _config.Messenger.EnableDtrEntry);
         _categories =
         [
-            new Category { Title = "AetherLove Chats", LabelKey = "dtr.chats", Count = () => _notifications.UnreadChatMessages + SiblingTotals().Unread, Open = _mainWindow.OpenToChat },
-            new Category { Title = "AetherLove Matches", LabelKey = "dtr.matches", Count = () => _notifications.NewMatches + SiblingTotals().Matches, Open = _mainWindow.OpenToChat },
-            new Category { Title = "AetherLove News", LabelKey = "dtr.news", Count = () => _news.UnreadCount, Open = _mainWindow.OpenToNews },
+            new Category { AppId = "aetherlove", EntryId = "chats", Title = "AetherLove Chats", LabelKey = "dtr.chats", Count = () => _notifications.UnreadChatMessages + SiblingTotals().Unread, Open = _mainWindow.OpenToChat },
+            new Category { AppId = "aetherlove", EntryId = "matches", Title = "AetherLove Matches", LabelKey = "dtr.matches", Count = () => _notifications.NewMatches + SiblingTotals().Matches, Open = _mainWindow.OpenToChat },
+            new Category { AppId = "news", EntryId = "unread", Title = "AetherLove News", LabelKey = "dtr.news", Count = () => _news.UnreadCount, Open = _mainWindow.OpenToNews },
             new Category
             {
+                AppId = "messenger",
+                EntryId = "unread",
                 Title = "AetherOS Messenger",
                 LabelKey = "dtr.messenger",
-                Count = () => _config.Messenger.EnableDtrEntry ? _messenger.TotalUnread() + _messenger.IncomingRequestCount() : 0,
+                Count = () => _messenger.TotalUnread() + _messenger.IncomingRequestCount(),
                 Open = _mainWindow.OpenToMessenger,
             },
         ];
         foreach (var c in _categories)
         {
-            c.Entry = _dtrBar.Get(c.Title);
-            c.Entry.OnClick = _ => c.Open();
+            c.Entry = _serverBar.For(c.AppId).Entry(c.EntryId, c.Title, c.LabelKey, c.Open);
         }
         Plugin.Framework.Update += OnUpdate;
         Refresh(force: true);
@@ -84,7 +90,7 @@ public sealed class DtrBarService
         Plugin.Framework.Update -= OnUpdate;
         foreach (var c in _categories)
         {
-            c.Entry?.Remove();
+            c.Entry?.Set(null);
             c.Entry = null;
         }
         _categories = [];
@@ -103,26 +109,19 @@ public sealed class DtrBarService
 
     private void Refresh(bool force)
     {
-        var enabled = _config.EnableDtrEntry && _mainWindow.IsPoweredOn;
         foreach (var c in _categories)
         {
             if (c.Entry is null)
             {
                 continue;
             }
-            var count = enabled ? c.Count() : 0;
-            var shown = enabled && count > 0;
-            if (!force && count == c.LastCount && shown == c.LastShown)
+            var count = c.Count();
+            if (!force && count == c.LastCount)
             {
                 continue;
             }
             c.LastCount = count;
-            c.LastShown = shown;
-            c.Entry.Shown = shown;
-            if (shown)
-            {
-                c.Entry.Text = new SeStringBuilder().AddText($"{Loc.T(c.LabelKey)} {count}").Build();
-            }
+            c.Entry.Set(count > 0 ? $"{Loc.T(c.LabelKey)} {count}" : null);
         }
     }
 }

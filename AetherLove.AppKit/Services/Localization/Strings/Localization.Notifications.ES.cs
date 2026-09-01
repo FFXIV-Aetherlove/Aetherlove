@@ -57,5 +57,8 @@ internal static class NotificationsEs
 
         // added after update 2.3.4
         ["notif.realtor_estate"] = "{0}: {2} días sin pasar por casa. Una parcela privada se derriba a los 45 días de ausencia, así que quedan unos {1}.",
+
+        // added after update 2.5.3
+        ["notif.realtor_entry_results"] = "Ya están los resultados de la lotería. Ve a ver si has ganado la parcela {0}, distrito {1}, {2}.",
     };
 }

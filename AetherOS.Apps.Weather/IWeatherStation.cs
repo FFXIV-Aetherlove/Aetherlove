@@ -31,6 +31,14 @@ public interface IWeatherStation
     /// <summary>False in combat; mutations are rejected while false.</summary>
     bool CanMutate { get; }
 
+    /// <summary>False when the game function backing the weather override could not be found
+    /// (usually after a game patch); the control needs a plugin update.</summary>
+    bool WeatherControlAvailable { get; }
+
+    /// <summary>False when the game function backing the time override could not be found
+    /// (usually after a game patch); the control needs a plugin update.</summary>
+    bool TimeControlAvailable { get; }
+
     byte? WeatherOverride { get; }
     void SetWeatherOverride(byte weatherId);
     void ClearWeatherOverride();

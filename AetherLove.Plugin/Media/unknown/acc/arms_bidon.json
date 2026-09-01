@@ -1,0 +1,14 @@
+{
+  "name": "Runner's Bidon",
+  "slot": "arms",
+  "tier": "seasonal",
+  "file": "arms_bidon.png",
+  "anchor": "handL",
+  "origin": [
+    61,
+    74
+  ],
+  "width": 72,
+  "height": 100,
+  "behind": false
+}

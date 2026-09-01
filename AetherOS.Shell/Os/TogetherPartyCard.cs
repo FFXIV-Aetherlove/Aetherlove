@@ -149,6 +149,7 @@ public sealed class TogetherPartyCard(IOsTogether together, ShareService share, 
         {
             "echo" => (FontAwesomeIcon.Film, Loc.T("os.party_activity_echo")),
             "wayfinder" => (FontAwesomeIcon.Compass, Loc.T("os.party_activity_wayfinder")),
+            "racer" => (FontAwesomeIcon.FlagCheckered, Loc.T("os.party_activity_racer")),
             _ => (FontAwesomeIcon.Bolt, Loc.T("os.party_activity_generic")),
         };
         var rowH = PillH();

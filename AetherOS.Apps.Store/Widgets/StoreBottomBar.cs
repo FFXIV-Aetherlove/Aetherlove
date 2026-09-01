@@ -25,8 +25,8 @@ internal static class StoreBottomBar
     /// <summary>Roots the bar never offers, matched the way the deep link matches them: on the English name,
     /// which is the only category handle the catalog DTO carries. Their products stay reachable by search and
     /// by a deep link, so this hides the door rather than the room. The Aetherling shelf went live with the
-    /// growth release and is no longer hidden.</summary>
-    private static readonly string[] HiddenRoots = ["Boosts"];
+    /// growth release and the Boosts shelf with the listing boosts, so nothing is hidden right now.</summary>
+    private static readonly string[] HiddenRoots = [];
 
     /// <summary>What the user picked: null id means Home, otherwise a root category.</summary>
     internal readonly record struct Pick(bool Home, Guid CategoryId);

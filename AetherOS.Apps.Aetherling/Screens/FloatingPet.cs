@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.Numerics;
 using AetherLove.Services.Localization;
-using AetherOS.Apps.Aetherling.Engine;
+using AetherLove.Widgets;
+using AetherOS.PetKit.Engine;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 
 namespace AetherOS.Apps.Aetherling.Screens;
@@ -33,6 +35,13 @@ internal sealed class FloatingPet(IAetherlingHost host, PetRuntime pet) : IAethe
     private const string MenuId = "##aetherlingFloatMenu";
 
     private readonly PartyHuddle _huddle = new(host);
+
+    private enum MenuPage { Root, Emotes }
+
+    private readonly List<OsMenu.MenuRow> _menuRows = [];
+    private readonly List<Action> _menuActions = [];
+
+    private MenuPage _menuPage;
 
     private Vector2? _position;
     private bool _dragging;
@@ -65,6 +74,10 @@ internal sealed class FloatingPet(IAetherlingHost host, PetRuntime pet) : IAethe
 
     /// <summary>Raised by the right-click menu's statistics row.</summary>
     public event Action? StatusRequested;
+
+    /// <summary>Raised with the new state when the menu pins or unpins it, so the app can persist the
+    /// choice and the settings page shows the same answer.</summary>
+    public event Action<bool>? LockToggled;
 
     /// <summary>Kept in for a moment: set while a ceremony or the grown-up's welcome owns the phone, so
     /// the same creature is not standing on the game screen while it is busy being celebrated inside.</summary>
@@ -166,7 +179,8 @@ internal sealed class FloatingPet(IAetherlingHost host, PetRuntime pet) : IAethe
 
         if (ImGui.IsItemHovered() && ImGui.IsMouseClicked(ImGuiMouseButton.Right))
         {
-            ImGui.OpenPopup(MenuId);
+            _menuPage = MenuPage.Root;
+            OsMenu.Open(MenuId);
         }
         DrawMenu();
 
@@ -206,38 +220,100 @@ internal sealed class FloatingPet(IAetherlingHost host, PetRuntime pet) : IAethe
         _huddle.Draw(bottomCentre, size, pet);
     }
 
-    /// <summary>The right-click menu. It reads its own strings rather than taking them from a frame context,
-    /// because out here there is no frame context to take them from.</summary>
+    /// <summary>The right-click menu, on the phone's own card rather than ImGui's grey box. It reads its own
+    /// strings rather than taking them from a frame context, because out here there is no frame context to
+    /// take them from.
+    ///
+    /// <para>The emote list is a page of the same menu rather than a flyout: out here the menu hangs in the
+    /// middle of the game screen with no page to hang a second panel off, and a list this long wants the
+    /// whole card anyway.</para></summary>
     private void DrawMenu()
     {
-        if (!ImGui.BeginPopup(MenuId))
+        _menuRows.Clear();
+        _menuActions.Clear();
+        switch (_menuPage)
         {
-            return;
+            case MenuPage.Emotes:
+                BuildEmotePage();
+                break;
+            default:
+                BuildRootPage();
+                break;
         }
-        if (ImGui.Selectable(Loc.T("os.aetherling_float_stats")))
+
+        var picked = OsMenu.Draw(MenuId, _menuRows);
+        if (picked >= 0)
         {
-            StatusRequested?.Invoke();
+            _menuActions[picked]();
         }
-        DrawEmoteMenu();
-        if (ImGui.Selectable(Loc.T("os.aetherling_float_hide")))
-        {
-            HideRequested?.Invoke();
-        }
-        ImGui.EndPopup();
     }
 
-    /// <summary>Perform on demand, from out here where the creature actually is. Only what it has learned
-    /// appears, and the submenu itself is absent until there is a first one, so an empty pet's menu never
-    /// carries a door to an empty room. A play the runtime refuses (napping, mid-emote, reduce motion) is
-    /// refused silently, exactly as everywhere else.</summary>
-    private void DrawEmoteMenu()
+    private void Add(OsMenu.MenuRow row, Action act)
     {
+        _menuRows.Add(row);
+        _menuActions.Add(act);
+    }
+
+    /// <summary>Steps to another page of the same card, replaying the opening so the new rows arrive the
+    /// way the menu did rather than swapping under the cursor.</summary>
+    private void GoTo(MenuPage page)
+    {
+        _menuPage = page;
+        OsMenu.Restart(MenuId);
+    }
+
+    private void BuildRootPage()
+    {
+        Add(new OsMenu.MenuRow(FontAwesomeIcon.ChartLine, Loc.T("os.aetherling_float_stats")),
+            () => StatusRequested?.Invoke());
+        if (LearnedEmotes().Count > 0)
+        {
+            Add(new OsMenu.MenuRow(FontAwesomeIcon.Star, Loc.T("os.aetherling_float_emotes"), true, true),
+                () => GoTo(MenuPage.Emotes));
+        }
+        Add(new OsMenu.MenuRow(Locked ? FontAwesomeIcon.LockOpen : FontAwesomeIcon.Lock,
+                Loc.T(Locked ? "os.aetherling_float_unlock" : "os.aetherling_float_lock")),
+            () =>
+            {
+                Locked = !Locked;
+                LockToggled?.Invoke(Locked);
+            });
+        Add(new OsMenu.MenuRow(FontAwesomeIcon.EyeSlash, Loc.T("os.aetherling_float_hide")),
+            () => HideRequested?.Invoke());
+    }
+
+    private void BuildEmotePage()
+    {
+        AddBackRow();
+        foreach (var def in LearnedEmotes())
+        {
+            var emote = def;
+            Add(new OsMenu.MenuRow(FontAwesomeIcon.Star, emote.Name), () =>
+            {
+                // A play the runtime refuses (napping, mid-emote, reduce motion) is refused silently,
+                // exactly as everywhere else.
+                pet.AuditionGlyph("burst");
+                pet.PlayEmote(emote);
+                _menuPage = MenuPage.Root;
+            });
+        }
+    }
+
+    private void AddBackRow()
+    {
+        Add(new OsMenu.MenuRow(FontAwesomeIcon.ChevronLeft, Loc.T("common.back"), false, true),
+            () => GoTo(MenuPage.Root));
+    }
+
+    /// <summary>What it has actually learned, in library order. The emote page is absent until there is a
+    /// first one, so an empty pet's menu never carries a door to an empty room.</summary>
+    private List<EmoteDef> LearnedEmotes()
+    {
+        var learned = new List<EmoteDef>();
         if (host.Snapshot?.Emotes is not { } emotes)
         {
-            return;
+            return learned;
         }
-
-        var learned = new List<EmoteDef>();
         foreach (var def in EmoteChoreographies.All)
         {
             foreach (var progress in emotes.Emotes)
@@ -249,23 +325,6 @@ internal sealed class FloatingPet(IAetherlingHost host, PetRuntime pet) : IAethe
                 }
             }
         }
-        if (learned.Count == 0)
-        {
-            return;
-        }
-
-        if (!ImGui.BeginMenu(Loc.T("os.aetherling_float_emotes")))
-        {
-            return;
-        }
-        foreach (var def in learned)
-        {
-            if (ImGui.MenuItem(def.Name))
-            {
-                pet.AuditionGlyph("burst");
-                pet.PlayEmote(def);
-            }
-        }
-        ImGui.EndMenu();
+        return learned;
     }
 }

@@ -21,7 +21,11 @@ public sealed record EchoMemberDto(
 
 /// <summary>One queued video. <see cref="Title"/> is null until a client resolves it;
 /// <see cref="Failed"/> marks an entry every client failed to play, so it renders as unavailable rather
-/// than stalling the queue.</summary>
+/// than stalling the queue. <see cref="IsLive"/> is a broadcast that is live NOW, which is a fact with a
+/// shelf life: it is resolved when the video is queued and corrected by whoever plays it.
+/// <see cref="VideoId"/> is a reference in the shape <see cref="EchoMediaRefs"/> produces, read together
+/// with <see cref="Source"/> (an <see cref="EchoMediaSource"/>); a source this client does not know is an
+/// entry it must not try to play.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record EchoPlaylistEntryDto(
     Guid Id,
@@ -30,7 +34,9 @@ public sealed record EchoPlaylistEntryDto(
     Guid? AddedByAccountId,
     string? AddedByName,
     int Order,
-    bool Failed);
+    bool Failed,
+    bool IsLive = false,
+    short Source = 0);
 
 /// <summary>The room's authoritative playback position. <see cref="UpdatedAtUtc"/> is when the server
 /// stamped it, so a joining client extrapolates the live position instead of starting behind.</summary>
@@ -100,3 +106,9 @@ public sealed record EchoKickedDto(Guid RoomId, string RoomName);
 
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record CreateEchoRoomRequest(string Name);
+
+/// <summary>One video from a playlist the client read for itself, queued in a single bulk add. The title
+/// travels with it because only the client that fetched the playlist has it, and so does the live badge the
+/// playlist row carried.</summary>
+[MessagePackObject(keyAsPropertyName: true)]
+public sealed record EchoPlaylistImportItem(string VideoId, string? Title, bool IsLive = false);

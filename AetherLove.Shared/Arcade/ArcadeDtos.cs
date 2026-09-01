@@ -10,7 +10,9 @@ namespace AetherLove.Shared.Arcade;
 /// solved (+ Metric2 = peak rung), Racooner level reached, SkySwarm stage reached (+ Metric2 = 1 when
 /// dual was achieved), Eordle words solved (+ Metric2 = total guesses used), CloudHop highest row
 /// reached (+ Metric2 = perfect landings), CrystalCatch crystals caught (+ Metric2 = best combo),
-/// HillRoll metres travelled (+ Metric2 = crystals collected).</summary>
+/// HillRoll metres travelled (+ Metric2 = crystals collected), StackerModern lines cleared,
+/// LumiLink level reached (+ Metric2 = deepest cascade), Gyre highest stage reached
+/// (+ Metric2 = deepest cascade).</summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record ArcadeScoreSubmissionDto(
     ArcadeGame Game,

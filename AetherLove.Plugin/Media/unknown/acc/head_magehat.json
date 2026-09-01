@@ -1,0 +1,14 @@
+{
+  "name": "Midnight Mage Hat",
+  "slot": "head",
+  "tier": "seasonal",
+  "file": "head_magehat.png",
+  "anchor": "head",
+  "origin": [
+    86,
+    84
+  ],
+  "width": 180,
+  "height": 112,
+  "behind": false
+}

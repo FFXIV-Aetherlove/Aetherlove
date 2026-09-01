@@ -118,6 +118,7 @@ internal static class CommonPt
         ["common.close_plugin_tip"] = "Dica: usa o botão Minimizar na parte inferior para manter a pequena bolha flutuante visível com o indicador de notificações.",
         ["common.close_plugin_dont_ask"] = "Não voltar a mostrar esta janela",
         ["common.close"] = "Fechar",
+        ["common.back"] = "Voltar",
 
         // Save-error modal
         ["common.save_error_title"] = "Algo deu errado",

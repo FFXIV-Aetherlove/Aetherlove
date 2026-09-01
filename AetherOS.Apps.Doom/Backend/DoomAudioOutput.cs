@@ -108,6 +108,12 @@ internal sealed class DoomAudioOutput : IDisposable
     /// per-voice work rather than rendering a mix nobody hears.</summary>
     public volatile bool Muted;
 
+    /// <summary>The player's own level, 0 to 1, applied with the master gain at the end of the mix.
+    /// Set from the UI thread and read on the playback thread, which is why it is a plain float
+    /// written whole: a torn read is impossible on a float and the worst a race can do is spend one
+    /// buffer at the previous level.</summary>
+    public volatile float Level = 1f;
+
     public void Dispose()
     {
         try
@@ -171,9 +177,12 @@ internal sealed class DoomAudioOutput : IDisposable
                 }
             }
 
+            // Read once for the whole buffer: sampled per sample it would step mid-buffer while a
+            // bar is being dragged, which is a click rather than a slide.
+            var level = Math.Clamp(this.owner.Level, 0f, 1f);
             for (var i = 0; i < count; i++)
             {
-                buffer[offset + i] = Math.Clamp(MasterGain * buffer[offset + i], -1f, 1f);
+                buffer[offset + i] = Math.Clamp(MasterGain * level * buffer[offset + i], -1f, 1f);
             }
             return count;
         }

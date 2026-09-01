@@ -14,4 +14,10 @@ namespace AetherLove.Shared.Store;
 public static class StoreItemRefs
 {
     public const string BundleAetherlingCare = "bundle-aetherling-care";
+
+    /// <summary>Boosts one of the account's venues to the top of the Places listings for five days.</summary>
+    public const string PowerupVenueBoost = "boost-venue";
+
+    /// <summary>Boosts one of the account's Levemetes ads to the top of the board for five days.</summary>
+    public const string PowerupLevemeteBoost = "boost-levemete";
 }

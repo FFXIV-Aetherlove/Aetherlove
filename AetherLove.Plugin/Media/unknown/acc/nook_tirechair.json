@@ -1,0 +1,14 @@
+{
+  "name": "Tire Chair",
+  "slot": "nook",
+  "tier": "seasonal",
+  "file": "nook_tirechair.png",
+  "anchor": "body",
+  "origin": [
+    115,
+    -30
+  ],
+  "width": 231,
+  "height": 120,
+  "behind": true
+}

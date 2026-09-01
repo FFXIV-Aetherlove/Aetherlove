@@ -42,6 +42,15 @@ public sealed partial class AetherHubContext
     public async Task<StoreInventoryItemDto[]> GetStoreInventoryAsync(CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync<StoreInventoryItemDto[]>("GetStoreInventoryAsync", ct).ConfigureAwait(false);
 
+    public async Task<MyBoostsDto> GetMyBoostsAsync(CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<MyBoostsDto>("GetMyBoostsAsync", ct).ConfigureAwait(false);
+
+    public async Task<BoostResultDto> ApplyBoostAsync(
+        BoostTarget target, Guid targetId, BoostStyle style, CancellationToken ct = default) =>
+        await (await ConnAsync(ct))
+            .InvokeAsync<BoostResultDto>("ApplyBoostAsync", (short)target, targetId, (short)style, ct)
+            .ConfigureAwait(false);
+
     public async Task<AvatarRingDto[]> GetMyAvatarRingsAsync(CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync<AvatarRingDto[]>("GetMyAvatarRingsAsync", ct).ConfigureAwait(false);
 

@@ -471,7 +471,8 @@ internal sealed class RoomScreen
         ImGui.PushStyleColor(ImGuiCol.Button, t.Accent);
         ImGui.PushStyleColor(ImGuiCol.ButtonHovered, t.AccentLight);
         ImGui.PushStyleColor(ImGuiCol.ButtonActive, t.AccentDark);
-        if (!_host.RuntimeReady)
+        var runtimeReady = _host.RuntimeReady;
+        if (!runtimeReady)
         {
             ImGui.BeginDisabled();
         }
@@ -479,7 +480,7 @@ internal sealed class RoomScreen
         {
             _host.OpenRoom();
         }
-        if (!_host.RuntimeReady)
+        if (!runtimeReady)
         {
             ImGui.EndDisabled();
         }

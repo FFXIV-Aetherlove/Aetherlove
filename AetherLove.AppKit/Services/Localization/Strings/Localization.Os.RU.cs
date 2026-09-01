@@ -226,6 +226,8 @@ internal static class OsRu
         ["os.profile_edit_title"] = "Редактировать профиль",
         ["os.profile_save"] = "Сохранить",
         // home right-click menu (added after update 2.0.0)
+        ["os.home_menu_lock_icons"] = "Закрепить значки",
+        ["os.home_menu_unlock_icons"] = "Открепить значки",
         ["os.home_menu_wallpaper"] = "Сменить обои",
         // news app tile rename (added after update 2.0.0)
         ["os.app_news_tile"] = "Новости",
@@ -290,7 +292,7 @@ internal static class OsRu
         ["echo.close"] = "Закрыть",
         // playlist
         ["echo.add"] = "Добавить",
-        ["echo.add_hint"] = "Вставьте ссылку на YouTube",
+        ["echo.add_hint"] = "Вставь ссылку с YouTube или Twitch",
         ["echo.added_by"] = "Добавлено: {0}",
         ["echo.added_by_unknown"] = "Добавлено участником, который уже вышел",
         ["echo.remove"] = "Убрать",
@@ -368,6 +370,7 @@ internal static class OsRu
         ["os.app_racooner"] = "Енот",
         ["os.app_skyswarm"] = "Небесный рой",
         ["os.app_eordle"] = "Эордл",
+        ["os.app_racer"] = "Lumi Racer",
 
         // echo playback settings (added after update 2.2.3)
         ["echo.settings_tip"] = "Настройки воспроизведения",
@@ -423,6 +426,7 @@ internal static class OsRu
         ["os.app_racooner_about"] = "Лови то, что падает, и тащи добычу по норам.",
         ["os.app_skyswarm_about"] = "Лети сквозь рой столько, сколько продержишься.",
         ["os.app_eordle_about"] = "Одно эорзейское слово в день и шесть попыток.",
+        ["os.app_racer_about"] = "Отправляй своего Луми на забеги и получай спарки и призы.",
 
         // together mode (added after update 2.4.0)
         ["os.party_title"] = "AetherParty",
@@ -445,6 +449,7 @@ internal static class OsRu
         ["os.party_invite_message"] = "{0} зовёт вас в отряд! Откройте страницу виджетов на телефоне и войдите по коду {1}.",
         ["os.party_activity_echo"] = "Идёт совместный просмотр",
         ["os.party_activity_wayfinder"] = "Идёт групповая охота",
+        ["os.party_activity_racer"] = "Идёт забег Луми",
         ["os.party_activity_generic"] = "Идёт совместное занятие",
         ["os.party_activity_open"] = "Открыть",
         ["os.party_chat_title"] = "Чат отряда",
@@ -516,6 +521,54 @@ internal static class OsRu
         ["os.party_kick_go"] = "Убрать",
         ["os.party_chat_joined"] = "{0} входит в отряд",
         ["os.party_chat_wayfinder"] = "{0} начал охоту в Wayfinder. Нажми, чтобы присоединиться.",
+        ["os.party_chat_racer"] = "{0} начал(а) забег Луми. Нажми, чтобы присоединиться.",
         ["os.party_chat_echo"] = "{0} открыл комнату Echo. Нажми, чтобы войти.",
+
+        // listing boosts (added after update 2.5.2)
+        ["os.boost_boosted"] = "Продвигается",
+        ["os.boost_featured"] = "На виду",
+        ["os.boost_left"] = "Продвижение, осталось {0}",
+        ["os.boost_left_count"] = "У тебя осталось: {0}.",
+        ["os.boost_none"] = "У тебя нет продвижений. Возьми одно в магазине.",
+        ["os.boost_go"] = "Продвинуть",
+        ["os.boost_confirm_venue"] = "Продвинуть это заведение?",
+        ["os.boost_confirm_ad"] = "Продвинуть это объявление?",
+        ["os.boost_confirm_body"] = "Оно поднимется в самый верх списка на 5 дней. Выбери эффект.",
+        ["os.boost_confirm_extend"] = "Продвижение действует ещё {0}. Это добавит 5 дней. Выбери эффект.",
+        ["os.boost_style_0"] = "Аврора",
+        ["os.boost_style_1"] = "Уголёк",
+        ["os.boost_style_2"] = "Призма",
+        ["os.boost_style_3"] = "Звёздный свет",
+        ["os.boost_venue_action"] = "Продвинуть это заведение",
+        ["os.boost_ad_action"] = "Продвинуть это объявление",
+        ["os.boost_get"] = "Взять продвижение",
+        ["os.boost_shelf"] = "Твои продвижения",
+        ["os.boost_pick"] = "Выбери, что продвинуть",
+        ["os.boost_no_targets"] = "У тебя пока нет активного заведения или объявления для продвижения.",
+        ["os.boost_done"] = "Продвижение на {0}.",
+        ["os.boost_venues"] = "Заведения",
+        ["os.boost_ads"] = "Объявления",
+
+        // echo playlist import (added after update 2.5.3)
+        ["echo.playlist_confirm"] = "Добавить все {0} видео из этого плейлиста?",
+        ["echo.playlist_capped"] = "В этом плейлисте {0} видео. Добавить первые {1}?",
+        ["echo.playlist_add_all"] = "Добавить все",
+        ["echo.playlist_add_one"] = "Только это видео",
+        ["echo.playlist_reading"] = "Читаем плейлист...",
+        ["echo.playlist_failed"] = "Echo не смог прочитать этот плейлист. Попробуй ссылку на видео.",
+        ["echo.playlist_added"] = "Добавлено видео: {0}.",
+        ["os.echo_home_watch_playlist"] = "Плейлисты работают только в комнате. Сначала создай комнату или зайди в неё.",
+
+        // phone shell menu (added after update 2.5.3)
+        ["os.phone_menu_exit"] = "Выключить телефон",
+        ["os.phone_menu_minimize"] = "Свернуть телефон",
+        ["os.phone_menu_open"] = "Открыть телефон",
+        ["os.phone_menu_lock"] = "Зафиксировать положение",
+        ["os.phone_menu_unlock"] = "Снять фиксацию",
+        // echo live streams (added after update 2.5.3)
+        ["echo.live"] = "В ЭФИРЕ",
+        ["echo.live_needs_player_title"] = "Для эфиров нужен новый плеер",
+        ["echo.live_needs_player_body"] = "Этот плеер не может воспроизводить прямые эфиры. Обычные видео работают.",
+        ["echo.live_needs_player_update"] = "Новый плеер готов. Установите его, чтобы смотреть эфиры.",
     };
 }

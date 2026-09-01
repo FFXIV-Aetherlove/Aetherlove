@@ -57,5 +57,8 @@ internal static class NotificationsFr
 
         // added after update 2.3.4
         ["notif.realtor_estate"] = "{0} : {2} jours sans passer à la maison. Un terrain privé est démoli après 45 jours d’absence, il reste donc environ {1} jours.",
+
+        // added after update 2.5.3
+        ["notif.realtor_entry_results"] = "Les résultats de la loterie sont tombés. Allez voir si vous avez gagné la parcelle {0}, quartier {1}, {2}.",
     };
 }

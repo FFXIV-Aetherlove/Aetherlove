@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -7,8 +7,9 @@ using System.Threading.Tasks;
 using AetherLove.Shared.Aetherling;
 using AetherLove.Shared.Store;
 using AetherLove.UI;
-using AetherOS.Apps.Aetherling.Engine;
-using AetherOS.Apps.Aetherling.Rendering;
+using AetherOS.PetKit.Engine;
+using AetherOS.PetKit.Rendering;
+using AetherOS.PetKit.Rendering.LineArt;
 using AetherOS.Apps.Aetherling.Ui;
 using AetherOS.Sdk;
 using Dalamud.Bindings.ImGui;
@@ -32,6 +33,9 @@ internal sealed class WardrobeScreen(IAetherlingHost host, PetRuntime pet)
 
     private Face _face = Face.Dressing;
 
+    private bool _formsIntro;
+    private float _formsIntroH;
+
     private const float SaveDelaySeconds = 1f;
 
     private AetherlingDto? _core;
@@ -48,6 +52,11 @@ internal sealed class WardrobeScreen(IAetherlingHost host, PetRuntime pet)
     private string _reaction = "";
     private readonly List<string> _disabled = [];
     private bool _armsFollowJob;
+    private string _shell = "";
+
+    /// <summary>One canvas for every form portrait on the page: it holds only scratch geometry
+    /// between draws, so the rows share it the way the creature's own surfaces share theirs.</summary>
+    private readonly LineCanvas _shellPreview = new();
     private string _lastJob = "";
 
     private bool _dirty;
@@ -85,10 +94,28 @@ internal sealed class WardrobeScreen(IAetherlingHost host, PetRuntime pet)
             _disabled.Clear();
             _disabled.AddRange(look.DisabledReactions ?? []);
             _armsFollowJob = look.ArmsFollowJob;
+            _shell = look.Shell;
         }
         _dirty = false;
         _saveDue = -1f;
         RefreshInventory();
+        ApplyPreview();
+    }
+
+    /// <summary>Wears a form and opens the socket it lives in, for the ticket that just granted one.
+    /// Called straight after <see cref="OnShow"/>, which has already adopted the saved look, so this
+    /// is the one change on top of it and the debounced save carries it to the server like any other
+    /// pick. Ownership is not re-checked here: the reveal that sent us granted it, and the server
+    /// validates the write regardless.</summary>
+    public void WearShell(string itemRef)
+    {
+        _slot = EquipSlots.ShellSlot;
+        if (string.Equals(_shell, itemRef, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+        _shell = itemRef;
+        Touch();
         ApplyPreview();
     }
 
@@ -128,6 +155,13 @@ internal sealed class WardrobeScreen(IAetherlingHost host, PetRuntime pet)
         {
             onNoPet();
             return;
+        }
+
+        // The draft shell previews live like everything else being tried on: while the wardrobe is
+        // the surface drawing the creature, the body follows the draft rather than the saved look.
+        if (core.Adult is not null)
+        {
+            pet.EnsureLoaded(host.AssetRoot, PetState.ShellFolderFor(_shell));
         }
 
         pet.Tick(ctx.ReduceMotion);
@@ -214,6 +248,50 @@ internal sealed class WardrobeScreen(IAetherlingHost host, PetRuntime pet)
         {
             ImGui.EndChild();
         }
+
+        DrawFormsIntro(ctx, origin, size);
+    }
+
+    /// <summary>Raised once, over the wardrobe, the first time a won form brings anybody here: a form is
+    /// the only wearable that changes what the creature IS in a race or a game, and nothing on the shelf
+    /// says so. Dismissed by its button or by a tap outside, and never shown again.</summary>
+    private void DrawFormsIntro(OsAppContext ctx, Vector2 origin, Vector2 size)
+    {
+        if (!_formsIntro)
+        {
+            return;
+        }
+
+        var dismissed = DrawPageOverlayPanel("aetherlingFormsIntro", origin, size, ref _formsIntroH, Px(220f),
+            innerW =>
+            {
+                using (ctx.TitleFont?.Push())
+                {
+                    Look.Centred(ImGui.GetWindowDrawList(), ctx.Localize("os.aetherling_forms_intro_title"),
+                        ImGui.GetWindowPos().X + (ImGui.GetWindowWidth() * 0.5f),
+                        ImGui.GetCursorScreenPos().Y, Look.U32(Look.CrystalPale));
+                    ImGui.Dummy(new Vector2(1f, ImGui.GetTextLineHeight() + Px(10f)));
+                }
+                OnboardingUi.DrawCenteredParagraph(ctx.Localize("os.aetherling_forms_intro_body"),
+                    innerW - Px(24f), new Vector4(0.86f, 0.88f, 0.94f, 1f), UiFonts.Body);
+                ImGui.Dummy(new Vector2(1f, Px(14f)));
+                if (OnboardingUi.DrawPrimaryButton(ctx.Localize("os.aetherling_forms_intro_ok"), true))
+                {
+                    _formsIntro = false;
+                }
+            });
+        if (dismissed)
+        {
+            _formsIntro = false;
+        }
+    }
+
+    /// <summary>Arms the forms explainer for the next draw. The app decides whether it is owed; the page
+    /// only shows it.</summary>
+    public void ExplainForms()
+    {
+        _formsIntro = true;
+        _formsIntroH = 0f;
     }
 
     // ------------------------------------------------------------------ sections
@@ -396,6 +474,12 @@ internal sealed class WardrobeScreen(IAetherlingHost host, PetRuntime pet)
             return;
         }
 
+        if (_slot == EquipSlots.ShellSlot)
+        {
+            DrawShellShelf(ctx);
+            return;
+        }
+
         var items = OwnedIn(_slot);
         SectionLabel(ctx.Localize(NameKeyFor(_slot)));
 
@@ -507,6 +591,10 @@ internal sealed class WardrobeScreen(IAetherlingHost host, PetRuntime pet)
 
     private int WornInSlot(string slot)
     {
+        if (slot == EquipSlots.ShellSlot)
+        {
+            return _shell.Length > 0 ? 1 : 0;
+        }
         if (pet.Catalogue is not { } catalogue)
         {
             return 0;
@@ -522,7 +610,24 @@ internal sealed class WardrobeScreen(IAetherlingHost host, PetRuntime pet)
         return count;
     }
 
-    private bool OwnsForSlot(string slot) => OwnedIn(slot).Count > 0;
+    private bool OwnsForSlot(string slot) =>
+        slot == EquipSlots.ShellSlot ? OwnedShells().Count > 0 : OwnedIn(slot).Count > 0;
+
+    /// <summary>The shells this account has earned, in roster order. Ownership is the only gate:
+    /// whatever kind-17 refs the inventory holds and the catalog knows are wearable.</summary>
+    private List<ShellCatalog.ShellDef> OwnedShells()
+    {
+        var owned = PetState.OwnedRefs(_inventory, StoreItemKind.AetherlingShell);
+        var result = new List<ShellCatalog.ShellDef>();
+        foreach (var def in ShellCatalog.All)
+        {
+            if (owned.Contains(def.Ref))
+            {
+                result.Add(def);
+            }
+        }
+        return result;
+    }
 
     private static string NameKeyFor(string slot)
     {
@@ -593,7 +698,7 @@ internal sealed class WardrobeScreen(IAetherlingHost host, PetRuntime pet)
         // Only what it actually knows. A list of things it has NOT learned is a checklist of chores, and
         // it also tells on the meter: what is shown here is what the creature can do, nothing else.
         var known = 0;
-        foreach (var def in Engine.EmoteChoreographies.All)
+        foreach (var def in AetherOS.PetKit.Engine.EmoteChoreographies.All)
         {
             var progress = emotes.Emotes.FirstOrDefault(e => e.Key == def.Key);
             if (progress?.LearnedAtUtc is null)
@@ -616,7 +721,7 @@ internal sealed class WardrobeScreen(IAetherlingHost host, PetRuntime pet)
         ImGui.Dummy(new Vector2(1f, Px(8f)));
     }
 
-    private void DrawEmoteRow(OsAppContext ctx, Engine.EmoteDef def)
+    private void DrawEmoteRow(OsAppContext ctx, AetherOS.PetKit.Engine.EmoteDef def)
     {
         var dl = ImGui.GetWindowDrawList();
         var origin = ImGui.GetWindowPos();
@@ -635,7 +740,12 @@ internal sealed class WardrobeScreen(IAetherlingHost host, PetRuntime pet)
         }
         if (pressed)
         {
-            pet.AuditionGlyph("burst");
+            // An emote with its own glyph offers it through PlayEmote; the burst flourish only
+            // covers the ones without, or the audition re-arms the cooldown and blocks them all.
+            if (def.Glyph.Length == 0)
+            {
+                pet.AuditionGlyph("burst");
+            }
             pet.PlayEmote(def);
         }
 
@@ -655,6 +765,123 @@ internal sealed class WardrobeScreen(IAetherlingHost host, PetRuntime pet)
     }
 
     // ------------------------------------------------------------------ rows
+
+    /// <summary>The shell shelf: the trueform, then every shell the account has earned. One at a
+    /// time by construction, the palette lane's model rather than the accessory rows': a body is
+    /// picked, never stacked.</summary>
+    private void DrawShellShelf(OsAppContext ctx)
+    {
+        SectionLabel(ctx.Localize(NameKeyFor(EquipSlots.ShellSlot)));
+        DrawAttunementLine(ctx);
+        DrawShellRow(ctx, "", ctx.Localize("os.aetherling_shell_trueform"));
+        foreach (var def in OwnedShells())
+        {
+            DrawShellRow(ctx, def.Ref, def.Name);
+        }
+    }
+
+    /// <summary>What the creature is attuned to right now, under the shelf's own heading: the form
+    /// decides it, so the answer belongs where the forms are picked. Reads the DRAFT form rather than
+    /// the saved one, so the line answers the row the player just tapped.</summary>
+    private void DrawAttunementLine(OsAppContext ctx)
+    {
+        if (ElementOfForm(_shell) is not { } element)
+        {
+            return;
+        }
+
+        var dl = ImGui.GetWindowDrawList();
+        var pad = Px(18f);
+        var at = new Vector2(ImGui.GetWindowPos().X + pad, ImGui.GetCursorScreenPos().Y);
+        var label = string.Format(ctx.Localize("os.aetherling_attuned_to"), ctx.Localize(Elements.NameKey(element)));
+        dl.AddText(at, Look.U32(element.Accent, 0.95f), label);
+        ImGui.SetCursorScreenPos(new Vector2(ImGui.GetWindowPos().X, at.Y + ImGui.GetTextLineHeight() + Px(8f)));
+    }
+
+    /// <summary>The element a form attunes to: the form's own, or the born one for the trueform and for
+    /// a form no diet grants.</summary>
+    private Elements.ElementDef? ElementOfForm(string? itemRef)
+    {
+        var key = itemRef is { Length: > 0 } ? Ui.ShellCatalog.ElementOf(itemRef) : string.Empty;
+        if (key.Length > 0)
+        {
+            foreach (var def in Elements.All)
+            {
+                if (def.Key == key)
+                {
+                    return def;
+                }
+            }
+        }
+        return _core?.Adult is { } adult ? Elements.Find(adult.Element) : null;
+    }
+
+    private void DrawShellRow(OsAppContext ctx, string itemRef, string label)
+    {
+        var dl = ImGui.GetWindowDrawList();
+        var origin = ImGui.GetWindowPos();
+        var size = ImGui.GetWindowSize();
+        var pad = Px(18f);
+        var height = Px(44f);
+        var tl = new Vector2(origin.X + pad, ImGui.GetCursorScreenPos().Y);
+        var width = size.X - (pad * 2f);
+
+        ImGui.SetCursorScreenPos(tl);
+        var pressed = ImGui.InvisibleButton($"##shell{(itemRef.Length > 0 ? itemRef : "trueform")}",
+            new Vector2(width, height));
+        var hovered = ImGui.IsItemHovered();
+        if (hovered)
+        {
+            HandOnHover();
+        }
+
+        var worn = string.Equals(_shell, itemRef, StringComparison.OrdinalIgnoreCase);
+        dl.AddRectFilled(tl, tl + new Vector2(width, height),
+            Look.U32(Look.Crystal with { W = hovered ? 0.12f : 0.05f }), Px(10f));
+        if (worn)
+        {
+            dl.AddRect(tl, tl + new Vector2(width, height), Look.U32(Look.Crystal, 0.6f), Px(10f),
+                ImDrawFlags.RoundCornersAll, Px(1.2f));
+        }
+
+        // The form draws its own portrait, so a row shows the shape rather than a word for it.
+        var thumb = height - Px(10f);
+        var thumbTl = tl + new Vector2(Px(6f), Px(5f));
+        if (!ShellPreview.Draw(dl, _shellPreview, itemRef, thumbTl, thumb))
+        {
+            IconDraw.AddCentered(dl, FontAwesomeIcon.Shapes, Px(15f),
+                thumbTl + new Vector2(thumb * 0.5f, thumb * 0.5f), Look.U32(Look.CrystalPale, 0.85f));
+        }
+
+        // The form's name over the element it attunes to: picking a body IS picking an attunement, so
+        // the row says both rather than making the player learn the pairing.
+        var textX = tl.X + thumb + Px(16f);
+        var line = ImGui.GetTextLineHeight();
+        dl.AddText(new Vector2(textX, tl.Y + (height * 0.5f) - line + Px(2f)),
+            Look.U32(Look.CrystalPale, 0.95f), label);
+        if (ElementOfForm(itemRef) is { } element)
+        {
+            dl.AddText(ImGui.GetFont(), ImGui.GetFontSize() * 0.82f,
+                new Vector2(textX, tl.Y + (height * 0.5f) + Px(1f)),
+                Look.U32(element.Accent, 0.9f), ctx.Localize(Elements.NameKey(element)));
+        }
+        if (worn)
+        {
+            var chip = ctx.Localize("os.aetherling_wardrobe_worn");
+            var chipW = ImGui.CalcTextSize(chip).X * 0.8f;
+            Look.Centred(dl, chip, tl.X + width - Px(16f) - (chipW * 0.5f),
+                tl.Y + ((height - (ImGui.GetTextLineHeight() * 0.8f)) * 0.5f),
+                Look.U32(Look.Crystal, 0.9f), 0.8f);
+        }
+
+        ImGui.SetCursorScreenPos(new Vector2(origin.X, tl.Y + height + Px(6f)));
+
+        if (pressed && !worn)
+        {
+            _shell = itemRef;
+            Touch();
+        }
+    }
 
     private void DrawItemRow(OsAppContext ctx, AccessoryDef def, string itemRef)
     {
@@ -741,6 +968,17 @@ internal sealed class WardrobeScreen(IAetherlingHost host, PetRuntime pet)
             if (pet.Catalogue is { } cat)
             {
                 _accessories.RemoveAll(a => cat.Accessory(a) is { } other && def.Displaces(other));
+            }
+
+            // Counted AFTER the displacement, since swapping one hat for another is not a thirteenth
+            // thing. The server refuses a look past the cap outright, so a wardrobe that let the tap
+            // through would write, be rejected, and drop the whole row back.
+            if (_accessories.Count >= AetherlingLimits.MaxEquippedAccessories)
+            {
+                _error = string.Format(ctx.Localize("os.aetherling_wardrobe_full"),
+                    AetherlingLimits.MaxEquippedAccessories.ToString(ctx.Culture));
+                _errorLeft = 4f;
+                return;
             }
             _accessories.Add(itemRef);
             if (def.Slot == AccessoryDef.ArmsSlot)
@@ -852,7 +1090,7 @@ internal sealed class WardrobeScreen(IAetherlingHost host, PetRuntime pet)
         _saving = true;
         _dirty = false;
         var look = new AetherlingLookDto(
-            _palette, [.. _accessories], _reaction, _armsFollowJob, [.. _disabled]);
+            _palette, [.. _accessories], _reaction, _armsFollowJob, [.. _disabled], _shell);
         _ = Task.Run(async () =>
         {
             try

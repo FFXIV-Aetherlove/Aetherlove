@@ -57,5 +57,8 @@ internal static class NotificationsDe
 
         // added after update 2.3.4
         ["notif.realtor_estate"] = "{0}: seit {2} Tagen nicht mehr zu Hause. Ein privates Grundstück wird nach 45 Tagen Abwesenheit abgerissen, es bleiben also noch etwa {1} Tage.",
+
+        // added after update 2.5.3
+        ["notif.realtor_entry_results"] = "Die Lotterie-Ergebnisse sind da. Schau nach, ob du Grundstück {0}, Bezirk {1}, {2} gewonnen hast.",
     };
 }

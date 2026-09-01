@@ -59,7 +59,7 @@ public static class EchoVideoIds
         return QueryValue(uri.Query, "v");
     }
 
-    private static string? QueryValue(string query, string key)
+    internal static string? QueryValue(string query, string key)
     {
         foreach (var pair in query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
         {
@@ -73,7 +73,7 @@ public static class EchoVideoIds
         return null;
     }
 
-    private static bool IsYouTubeHost(string host)
+    internal static bool IsYouTubeHost(string host)
     {
         foreach (var suffix in AllowedHostSuffixes)
         {

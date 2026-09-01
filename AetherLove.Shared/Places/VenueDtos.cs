@@ -37,7 +37,11 @@ public sealed record VenueSummaryDto(
     int LikeCount,
     bool LikedByMe,
     double AverageRating,
-    int ReviewCount);
+    int ReviewCount,
+    // A store boost, as a window rather than a set of boosted openings: every occurrence this venue
+    // expands while the window is open wears the effect, including ones added after the boost was spent.
+    DateTimeOffset? BoostedUntilUtc = null,
+    short BoostStyle = 0);
 
 /// <summary>One concrete dated occurrence expanded from a venue's opening times. <see cref="RsvpAvatars"/>
 /// is a small capped clump of attendee avatars; null where the payload would be too heavy (upcoming list).
@@ -73,7 +77,11 @@ public sealed record PlacesFilterDto(
 public sealed record PlacesBrowseDto(
     VenueSummaryDto[] Venues,
     VenueOccurrenceDto[] HappeningNow,
-    VenueOccurrenceDto[] Upcoming);
+    VenueOccurrenceDto[] Upcoming,
+    // One occurrence per boosted venue (the live one, else the soonest ahead) for the Featured strip.
+    // They are NOT removed from the two lists above: the week view is grouped by day, and a hole in it
+    // would read as the venue having closed.
+    VenueOccurrenceDto[]? Featured = null);
 
 /// <summary>One published venue review. Reviews are avatar-only by design: no author name crosses the
 /// wire. <see cref="PendingModeration"/> is true only on the caller's own flagged review.</summary>
@@ -139,7 +147,9 @@ public sealed record MyVenueDto(
     double AverageRating,
     int ReviewCount,
     VenueBannerDto[]? Banners = null,
-    string Discord = "");
+    string Discord = "",
+    DateTimeOffset? BoostedUntilUtc = null,
+    short BoostStyle = 0);
 
 /// <summary>Create (null <see cref="Id"/>) or update a venue definition. Images travel separately via
 /// <c>SetVenueImageAsync</c> (a <see cref="PhotoUploadDto"/> per slot).</summary>

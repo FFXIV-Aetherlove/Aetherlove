@@ -1,0 +1,14 @@
+{
+  "name": "Code Review Rims",
+  "slot": "glasses",
+  "tier": "seasonal",
+  "file": "glasses_devglasses.png",
+  "anchor": "face",
+  "origin": [
+    68,
+    9
+  ],
+  "width": 137,
+  "height": 74,
+  "behind": false
+}

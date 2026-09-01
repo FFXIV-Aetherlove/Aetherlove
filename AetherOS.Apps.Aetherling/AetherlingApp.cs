@@ -5,10 +5,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using AetherLove.Services.Localization;
 using AetherLove.Shared.Aetherling;
-using AetherOS.Apps.Aetherling.Engine;
+using AetherOS.PetKit.Engine;
 using AetherOS.Apps.Aetherling.Screens;
 using AetherOS.Apps.Aetherling.Ui;
 using AetherLove.UI;
+using AetherLove.Widgets;
 using AetherOS.Sdk;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -25,10 +26,15 @@ public sealed class AetherlingApp : IAetherApp
     private const string HatchedIconId = "unknown2";
 
     private const string MutedKey = "bgmMuted";
+    private const string BgmVolumeKey = "bgmVolume";
     private const string SoundsMutedKey = "soundsMuted";
     private const string SoundVolumeKey = "soundVolume";
     private const string IntroSeenKey = "petIntroFor";
     private const string WheelSeenKey = "wheelSeenFor";
+
+    /// <summary>Whether the forms explainer has been shown. Not stamped against a hatch like the wheel's:
+    /// what a form does is the same lesson for every creature this account ever raises.</summary>
+    private const string FormsIntroKey = "formsIntroSeen";
     private const string FloatingKey = "floatingShow";
     private const string FloatingLockKey = "floatingLocked";
     private const string FloatingSizeKey = "floatingSize";
@@ -108,6 +114,7 @@ public sealed class AetherlingApp : IAetherApp
         _games = new GamesScreen(host, _runtime, scores, _storage);
         _floating = new FloatingPet(host, _runtime);
         _host.BgmMuted = _storage.Get<bool?>(MutedKey) ?? false;
+        _host.BgmVolume = _storage.Get<float?>(BgmVolumeKey) ?? 1f;
         _host.SoundsMuted = _storage.Get<bool?>(SoundsMutedKey) ?? false;
         _host.SoundVolume = _storage.Get<float?>(SoundVolumeKey) ?? IAetherlingHost.DefaultSoundVolume;
         _petSettings.SoundsChanged += SaveSoundSettings;
@@ -120,7 +127,23 @@ public sealed class AetherlingApp : IAetherApp
             _wardrobe.OnShow(_host.Snapshot);
             _view = View.Wardrobe;
         };
+        // A form ticket ends where the form goes on: the wardrobe, opened on the forms socket with
+        // the new one already worn, so the reward is on the creature before the page has settled.
+        _pet.WardrobeFormRequested += shellRef =>
+        {
+            _wardrobe.OnShow(_host.Snapshot);
+            _wardrobe.WearShell(shellRef);
+            // Said once, on the first form anybody ever wins: what a form is for is not something the
+            // wardrobe's rows can say by themselves.
+            if (_storage.Get<bool?>(FormsIntroKey) is not true)
+            {
+                _storage.Set(FormsIntroKey, (bool?)true);
+                _wardrobe.ExplainForms();
+            }
+            _view = View.Wardrobe;
+        };
         _games.MuteChanged += muted => _storage.Set(MutedKey, (bool?)muted);
+        _games.VolumeChanged += volume => _storage.Set(BgmVolumeKey, (float?)volume);
         _pet.AdultingFinished += () =>
         {
             _adultOnboarding.OnShow(_host.Snapshot);
@@ -162,6 +185,11 @@ public sealed class AetherlingApp : IAetherApp
             SaveFloatingSettings();
         };
         _floating.StatusRequested += _host.OpenOnPhone;
+        _floating.LockToggled += locked =>
+        {
+            _petSettings.FloatingLocked = locked;
+            _storage.Set(FloatingLockKey, (bool?)locked);
+        };
         LoadFloatingSettings();
         _host.Overlay = _floating;
         _host.InteractLab = new InteractLab(_runtime);
@@ -676,5 +704,29 @@ public sealed class AetherlingApp : IAetherApp
         dl.AddCircleFilled(centre, side * 0.5f, Look.U32(Look.Crystal with { W = hovered ? 0.14f : 0.06f }), 20);
         IconDraw.AddCentered(dl, _host.BgmMuted ? FontAwesomeIcon.VolumeMute : FontAwesomeIcon.VolumeDown,
             Px(12f), centre, Look.U32(Look.CrystalPale, alpha));
+
+        DrawBgmVolume(dl, tl, new Vector2(side, side));
+    }
+
+    /// <summary>The level under the chip. Shared with the minigames' own chip because it is one
+    /// loop: a player who turned the pet's music down has turned this app's music down.</summary>
+    private void DrawBgmVolume(ImDrawListPtr dl, Vector2 chipTl, Vector2 chipSize)
+    {
+        var muted = _host.BgmMuted;
+        var volume = _host.BgmVolume;
+        if (!VolumeBar.Draw("aetherlingBgm", dl, chipTl, chipSize, ref muted, ref volume,
+            Look.U32(Look.Crystal, 0.85f), Look.U32(Look.CrystalPale, 0.18f),
+            Look.U32(Look.CrystalPale, 0.95f), UiScale.S))
+        {
+            return;
+        }
+
+        _host.BgmVolume = volume;
+        _storage.Set(BgmVolumeKey, (float?)volume);
+        if (muted != _host.BgmMuted)
+        {
+            _host.BgmMuted = muted;
+            _storage.Set(MutedKey, (bool?)muted);
+        }
     }
 }

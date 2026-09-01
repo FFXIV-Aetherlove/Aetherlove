@@ -6,8 +6,8 @@ using AetherLove.Services.Localization;
 using AetherLove.Shared.Aetherling;
 using AetherLove.UI;
 using AetherLove.Shared.Arcade;
-using AetherOS.Apps.Aetherling.Engine;
-using AetherOS.Apps.Aetherling.Rendering;
+using AetherOS.PetKit.Engine;
+using AetherOS.PetKit.Rendering;
 using AetherOS.Apps.Aetherling.Ui;
 using AetherOS.Sdk;
 using Dalamud.Bindings.ImGui;
@@ -223,7 +223,9 @@ internal sealed class LumiLinkGame : IPetGame
         {
             return false;
         }
-        if ((AetherlingElement)adult.Element == element)
+        // The attuned element, not the born one: a form changes what the creature is attuned to, and the
+        // power it always has is the one it is attuned to now.
+        if ((AetherlingElement)PetState.AttunedElement(core) == element)
         {
             return true;
         }

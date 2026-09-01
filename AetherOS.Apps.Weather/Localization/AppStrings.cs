@@ -19,6 +19,8 @@ internal static class AppStrings
         ["os.weather_sunset"] = "Sunset",
         ["os.weather_midnight"] = "Midnight",
         ["os.weather_time_reset"] = "Restore natural time",
+        // added after update 2.5.3
+        ["os.weather_broken"] = "A game update broke this control. It will work again after the next AetherLove update.",
     };
 
     public static readonly Dictionary<string, string> De = new()
@@ -36,6 +38,8 @@ internal static class AppStrings
         ["os.weather_sunset"] = "Sonnenuntergang",
         ["os.weather_midnight"] = "Mitternacht",
         ["os.weather_time_reset"] = "Natürliche Zeit wiederherstellen",
+        // added after update 2.5.3
+        ["os.weather_broken"] = "Ein Spiel-Update hat diese Funktion beschädigt. Nach dem nächsten AetherLove-Update funktioniert sie wieder.",
     };
 
     public static readonly Dictionary<string, string> Es = new()
@@ -53,6 +57,8 @@ internal static class AppStrings
         ["os.weather_sunset"] = "Atardecer",
         ["os.weather_midnight"] = "Medianoche",
         ["os.weather_time_reset"] = "Restaurar hora natural",
+        // added after update 2.5.3
+        ["os.weather_broken"] = "Una actualización del juego dañó este control. Volverá a funcionar con la próxima actualización de AetherLove.",
     };
 
     public static readonly Dictionary<string, string> Fr = new()
@@ -70,6 +76,8 @@ internal static class AppStrings
         ["os.weather_sunset"] = "Coucher du soleil",
         ["os.weather_midnight"] = "Minuit",
         ["os.weather_time_reset"] = "Rétablir l'heure naturelle",
+        // added after update 2.5.3
+        ["os.weather_broken"] = "Une mise à jour du jeu a cassé ce contrôle. Il fonctionnera à nouveau après la prochaine mise à jour d'AetherLove.",
     };
 
     public static readonly Dictionary<string, string> Pt = new()
@@ -87,6 +95,8 @@ internal static class AppStrings
         ["os.weather_sunset"] = "Pôr do sol",
         ["os.weather_midnight"] = "Meia-noite",
         ["os.weather_time_reset"] = "Restaurar hora natural",
+        // added after update 2.5.3
+        ["os.weather_broken"] = "Uma atualização do jogo quebrou este controle. Ele voltará a funcionar após a próxima atualização do AetherLove.",
     };
 
     public static readonly Dictionary<string, string> Ru = new()
@@ -104,6 +114,8 @@ internal static class AppStrings
         ["os.weather_sunset"] = "Закат",
         ["os.weather_midnight"] = "Полночь",
         ["os.weather_time_reset"] = "Вернуть естественное время",
+        // added after update 2.5.3
+        ["os.weather_broken"] = "Обновление игры сломало эту функцию. Она снова заработает после следующего обновления AetherLove.",
     };
 
     public static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> Packs = new Dictionary<string, IReadOnlyDictionary<string, string>>

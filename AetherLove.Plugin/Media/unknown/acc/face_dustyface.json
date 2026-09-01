@@ -1,0 +1,14 @@
+{
+  "name": "Dusty Face",
+  "slot": "facialhair",
+  "tier": "seasonal",
+  "file": "face_dustyface.png",
+  "anchor": "face",
+  "origin": [
+    68,
+    -49
+  ],
+  "width": 137,
+  "height": 34,
+  "behind": false
+}

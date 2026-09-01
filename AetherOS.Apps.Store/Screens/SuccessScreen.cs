@@ -17,7 +17,7 @@ namespace AetherOS.Apps.Store;
 /// <summary>The purchase celebration, staged like a match scene: radial glow, rotating rays, an
 /// overshooting bolt, confetti, a coin fountain, the bought items cascading in, and the balance ticking
 /// down before the Done button fades up. Under reduce-motion everything snaps to its final frame.</summary>
-internal sealed class SuccessScreen(IStoreHost host, StoreMediaCache media, Action done)
+internal sealed class SuccessScreen(IStoreHost host, StoreMediaCache media, Action done, Action openBoosts)
 {
     /// <summary>Something a bought line can switch on right here. A bundle contributes one per wearable
     /// child, and each gets its own row, because "enable all" hides what the bundle actually contained.</summary>
@@ -361,19 +361,43 @@ internal sealed class SuccessScreen(IStoreHost host, StoreMediaCache media, Acti
 
     private void DrawDone(OsAppContext ctx, Vector2 origin, Vector2 size, float t)
     {
-        if (t > 1.4f)
+        if (t <= 1.4f)
         {
-            var btnAlpha = ctx.ReduceMotion ? 1f : Math.Clamp((t - 1.4f) / 0.3f, 0f, 1f);
-            using (Dalamud.Interface.Utility.Raii.ImRaii.PushStyle(ImGuiStyleVar.Alpha, btnAlpha))
+            return;
+        }
+        var btnAlpha = ctx.ReduceMotion ? 1f : Math.Clamp((t - 1.4f) / 0.3f, 0f, 1f);
+        using (Dalamud.Interface.Utility.Raii.ImRaii.PushStyle(ImGuiStyleVar.Alpha, btnAlpha))
+        {
+            var btnW = size.X - Px(72f);
+            var btnX = origin.X + Px(36f);
+            if (BoughtABoost())
             {
-                var btnW = size.X - Px(72f);
-                ImGui.SetCursorScreenPos(new Vector2(origin.X + Px(36f), origin.Y + size.Y - Px(74f)));
-                if (StoreUi.Button(Loc.T("os.store_success_done"), btnW))
+                ImGui.SetCursorScreenPos(new Vector2(btnX, origin.Y + size.Y - Px(112f)));
+                if (StoreUi.Button(Loc.T("os.boost_go"), btnW))
                 {
-                    _celebration = null;
-                    done();
+                    openBoosts();
                 }
             }
+            ImGui.SetCursorScreenPos(new Vector2(btnX, origin.Y + size.Y - Px(74f)));
+            if (StoreUi.Button(Loc.T("os.store_success_done"), btnW))
+            {
+                _celebration = null;
+                done();
+            }
         }
+    }
+
+    /// <summary>Whether this checkout carried a listing boost, which is the one purchase with somewhere else
+    /// to be spent; the sheet that spends it is one tap from here rather than three screens away.</summary>
+    private bool BoughtABoost()
+    {
+        foreach (var line in _celebration?.Lines ?? [])
+        {
+            if (line.Kind == StoreItemKind.Powerup)
+            {
+                return true;
+            }
+        }
+        return false;
     }
 }

@@ -1,0 +1,14 @@
+{
+  "name": "Trophy Cup",
+  "slot": "arms",
+  "tier": "seasonal",
+  "file": "arms_trophy.png",
+  "anchor": "handL",
+  "origin": [
+    46,
+    94
+  ],
+  "width": 92,
+  "height": 104,
+  "behind": false
+}

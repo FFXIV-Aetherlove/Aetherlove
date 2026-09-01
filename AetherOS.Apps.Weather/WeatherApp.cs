@@ -180,13 +180,14 @@ public sealed class WeatherApp : IAetherApp
     {
         DrawSectionHeading(ctx, ctx.Localize("os.weather_control"));
         var width = ImGui.GetContentRegionAvail().X - pad;
+        if (!this.station.WeatherControlAvailable)
+        {
+            DrawNotice(ctx, width, "os.weather_broken");
+            return;
+        }
         if (!this.station.CanMutate)
         {
-            ImGui.PushStyleColor(ImGuiCol.Text, WarningText);
-            ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + width);
-            ImGui.TextUnformatted(ctx.Localize("os.weather_combat"));
-            ImGui.PopTextWrapPos();
-            ImGui.PopStyleColor();
+            DrawNotice(ctx, width, "os.weather_combat");
             return;
         }
 
@@ -251,6 +252,12 @@ public sealed class WeatherApp : IAetherApp
 
     private void DrawTimeControl(OsAppContext ctx, float pad)
     {
+        if (!this.station.TimeControlAvailable)
+        {
+            DrawSectionHeading(ctx, ctx.Localize("os.weather_time"));
+            DrawNotice(ctx, ImGui.GetContentRegionAvail().X - pad, "os.weather_broken");
+            return;
+        }
         if (!this.station.CanMutate)
         {
             return;
@@ -278,10 +285,10 @@ public sealed class WeatherApp : IAetherApp
         var presetSize = new Vector2((width - gap * 3f) / 4f, ctx.Px(30f));
         var presets = new (string Key, int Minutes)[]
         {
+            ("os.weather_midnight", 0),
             ("os.weather_sunrise", 360),
             ("os.weather_noon", 720),
             ("os.weather_sunset", 1080),
-            ("os.weather_midnight", 0),
         };
         for (var i = 0; i < presets.Length; i++)
         {
@@ -355,6 +362,15 @@ public sealed class WeatherApp : IAetherApp
         var size = ImGui.CalcTextSize(glyph) * (px / ImGui.GetFontSize());
         dl.AddText(ImGui.GetFont(), px, center - size * 0.5f, col, glyph);
         ImGui.PopFont();
+    }
+
+    private static void DrawNotice(OsAppContext ctx, float width, string key)
+    {
+        ImGui.PushStyleColor(ImGuiCol.Text, WarningText);
+        ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + width);
+        ImGui.TextUnformatted(ctx.Localize(key));
+        ImGui.PopTextWrapPos();
+        ImGui.PopStyleColor();
     }
 
     private static void DrawSectionHeading(OsAppContext ctx, string text)

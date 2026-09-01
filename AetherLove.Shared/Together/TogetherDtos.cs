@@ -32,7 +32,8 @@ public sealed record TogetherPetDto(
     short Stage,
     string Palette,
     string[] Accessories,
-    string? Name = null);
+    string? Name = null,
+    string Shell = "");
 
 /// <summary>What the party is doing right now. Stamped only by the owning app's server service (an Echo
 /// room bind, a Wayfinder run), never by a client call. <see cref="Code"/> is an optional join code for

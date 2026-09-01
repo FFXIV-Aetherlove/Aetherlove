@@ -16,6 +16,7 @@ internal static class ControlCommands
     public const string Volume = "volume";
     public const string Size = "size";
     public const string Captions = "captions";
+    public const string ToLive = "tolive";
     public const string Shutdown = "shutdown";
 }
 
@@ -30,7 +31,8 @@ internal sealed record ControlCommand(
     double? Volume = null,
     int? Width = null,
     int? Height = null,
-    bool? On = null);
+    bool? On = null,
+    string? Source = null);
 
 internal sealed record HostHello(
     [property: JsonPropertyName("v")] int V,
@@ -167,7 +169,9 @@ internal sealed class ControlPipe : IDisposable
                 JsonRead.Number(root, "sec"),
                 JsonRead.Number(root, "v"),
                 JsonRead.Int32(root, "w"),
-                JsonRead.Int32(root, "h"));
+                JsonRead.Int32(root, "h"),
+                null,
+                JsonRead.Text(root, "source"));
             return true;
         }
         catch (JsonException)
@@ -244,6 +248,14 @@ internal static class JsonRead
 
     public static bool Flag(JsonElement root, string name) =>
         root.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.True;
+
+    /// <summary>A flag that keeps "the page never said" distinct from "the page said false". Absent must
+    /// not read as false for a capability: a page older than the field would then claim the player cannot
+    /// do something nobody ever asked it about.</summary>
+    public static bool? FlagOrNull(JsonElement root, string name) =>
+        root.TryGetProperty(name, out var value) && value.ValueKind is JsonValueKind.True or JsonValueKind.False
+            ? value.ValueKind == JsonValueKind.True
+            : null;
 
     public static double? Number(JsonElement root, string name) =>
         root.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.Number

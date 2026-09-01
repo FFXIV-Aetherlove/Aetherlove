@@ -1,0 +1,14 @@
+{
+  "name": "Trailmaster Hat",
+  "slot": "head",
+  "tier": "seasonal",
+  "file": "head_scouthat.png",
+  "anchor": "head",
+  "origin": [
+    76,
+    76
+  ],
+  "width": 165,
+  "height": 84,
+  "behind": false
+}

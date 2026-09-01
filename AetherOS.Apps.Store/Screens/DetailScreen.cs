@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -15,10 +15,11 @@ using Dalamud.Interface.Utility.Raii;
 namespace AetherOS.Apps.Store;
 
 /// <summary>One product: big art, price block, description, bundle contents with the savings line, tags,
-/// a quantity stepper for stackables and the pulsing add-to-bag CTA with the bolt flight to the bag.</summary>
+/// and the buying block, where a quantity stepper sits beside the pulsing add-to-cart CTA with its bolt
+/// flight to the cart, over a rule from the wishlist toggle.</summary>
 internal sealed class DetailScreen(
-    IStoreHost host, StoreState state, StoreMediaCache media, StoreMediaCache backgrounds, StoreBag bag,
-    Action addedToBag, Action<BrowseScreen.Seed> openBrowse)
+    IStoreHost host, StoreState state, StoreMediaCache media, StoreMediaCache backgrounds, StoreCart cart,
+    StoreWishlist wishlist, Action addedToCart, Action<BrowseScreen.Seed> openBrowse)
 {
     private const float PadX = 16f;
 
@@ -28,7 +29,7 @@ internal sealed class DetailScreen(
     private StoreProductDto? _product;
     private int _generation;
     private int _quantity = 1;
-    private double _inBagFlashStamp = -10.0;
+    private double _inCartFlashStamp = -10.0;
     private double _boltFlightStamp = -10.0;
     private StoreProductDto[] _related = [];
     private int _relatedGeneration;
@@ -70,7 +71,7 @@ internal sealed class DetailScreen(
         _productId = productId;
         _product = state.Find(productId);
         _quantity = 1;
-        _inBagFlashStamp = -10.0;
+        _inCartFlashStamp = -10.0;
         _related = [];
         Refresh();
         RefreshRelated();
@@ -224,21 +225,7 @@ internal sealed class DetailScreen(
             DrawTags(winW, product);
         }
 
-        // Quantity stepper for stackables (clamped to remaining allowance).
         var maxAddable = MaxAddable(product);
-        if (product.MaxPerAccount != 1 && maxAddable > 1)
-        {
-            ImGui.SetCursorPosX(Px(PadX));
-            ImGui.TextColored(UiColors.Hint, Loc.T("os.store_quantity"));
-            ImGui.SetCursorPosX(Px(PadX));
-            _quantity = Math.Clamp(_quantity, 1, maxAddable);
-            QuantityStepper.Draw("##detailQty", ImGui.GetCursorScreenPos(), 1, maxAddable, ctx.ReduceMotion, ref _quantity);
-            ImGui.Dummy(new Vector2(0f, Px(10f)));
-        }
-        else
-        {
-            _quantity = 1;
-        }
         if (product.MaxPerAccount is { } perAccount && perAccount > 1)
         {
             ImGui.SetCursorPosX(Px(PadX));
@@ -523,10 +510,10 @@ internal sealed class DetailScreen(
 
     private int MaxAddable(StoreProductDto product)
     {
-        var inBag = bag.QuantityOf(product.Id);
+        var inCart = cart.QuantityOf(product.Id);
         return product.MaxPerAccount is { } max
-            ? Math.Max(0, max - product.OwnedQuantity - inBag)
-            : 10;
+            ? Math.Max(0, max - product.OwnedQuantity - inCart)
+            : StoreLimits.MaxQuantityPerCheckout;
     }
 
     private void DrawBundleContents(OsAppContext ctx, ImDrawListPtr dl, float winW, StoreProductDto product)
@@ -630,16 +617,43 @@ internal sealed class DetailScreen(
         ImGui.Dummy(new Vector2(0f, Px(8f)));
     }
 
+    /// <summary>The buying block: the quantity picker and the cart button share one row, then a rule, then
+    /// the wishlist button. The picker sits beside the button rather than above it because the two are one
+    /// decision, and the wishlist is the other answer to the same question.</summary>
     private void DrawCta(OsAppContext ctx, ImDrawListPtr dl, float winW, StoreProductDto product, bool owned, int maxAddable)
     {
+        var fullW = winW - Px(PadX) * 2f;
+        var stackable = product.MaxPerAccount != 1 && maxAddable > 1;
+        if (!stackable)
+        {
+            _quantity = 1;
+        }
+
+        var stepperW = QuantityStepper.Size().X;
+        var gap = Px(10f);
+        if (stackable)
+        {
+            ImGui.SetCursorPosX(Px(PadX));
+            ImGui.TextColored(UiColors.Hint, Loc.T("os.store_quantity"));
+            ImGui.Dummy(new Vector2(0f, Px(2f)));
+        }
+
         ImGui.SetCursorPosX(Px(PadX));
-        var tl = ImGui.GetCursorScreenPos();
-        var size = new Vector2(winW - Px(PadX) * 2f, Px(42f));
-        var justAdded = ImGui.GetTime() - _inBagFlashStamp < 1.2;
+        var rowTl = ImGui.GetCursorScreenPos();
+        var size = new Vector2(stackable ? fullW - stepperW - gap : fullW, Px(42f));
+        var tl = rowTl + new Vector2(stackable ? stepperW + gap : 0f, 0f);
+        var justAdded = ImGui.GetTime() - _inCartFlashStamp < 1.2;
         var enabled = !owned && maxAddable > 0 && !justAdded;
 
+        if (stackable)
+        {
+            _quantity = Math.Clamp(_quantity, 1, maxAddable);
+            var stepperTl = rowTl + new Vector2(0f, (size.Y - QuantityStepper.Size().Y) * 0.5f);
+            QuantityStepper.Draw("##detailQty", stepperTl, 1, maxAddable, ctx.ReduceMotion, ref _quantity);
+        }
+
         ImGui.SetCursorScreenPos(tl);
-        var clicked = ImGui.InvisibleButton("##addToBag", size) && enabled;
+        var clicked = ImGui.InvisibleButton("##addToCart", size) && enabled;
         var hovered = enabled && ImGui.IsItemHovered();
         if (hovered)
         {
@@ -666,25 +680,75 @@ internal sealed class DetailScreen(
         var label = owned
             ? Loc.T("os.store_owned")
             : justAdded
-                ? Loc.T("os.store_in_bag")
+                ? Loc.T("os.store_in_cart")
                 : maxAddable <= 0
-                    ? Loc.T("os.store_bag_holds_max")
-                    : Loc.T("os.store_add_to_bag");
+                    ? Loc.T("os.store_cart_holds_max")
+                    : Loc.T("os.store_add_to_cart");
         var labelSz = ImGui.CalcTextSize(label);
         dl.AddText(tl + (size - labelSz) * 0.5f,
             ImGui.GetColorU32(enabled ? UiColors.Body : UiColors.Hint), label);
 
         if (clicked)
         {
-            bag.Add(product.Id, _quantity);
-            _inBagFlashStamp = ImGui.GetTime();
+            cart.Add(product.Id, _quantity);
+            _inCartFlashStamp = ImGui.GetTime();
             _boltFlightStamp = ImGui.GetTime();
             _boltFrom = tl + size * 0.5f;
-            addedToBag();
+            addedToCart();
+        }
+
+        ImGui.SetCursorScreenPos(new Vector2(ImGui.GetWindowPos().X, rowTl.Y + size.Y));
+        ImGui.Dummy(new Vector2(0f, Px(12f)));
+        var ruleY = ImGui.GetCursorScreenPos().Y;
+        dl.AddLine(new Vector2(rowTl.X, ruleY), new Vector2(rowTl.X + fullW, ruleY), OsDrawShared.White(0.1f), Px(1f));
+        ImGui.Dummy(new Vector2(0f, Px(12f)));
+
+        DrawWishlistButton(dl, fullW, product);
+    }
+
+    /// <summary>The other answer to "do I want this": keep it for later. A tap toggles, so the same button
+    /// takes the product back off the list.</summary>
+    private void DrawWishlistButton(ImDrawListPtr dl, float fullW, StoreProductDto product)
+    {
+        ImGui.SetCursorPosX(Px(PadX));
+        var tl = ImGui.GetCursorScreenPos();
+        var size = new Vector2(fullW, Px(38f));
+        var saved = wishlist.Contains(product.Id);
+
+        ImGui.SetCursorScreenPos(tl);
+        var clicked = ImGui.InvisibleButton("##addToWishlist", size);
+        var hovered = ImGui.IsItemHovered();
+        if (hovered)
+        {
+            HandOnHover();
+        }
+
+        dl.AddRectFilled(tl, tl + size, OsDrawShared.White(hovered ? 0.12f : 0.06f), Px(12f));
+        dl.AddRect(tl, tl + size,
+            saved
+                ? ImGui.GetColorU32(StoreChips.GoldColor with { W = 0.75f })
+                : StorePalette.BlueWithAlpha(0.45f),
+            Px(12f), ImDrawFlags.RoundCornersAll, Px(1.2f));
+
+        var label = Loc.T(saved ? "os.store_in_wishlist" : "os.store_add_to_wishlist");
+        var labelSz = ImGui.CalcTextSize(label);
+        var iconPx = Px(13f);
+        var contentW = iconPx + Px(8f) + labelSz.X;
+        var contentX = tl.X + (size.X - contentW) * 0.5f;
+        var tint = ImGui.GetColorU32(saved ? StoreChips.GoldColor : UiColors.Body);
+        IconDraw.AddCentered(dl, FontAwesomeIcon.Star, iconPx,
+            new Vector2(contentX + iconPx * 0.5f, tl.Y + size.Y * 0.5f), tint);
+        dl.AddText(new Vector2(contentX + iconPx + Px(8f), tl.Y + (size.Y - labelSz.Y) * 0.5f), tint, label);
+
+        ImGui.SetCursorScreenPos(new Vector2(ImGui.GetWindowPos().X, tl.Y + size.Y));
+        ImGui.Dummy(new Vector2(0f, Px(6f)));
+        if (clicked)
+        {
+            wishlist.Toggle(product.Id);
         }
     }
 
-    /// <summary>The half-second bolt that arcs from the CTA toward the bag icon in the header.</summary>
+    /// <summary>The half-second bolt that arcs from the CTA toward the cart icon in the header.</summary>
     private void DrawBoltFlight(OsAppContext ctx, ImDrawListPtr dl)
     {
         var t = (float)(ImGui.GetTime() - _boltFlightStamp) / 0.5f;

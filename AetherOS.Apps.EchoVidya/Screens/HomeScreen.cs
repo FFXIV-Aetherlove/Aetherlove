@@ -423,7 +423,10 @@ internal sealed class HomeScreen
     {
         if (!TryNormalizeVideoRef(_watchInput, out var videoId))
         {
-            _watchError = Loc.T("os.echo_home_watch_invalid");
+            // A playlist has nowhere to go outside a room: watching alone is one video, not a queue.
+            _watchError = EchoPlaylistIds.TryParse(_watchInput, out _, out _)
+                ? Loc.T("os.echo_home_watch_playlist")
+                : Loc.T("os.echo_home_watch_invalid");
             return;
         }
         _watchError = null;

@@ -444,6 +444,7 @@ public sealed class PartyDockWindow : Window
     private static string NoticeText(OsPartyChatLine line) => line.Kind switch
     {
         "wayfinder" => string.Format(Loc.T("os.party_chat_wayfinder"), line.Text),
+        "racer" => string.Format(Loc.T("os.party_chat_racer"), line.Text),
         "echo" => string.Format(Loc.T("os.party_chat_echo"), line.Text),
         _ => string.Format(Loc.T("os.party_chat_joined"), line.Text),
     };

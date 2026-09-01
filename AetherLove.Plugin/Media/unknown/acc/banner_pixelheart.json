@@ -1,0 +1,14 @@
+{
+  "name": "Pixel Heart Banner",
+  "slot": "banner",
+  "tier": "seasonal",
+  "file": "banner_pixelheart.png",
+  "anchor": "body",
+  "origin": [
+    102,
+    108
+  ],
+  "width": 73,
+  "height": 134,
+  "behind": true
+}

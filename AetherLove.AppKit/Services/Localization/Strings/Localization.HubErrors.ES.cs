@@ -182,5 +182,22 @@ internal static class HubErrorsEs
         ["huberror.wayfinder_run_wrong_world"] = "Tienes que estar en {0} para unirte a esta cacería.",
         ["huberror.wayfinder_run_not_gathering"] = "Esa cacería ya ha empezado.",
         ["huberror.wayfinder_run_too_few"] = "Antes deben unirse al menos dos cazadores.",
+        ["huberror.lumirace_disabled"] = "Las carreras están desactivadas ahora mismo.",
+        ["huberror.lumirace_no_pet"] = "Necesitas un Aetherling nacido para correr.",
+        ["huberror.lumirace_not_adult"] = "Tu Aetherling corre cuando se hace adulto. Sigue alimentándolo.",
+        ["huberror.lumirace_gated"] = "La próxima carrera abre en {0} minutos.",
+        ["huberror.lumirace_pack_none"] = "No hay ningún sobre para abrir.",
+        ["huberror.lumirace_run_exists"] = "Ya hay una carrera en grupo abierta.",
+        ["huberror.lumirace_run_not_found"] = "Ahora mismo no hay carrera en grupo.",
+        ["huberror.lumirace_not_gathering"] = "Esa carrera ya empezó.",
+        ["huberror.lumirace_too_few"] = "Primero deben unirse al menos dos corredores.",
+        ["huberror.lumirace_no_offer"] = "Esas carreras ya no están disponibles. Abre la página otra vez y saldrán tres nuevas.",
+
+        // listing boosts (added after update 2.5.2)
+        ["huberror.boost_none_owned"] = "No tienes ningún impulso para eso. Consigue uno en la Tienda.",
+        ["huberror.boost_target_not_found"] = "Eso no es tuyo.",
+        ["huberror.boost_cap_reached"] = "No puedes sumar más días. Un impulso dura {0} días como máximo.",
+        ["huberror.boost_style_invalid"] = "Elige uno de los cuatro efectos.",
+        ["huberror.boost_target_not_live"] = "Eso todavía no está publicado. Impúlsalo cuando esté activo.",
     };
 }

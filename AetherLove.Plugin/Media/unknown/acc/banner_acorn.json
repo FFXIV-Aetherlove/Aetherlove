@@ -1,0 +1,14 @@
+{
+  "name": "Acorn Pennant",
+  "slot": "banner",
+  "tier": "seasonal",
+  "file": "banner_acorn.png",
+  "anchor": "body",
+  "origin": [
+    102,
+    108
+  ],
+  "width": 73,
+  "height": 134,
+  "behind": true
+}

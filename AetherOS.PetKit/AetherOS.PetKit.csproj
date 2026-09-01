@@ -1,0 +1,17 @@
+<Project Sdk="Dalamud.NET.Sdk/15.0.0">
+  <PropertyGroup>
+    <RootNamespace>AetherOS.PetKit</RootNamespace>
+    <AssemblyName>AetherOS.PetKit</AssemblyName>
+    <Use_DalamudPackager>false</Use_DalamudPackager>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Dalamud.Bindings.ImGui" Private="false" />
+    <ProjectReference Include="..\AetherOS.Sdk\AetherOS.Sdk.csproj" />
+    <ProjectReference Include="..\AetherLove.Shared\AetherLove.Shared.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="AetherOS.Apps.Aetherling" />
+    <InternalsVisibleTo Include="AetherOS.Apps.Racer" />
+    <InternalsVisibleTo Include="AetherLovePlugin" />
+  </ItemGroup>
+</Project>

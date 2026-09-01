@@ -1,0 +1,14 @@
+{
+  "name": "Voxel Helm",
+  "slot": "head",
+  "tier": "seasonal",
+  "file": "head_pixelhelm.png",
+  "anchor": "head",
+  "origin": [
+    86,
+    26
+  ],
+  "width": 165,
+  "height": 86,
+  "behind": false
+}

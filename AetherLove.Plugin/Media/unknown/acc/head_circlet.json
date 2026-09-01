@@ -1,0 +1,14 @@
+{
+  "name": "Adventurer's Circlet",
+  "slot": "head",
+  "tier": "seasonal",
+  "file": "head_circlet.png",
+  "anchor": "head",
+  "origin": [
+    56,
+    28
+  ],
+  "width": 120,
+  "height": 44,
+  "behind": false
+}

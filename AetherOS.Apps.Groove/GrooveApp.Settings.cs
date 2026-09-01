@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Numerics;
 using AetherLove.Services.Localization;
 using AetherLove.UI;
@@ -47,7 +47,7 @@ public sealed partial class GrooveApp
         DrawSurfaceToggle(ctx, padX, width, "##grooveMini", Loc.T("os.groove_set_mini"),
             Loc.T("os.groove_set_mini_hint"), _settings.ShowMiniControls, v => _settings.ShowMiniControls = v);
         DrawSurfaceToggle(ctx, padX, width, "##grooveDtr", Loc.T("os.groove_set_dtr"),
-            Loc.T("os.groove_set_dtr_hint"), _settings.ShowDtr, v => _settings.ShowDtr = v);
+            Loc.T("os.groove_set_dtr_hint"), _serverBar.AppEnabled, v => _serverBar.AppEnabled = v);
         DrawSurfaceToggle(ctx, padX, width, "##grooveShade", Loc.T("os.groove_set_shade"),
             Loc.T("os.groove_set_shade_hint"), _settings.ShowShadeTile, v => _settings.ShowShadeTile = v);
         DrawSurfaceToggle(ctx, padX, width, "##grooveWidget", Loc.T("os.groove_set_widget"),

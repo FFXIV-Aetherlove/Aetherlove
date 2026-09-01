@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AetherLove.Shared.Places;
 using AetherLove.Shared.Profile;
+using AetherLove.Shared.Store;
 
 namespace AetherOS.Apps.Places;
 
@@ -22,6 +23,13 @@ public interface IPlacesHost
     Task DeleteVenueAsync(Guid venueId, CancellationToken ct = default);
     Task<MyVenueDto> SetVenueImageAsync(Guid venueId, bool banner, PhotoUploadDto upload, short slot = 1, CancellationToken ct = default);
     Task<MyVenueDto> RemoveVenueImageAsync(Guid venueId, bool banner, short slot = 1, CancellationToken ct = default);
+
+    /// <summary>The boosts the account holds, for the editor's boost row. Null on any hub failure, which the
+    /// row reads as "none" and offers the store link instead.</summary>
+    Task<MyBoostsDto?> GetMyBoostsAsync(CancellationToken ct = default);
+
+    Task<BoostResultDto> ApplyBoostAsync(
+        BoostTarget target, Guid targetId, BoostStyle style, CancellationToken ct = default);
 
     /// <summary>The profile's NSFW consent; seeds the 18+ browse filter default.</summary>
     bool NsfwEnabled { get; }

@@ -246,10 +246,18 @@ public partial class MyVenuesScreen
         PopScrollbarStyle();
 
         DrawDeleteVenueConfirm();
+        DrawBoostOverlay();
     }
 
     private void DrawEditorForm(ThemeDefinition t, float w)
     {
+        if (_editId != Guid.Empty)
+        {
+            DrawSectionHeading(Loc.T("os.boost_shelf"), t);
+            DrawBoostRow(w);
+            ImGui.Spacing();
+        }
+
         DrawSectionHeading(Loc.T("places.section_details"), t);
 
         DrawFieldLabel(Loc.T("places.venue_name"), t);
@@ -454,7 +462,8 @@ public partial class MyVenuesScreen
 
         PushThemeButton(t);
         ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
-        if (_saving)
+        var saving = _saving;
+        if (saving)
         {
             ImGui.BeginDisabled();
         }
@@ -462,7 +471,7 @@ public partial class MyVenuesScreen
         {
             SaveVenue();
         }
-        if (_saving)
+        if (saving)
         {
             ImGui.EndDisabled();
         }

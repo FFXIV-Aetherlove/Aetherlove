@@ -10,6 +10,7 @@ using AetherLove.Services;
 using AetherLove.Services.Localization;
 using AetherLove.Shared.Places;
 using AetherLove.Shared.Profile.Enums;
+using AetherLove.Shared.Store;
 using AetherLove.UI;
 using AetherOS.Sdk;
 using Dalamud.Bindings.ImGui;
@@ -228,6 +229,15 @@ public partial class PlacesScreen
             _liveBannerTex[occ.VenueId] = occ.BannerWebp is { Length: > 0 }
                 ? AvatarDiskCache.Store(PlacesCacheDir, $"banner_{occ.VenueId:N}", occ.BannerWebp)
                 : null;
+        }
+        foreach (var occ in dto.Featured ?? [])
+        {
+            CacheClumpTextures(occ);
+            if (occ.BannerWebp is { Length: > 0 } bytes)
+            {
+                _liveBannerTex[occ.VenueId] = AvatarDiskCache.Store(
+                    PlacesCacheDir, $"banner_{occ.VenueId:N}", bytes);
+            }
         }
     }
 
@@ -476,7 +486,12 @@ public partial class PlacesScreen
             .OrderBy(o => o.StartUtc)
             .ToList();
 
-        if (live.Count == 0 && upcoming.Count == 0)
+        var featured = (browse.Featured ?? [])
+            .Where(o => !hidden.ContainsKey(o.VenueId)
+                && venuesById.TryGetValue(o.VenueId, out var v) && MatchesSearch(v))
+            .ToList();
+
+        if (live.Count == 0 && upcoming.Count == 0 && featured.Count == 0)
         {
             var searching = _searchActive && _searchText.Trim().Length > 0;
             ImGui.Dummy(new Vector2(1f, Px(30f)));
@@ -485,12 +500,25 @@ public partial class PlacesScreen
             return;
         }
 
+        if (featured.Count > 0)
+        {
+            var now = DateTimeOffset.UtcNow;
+            DrawSectionPill(Loc.T("os.boost_featured"),
+                BoostFx.KeyColor((BoostStyle)venuesById[featured[0].VenueId].BoostStyle), FontAwesomeIcon.Bolt);
+            foreach (var occ in featured)
+            {
+                DrawLiveCard(venuesById[occ.VenueId], occ, listW, occ.StartUtc <= now && now < occ.EndUtc);
+                ImGui.Dummy(new Vector2(1f, Px(8f)));
+            }
+            ImGui.Spacing();
+        }
+
         if (live.Count > 0)
         {
             DrawLiveSectionHeader();
             foreach (var occ in live)
             {
-                DrawLiveCard(venuesById[occ.VenueId], occ, listW);
+                DrawLiveCard(venuesById[occ.VenueId], occ, listW, live: true);
                 ImGui.Dummy(new Vector2(1f, Px(8f)));
             }
             ImGui.Spacing();
@@ -624,7 +652,10 @@ public partial class PlacesScreen
         return $"{VenueFields.DayAbbreviations[dayIdx]} {localDay.Day:D2}.{localDay.Month:D2}";
     }
 
-    private void DrawLiveCard(VenueSummaryDto venue, VenueOccurrenceDto occ, float listW)
+    /// <summary>The hero card. <paramref name="live"/> false is the Featured strip showing a boosted venue's
+    /// next opening rather than one running now: same card, with the start time in place of the countdown
+    /// and no progress bar to fill.</summary>
+    private void DrawLiveCard(VenueSummaryDto venue, VenueOccurrenceDto occ, float listW, bool live)
     {
         var t = ThemeService.Current;
         var dl = ImGui.GetWindowDrawList();
@@ -676,13 +707,22 @@ public partial class PlacesScreen
             venue.AverageRating, venue.ReviewCount, Px(12f));
 
         var now = DateTimeOffset.UtcNow;
-        var remaining = occ.EndUtc - now;
-        if (remaining < TimeSpan.Zero)
+        if (live)
         {
-            remaining = TimeSpan.Zero;
+            var remaining = occ.EndUtc - now;
+            if (remaining < TimeSpan.Zero)
+            {
+                remaining = TimeSpan.Zero;
+            }
+            DrawEndsInChip(dl, new Vector2(br.X - Px(12f), tl.Y + Px(10f)),
+                Loc.T("places.ends_in", FormatRemaining(remaining)));
         }
-        DrawEndsInChip(dl, new Vector2(br.X - Px(12f), tl.Y + Px(10f)),
-            Loc.T("places.ends_in", FormatRemaining(remaining)));
+        else
+        {
+            var localStart = occ.StartUtc.ToLocalTime();
+            DrawEndsInChip(dl, new Vector2(br.X - Px(12f), tl.Y + Px(10f)),
+                $"{DayHeader(DateOnly.FromDateTime(localStart.Date))} · {localStart:HH:mm}");
+        }
 
         var textX = tl.X + Px(14f);
         var textMaxW = cardW - Px(28f);
@@ -697,7 +737,14 @@ public partial class PlacesScreen
         dl.AddText(new Vector2(textX, line2Y), ImGui.GetColorU32(UiColors.Body),
             TruncateToWidth(RegionDcWorldLine(venue), textMaxW - Px(12f)));
 
-        DrawLiveProgressBar(dl, occ, now, tl, br, t);
+        if (live)
+        {
+            DrawLiveProgressBar(dl, occ, now, tl, br, t);
+        }
+        if (BoostRules.IsActive(venue.BoostedUntilUtc, now))
+        {
+            BoostFx.Draw(dl, tl, br, Px(14f), (BoostStyle)venue.BoostStyle);
+        }
 
         if (clicked)
         {
@@ -856,6 +903,10 @@ public partial class PlacesScreen
             ImGui.GetColorU32(UiColors.Success), goingLabel);
         VenueFields.DrawStarSummary(dl, new Vector2(br.X - Px(12f), line2Y),
             venue.AverageRating, venue.ReviewCount, Px(9f), alignRight: true);
+        if (BoostRules.IsActive(venue.BoostedUntilUtc, DateTimeOffset.UtcNow))
+        {
+            BoostFx.Draw(dl, tl, br, Px(12f), (BoostStyle)venue.BoostStyle);
+        }
 
         if (clicked)
         {
@@ -913,6 +964,10 @@ public partial class PlacesScreen
             var labelSz = ImGui.CalcTextSize(label);
             dl.AddText(new Vector2(br.X - labelSz.X - Px(10f), y),
                 ImGui.GetColorU32(UiColors.Subtle), label);
+        }
+        if (BoostRules.IsActive(venue.BoostedUntilUtc, DateTimeOffset.UtcNow))
+        {
+            BoostFx.Draw(dl, tl, br, Px(10f), (BoostStyle)venue.BoostStyle);
         }
 
         if (clicked)

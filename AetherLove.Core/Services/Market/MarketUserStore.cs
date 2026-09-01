@@ -21,12 +21,14 @@ public sealed class MarketUserStore
     private const string RecentsKey = "recents";
     private const string SelectionsKey = "selections";
     private const string ConfirmTravelKey = "confirmTravel";
+    private const string ListSortKey = "listSort";
 
     private readonly IAppStorage _storage;
     private readonly object _gate = new();
     private List<uint> _watchlist;
     private List<uint> _recents;
     private List<MarketSelection> _selections;
+    private Dictionary<string, int> _listSort;
 
     public MarketUserStore(IAppStorage storage)
     {
@@ -35,6 +37,26 @@ public sealed class MarketUserStore
         _recents = storage.Get<List<uint>>(RecentsKey) ?? [];
         _selections = storage.Get<List<MarketSelection>>(SelectionsKey) ?? [];
         _confirmTravel = storage.Get<bool?>(ConfirmTravelKey) ?? true;
+        _listSort = storage.Get<Dictionary<string, int>>(ListSortKey) ?? [];
+    }
+
+    /// <summary>The sort last picked for one list, or null if it has never been sorted by hand. Kept per
+    /// list rather than per app: a watchlist is read newest-first and a price hunt is not.</summary>
+    public int? SortFor(string listKey)
+    {
+        lock (_gate)
+        {
+            return _listSort.TryGetValue(listKey, out var mode) ? mode : null;
+        }
+    }
+
+    public void SetSortFor(string listKey, int mode)
+    {
+        lock (_gate)
+        {
+            _listSort[listKey] = mode;
+            _storage.Set(ListSortKey, _listSort);
+        }
     }
 
     private volatile bool _confirmTravel;

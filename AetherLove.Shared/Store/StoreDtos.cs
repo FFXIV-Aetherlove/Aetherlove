@@ -238,3 +238,30 @@ public sealed record StoreInventoryItemDto(
     Guid ProductId,
     int Quantity,
     DateTimeOffset FirstAcquiredAtUtc);
+
+/// <summary>One thing the caller could spend a boost on, with the boost it is already wearing.
+/// <see cref="Target"/> is a <see cref="BoostTarget"/>; <see cref="Subtitle"/> is the venue's world or
+/// the ad's category line, enough to tell two same-named entries apart.</summary>
+[MessagePackObject(keyAsPropertyName: true)]
+public sealed record BoostTargetDto(
+    short Target,
+    Guid Id,
+    string Name,
+    string Subtitle,
+    DateTimeOffset? BoostedUntilUtc,
+    short BoostStyle);
+
+/// <summary>What the Store's boosts shelf needs in one call: how many of each boost the account holds,
+/// and everything it could spend them on.</summary>
+[MessagePackObject(keyAsPropertyName: true)]
+public sealed record MyBoostsDto(
+    int VenueBoosts,
+    int LevemeteBoosts,
+    BoostTargetDto[] Targets);
+
+/// <summary>The window a spent boost left behind, plus what is left in the bag.</summary>
+[MessagePackObject(keyAsPropertyName: true)]
+public sealed record BoostResultDto(
+    DateTimeOffset BoostedUntilUtc,
+    short BoostStyle,
+    int Remaining);

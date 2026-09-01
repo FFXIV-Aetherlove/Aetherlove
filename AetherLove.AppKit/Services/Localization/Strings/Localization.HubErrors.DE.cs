@@ -182,5 +182,22 @@ internal static class HubErrorsDe
         ["huberror.wayfinder_run_wrong_world"] = "Du musst auf {0} sein, um mitzujagen.",
         ["huberror.wayfinder_run_not_gathering"] = "Diese Jagd hat schon begonnen.",
         ["huberror.wayfinder_run_too_few"] = "Es müssen erst mindestens zwei Jäger beitreten.",
+        ["huberror.lumirace_disabled"] = "Rennen sind gerade abgeschaltet.",
+        ["huberror.lumirace_no_pet"] = "Du brauchst ein geschlüpftes Aetherling, um zu rennen.",
+        ["huberror.lumirace_not_adult"] = "Dein Aetherling rennt, sobald es erwachsen ist. Füttere es weiter.",
+        ["huberror.lumirace_gated"] = "Das nächste Rennen öffnet in {0} Minuten.",
+        ["huberror.lumirace_pack_none"] = "Es gibt kein Päckchen zum Öffnen.",
+        ["huberror.lumirace_run_exists"] = "Ein Gruppenrennen ist bereits offen.",
+        ["huberror.lumirace_run_not_found"] = "Gerade gibt es kein Gruppenrennen.",
+        ["huberror.lumirace_not_gathering"] = "Dieses Rennen hat schon begonnen.",
+        ["huberror.lumirace_too_few"] = "Mindestens zwei Rennteilnehmer müssen zuerst beitreten.",
+        ["huberror.lumirace_no_offer"] = "Diese Rennen stehen nicht mehr zur Auswahl. Öffne die Seite erneut, dann gibt es drei neue.",
+
+        // listing boosts (added after update 2.5.2)
+        ["huberror.boost_none_owned"] = "Du hast dafür keinen Boost. Hol dir einen im Store.",
+        ["huberror.boost_target_not_found"] = "Das gehört dir nicht.",
+        ["huberror.boost_cap_reached"] = "Du kannst keine Tage mehr drauflegen. Ein Boost läuft höchstens {0} Tage.",
+        ["huberror.boost_style_invalid"] = "Wähle einen der vier Effekte.",
+        ["huberror.boost_target_not_live"] = "Das ist noch nicht online. Booste es, sobald es live ist.",
     };
 }

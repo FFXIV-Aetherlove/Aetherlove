@@ -631,7 +631,8 @@ public partial class LevemetesScreen
         ImGui.SetCursorPosX(pad);
         PushThemeButton(ThemeService.Current);
         ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(10f));
-        if (_contactBusy)
+        var contactBusy = _contactBusy;
+        if (contactBusy)
         {
             ImGui.BeginDisabled();
         }
@@ -639,7 +640,7 @@ public partial class LevemetesScreen
         {
             StartContact(detail);
         }
-        if (_contactBusy)
+        if (contactBusy)
         {
             ImGui.EndDisabled();
         }

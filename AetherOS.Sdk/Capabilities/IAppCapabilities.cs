@@ -1,4 +1,4 @@
-namespace AetherOS.Sdk;
+﻿namespace AetherOS.Sdk;
 
 /// <summary>The platform capabilities every AetherOS app can reuse instead of declaring its own host
 /// bridge for the same cross-cutting features. The shell supplies one implementation; apps receive it by
@@ -41,4 +41,8 @@ public interface IAppCapabilities
     /// <summary>Persistent storage scoped to <paramref name="appId"/>: a private folder plus a JSON key-value
     /// store. Pass your own app id.</summary>
     IAppStorage Storage(string appId);
+
+    /// <summary>The app's slice of FFXIV's server info bar. Publish text and the host owns every gate,
+    /// including the player's per-app and per-entry toggles. Pass your own app id.</summary>
+    IServerBar ServerBar(string appId);
 }

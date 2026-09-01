@@ -6,7 +6,8 @@ using AetherLove.Os;
 using AetherLove.Shared.Aetherling;
 using AetherLove.Shared.Arcade;
 using AetherLove.UI;
-using AetherOS.Apps.Aetherling.Engine;
+using AetherLove.Widgets;
+using AetherOS.PetKit.Engine;
 using AetherOS.Apps.Aetherling.Screens.Games;
 using AetherOS.Apps.Aetherling.Ui;
 using AetherOS.Sdk;
@@ -46,7 +47,13 @@ internal sealed class GamesScreen
     private readonly HillRollGame _hillRoll = new();
     private readonly Games.LumiLink.LumiLinkGame _lumiLink = new();
     private readonly Games.LumiLink.LumiLinkGuide _lumiLinkGuide = new();
+    private readonly Games.Gyre.GyreGame _gyre = new();
+    private readonly Games.Gyre.GyreGuide _gyreGuide = new();
     private readonly Dictionary<ArcadeGame, int> _bests = [];
+
+    /// <summary>Games this shelf has never been opened for. A card wears "New" until its first open, not
+    /// until its first score: a run that ends badly is still a game the player has met.</summary>
+    private readonly HashSet<ArcadeGame> _unopened = [];
 
     private Phase _phase = Phase.Select;
     private Phase _boardReturn = Phase.Select;
@@ -61,6 +68,15 @@ internal sealed class GamesScreen
     private int _lastScore;
     private bool _bestsLoaded;
     private const float LumiLinkSpeedPerLevel = 0.02f;
+
+    /// <summary>What one Gyre stage adds to its chapter's loop, pitch and tempo together. Five stages a
+    /// chapter, so a chapter ends about a seventh faster than it began: audible as the screws tightening,
+    /// short of the chipmunk a whole run's worth of climbing would reach.</summary>
+    private const float GyreSpeedPerStage = 0.035f;
+
+    private const float GyreMusicPerEndlessStep = 0.02f;
+
+    private const float GyreEndlessMusicCap = 0.30f;
     private string? _bgmTrack;
     private float _bgmSpeed = 1f;
 
@@ -71,6 +87,9 @@ internal sealed class GamesScreen
     /// <summary>The music switch was flipped. The app owns the stored answer, since the ceremony's own mute
     /// button writes the same one.</summary>
     public event Action<bool>? MuteChanged;
+
+    /// <summary>The music level, for the app to persist beside the mute it already stores.</summary>
+    public event Action<float>? VolumeChanged;
 
     /// <summary>A round is in progress (counting down, playing or paused). The app mirrors this to the
     /// host so the phone battery can never die mid-run.</summary>
@@ -85,7 +104,7 @@ internal sealed class GamesScreen
         _leaderboard = new SoftLeaderboardPanel(scores);
     }
 
-    private IPetGame[] AllGames => [_cloudHop, _crystalCatch, _hillRoll, _lumiLink];
+    private IPetGame[] AllGames => [_cloudHop, _crystalCatch, _hillRoll, _lumiLink, _gyre];
 
     public void OnShow(AetherlingDto? core)
     {
@@ -104,6 +123,13 @@ internal sealed class GamesScreen
             foreach (var game in AllGames)
             {
                 _bests[game.Id] = _storage.Get<int?>(BestKey(game.Id)) ?? 0;
+                // A shelf that predates the flag has been played for years: only a game whose badge has
+                // never been offered counts as new, and a best score proves it was played before.
+                var seen = _storage.Get<bool?>(OpenedKey(game.Id)) ?? _bests[game.Id] > 0;
+                if (!seen && NewGames.Contains(game.Id))
+                {
+                    _unopened.Add(game.Id);
+                }
             }
         }
     }
@@ -121,6 +147,12 @@ internal sealed class GamesScreen
     }
 
     private static string BestKey(ArcadeGame game) => $"games.best.{game.ToString().ToLowerInvariant()}";
+
+    private static string OpenedKey(ArcadeGame game) => $"games.opened.{game.ToString().ToLowerInvariant()}";
+
+    /// <summary>Which games are new enough to say so. A game leaves this list when it stops being news;
+    /// nothing else on the shelf has ever worn the badge, and an empty list is the resting state.</summary>
+    private static readonly ArcadeGame[] NewGames = [ArcadeGame.Gyre];
 
     private static string NameKey(ArcadeGame game) => $"os.aetherling_game_{game.ToString().ToLowerInvariant()}";
 
@@ -145,8 +177,34 @@ internal sealed class GamesScreen
         ArcadeGame.CloudHop => FontAwesomeIcon.Cloud,
         ArcadeGame.CrystalCatch => FontAwesomeIcon.Gem,
         ArcadeGame.LumiLink => FontAwesomeIcon.Th,
+        ArcadeGame.Gyre => FontAwesomeIcon.CircleNotch,
         _ => FontAwesomeIcon.Mountain,
     };
+
+    /// <summary>Gyre swaps its loop per chapter of the ladder; a chapter whose track has not shipped
+    /// yet falls back to the first one that exists, so the plumbing precedes the files.</summary>
+    /// <summary>Gyre's two loops, alternating by chapter: the sky and the cavern share one, the hills and
+    /// the core the other, and each chapter climbs its own pitch across its five stages (see
+    /// <see cref="GyreSpeedPerStage"/>). Two tracks rather than four on purpose: a run is twenty stages
+    /// long and hearing the same pair return, faster each time, reads as the descent tightening.</summary>
+    private string GyreBgm(int chapter)
+    {
+        string[] tracks = ["bgm_gyre_1.ogg", "bgm_gyre_2.ogg", "bgm_gyre_1.ogg", "bgm_gyre_2.ogg"];
+        var bgmDir = Path.Combine(_host.AssetRoot, "..", "bgm");
+        var wanted = tracks[Math.Clamp(chapter, 0, 3)];
+        if (File.Exists(Path.Combine(bgmDir, wanted)))
+        {
+            return wanted;
+        }
+        foreach (var track in tracks)
+        {
+            if (File.Exists(Path.Combine(bgmDir, track)))
+            {
+                return track;
+            }
+        }
+        return "bgm_lumi_link.ogg";
+    }
 
     public void Draw(OsAppContext ctx)
     {
@@ -234,13 +292,30 @@ internal sealed class GamesScreen
     /// <summary>The loop follows the chosen game: it comes up with the title screen and runs until the
     /// player is back on the shelf. Reconciled from the phase each frame rather than fired on transitions,
     /// so no exit path can leave music behind.</summary>
+    /// <summary>How far into its own chapter a Gyre stage is, 0..4. The endless finale sits at the top of
+    /// the last one and stays there.</summary>
+    private static int StageInChapter(int stage) => Math.Clamp((Math.Max(1, stage) - 1) % 5, 0, 4);
+
     private void SyncBgm()
     {
         var wanted = _phase != Phase.Select && _active is { } game ? BgmFile(game.Id) : null;
-        // Lumi-Link's loop climbs two percent per level, pitch and tempo together.
-        var speed = _active is Games.LumiLink.LumiLinkGame lumi && wanted is not null
-            ? 1f + (LumiLinkSpeedPerLevel * Math.Max(0, lumi.Metric1 - 1))
-            : 1f;
+        if (wanted is not null && _active is Games.Gyre.GyreGame gyre)
+        {
+            wanted = GyreBgm(gyre.Chapter);
+        }
+        // Lumi-Link's loop climbs two percent per level, pitch and tempo together; Gyre's climbs across
+        // the five stages of a chapter and starts over when the next chapter brings the other loop in.
+        var speed = 1f;
+        if (wanted is not null && _active is Games.LumiLink.LumiLinkGame lumi)
+        {
+            speed = 1f + (LumiLinkSpeedPerLevel * Math.Max(0, lumi.Metric1 - 1));
+        }
+        else if (wanted is not null && _active is Games.Gyre.GyreGame gyreSpeed)
+        {
+            speed = 1f + (GyreSpeedPerStage * StageInChapter(gyreSpeed.Metric1));
+            // The Core has no next stage to hand the climb to, so its own steps carry the loop up.
+            speed += Math.Min(GyreEndlessMusicCap, GyreMusicPerEndlessStep * gyreSpeed.EndlessSteps);
+        }
         if (wanted == _bgmTrack && Math.Abs(speed - _bgmSpeed) < 0.001f)
         {
             return;
@@ -258,6 +333,7 @@ internal sealed class GamesScreen
     }
 
     private const string LumiLinkGuideKey = "games.lumilink.guideSeen";
+    private const string GyreGuideKey = "games.gyre.guideSeen";
 
     private void Start(IPetGame game)
     {
@@ -271,7 +347,17 @@ internal sealed class GamesScreen
             });
             return;
         }
+        if (game is Games.Gyre.GyreGame && _storage.Get<bool?>(GyreGuideKey) != true && !_gyreGuide.Active)
+        {
+            _gyreGuide.Show(() =>
+            {
+                _storage.Set(GyreGuideKey, true);
+                Start(game);
+            });
+            return;
+        }
         _lumiLink.SetCreature(_core);
+        _gyre.SetCreature(_core);
         _active = game;
         game.Reset(new Random());
         _countdown = CountdownSeconds;
@@ -320,7 +406,7 @@ internal sealed class GamesScreen
         y += (ImGui.GetTextLineHeight() * 0.92f) + Px(12f);
 
         var cardW = size.X - (pad * 2f);
-        var gap = Px(12f);
+        var gap = Px(8f);
         foreach (var game in AllGames)
         {
             y += DrawGameCard(ctx, dl, game, new Vector2(origin.X + pad, y), cardW) + gap;
@@ -344,12 +430,15 @@ internal sealed class GamesScreen
     /// height it drew, so the list can stack whatever each card needed.</summary>
     private float DrawGameCard(OsAppContext ctx, ImDrawListPtr dl, IPetGame game, Vector2 tl, float width)
     {
-        const float HintScale = 0.85f;
-        var padIn = Px(12f);
-        var iconSide = Px(84f);
-        var trophySide = Px(28f);
+        // Five games fit the shelf without scrolling only because the card is measured rather than
+        // guessed: the padding, the icon and the gaps between the three lines are all as small as they
+        // can be while the blurb still reads as a paragraph.
+        const float HintScale = 0.82f;
+        var padIn = Px(9f);
+        var iconSide = Px(64f);
+        var trophySide = Px(24f);
 
-        var textX = tl.X + padIn + iconSide + Px(14f);
+        var textX = tl.X + padIn + iconSide + Px(11f);
         var textLimit = tl.X + width - textX - padIn;
         var hint = ctx.Localize(BlurbKey(game.Id));
         var best = _bests.GetValueOrDefault(game.Id);
@@ -360,7 +449,7 @@ internal sealed class GamesScreen
         var nameH = ImGui.GetTextLineHeight();
         var hintH = Look.WrappedHeight(hint, textLimit, HintScale);
         var bestH = bestText.Length > 0 ? ImGui.GetTextLineHeight() * HintScale : 0f;
-        var textBlock = nameH + Px(6f) + hintH + (bestH > 0f ? Px(6f) + bestH : 0f);
+        var textBlock = nameH + Px(4f) + hintH + (bestH > 0f ? Px(4f) + bestH : 0f);
         var height = MathF.Max(iconSide + (padIn * 2f), textBlock + (padIn * 2f));
 
         // The trophy is submitted before the card's own button, so its little corner wins the click.
@@ -385,14 +474,30 @@ internal sealed class GamesScreen
         DrawGameIcon(ctx, dl, game.Id, tl + new Vector2(padIn, (height - iconSide) * 0.5f), iconSide);
 
         var textY = tl.Y + ((height - textBlock) * 0.5f);
+        var name = ctx.Localize(NameKey(game.Id));
+        var badge = _unopened.Contains(game.Id) ? ctx.Localize("os.news_new") : string.Empty;
+        var badgeW = badge.Length > 0
+            ? (ImGui.CalcTextSize(badge).X * HintScale) + Px(14f)
+            : 0f;
         dl.AddText(new Vector2(textX, textY), Look.U32(Look.CrystalPale),
-            TruncateToWidth(ctx.Localize(NameKey(game.Id)), textLimit));
-        textY += nameH + Px(6f);
+            TruncateToWidth(name, textLimit - badgeW));
+        if (badge.Length > 0)
+        {
+            var badgeTl = new Vector2(
+                textX + MathF.Min(ImGui.CalcTextSize(name).X, textLimit - badgeW) + Px(8f),
+                textY + Px(2f));
+            var badgeH = (ImGui.GetTextLineHeight() * HintScale) + Px(3f);
+            dl.AddRectFilled(badgeTl, badgeTl + new Vector2(badgeW - Px(8f), badgeH),
+                Look.U32(Look.Spark, 0.9f), badgeH * 0.5f);
+            dl.AddText(ImGui.GetFont(), ImGui.GetFontSize() * HintScale,
+                badgeTl + new Vector2(Px(6f), Px(1f)), Look.U32(Look.Void), badge);
+        }
+        textY += nameH + Px(4f);
         Look.LeftWrapped(dl, hint, textX, textY, textLimit, Look.U32(Look.Whisper), HintScale);
         if (bestText.Length > 0)
         {
             dl.AddText(ImGui.GetFont(), ImGui.GetFontSize() * HintScale,
-                new Vector2(textX, textY + hintH + Px(6f)), Look.U32(Look.Spark, 0.9f), bestText);
+                new Vector2(textX, textY + hintH + Px(4f)), Look.U32(Look.Spark, 0.9f), bestText);
         }
 
         IconDraw.AddCentered(dl, FontAwesomeIcon.Trophy, Px(13f),
@@ -407,6 +512,10 @@ internal sealed class GamesScreen
         }
         else if (clicked)
         {
+            if (_unopened.Remove(game.Id))
+            {
+                _storage.Set(OpenedKey(game.Id), (bool?)true);
+            }
             _active = game;
             _phase = Phase.Title;
         }
@@ -470,6 +579,15 @@ internal sealed class GamesScreen
             }
             backTop += Px(52f);
         }
+        if (game is Games.Gyre.GyreGame)
+        {
+            if (DrawSoftButton(ctx, dl, "##titleHelp", ctx.Localize("os.aetherling_gyre_help"), centreX,
+                backTop, false))
+            {
+                _gyreGuide.Show(null);
+            }
+            backTop += Px(52f);
+        }
         if (DrawSoftButton(ctx, dl, "##titleBack", ctx.Localize("os.aetherling_game_tohub"), centreX,
             backTop, false))
         {
@@ -477,6 +595,7 @@ internal sealed class GamesScreen
             _phase = Phase.Select;
         }
         _lumiLinkGuide.Draw(ctx, origin, size, _host.AssetRoot, _core);
+        _gyreGuide.Draw(ctx, origin, size, _host.AssetRoot, _core, _runtime);
     }
 
     private void DrawGameIcon(OsAppContext ctx, ImDrawListPtr dl, ArcadeGame game, Vector2 tl, float side)
@@ -589,6 +708,26 @@ internal sealed class GamesScreen
             }
         }
         DrawChip(dl, tl, _host.BgmMuted ? FontAwesomeIcon.VolumeMute : FontAwesomeIcon.VolumeDown, hovered);
+
+        // The same loop the app's own chip carries, so the bar under either one moves the other.
+        var barMuted = _host.BgmMuted;
+        var volume = _host.BgmVolume;
+        if (VolumeBar.Draw("aetherlingGamesBgm", dl, tl, new Vector2(ChipSide, ChipSide), ref barMuted, ref volume,
+            Look.U32(Look.CrystalPale, 0.9f), Look.U32(new Vector4(0f, 0f, 0f, 0.45f)),
+            Look.U32(Look.CrystalPale, 0.95f), UiScale.S))
+        {
+            _host.BgmVolume = volume;
+            VolumeChanged?.Invoke(volume);
+            if (barMuted != _host.BgmMuted)
+            {
+                _host.BgmMuted = barMuted;
+                MuteChanged?.Invoke(barMuted);
+                if (!barMuted && _bgmTrack is { } resumed)
+                {
+                    _host.StartGameBgm(resumed);
+                }
+            }
+        }
     }
 
     private static void DrawChip(ImDrawListPtr dl, Vector2 tl, FontAwesomeIcon icon, bool hovered)

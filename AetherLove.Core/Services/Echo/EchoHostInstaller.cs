@@ -81,6 +81,9 @@ public sealed class EchoHostInstaller
         {
             if (_locator.IsComplete(manifest.Version))
             {
+                // A prune blocked by a still-running old build gets its second chance here, or the
+                // leftover would survive forever: every later attempt takes this early return.
+                _locator.PruneOtherVersions(manifest.Version);
                 Publish(new EchoInstallState(EchoInstallPhase.Installed, 0, 0, manifest.Version, null));
                 return true;
             }

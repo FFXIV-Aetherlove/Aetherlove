@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -266,9 +266,11 @@ public sealed class NewAppOffer(OsShell shell)
             {
                 os.OfferedApps.Add(id);
             }
-            if (_declined.Contains(id) && !os.RemovedApps.Contains(id))
+            if (_declined.Contains(id))
             {
-                os.RemovedApps.Add(id);
+                // Through the shell rather than by hand: a decline must also clear the badge and drop any
+                // notification the app posted while it was being offered, exactly as removing it would.
+                shell.RemoveBuiltInApp(id);
             }
         }
         UiHost.Configuration.Save();

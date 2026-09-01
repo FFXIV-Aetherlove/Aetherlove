@@ -18,9 +18,14 @@
     <RootNamespace>AetherOS.WatchHost</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
-  <ItemGroup>
+  <PropertyGroup>
     <!-- Matching the version a shipping in-game browser plugin (Browsingway) runs, rather than whatever
-         NuGet offered first: 120 carries known CVEs and this is a browser. -->
-    <PackageReference Include="CefSharp.OffScreen.NETCore" Version="143.0.90" />
+         NuGet offered first: 120 carries known CVEs and this is a browser. Overridable so a codec-enabled
+         bundle can build against the CEF version a third-party build actually exists for
+         (ops/publishing-the-echo-playback-host.md): dotnet publish -p:CefSharpVersion=127.3.50 -->
+    <CefSharpVersion Condition="'$(CefSharpVersion)' == ''">143.0.90</CefSharpVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="CefSharp.OffScreen.NETCore" Version="$(CefSharpVersion)" />
   </ItemGroup>
 </Project>

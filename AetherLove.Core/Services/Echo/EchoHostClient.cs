@@ -22,7 +22,10 @@ public sealed record EchoPlayerState(
     bool Ended,
     int? Error,
     long Epoch,
-    string? Title);
+    string? Title,
+    bool IsLive = false,
+    double LiveEdge = 0d,
+    bool? CanPlayH264 = null);
 
 /// <summary>Failures raised by the client itself; the player's own error codes are non-negative.</summary>
 public static class EchoHostErrors
@@ -40,7 +43,8 @@ public sealed class EchoHostClient : IDisposable
     private const int ConnectTimeoutMs = 15000;
     private const int ShutdownGraceMs = 1500;
     private static readonly int[] RestartBackoffMs = [2000, 5000, 10000];
-    private static readonly EchoPlayerState EmptyState = new(false, null, 0, 0, false, false, false, null, 0, null);
+    private static readonly EchoPlayerState EmptyState =
+        new(false, null, 0, 0, false, false, false, null, 0, null, false, 0d, null);
 
     private readonly object _gate = new();
     private Process? _process;
@@ -56,6 +60,7 @@ public sealed class EchoHostClient : IDisposable
     private float _volume = 1f;
     private bool _captions;
     private string? _lastVideoId;
+    private string? _lastSource;
     private double _lastPosition;
     private int _restartAttempt;
     private long _epoch;
@@ -121,7 +126,7 @@ public sealed class EchoHostClient : IDisposable
 
     /// <summary>Starts a new video. Every load opens a new epoch, so a state report still in flight for the
     /// previous video cannot trigger a spurious auto-advance or a correction seek against the wrong media.</summary>
-    public void Load(string videoId, double startSeconds)
+    public void Load(string videoId, double startSeconds, string? source = null)
     {
         var start = Math.Max(0d, startSeconds);
         var epoch = Interlocked.Increment(ref _epoch);
@@ -130,7 +135,8 @@ public sealed class EchoHostClient : IDisposable
             _lastVideoId = videoId;
             _lastPosition = start;
         }
-        Send(new { t = "load", videoId, start, epoch }, replayedOnConnect: true);
+        _lastSource = source;
+        Send(new { t = "load", videoId, start, epoch, source = source ?? "youtube" }, replayedOnConnect: true);
     }
 
     public void Play() => Send(new { t = "play" });
@@ -146,6 +152,10 @@ public sealed class EchoHostClient : IDisposable
         }
         Send(new { t = "seek", sec = target }, replayedOnConnect: true);
     }
+
+    /// <summary>Jumps a live stream to the front of its window and resumes. Older playback hosts do not know
+    /// this command and ignore it, which is why the caller seeks as well rather than relying on it.</summary>
+    public void ToLive() => Send(new { t = "tolive" });
 
     public void SetVolume(float v01)
     {
@@ -233,6 +243,18 @@ public sealed class EchoHostClient : IDisposable
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
             };
+            // CEF's helper processes are CefSharp's framework-dependent CefSharp.BrowserSubprocess.exe,
+            // and children inherit whatever DOTNET_ROOT the game environment carries, which on a player's
+            // machine resolves no compatible runtime: every helper then dies in a "You must install .NET"
+            // dialog while the host itself runs. A bundle that ships a runtime/ folder in the shared layout
+            // pins every process in the tree to it; a bundle without one keeps today's behaviour.
+            var bundledRuntime = Path.Combine(Path.GetDirectoryName(_exePath) ?? string.Empty, "runtime");
+            if (Directory.Exists(Path.Combine(bundledRuntime, "shared")))
+            {
+                psi.EnvironmentVariables["DOTNET_ROOT"] = bundledRuntime;
+                psi.EnvironmentVariables["DOTNET_ROOT_X64"] = bundledRuntime;
+                psi.EnvironmentVariables["DOTNET_MULTILEVEL_LOOKUP"] = "0";
+            }
             // The host ties its life to ours: it exits when this pid does, so a game crash leaves no orphan
             // browser behind.
             psi.ArgumentList.Add("--parent");
@@ -351,6 +373,7 @@ public sealed class EchoHostClient : IDisposable
     private void Resume()
     {
         string? videoId;
+        string? source;
         double position;
         float volume;
         bool captions;
@@ -360,6 +383,7 @@ public sealed class EchoHostClient : IDisposable
         {
             _restartAttempt = 0;
             videoId = _lastVideoId;
+            source = _lastSource;
             position = _lastPosition;
             volume = _volume;
             captions = _captions;
@@ -371,7 +395,7 @@ public sealed class EchoHostClient : IDisposable
         Send(new { t = "captions", on = captions }, replayedOnConnect: true);
         if (videoId is { Length: > 0 })
         {
-            Load(videoId, position);
+            Load(videoId, position, source);
         }
     }
 
@@ -431,7 +455,15 @@ public sealed class EchoHostClient : IDisposable
                         root.TryGetProperty("error", out var err) && err.ValueKind == JsonValueKind.Number
                             && err.TryGetInt32(out var code) ? code : null,
                         epoch,
-                        Str(root, "title"));
+                        Str(root, "title"),
+                        Flag(root, "isLive"),
+                        Num(root, "edge"),
+                        // Tri-state on purpose: true and false are the page's own measurement, null means
+                        // the page or the host predates the field. Null must never read as "cannot":
+                        // a watch page from before the field made every capable player claim it was
+                        // outdated, straight after its user had updated it.
+                        root.TryGetProperty("h264", out var h264) && h264.ValueKind
+                            is JsonValueKind.True or JsonValueKind.False ? h264.GetBoolean() : null);
                     lock (_gate)
                     {
                         _lastPosition = state.Time;
@@ -482,7 +514,9 @@ public sealed class EchoHostClient : IDisposable
         UiHost.Log.Information(
             $"[Echo] player video={state.VideoId ?? "none"} ready={state.Ready} playing={state.Playing} " +
             $"buffering={state.Buffering} ended={state.Ended} error={(state.Error?.ToString() ?? "none")} " +
-            $"time={state.Time:0.0} dur={state.Duration:0.0} title={state.Title ?? "none"}");
+            $"time={state.Time:0.0} dur={state.Duration:0.0} " +
+            $"live={state.IsLive} edge={state.LiveEdge:0.0} " +
+            $"h264={(state.CanPlayH264 is { } h ? h.ToString() : "unknown")} title={state.Title ?? "none"}");
     }
 
     private void Publish(EchoPlayerState state)

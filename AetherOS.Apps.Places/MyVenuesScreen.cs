@@ -29,6 +29,7 @@ public partial class MyVenuesScreen
     private readonly IAppCapabilities _caps;
     private readonly Action _backToPlaces;
     private readonly CancellationTokenSource _cts = new();
+    private IOsShell? _shell;
 
     private volatile MyVenueDto[]? _venues;
     private volatile bool _loading;
@@ -58,6 +59,7 @@ public partial class MyVenuesScreen
     {
         _section = Section.List;
         StartListFetch();
+        StartBoostCountFetch();
     }
 
     private void StartListFetch()
@@ -103,8 +105,9 @@ public partial class MyVenuesScreen
         }, ct);
     }
 
-    public void Draw()
+    public void Draw(IOsShell shell)
     {
+        _shell = shell;
         if (_savedTimer > 0f)
         {
             _savedTimer -= ImGui.GetIO().DeltaTime;

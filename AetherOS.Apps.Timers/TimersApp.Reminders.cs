@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Numerics;
 using AetherLove.Services.Localization;
 using AetherLove.UI;
@@ -80,12 +80,12 @@ public sealed partial class TimersApp
                 DrawRegionPills(config, x, width);
                 ImGui.Dummy(new Vector2(0f, Px(12f)));
 
-                var showDtr = config.ShowDtr;
+                var serverBar = _caps.ServerBar("timers");
+                var showDtr = serverBar.AppEnabled;
                 if (AppSettingsUi.SettingToggle(ctx, "timersDtr", Loc.T("os.timers_rem_dtr"),
                         Loc.T("os.timers_rem_dtr_hint"), x, width, ref showDtr))
                 {
-                    config.ShowDtr = showDtr;
-                    SaveConfig();
+                    serverBar.AppEnabled = showDtr;
                 }
 
                 ImGui.Dummy(new Vector2(0f, Px(16f)));

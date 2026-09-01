@@ -142,6 +142,9 @@ internal sealed class HomeScreen
     /// world's scouting is; null only before the very first sighting this install has ever seen.</summary>
     public int? LotteryPhase => _clock.Current?.Phase;
 
+    /// <summary>When the running phase began, for deciding whether a captured entry is from this cycle.</summary>
+    public DateTimeOffset? LotteryPhaseStart => _clock.PhaseStartedAt;
+
     public void Draw(OsAppContext ctx)
     {
         _entrance.BeginFrame();

@@ -182,5 +182,22 @@ internal static class HubErrorsFr
         ["huberror.wayfinder_run_wrong_world"] = "Vous devez être sur {0} pour rejoindre cette chasse.",
         ["huberror.wayfinder_run_not_gathering"] = "Cette chasse a déjà commencé.",
         ["huberror.wayfinder_run_too_few"] = "Il faut d'abord qu'au moins deux chasseurs la rejoignent.",
+        ["huberror.lumirace_disabled"] = "Les courses sont désactivées pour le moment.",
+        ["huberror.lumirace_no_pet"] = "Il te faut un Aetherling éclos pour courir.",
+        ["huberror.lumirace_not_adult"] = "Ton Aetherling court une fois adulte. Continue à le nourrir.",
+        ["huberror.lumirace_gated"] = "La prochaine course ouvre dans {0} minutes.",
+        ["huberror.lumirace_pack_none"] = "Il n'y a pas de paquet à ouvrir.",
+        ["huberror.lumirace_run_exists"] = "Une course de groupe est déjà ouverte.",
+        ["huberror.lumirace_run_not_found"] = "Il n'y a pas de course de groupe en ce moment.",
+        ["huberror.lumirace_not_gathering"] = "Cette course a déjà commencé.",
+        ["huberror.lumirace_too_few"] = "Au moins deux coureurs doivent d'abord rejoindre.",
+        ["huberror.lumirace_no_offer"] = "Ces courses ne sont plus proposées. Rouvre la page pour en avoir trois nouvelles.",
+
+        // listing boosts (added after update 2.5.2)
+        ["huberror.boost_none_owned"] = "Vous n'avez pas de boost pour cela. Prenez-en un dans la Boutique.",
+        ["huberror.boost_target_not_found"] = "Cela ne vous appartient pas.",
+        ["huberror.boost_cap_reached"] = "Vous ne pouvez pas ajouter de jours. Un boost dure {0} jours au maximum.",
+        ["huberror.boost_style_invalid"] = "Choisissez un des quatre effets.",
+        ["huberror.boost_target_not_live"] = "Ce n'est pas encore en ligne. Boostez-le une fois publié.",
     };
 }

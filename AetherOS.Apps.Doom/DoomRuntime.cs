@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Numerics;
@@ -99,6 +99,20 @@ internal sealed class DoomRuntime : IDisposable
             if (this.audio is { } device)
             {
                 device.Muted = value;
+            }
+        }
+    }
+
+    /// <summary>How loud the cabinet plays, 0 to 1. Kept apart from the mute so silencing Doom and
+    /// bringing it back returns to the level the player set.</summary>
+    public float Volume
+    {
+        get => this.audio?.Level ?? 1f;
+        set
+        {
+            if (this.audio is { } device)
+            {
+                device.Level = Math.Clamp(value, 0f, 1f);
             }
         }
     }

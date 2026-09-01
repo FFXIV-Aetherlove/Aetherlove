@@ -332,8 +332,9 @@ public sealed partial class EchoWindow
         var canControl = CanControl();
         var tip = canControl ? null : Loc.T("echo.host_only_tip");
 
+        var live = CurrentIsLive();
         DrawSeekBar(t, new Vector2(barTL.X + Px(TransportPadX), barTL.Y + Px(6f)),
-            barW - Px(TransportPadX) * 2f, position, duration, canControl, alpha);
+            barW - Px(TransportPadX) * 2f, position, duration, canControl && !live, alpha, live);
 
         var rowY = barTL.Y + Px(6f + SeekRowH + 2f);
         var button = Px(ControlRowH);
@@ -348,10 +349,17 @@ public sealed partial class EchoWindow
         }
         x += button + Px(8f);
 
-        var clock = $"{FormatTime(position)} / {FormatTime(duration)}";
-        var clockSize = ImGui.CalcTextSize(clock);
-        dl.AddText(new Vector2(x, rowY + (button - clockSize.Y) * 0.5f),
-            Fade(0xFFDDDDDDu, alpha), clock);
+        if (live)
+        {
+            DrawLivePill(dl, new Vector2(x, rowY), button, alpha);
+        }
+        else
+        {
+            var clock = $"{FormatTime(position)} / {FormatTime(duration)}";
+            var clockSize = ImGui.CalcTextSize(clock);
+            dl.AddText(new Vector2(x, rowY + (button - clockSize.Y) * 0.5f),
+                Fade(0xFFDDDDDDu, alpha), clock);
+        }
 
         var right = barTL.X + barW - Px(TransportPadX);
         if (_state.CurrentRoomId is not null)
@@ -384,13 +392,51 @@ public sealed partial class EchoWindow
         }
     }
 
+    /// <summary>Whether what is on the stage right now is a broadcast. In a room that is the queued entry's
+    /// badge, which every member shares whatever their player has managed to load; solo asks YouTube when the
+    /// video is opened. A playback host new enough to report it is believed over both, because it is looking
+    /// at the stream rather than at what was true when it was queued.</summary>
+    private bool CurrentIsLive()
+    {
+        if (_host.LastState is { Ready: true, IsLive: true })
+        {
+            return true;
+        }
+        return _state.CurrentRoomId is null ? _soloIsLive : _state.CurrentEntry?.IsLive ?? false;
+    }
+
+    /// <summary>The LIVE marker where the clock sits on an ordinary video: there is no elapsed-of-total to
+    /// show, because a broadcast has no total.</summary>
+    private static void DrawLivePill(ImDrawListPtr dl, Vector2 tl, float rowH, float alpha)
+    {
+        var label = Loc.T("echo.live");
+        var size = ImGui.CalcTextSize(label);
+        var dot = Px(3f);
+        var gap = Px(6f);
+        var centerY = tl.Y + rowH * 0.5f;
+        dl.AddCircleFilled(new Vector2(tl.X + dot, centerY), dot, Fade(UiColors.YouTubeRed, alpha));
+        dl.AddText(new Vector2(tl.X + dot * 2f + gap, centerY - size.Y * 0.5f),
+            Fade(UiColors.YouTubeRed, alpha), label);
+    }
+
     private void DrawSeekBar(ThemeDefinition t, Vector2 rowTL, float width, double position, double duration,
-        bool canControl, float alpha)
+        bool canControl, float alpha, bool live = false)
     {
         var dl = ImGui.GetWindowDrawList();
         var rowH = Px(SeekRowH);
         var centerY = rowTL.Y + rowH * 0.5f;
         var seekable = duration > 0.5d && canControl;
+
+        // A broadcast is drawn as one filled track: there is nowhere to scrub to, and a progress fraction of
+        // a window that grows while you watch would crawl backwards.
+        if (live)
+        {
+            var liveTrackH = Px(TrackIdleH);
+            dl.AddRectFilled(new Vector2(rowTL.X, centerY - liveTrackH * 0.5f),
+                new Vector2(rowTL.X + width, centerY + liveTrackH * 0.5f),
+                Fade(UiColors.YouTubeRed, alpha * 0.85f), liveTrackH * 0.5f);
+            return;
+        }
 
         var hovered = false;
         double? preview = null;
@@ -543,11 +589,17 @@ public sealed partial class EchoWindow
         if (_host.LastState is { Playing: true })
         {
             _host.Pause();
+            return;
         }
-        else
+        if (_soloIsLive && _host.LastState is { } state)
         {
-            _host.Play();
+            _host.ToLive();
+            if (state.LiveEdge > 0)
+            {
+                _host.Seek(state.LiveEdge);
+            }
         }
+        _host.Play();
     }
 
     private void CommitSeek(double seconds)

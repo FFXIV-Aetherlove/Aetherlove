@@ -1,0 +1,14 @@
+{
+  "name": "8-bit Shades",
+  "slot": "glasses",
+  "tier": "seasonal",
+  "file": "glasses_pixelshades.png",
+  "anchor": "face",
+  "origin": [
+    68,
+    -3
+  ],
+  "width": 137,
+  "height": 74,
+  "behind": false
+}

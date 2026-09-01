@@ -1502,5 +1502,58 @@
     ]
   },
   "mouthScale": 0.8,
-  "lineColor": "#262230"
+  "lineColor": "#262230",
+  "fit": {
+    "Flower Garland": {
+      "dy": -18
+    },
+    "Silver Belly Medal": {
+      "scale": 0.7,
+      "dy": -5
+    },
+    "glasses": {
+      "dy": -29
+    },
+    "facialhair": {
+      "dy": -21
+    },
+    "arms": {
+      "dy": -28
+    },
+    "Marathon Sweatband": {
+      "dy": -19
+    },
+    "Beard": {
+      "scale": 0.73
+    },
+    "Wizard's Beard": {
+      "scale": 0.7
+    },
+    "Goatee": {
+      "scale": 0.47,
+      "dy": 6
+    },
+    "ears": {
+      "scale": 0.7,
+      "dy": 6
+    },
+    "tail": {
+      "scale": 0.7
+    },
+    "banner": {
+      "scale": 0.69,
+      "dy": -1
+    },
+    "nook": {
+      "dy": -25
+    }
+  },
+  "wrapSeat": {
+    "cx": 128,
+    "cy": 227,
+    "rx": 57.7,
+    "ry": 6.5,
+    "rot": 0,
+    "sink": 4
+  }
 }

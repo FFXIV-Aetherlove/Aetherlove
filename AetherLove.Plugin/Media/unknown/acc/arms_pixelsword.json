@@ -1,0 +1,14 @@
+{
+  "name": "Voxel Sword",
+  "slot": "arms",
+  "tier": "seasonal",
+  "file": "arms_pixelsword.png",
+  "anchor": "handL",
+  "origin": [
+    34,
+    84
+  ],
+  "width": 96,
+  "height": 104,
+  "behind": false
+}

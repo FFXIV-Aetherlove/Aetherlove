@@ -80,15 +80,13 @@ public sealed class RealtorPhaseWatchService : IRealtorAlerts, IDisposable
     private void Check()
     {
         var store = _storage.For("realtor");
-        if (!new RealtorSettings(store).NotifyPhase)
-        {
-            return;
-        }
         if (new LotteryClock(store).Current is not { } now)
         {
             return;
         }
 
+        // Tracked before the settings gate: the entry announcement below is not the generic phase
+        // chatter and must still fire for someone who muted that, so the cursor has to keep moving.
         var last = store.Get<int?>(LastPhaseKey);
         store.Set<int?>(LastPhaseKey, now.Phase);
         if (last is null || last == now.Phase)
@@ -96,9 +94,37 @@ public sealed class RealtorPhaseWatchService : IRealtorAlerts, IDisposable
             return;
         }
 
-        var text = Loc.T(now.Phase == PaissaLottoPhase.Accepting
+        if (now.Phase == PaissaLottoPhase.Results && AnnounceEntryResolved())
+        {
+            return;
+        }
+        if (!new RealtorSettings(store).NotifyPhase)
+        {
+            return;
+        }
+
+        Announce(Loc.T(now.Phase == PaissaLottoPhase.Accepting
             ? "notif.realtor_accepting"
-            : "notif.realtor_results");
+            : "notif.realtor_results"));
+    }
+
+    /// <summary>The results are out on a plot the player actually entered for, so it names the plot and
+    /// tells them to go and look. The entry is dropped in the same breath: it has resolved either way, and
+    /// a bid left behind would be shown as live again when the next cycle opens.</summary>
+    private bool AnnounceEntryResolved()
+    {
+        var watch = _services.GetService<IHousingLotteryWatch>();
+        if (watch?.Current is not { } entry)
+        {
+            return false;
+        }
+        Announce(Loc.T("notif.realtor_entry_results", entry.Plot, entry.Ward, entry.District));
+        watch.Clear();
+        return true;
+    }
+
+    private void Announce(string text)
+    {
         _notifier.NotifyRealtorPhase(text);
         try
         {

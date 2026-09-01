@@ -226,6 +226,8 @@ internal static class OsPt
         ["os.profile_edit_title"] = "Editar perfil",
         ["os.profile_save"] = "Salvar",
         // home right-click menu (added after update 2.0.0)
+        ["os.home_menu_lock_icons"] = "Bloquear ícones",
+        ["os.home_menu_unlock_icons"] = "Desbloquear ícones",
         ["os.home_menu_wallpaper"] = "Alterar papel de parede",
         // news app tile rename (added after update 2.0.0)
         ["os.app_news_tile"] = "Notícias",
@@ -290,7 +292,7 @@ internal static class OsPt
         ["echo.close"] = "Fechar",
         // playlist
         ["echo.add"] = "Adicionar",
-        ["echo.add_hint"] = "Cola um link do YouTube",
+        ["echo.add_hint"] = "Cola um link do YouTube ou da Twitch",
         ["echo.added_by"] = "Adicionado por {0}",
         ["echo.added_by_unknown"] = "Adicionado por alguém que já saiu",
         ["echo.remove"] = "Remover",
@@ -368,6 +370,7 @@ internal static class OsPt
         ["os.app_racooner"] = "Racooner",
         ["os.app_skyswarm"] = "Sky Swarm",
         ["os.app_eordle"] = "Eordle",
+        ["os.app_racer"] = "Lumi Racer",
 
         // echo playback settings (added after update 2.2.3)
         ["echo.settings_tip"] = "Definições de reprodução",
@@ -423,6 +426,7 @@ internal static class OsPt
         ["os.app_racooner_about"] = "Apanha o que cai e leva-o até às tocas.",
         ["os.app_skyswarm_about"] = "Voa pelo enxame enquanto aguentares.",
         ["os.app_eordle_about"] = "Uma palavra eorzeana por dia, seis tentativas.",
+        ["os.app_racer_about"] = "Põe o teu Lumi a correr e ganha sparks e prémios.",
 
         // together mode (added after update 2.4.0)
         ["os.party_title"] = "AetherParty",
@@ -445,6 +449,7 @@ internal static class OsPt
         ["os.party_invite_message"] = "{0} convida você para um grupo! Abra a página de widgets do telefone e entre com o código {1}.",
         ["os.party_activity_echo"] = "Watch party ativa",
         ["os.party_activity_wayfinder"] = "Caçada em grupo ativa",
+        ["os.party_activity_racer"] = "Corrida de Lumis em andamento",
         ["os.party_activity_generic"] = "Atividade em andamento",
         ["os.party_activity_open"] = "Abrir",
         ["os.party_chat_title"] = "Chat do grupo",
@@ -516,6 +521,54 @@ internal static class OsPt
         ["os.party_kick_go"] = "Remover",
         ["os.party_chat_joined"] = "{0} entrou no grupo",
         ["os.party_chat_wayfinder"] = "{0} começou uma caça do Wayfinder. Toca para entrar.",
+        ["os.party_chat_racer"] = "{0} começou uma corrida de Lumis. Toca para entrar.",
         ["os.party_chat_echo"] = "{0} abriu uma sala do Echo. Toca para entrar.",
+
+        // listing boosts (added after update 2.5.2)
+        ["os.boost_boosted"] = "Impulsionado",
+        ["os.boost_featured"] = "Em destaque",
+        ["os.boost_left"] = "Impulsionado, falta {0}",
+        ["os.boost_left_count"] = "Ainda tens {0}.",
+        ["os.boost_none"] = "Não tens impulsos. Arranja um na Loja.",
+        ["os.boost_go"] = "Impulsionar",
+        ["os.boost_confirm_venue"] = "Impulsionar este local?",
+        ["os.boost_confirm_ad"] = "Impulsionar este anúncio?",
+        ["os.boost_confirm_body"] = "Vai para o topo da lista durante 5 dias. Escolhe o efeito que ele usa.",
+        ["os.boost_confirm_extend"] = "Ainda está impulsionado {0}. Isto soma mais 5 dias. Escolhe o efeito que ele usa.",
+        ["os.boost_style_0"] = "Aurora",
+        ["os.boost_style_1"] = "Brasa",
+        ["os.boost_style_2"] = "Prisma",
+        ["os.boost_style_3"] = "Luz das estrelas",
+        ["os.boost_venue_action"] = "Impulsionar este local",
+        ["os.boost_ad_action"] = "Impulsionar este anúncio",
+        ["os.boost_get"] = "Arranja um impulso",
+        ["os.boost_shelf"] = "Os teus impulsos",
+        ["os.boost_pick"] = "Escolhe o que impulsionar",
+        ["os.boost_no_targets"] = "Ainda não tens nenhum local nem anúncio ativo para impulsionar.",
+        ["os.boost_done"] = "Impulsionado durante {0}.",
+        ["os.boost_venues"] = "Locais",
+        ["os.boost_ads"] = "Anúncios",
+
+        // echo playlist import (added after update 2.5.3)
+        ["echo.playlist_confirm"] = "Adicionar os {0} vídeos desta playlist?",
+        ["echo.playlist_capped"] = "Esta playlist tem {0} vídeos. Adicionar os primeiros {1}?",
+        ["echo.playlist_add_all"] = "Adicionar todos",
+        ["echo.playlist_add_one"] = "Só este vídeo",
+        ["echo.playlist_reading"] = "A ler a playlist...",
+        ["echo.playlist_failed"] = "O Echo não conseguiu ler essa playlist. Tenta o link do vídeo.",
+        ["echo.playlist_added"] = "{0} vídeos adicionados.",
+        ["os.echo_home_watch_playlist"] = "As playlists só funcionam numa sala. Cria ou entra numa sala primeiro.",
+
+        // phone shell menu (added after update 2.5.3)
+        ["os.phone_menu_exit"] = "Desligar o telefone",
+        ["os.phone_menu_minimize"] = "Minimizar o telefone",
+        ["os.phone_menu_open"] = "Abrir o telefone",
+        ["os.phone_menu_lock"] = "Travar a posição",
+        ["os.phone_menu_unlock"] = "Destravar a posição",
+        // echo live streams (added after update 2.5.3)
+        ["echo.live"] = "AO VIVO",
+        ["echo.live_needs_player_title"] = "As transmissões em direto precisam de um leitor mais recente",
+        ["echo.live_needs_player_body"] = "Este leitor não consegue reproduzir transmissões em direto. Os vídeos normais continuam a funcionar.",
+        ["echo.live_needs_player_update"] = "Está pronto um leitor mais recente. Instala-o para ver transmissões em direto.",
     };
 }

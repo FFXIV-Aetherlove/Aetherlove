@@ -226,6 +226,8 @@ internal static class OsFr
         ["os.profile_edit_title"] = "Modifier le profil",
         ["os.profile_save"] = "Enregistrer",
         // home right-click menu (added after update 2.0.0)
+        ["os.home_menu_lock_icons"] = "Verrouiller les icônes",
+        ["os.home_menu_unlock_icons"] = "Déverrouiller les icônes",
         ["os.home_menu_wallpaper"] = "Changer le fond d'écran",
         // news app tile rename (added after update 2.0.0)
         ["os.app_news_tile"] = "Actualités",
@@ -290,7 +292,7 @@ internal static class OsFr
         ["echo.close"] = "Fermer",
         // playlist
         ["echo.add"] = "Ajouter",
-        ["echo.add_hint"] = "Collez un lien YouTube",
+        ["echo.add_hint"] = "Collez un lien YouTube ou Twitch",
         ["echo.added_by"] = "Ajoutée par {0}",
         ["echo.added_by_unknown"] = "Ajoutée par quelqu'un qui est déjà parti",
         ["echo.remove"] = "Retirer",
@@ -368,6 +370,7 @@ internal static class OsFr
         ["os.app_racooner"] = "Racooner",
         ["os.app_skyswarm"] = "Sky Swarm",
         ["os.app_eordle"] = "Eordle",
+        ["os.app_racer"] = "Lumi Racer",
 
         // echo playback settings (added after update 2.2.3)
         ["echo.settings_tip"] = "Réglages de lecture",
@@ -423,6 +426,7 @@ internal static class OsFr
         ["os.app_racooner_about"] = "Attrapez ce qui tombe et ramenez-le jusqu'aux terriers.",
         ["os.app_skyswarm_about"] = "Traversez l'essaim aussi longtemps que vous tenez.",
         ["os.app_eordle_about"] = "Un mot éorzéen par jour, six essais.",
+        ["os.app_racer_about"] = "Inscris ton Lumi à des courses et gagne des sparks et des prix.",
 
         // together mode (added after update 2.4.0)
         ["os.party_title"] = "AetherParty",
@@ -445,6 +449,7 @@ internal static class OsFr
         ["os.party_invite_message"] = "{0} vous invite dans un groupe ! Ouvrez la page des widgets du téléphone et rejoignez avec le code {1}.",
         ["os.party_activity_echo"] = "Watch party en cours",
         ["os.party_activity_wayfinder"] = "Chasse de groupe en cours",
+        ["os.party_activity_racer"] = "Course de Lumis en cours",
         ["os.party_activity_generic"] = "Activité en cours",
         ["os.party_activity_open"] = "Ouvrir",
         ["os.party_chat_title"] = "Chat du groupe",
@@ -516,6 +521,54 @@ internal static class OsFr
         ["os.party_kick_go"] = "Retirer",
         ["os.party_chat_joined"] = "{0} a rejoint le groupe",
         ["os.party_chat_wayfinder"] = "{0} a lancé une chasse Wayfinder. Touchez pour participer.",
+        ["os.party_chat_racer"] = "{0} a lancé une course de Lumis. Touche pour rejoindre.",
         ["os.party_chat_echo"] = "{0} a ouvert un salon Echo. Touchez pour le rejoindre.",
+
+        // listing boosts (added after update 2.5.2)
+        ["os.boost_boosted"] = "Boosté",
+        ["os.boost_featured"] = "À la une",
+        ["os.boost_left"] = "Boosté, encore {0}",
+        ["os.boost_left_count"] = "Il vous en reste {0}.",
+        ["os.boost_none"] = "Vous n'avez aucun boost. Prenez-en un dans la Boutique.",
+        ["os.boost_go"] = "Booster",
+        ["os.boost_confirm_venue"] = "Booster ce lieu ?",
+        ["os.boost_confirm_ad"] = "Booster cette annonce ?",
+        ["os.boost_confirm_body"] = "Il passe tout en haut de la liste pendant 5 jours. Choisissez l'effet qu'il porte.",
+        ["os.boost_confirm_extend"] = "Il est boosté encore {0}. Ceci ajoute 5 jours. Choisissez l'effet qu'il porte.",
+        ["os.boost_style_0"] = "Aurore",
+        ["os.boost_style_1"] = "Braise",
+        ["os.boost_style_2"] = "Prisme",
+        ["os.boost_style_3"] = "Lueur d'étoiles",
+        ["os.boost_venue_action"] = "Booster ce lieu",
+        ["os.boost_ad_action"] = "Booster cette annonce",
+        ["os.boost_get"] = "Prendre un boost",
+        ["os.boost_shelf"] = "Vos boosts",
+        ["os.boost_pick"] = "Choisissez quoi booster",
+        ["os.boost_no_targets"] = "Vous n'avez encore aucun lieu ni aucune annonce en ligne à booster.",
+        ["os.boost_done"] = "Boosté pendant {0}.",
+        ["os.boost_venues"] = "Lieux",
+        ["os.boost_ads"] = "Annonces",
+
+        // echo playlist import (added after update 2.5.3)
+        ["echo.playlist_confirm"] = "Ajouter les {0} vidéos de cette playlist ?",
+        ["echo.playlist_capped"] = "Cette playlist a {0} vidéos. Ajouter les {1} premières ?",
+        ["echo.playlist_add_all"] = "Tout ajouter",
+        ["echo.playlist_add_one"] = "Cette vidéo seulement",
+        ["echo.playlist_reading"] = "Lecture de la playlist...",
+        ["echo.playlist_failed"] = "Echo n'a pas pu lire cette playlist. Essayez le lien de la vidéo.",
+        ["echo.playlist_added"] = "{0} vidéos ajoutées.",
+        ["os.echo_home_watch_playlist"] = "Les playlists ne marchent que dans un salon. Créez ou rejoignez un salon d'abord.",
+
+        // phone shell menu (added after update 2.5.3)
+        ["os.phone_menu_exit"] = "Éteindre le téléphone",
+        ["os.phone_menu_minimize"] = "Réduire le téléphone",
+        ["os.phone_menu_open"] = "Ouvrir le téléphone",
+        ["os.phone_menu_lock"] = "Verrouiller la position",
+        ["os.phone_menu_unlock"] = "Déverrouiller la position",
+        // echo live streams (added after update 2.5.3)
+        ["echo.live"] = "EN DIRECT",
+        ["echo.live_needs_player_title"] = "Les directs demandent un lecteur plus récent",
+        ["echo.live_needs_player_body"] = "Ce lecteur ne peut pas lire les directs. Les vidéos normales fonctionnent toujours.",
+        ["echo.live_needs_player_update"] = "Un lecteur plus récent est prêt. Installez-le pour regarder les directs.",
     };
 }

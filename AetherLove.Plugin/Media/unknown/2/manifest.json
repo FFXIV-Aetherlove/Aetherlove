@@ -1502,5 +1502,45 @@
     ]
   },
   "mouthScale": 0.87,
-  "lineColor": "#262230"
+  "lineColor": "#262230",
+  "fit": {
+    "glasses": {
+      "dy": -27
+    },
+    "Goatee": {
+      "dy": -31
+    },
+    "Beard": {
+      "dy": -28
+    },
+    "Wizard's Beard": {
+      "dy": -33
+    },
+    "Dusty Face": {
+      "dy": -24
+    },
+    "Speed Blush": {
+      "dy": -24
+    },
+    "Gold Belly Medal": {
+      "dy": -22
+    },
+    "Silver Belly Medal": {
+      "dy": -22
+    },
+    "nook": {
+      "dy": -20
+    },
+    "Marathon Sweatband": {
+      "scale": 0.78
+    }
+  },
+  "wrapSeat": {
+    "cx": 128.0,
+    "cy": 228.0,
+    "rx": 68.5,
+    "ry": 8.0,
+    "rot": 0,
+    "sink": 3
+  }
 }

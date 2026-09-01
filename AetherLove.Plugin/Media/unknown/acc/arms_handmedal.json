@@ -1,0 +1,14 @@
+{
+  "name": "Winner's Medal",
+  "slot": "arms",
+  "tier": "seasonal",
+  "file": "arms_handmedal.png",
+  "anchor": "handL",
+  "origin": [
+    36,
+    10
+  ],
+  "width": 72,
+  "height": 104,
+  "behind": false
+}

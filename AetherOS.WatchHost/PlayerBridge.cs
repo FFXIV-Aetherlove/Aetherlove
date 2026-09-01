@@ -18,7 +18,10 @@ internal sealed record PlayerState(
     [property: JsonPropertyName("ended")] bool Ended,
     [property: JsonPropertyName("error")] int? Error,
     [property: JsonPropertyName("epoch")] long Epoch,
-    [property: JsonPropertyName("title")] string? Title)
+    [property: JsonPropertyName("title")] string? Title,
+    [property: JsonPropertyName("isLive")] bool IsLive = false,
+    [property: JsonPropertyName("edge")] double Edge = 0d,
+    [property: JsonPropertyName("h264")] bool? CanPlayH264 = null)
 {
     [JsonPropertyName("t")]
     [JsonPropertyOrder(-1)]
@@ -82,10 +85,37 @@ internal sealed class PlayerBridge : IDisposable
         this.poll.Change(PollIntervalMs, PollIntervalMs);
     }
 
-    public void Load(string videoId, double start, long epoch)
+    /// <summary>Loads a reference from a named source. The source is passed as a fourth argument the page
+    /// defaults to youtube when it is absent, so an older page still plays a YouTube entry from a newer
+    /// host.</summary>
+    public void Load(string videoId, double start, long epoch, string? source)
     {
         Interlocked.Exchange(ref this.epoch, epoch);
-        Issue($"window.echo.load({Arg(videoId)}, {Arg(Math.Max(0d, Finite(start)))}, {Arg(epoch)})");
+        Issue($"window.echo.load({Arg(videoId)}, {Arg(Math.Max(0d, Finite(start)))}, {Arg(epoch)}, "
+            + $"{Arg(string.IsNullOrEmpty(source) ? "youtube" : source)})");
+    }
+
+    /// <summary>One genuine input event into the page, centred. Twitch's player refuses unmuted playback
+    /// without real user activation, which scripted play() can never grant and this can: OSR input goes
+    /// through the same pipeline as a human click. Sent once after a Twitch load; if it happens to land on
+    /// an already-playing player and pauses it, the plugin's play correction resumes it within a second.</summary>
+    public void ClickCenter(int width, int height)
+    {
+        try
+        {
+            var host = this.browser.GetBrowser()?.GetHost();
+            if (host is null)
+            {
+                return;
+            }
+            var ev = new MouseEvent(width / 2, height / 2, CefEventFlags.None);
+            host.SendMouseClickEvent(ev, MouseButtonType.Left, false, 1);
+            host.SendMouseClickEvent(ev, MouseButtonType.Left, true, 1);
+        }
+        catch (Exception ex)
+        {
+            Log?.Invoke($"Activation click failed: {ex.Message}");
+        }
     }
 
     public void Play()
@@ -101,6 +131,13 @@ internal sealed class PlayerBridge : IDisposable
     public void Seek(double seconds)
     {
         Issue($"window.echo.seek({Arg(Math.Max(0d, Finite(seconds)))})");
+    }
+
+    /// <summary>Jumps a live stream to the front of its DVR window and resumes. The edge is resolved inside
+    /// the page rather than passed in, because it moves while the command is in flight.</summary>
+    public void ToLive()
+    {
+        Issue("window.echo.toLive()");
     }
 
     public void SetVolume(double volume)
@@ -323,7 +360,13 @@ internal sealed class PlayerBridge : IDisposable
             // every playback failure and the room looked merely idle.
             JsonRead.Int32(root, "error"),
             JsonRead.Integer(root, "epoch") ?? fallbackEpoch,
-            JsonRead.Text(root, "title"));
+            JsonRead.Text(root, "title"),
+            // Everything below is mapped by hand like the rest: a field the page starts sending reaches
+            // the plugin only once it is read here. Forgetting that is how h264 arrived as false from a
+            // page that had measured it true, and made a capable player report itself outdated.
+            JsonRead.Flag(root, "isLive"),
+            JsonRead.Number(root, "edge") ?? 0d,
+            JsonRead.FlagOrNull(root, "h264"));
     }
 
     public void Dispose()

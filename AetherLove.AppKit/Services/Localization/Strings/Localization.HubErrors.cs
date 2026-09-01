@@ -182,5 +182,22 @@ internal static class HubErrorsEn
         ["huberror.wayfinder_run_wrong_world"] = "You need to be on {0} to join this hunt.",
         ["huberror.wayfinder_run_not_gathering"] = "That hunt has already started.",
         ["huberror.wayfinder_run_too_few"] = "At least two hunters need to join first.",
+        ["huberror.lumirace_disabled"] = "Races are switched off right now.",
+        ["huberror.lumirace_no_pet"] = "You need a hatched Aetherling to race.",
+        ["huberror.lumirace_not_adult"] = "Your Aetherling races once it grows up. Keep feeding it.",
+        ["huberror.lumirace_gated"] = "The next race opens in {0} minutes.",
+        ["huberror.lumirace_pack_none"] = "There is no pack to open.",
+        ["huberror.lumirace_run_exists"] = "A party race is already open.",
+        ["huberror.lumirace_run_not_found"] = "There is no party race right now.",
+        ["huberror.lumirace_not_gathering"] = "That race has already started.",
+        ["huberror.lumirace_too_few"] = "At least two racers need to join first.",
+        ["huberror.lumirace_no_offer"] = "Those races are no longer on offer. Open the page again for three new ones.",
+
+        // listing boosts (added after update 2.5.2)
+        ["huberror.boost_none_owned"] = "You have no boost for that. Get one in the Store.",
+        ["huberror.boost_target_not_found"] = "That is not one of yours.",
+        ["huberror.boost_cap_reached"] = "You cannot add more days. A boost runs for {0} days at most.",
+        ["huberror.boost_style_invalid"] = "Pick one of the four effects.",
+        ["huberror.boost_target_not_live"] = "That is not on the board yet. Boost it once it is live.",
     };
 }

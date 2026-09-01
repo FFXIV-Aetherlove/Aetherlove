@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 using AetherLove.Shared.Aetherling;
 using AetherLove.Shared.Store;
 using AetherLove.UI;
-using AetherOS.Apps.Aetherling.Engine;
-using AetherOS.Apps.Aetherling.Rendering;
+using AetherOS.PetKit.Engine;
+using AetherOS.PetKit.Rendering;
 using AetherOS.Apps.Aetherling.Ui;
 using AetherOS.Sdk;
 using Dalamud.Bindings.ImGui;
@@ -86,10 +86,17 @@ internal sealed class PetAboutScreen(IAetherlingHost host, PetRuntime pet)
 
         if (core.Adult is { } adult)
         {
-            var element = Elements.Find(adult.Element);
+            // The attuned element leads, because it is the one in play; the born one is only named when a
+            // form has moved it, where "it hatched as this" is the thing that would otherwise be lost.
+            var attuned = Elements.Find(PetState.AttunedElement(core));
             y += PetPageUi.Row(dl, origin, size, y, FontAwesomeIcon.Bolt,
                 ctx.Localize("os.aetherling_status_element"),
-                element is { } def ? ctx.Localize(Elements.NameKey(def)) : "");
+                attuned is { } def ? ctx.Localize(Elements.NameKey(def)) : "");
+            if (Elements.Find(adult.Element) is { } hatchedAs && hatchedAs.Value != attuned?.Value)
+            {
+                y += PetPageUi.Row(dl, origin, size, y, FontAwesomeIcon.Dna,
+                    ctx.Localize("os.aetherling_status_hatched_as"), ctx.Localize(Elements.NameKey(hatchedAs)));
+            }
 
             // The radar: the one place the diet is numbers, and it grows for life.
             _reveal = ctx.ReduceMotion ? 1f : MathF.Min(1f, _reveal + (dt / 0.6f));
@@ -100,7 +107,8 @@ internal sealed class PetAboutScreen(IAetherlingHost host, PetRuntime pet)
             }
             var radius = MathF.Min(size.X * 0.28f, Px(96f));
             var centre = new Vector2(origin.X + (size.X * 0.5f), y + radius + Px(34f));
-            RadarChart.Draw(ctx, dl, centre, radius, counts, Math.Max(1, adult.DietTurnThreshold),
+            RadarChart.Draw(ctx, dl, centre, radius, counts,
+                Math.Max(1, adult.ShellFeedThreshold2 > 0 ? adult.ShellFeedThreshold2 : adult.DietTurnThreshold),
                 _reveal * _reveal * (3f - (2f * _reveal)));
 
             y = DrawFoodHistory(ctx, dl, origin, size, core, adult, centre.Y + radius + Px(20f), counts);
@@ -132,7 +140,7 @@ internal sealed class PetAboutScreen(IAetherlingHost host, PetRuntime pet)
     {
         DrainInventory();
         var owned = PetState.OwnedRefs(_inventory, StoreItemKind.AetherlingReaction);
-        var threshold = Math.Max(1, adult.DietTurnThreshold);
+        var ownedShells = PetState.OwnedRefs(_inventory, StoreItemKind.AetherlingShell);
         var pad = Px(18f);
         var rowH = Px(34f);
         var y = top;
@@ -150,7 +158,22 @@ internal sealed class PetAboutScreen(IAetherlingHost host, PetRuntime pet)
             dl.AddText(new Vector2(origin.X + pad + Px(32f), y + Px(9f)),
                 Look.U32(Look.Body, 0.92f), ctx.Localize(Elements.NameKey(element)));
 
+            // The element's ladder: the flourish, then the two shells. The meter always shows the
+            // next rung still to earn, and the "learned" chip means the whole ladder is climbed.
+            var threshold = Math.Max(1, adult.DietTurnThreshold);
             var earned = owned.Contains(ReactionDef.FindSignature(element.Key)?.ItemRef ?? "");
+            if (earned && adult.ShellFeedThreshold > 0
+                && !ownedShells.Contains(ShellCatalog.FirstFor(element.Key)))
+            {
+                threshold = Math.Max(1, adult.ShellFeedThreshold);
+                earned = false;
+            }
+            else if (earned && adult.ShellFeedThreshold2 > 0
+                && !ownedShells.Contains(ShellCatalog.SecondFor(element.Key)))
+            {
+                threshold = Math.Max(1, adult.ShellFeedThreshold2);
+                earned = false;
+            }
             var waiting = TicketWaiting(core, element.Value);
             var right = origin.X + size.X - pad;
             if (earned)
@@ -187,7 +210,10 @@ internal sealed class PetAboutScreen(IAetherlingHost host, PetRuntime pet)
     {
         foreach (var card in core.Cards ?? [])
         {
-            if (card.Slot == ReactionTicketOverlay.SlotBase + (short)element && card.RevealedAtUtc is null)
+            var mine = card.Slot == ReactionTicketOverlay.SlotBase + (short)element
+                || card.Slot == ReactionTicketOverlay.ShellSlotBase + (short)element
+                || card.Slot == ReactionTicketOverlay.ShellSlot2Base + (short)element;
+            if (mine && card.RevealedAtUtc is null)
             {
                 return true;
             }

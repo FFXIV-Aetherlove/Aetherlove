@@ -1,0 +1,14 @@
+{
+  "name": "Brown Leaf Pile",
+  "slot": "nook",
+  "tier": "seasonal",
+  "file": "nook_leafpile.png",
+  "anchor": "body",
+  "origin": [
+    115,
+    -30
+  ],
+  "width": 231,
+  "height": 120,
+  "behind": true
+}

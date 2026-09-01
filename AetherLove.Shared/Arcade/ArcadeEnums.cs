@@ -25,6 +25,9 @@ public enum ArcadeGame : short
 
     /// <summary>The match-3, a companion game.</summary>
     LumiLink = 15,
+
+    /// <summary>The marble-chain shooter, a companion game.</summary>
+    Gyre = 16,
 }
 
 /// <summary>Which leaderboard window to fetch.</summary>

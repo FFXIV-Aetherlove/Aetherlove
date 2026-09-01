@@ -112,7 +112,7 @@ public sealed class AetherlingHostService : IAetherlingHost, IDisposable
                     continue;
                 }
                 pets.Add(new AetherOS.Apps.Aetherling.AetherlingPartyPet(
-                    member.AccountId, pet.Stage, pet.Palette, pet.Accessories, pet.Name));
+                    member.AccountId, pet.Stage, pet.Palette, pet.Accessories, pet.Name, pet.Shell));
             }
             return pets;
         }
@@ -455,19 +455,37 @@ public sealed class AetherlingHostService : IAetherlingHost, IDisposable
         }
     }
 
+    public float BgmVolume
+    {
+        get => _bgmVolume;
+        set
+        {
+            _bgmVolume = Math.Clamp(value, 0f, 1f);
+            _bgm.SetLevelScale(_bgmVolume);
+        }
+    }
+
+    private float _bgmVolume = 1f;
+
+    /// <summary>Sets the player's live level WITHOUT taking it as the pet's own, for another app
+    /// borrowing the same player (the racer). The pet re-asserts its level when it next plays.</summary>
+    public void SetBgmLevel(float level) => _bgm.SetLevelScale(level);
+
     public void StartBgm(float speed) => PlayTrack(Path.Combine(AssetRoot, BgmFile), speed);
 
-    public void StartGameBgm(string fileName, float speed = 1f) => PlayTrack(Path.Combine(MediaRoot, GameBgmFolder, fileName), speed);
+    public void StartGameBgm(string fileName, float speed = 1f, float levelScale = 1f) => PlayTrack(Path.Combine(MediaRoot, GameBgmFolder, fileName), speed, levelScale);
 
     /// <summary>Re-rates the track that is already up, and restarts from the top for any other one: the
     /// ceremony and each minigame are different pieces of music, so "already playing" is only an answer
     /// when it is the same file.</summary>
-    private void PlayTrack(string path, float speed)
+    private void PlayTrack(string path, float speed, float levelScale = 1f)
     {
         if (_muted)
         {
             return;
         }
+        // A track arriving during another's fade cancels the restore that fade owed the game.
+        _restoreGameBgmAt = null;
         if (_bgm.IsPlaying && string.Equals(_track, path, StringComparison.OrdinalIgnoreCase))
         {
             _bgm.SetSpeed(speed);
@@ -475,7 +493,11 @@ public sealed class AetherlingHostService : IAetherlingHost, IDisposable
         else
         {
             _track = path;
-            _bgm.Play(path, speed);
+            _bgm.Play(path, speed, levelScale);
+
+            // Play keeps whatever level the last owner set, so the pet's own is re-asserted here:
+            // a race that just played at its level must not leave the loop there.
+            _bgm.SetLevelScale(_bgmVolume);
         }
         _silenced = !ShouldBeAudible();
         ApplyAudioState();
@@ -494,6 +516,12 @@ public sealed class AetherlingHostService : IAetherlingHost, IDisposable
         _audioAccum = 0;
         _job = ReadJob();
         SampleEmote();
+
+        if (_restoreGameBgmAt is { } due && DateTime.UtcNow >= due)
+        {
+            _restoreGameBgmAt = null;
+            RestoreGameBgm();
+        }
 
         if (!_bgm.IsPlaying)
         {
@@ -569,12 +597,27 @@ public sealed class AetherlingHostService : IAetherlingHost, IDisposable
         DuckGameBgm();
     }
 
-    public void StopBgm()
+    public void StopBgm() => StopBgm(1.5);
+
+    public void StopBgm(double fadeSeconds)
     {
         _track = null;
-        _bgm.Stop();
-        RestoreGameBgm();
+        _bgm.Stop(fadeSeconds);
+
+        // The game's own music waits for ours to actually be gone. Unducking at the TOP of a fade puts
+        // the game's track straight over the tail the caller asked to keep playing, which is heard as
+        // the fade never happening at all.
+        if (fadeSeconds <= 0.05)
+        {
+            _restoreGameBgmAt = null;
+            RestoreGameBgm();
+            return;
+        }
+        _restoreGameBgmAt = DateTime.UtcNow.AddSeconds(fadeSeconds);
     }
+
+    /// <summary>When the game's BGM is owed its mute back, while one of ours fades out.</summary>
+    private DateTime? _restoreGameBgmAt;
 
     /// <summary>The shell giving way. Rides the mute toggle with the loop, because a player who silenced the
     /// ceremony does not want the one loud moment of it either.</summary>

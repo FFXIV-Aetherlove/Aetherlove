@@ -1,0 +1,14 @@
+{
+  "name": "Victor's Laurel",
+  "slot": "head",
+  "tier": "seasonal",
+  "file": "head_laurel.png",
+  "anchor": "head",
+  "origin": [
+    75,
+    15
+  ],
+  "width": 150,
+  "height": 38,
+  "behind": false
+}

@@ -110,6 +110,7 @@ internal static class CommonRu
         ["common.close_plugin_tip"] = "Совет: используйте кнопку «Свернуть» внизу, чтобы маленький виджет уведомлений оставался видимым.",
         ["common.close_plugin_dont_ask"] = "Больше не показывать это окно",
         ["common.close"] = "Закрыть",
+        ["common.back"] = "Назад",
 
         // Save-error modal
         ["common.save_error_title"] = "Что-то пошло не так",

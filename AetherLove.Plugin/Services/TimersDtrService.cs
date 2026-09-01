@@ -1,41 +1,34 @@
-using System;
-using AetherLove.Config;
+﻿using System;
 using AetherLove.Os;
 using AetherLove.Services.Localization;
 using AetherLove.Windows;
 using AetherOS.Apps.Timers;
 using AetherOS.Apps.Timers.Schedule;
-using Dalamud.Game.Gui.Dtr;
-using Dalamud.Game.Text.SeStringHandling;
+using AetherOS.Sdk;
 using Dalamud.Plugin.Services;
 
 namespace AetherLove.Services;
 
-/// <summary>Publishes the soonest enabled Timers countdown to the DTR bar. A sibling of
-/// <see cref="GrooveDtrService"/>: same text-entry shape, polled once a second because the countdown
-/// itself ticks.</summary>
+/// <summary>Publishes the soonest enabled reminder to the server info bar through
+/// <see cref="ServerBarService"/> (ADR 21). This service only knows WHAT to say; every gate, the
+/// toggles included, belongs to the bar service.</summary>
 public sealed class TimersDtrService
 {
     private const double PollSeconds = 1.0;
-    private const int LabelMaxChars = 24;
+    private const int LabelMaxChars = 18;
     private const string AppId = "timers";
 
-    private readonly IDtrBar _dtrBar;
+    private readonly ServerBarService _serverBar;
     private readonly TimerScheduleService _host;
-    private readonly Configuration _config;
     private readonly MainPluginWindow _mainWindow;
 
-    private IDtrBarEntry? _entry;
+    private IServerBarEntry? _entry;
     private double _accum;
-    private string _lastText = string.Empty;
-    private bool _lastShown;
 
-    public TimersDtrService(IDtrBar dtrBar, TimerScheduleService host, Configuration config,
-        MainPluginWindow mainWindow)
+    public TimersDtrService(ServerBarService serverBar, TimerScheduleService host, MainPluginWindow mainWindow)
     {
-        _dtrBar = dtrBar;
+        _serverBar = serverBar;
         _host = host;
-        _config = config;
         _mainWindow = mainWindow;
     }
 
@@ -45,8 +38,9 @@ public sealed class TimersDtrService
         {
             return;
         }
-        _entry = _dtrBar.Get("AetherOS Timers");
-        _entry.OnClick = _ => _mainWindow.OpenToTimers();
+        _serverBar.SeedLegacyToggle(AppId, _host.GetReminderConfig().ShowDtr);
+        _entry = _serverBar.For(AppId).Entry(
+            "reminder", "AetherOS Timers", "os.timers_rem_dtr", _mainWindow.OpenToTimers);
         Plugin.Framework.Update += OnUpdate;
         Refresh();
     }
@@ -54,7 +48,7 @@ public sealed class TimersDtrService
     public void Shutdown()
     {
         Plugin.Framework.Update -= OnUpdate;
-        _entry?.Remove();
+        _entry?.Set(null);
         _entry = null;
     }
 
@@ -76,27 +70,9 @@ public sealed class TimersDtrService
             return;
         }
         var reminders = _host.GetReminderConfig();
-        // Removing the Timers app is an opt-out of the whole feature, so the server-bar line goes with it.
-        var eligible = _config.EnableDtrEntry && reminders.ShowDtr && _mainWindow.IsPoweredOn
-            && !_config.Os.RemovedApps.Contains(AppId);
-        var shown = false;
-        var text = string.Empty;
-        if (eligible && TryGetSoonest(reminders, out var label, out var remaining))
-        {
-            shown = true;
-            text = string.Format(Loc.T("dtr.timers"), Truncate(label), FormatCountdown(remaining));
-        }
-        if (shown == _lastShown && text == _lastText)
-        {
-            return;
-        }
-        _lastShown = shown;
-        _lastText = text;
-        _entry.Shown = shown;
-        if (shown)
-        {
-            _entry.Text = new SeStringBuilder().AddText(text).Build();
-        }
+        _entry.Set(TryGetSoonest(reminders, out var label, out var remaining)
+            ? string.Format(Loc.T("dtr.timers"), Truncate(label), FormatCountdown(remaining))
+            : null);
     }
 
     private bool TryGetSoonest(ReminderConfig config, out string label, out TimeSpan remaining)

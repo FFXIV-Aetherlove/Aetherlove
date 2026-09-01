@@ -32,7 +32,7 @@ internal sealed class StoreState(IStoreHost host)
 
     public event Action? Changed;
 
-    /// <summary>Product lookup across everything fetched so far (rails + browse), for the bag.</summary>
+    /// <summary>Product lookup across everything fetched so far (rails + browse), for the cart.</summary>
     public StoreProductDto? Find(Guid productId)
     {
         if (Front is { } front)
@@ -90,6 +90,27 @@ internal sealed class StoreState(IStoreHost host)
     {
         Balance = balance;
         Changed?.Invoke();
+    }
+
+    /// <summary>The boosts the account holds and what it could spend them on. Null until the first fetch
+    /// lands, and left as it was on a failure so the shelf does not blink out on a dropped call.</summary>
+    public MyBoostsDto? Boosts { get; private set; }
+
+    private int _boostsGeneration;
+
+    public void RefreshBoosts()
+    {
+        var generation = Interlocked.Increment(ref _boostsGeneration);
+        _ = Task.Run(async () =>
+        {
+            var boosts = await host.GetMyBoostsAsync().ConfigureAwait(false);
+            if (generation != Volatile.Read(ref _boostsGeneration) || boosts is null)
+            {
+                return;
+            }
+            Boosts = boosts;
+            Changed?.Invoke();
+        });
     }
 
     public sealed record BrowseFilter(

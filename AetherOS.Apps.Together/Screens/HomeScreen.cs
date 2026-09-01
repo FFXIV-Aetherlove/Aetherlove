@@ -169,6 +169,7 @@ internal sealed class HomeScreen(ITogetherHost host, Action openTour, Action ope
         {
             "echo" => (FontAwesomeIcon.Film, "os.party_activity_echo"),
             "wayfinder" => (FontAwesomeIcon.Compass, "os.party_activity_wayfinder"),
+            "racer" => (FontAwesomeIcon.FlagCheckered, "os.party_activity_racer"),
             _ => (FontAwesomeIcon.Bolt, "os.party_activity_generic"),
         };
         var dl = ImGui.GetWindowDrawList();

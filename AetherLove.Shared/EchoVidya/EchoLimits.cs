@@ -11,7 +11,13 @@ public static class EchoLimits
     /// <summary>People in one room, owner included.</summary>
     public const int MaxMembers = 16;
 
-    public const int MaxPlaylistEntries = 50;
+    /// <summary>The whole queue ships inline in every room snapshot, so this is a payload bound as much as
+    /// a product one: roughly 130 bytes an entry, re-sent to each member on every join and reconnect.</summary>
+    public const int MaxPlaylistEntries = 500;
+
+    /// <summary>Ceiling on one bulk playlist add. The queue cap is what actually lands; this only stops an
+    /// oversized payload reaching the server at all.</summary>
+    public const int MaxPlaylistImportItems = MaxPlaylistEntries;
 
     public const int ChatMaxLength = 300;
 

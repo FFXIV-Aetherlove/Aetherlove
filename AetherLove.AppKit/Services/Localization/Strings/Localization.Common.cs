@@ -118,6 +118,7 @@ internal static class CommonEn
         ["common.close_plugin_tip"] = "Tip: use the Minimize button at the bottom instead to keep the small floating bubble visible with its notification badge.",
         ["common.close_plugin_dont_ask"] = "Do not show this popup again",
         ["common.close"] = "Close",
+        ["common.back"] = "Back",
 
         // Save-error modal
         ["common.save_error_title"] = "Something went wrong",

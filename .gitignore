@@ -444,3 +444,7 @@ NPC_Profiles*.md
 
 # Windows folder-view settings; purely local.
 desktop.ini
+
+# Tuning readings from the gated race balance harness, regenerated on every run.
+race-balance-report.txt
+race-locals-sweep.txt

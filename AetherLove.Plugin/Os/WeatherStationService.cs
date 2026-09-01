@@ -4,6 +4,7 @@ using System.Linq;
 using AetherOS.Apps.Weather;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Game.ClientState.Conditions;
+using Dalamud.Hooking;
 using Dalamud.Interface.Textures;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Graphics.Environment;
@@ -12,7 +13,14 @@ using Lumina.Excel.Sheets;
 
 namespace AetherLove.Os;
 
-/// <summary>Weatherman's bridge into the game: Lumina forecast data plus per-tick env overrides.</summary>
+/// <summary>Weatherman's bridge into the game: Lumina forecast data plus weather/time overrides.
+///
+/// <para>Overrides suspend the game's own updater functions via no-op hooks instead of writing game
+/// state every tick. While the weather updater is suspended one <c>ActiveWeather</c> write holds, and
+/// while the time updater is suspended the clock stands still where we set it. Restoring is just
+/// disabling the hook: the game's updater resumes and corrects everything itself, so a clear never
+/// writes anything. The cutscene override slot (<c>EorzeaTimeOverride</c>) belongs to the game and is
+/// never touched; squatting on it made NPC dialogue fight the plugin for the sky.</para></summary>
 public sealed class WeatherStationService : IWeatherStation, IDisposable
 {
     private readonly Dictionary<uint, ISharedImmediateTexture?> _iconCache = new();
@@ -25,11 +33,46 @@ public sealed class WeatherStationService : IWeatherStation, IDisposable
 
     private const long EorzeaDaySeconds = 86400;
     private const long WindowRealSeconds = 1400;
+    private const float WeatherTransitionSeconds = 0.5f;
+
+    private delegate void UpdateTerritoryWeatherDelegate(nint weatherManager);
+    private delegate void UpdateEorzeaTimeDelegate(nint a1, nint a2);
+
+    private const string UpdateTerritoryWeatherSig = "48 89 5C 24 ?? 55 56 57 48 83 EC ?? 48 8B F9 48 8D 0D";
+    private const string UpdateEorzeaTimeSig = "48 89 5C 24 ?? 57 48 83 EC ?? 48 8B F9 48 8B DA 48 81 C1 ?? ?? ?? ?? E8 ?? ?? ?? ?? 4C";
+
+    private readonly Hook<UpdateTerritoryWeatherDelegate>? _weatherUpdateHook;
+    private readonly Hook<UpdateEorzeaTimeDelegate>? _timeUpdateHook;
 
     public WeatherStationService()
     {
+        _weatherUpdateHook = TryHook<UpdateTerritoryWeatherDelegate>(UpdateTerritoryWeatherSig, NoOpWeatherUpdate);
+        _timeUpdateHook = TryHook<UpdateEorzeaTimeDelegate>(UpdateEorzeaTimeSig, NoOpTimeUpdate);
         Plugin.Framework.Update += OnFrameworkUpdate;
         Plugin.ClientState.TerritoryChanged += OnTerritoryChanged;
+    }
+
+    /// <summary>A miss means the game patched past our signature; the matching control reports
+    /// unavailable and the app shows a wait-for-update notice instead of touching the sky.</summary>
+    private static Hook<T>? TryHook<T>(string signature, T detour) where T : Delegate
+    {
+        try
+        {
+            return Plugin.GameInterop.HookFromSignature(signature, detour);
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Warning(ex, $"[Weather] Signature not found, control disabled until a plugin update: {signature}");
+            return null;
+        }
+    }
+
+    private static void NoOpWeatherUpdate(nint weatherManager)
+    {
+    }
+
+    private static void NoOpTimeUpdate(nint a1, nint a2)
+    {
     }
 
     public bool InGame => Plugin.ClientState.IsLoggedIn && RefreshZone();
@@ -97,24 +140,36 @@ public sealed class WeatherStationService : IWeatherStation, IDisposable
 
     public bool CanMutate => Plugin.ClientState.IsLoggedIn && !Plugin.Condition[ConditionFlag.InCombat];
 
+    public bool WeatherControlAvailable => _weatherUpdateHook != null;
+
+    public bool TimeControlAvailable => _timeUpdateHook != null;
+
     public byte? WeatherOverride => _weatherOverride;
 
-    public void SetWeatherOverride(byte weatherId)
+    public unsafe void SetWeatherOverride(byte weatherId)
     {
-        if (CanMutate)
+        if (!CanMutate || _weatherUpdateHook == null)
         {
-            _weatherOverride = weatherId;
+            return;
+        }
+        _weatherUpdateHook.Enable();
+        _weatherOverride = weatherId;
+        var env = EnvManager.Instance();
+        if (env != null)
+        {
+            env->ActiveWeather = weatherId;
+            env->TransitionTime = WeatherTransitionSeconds;
         }
     }
 
-    public unsafe void ClearWeatherOverride()
+    public void ClearWeatherOverride()
     {
         if (_weatherOverride == null)
         {
             return;
         }
         _weatherOverride = null;
-        NudgeEnvironment();
+        _weatherUpdateHook?.Disable();
     }
 
     public unsafe TimeSpan EorzeaTime
@@ -135,117 +190,53 @@ public sealed class WeatherStationService : IWeatherStation, IDisposable
 
     public int? TimeOverrideMinutes => _timeOverrideMinutes;
 
-    public void SetTimeOverride(int minuteOfDay)
+    /// <summary>Suspends the clock updater and writes the wanted hour into <c>EorzeaTime</c> itself, never
+    /// the override slot: that slot is the game's own cutscene/dialogue mechanism, and two writers on it is
+    /// how talking to an NPC used to yank the sky around.</summary>
+    public unsafe void SetTimeOverride(int minuteOfDay)
     {
-        if (CanMutate)
+        if (!CanMutate || _timeUpdateHook == null)
         {
-            _timeOverrideMinutes = Math.Clamp(minuteOfDay, 0, 1439);
+            return;
+        }
+        var minutes = Math.Clamp(minuteOfDay, 0, 1439);
+        _timeUpdateHook.Enable();
+        _timeOverrideMinutes = minutes;
+        var framework = Framework.Instance();
+        if (framework != null)
+        {
+            var days = framework->ClientTime.EorzeaTime / EorzeaDaySeconds;
+            framework->ClientTime.EorzeaTime = days * EorzeaDaySeconds + minutes * 60L;
         }
     }
 
-    /// <summary>Hands the sky back to the real clock. Clearing the flag alone was not enough: the
-    /// environment keeps the lighting it last resolved and only recomputes when something makes it, so a
-    /// midday sky stayed bright at 23:20. Writing the real time into the override slot before dropping the
-    /// flag leaves nothing stale behind, and re-applying the forecast weather with a transition is what
-    /// actually forces the recompute.
-    ///
-    /// <para>The early return is not an optimisation: without an override of our own to undo there is
-    /// nothing to restore, and nudging anyway wrote over the environment of every player who never opened
-    /// the app.</para></summary>
-    public unsafe void ClearTimeOverride()
+    public void ClearTimeOverride()
     {
         if (_timeOverrideMinutes == null)
         {
             return;
         }
         _timeOverrideMinutes = null;
-        var framework = Framework.Instance();
-        if (framework != null)
-        {
-            framework->ClientTime.EorzeaTimeOverride = framework->ClientTime.EorzeaTime;
-            framework->ClientTime.IsEorzeaTimeOverridden = false;
-        }
-        NudgeEnvironment();
+        _timeUpdateHook?.Disable();
     }
 
-    /// <summary>Re-applies whatever weather should be running, which makes the environment resolve its
-    /// whole state again (lighting and sky included) instead of keeping what it last computed. Only ever
-    /// call this to undo an override of ours while the player stands where they are; a zone load resolves
-    /// the environment by itself.</summary>
-    private unsafe void NudgeEnvironment()
+    private void OnFrameworkUpdate(IFramework _)
     {
-        // The rate table is cached per zone and refreshed lazily, so without this the nudge can write the
-        // PREVIOUS zone's weather into the new one.
-        if (!RefreshZone())
-        {
-            return;
-        }
-        var env = EnvManager.Instance();
-        if (env == null)
-        {
-            return;
-        }
-        var unix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        env->ActiveWeather = _weatherOverride
-            ?? PickWeather(CalculateForecastTarget(unix - unix % WindowRealSeconds));
-        env->TransitionTime = 0.5f;
-    }
-
-    private unsafe void OnFrameworkUpdate(IFramework _)
-    {
-        if (!PhonePower.IsOn)
-        {
-            return;
-        }
         if (_weatherOverride == null && _timeOverrideMinutes == null)
         {
             return;
         }
-        if (Plugin.Condition[ConditionFlag.InCombat])
+        if (!PhonePower.IsOn || Plugin.Condition[ConditionFlag.InCombat])
         {
             ClearWeatherOverride();
             ClearTimeOverride();
-            return;
-        }
-
-        if (_weatherOverride is { } weather)
-        {
-            var env = EnvManager.Instance();
-            if (env != null && env->ActiveWeather != weather)
-            {
-                env->ActiveWeather = weather;
-                env->TransitionTime = 0.5f;
-            }
-        }
-
-        if (_timeOverrideMinutes is { } minutes)
-        {
-            var framework = Framework.Instance();
-            if (framework != null)
-            {
-                var days = framework->ClientTime.EorzeaTime / EorzeaDaySeconds;
-                framework->ClientTime.IsEorzeaTimeOverridden = true;
-                framework->ClientTime.EorzeaTimeOverride = days * EorzeaDaySeconds + minutes * 60L;
-            }
         }
     }
 
-    /// <summary>Drops both overrides on the way into a new zone, and deliberately writes nothing back: the
-    /// zone load resolves the environment on its own, so a nudge here is a write into somebody else's sky.
-    /// The clock flag still has to come off, or the new zone would keep running on the frozen hour.</summary>
-    private unsafe void OnTerritoryChanged(uint _)
+    private void OnTerritoryChanged(uint _)
     {
-        _weatherOverride = null;
-        if (_timeOverrideMinutes == null)
-        {
-            return;
-        }
-        _timeOverrideMinutes = null;
-        var framework = Framework.Instance();
-        if (framework != null)
-        {
-            framework->ClientTime.IsEorzeaTimeOverridden = false;
-        }
+        ClearWeatherOverride();
+        ClearTimeOverride();
     }
 
     private TerritoryType? TerritoryRow()
@@ -536,5 +527,7 @@ public sealed class WeatherStationService : IWeatherStation, IDisposable
         Plugin.ClientState.TerritoryChanged -= OnTerritoryChanged;
         ClearWeatherOverride();
         ClearTimeOverride();
+        _weatherUpdateHook?.Dispose();
+        _timeUpdateHook?.Dispose();
     }
 }

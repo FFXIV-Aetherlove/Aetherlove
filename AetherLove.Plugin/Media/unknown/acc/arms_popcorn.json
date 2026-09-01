@@ -1,0 +1,14 @@
+{
+  "name": "Spectator Popcorn",
+  "slot": "arms",
+  "tier": "seasonal",
+  "file": "arms_popcorn.png",
+  "anchor": "handL",
+  "origin": [
+    61,
+    74
+  ],
+  "width": 80,
+  "height": 100,
+  "behind": false
+}

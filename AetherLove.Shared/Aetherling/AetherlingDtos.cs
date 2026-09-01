@@ -38,8 +38,10 @@ public static class AetherlingLimits
     /// <summary>What a freshly hatched one is called until the player says otherwise.</summary>
     public const string DefaultName = "Lumi";
 
-    /// <summary>Most accessories one look may equip at once.</summary>
-    public const int MaxEquippedAccessories = 12;
+    /// <summary>Most accessories one look may equip at once. Raised from 12 to 25 (owner, 2026-08-28):
+    /// ears, tails, nooks, banners and both arms all count against it, so a well-dressed creature was
+    /// reaching the old cap in ordinary play. The stored column holds far more than this.</summary>
+    public const int MaxEquippedAccessories = 25;
 
     /// <summary>The store ref of the consumable that buys a rename. Both sides name it: the server spends
     /// it, the client checks for it before offering the pill.</summary>
@@ -84,8 +86,14 @@ public sealed record AetherlingGrowthDto(
     int FeedGateMinutes,
     short FeedsPerStage);
 
-/// <summary>The grown pet: its rolled element and the lifetime diet ledger the radar and the
-/// signature turns read. Counts only ever go up.</summary>
+/// <summary>The grown pet: the element it was born with, the element it is attuned to now, and the
+/// lifetime diet ledger the radar and the signature turns read. Counts only ever go up.
+///
+/// <para><see cref="Element"/> is the one rolled at the adulting and never changes.
+/// <see cref="AttunedElement"/> is what the creature currently answers to: the worn form's element,
+/// or the born one while it wears none. Everything that asks "which element is this pet" (races, the
+/// games' powers) means the attuned one; only "what did it hatch as" means the born one. It is zero
+/// on a server that predates it, so a reader falls back to <see cref="Element"/>.</para></summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record AetherlingAdultDto(
     DateTimeOffset AdultAtUtc,
@@ -93,7 +101,10 @@ public sealed record AetherlingAdultDto(
     short FeedsToday,
     short FeedsPerDay,
     int DietTurnThreshold,
-    AetherlingDietCountDto[] Diet);
+    AetherlingDietCountDto[] Diet,
+    int ShellFeedThreshold = 0,
+    int ShellFeedThreshold2 = 0,
+    short AttunedElement = 0);
 
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record AetherlingDietCountDto(short Element, int Count);
@@ -107,7 +118,8 @@ public sealed record AetherlingLookDto(
     string[] Accessories,
     string Reaction,
     bool ArmsFollowJob,
-    string[]? DisabledReactions = null);
+    string[]? DisabledReactions = null,
+    string Shell = "");
 
 /// <summary>One scratch card. The prize fields stay at their defaults until the reveal, so an
 /// unscratched prize never leaves the server.</summary>

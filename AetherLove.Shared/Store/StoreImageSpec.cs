@@ -42,7 +42,8 @@ public static class StoreImageSpec
         kind is StoreItemKind.AvatarFrame
             or StoreItemKind.AetherlingAccessory
             or StoreItemKind.AetherlingArms
-            or StoreItemKind.AetherlingConsumable;
+            or StoreItemKind.AetherlingConsumable
+            or StoreItemKind.Powerup;
 
     public static (int MaxWidth, int? MaxHeight, int Quality) For(StoreItemKind kind) =>
         IsPhoneSkin(kind)

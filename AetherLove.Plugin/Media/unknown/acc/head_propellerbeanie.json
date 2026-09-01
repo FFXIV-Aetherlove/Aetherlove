@@ -1,0 +1,14 @@
+{
+  "name": "Propeller Beanie",
+  "slot": "head",
+  "tier": "seasonal",
+  "file": "head_propellerbeanie.png",
+  "anchor": "head",
+  "origin": [
+    70,
+    68
+  ],
+  "width": 150,
+  "height": 96,
+  "behind": false
+}

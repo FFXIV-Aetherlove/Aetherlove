@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
-using AetherOS.Apps.Aetherling.Rendering;
+using AetherOS.PetKit.Rendering;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 

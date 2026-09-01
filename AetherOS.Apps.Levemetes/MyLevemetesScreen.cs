@@ -22,7 +22,7 @@ using Widgets = AetherLove.Widgets;
 
 namespace AetherOS.Apps.Levemetes;
 
-public sealed class MyLevemetesScreen
+public sealed partial class MyLevemetesScreen
 {
     private enum Section { List, Editor }
 
@@ -32,6 +32,7 @@ public sealed class MyLevemetesScreen
     private readonly IAppCapabilities _caps;
     private readonly Action _backToBrowse;
     private readonly CancellationTokenSource _cts = new();
+    private IOsShell? _shell;
 
     private volatile MyLevemeteDto[]? _mine;
     private volatile bool _listLoading;
@@ -105,6 +106,7 @@ public sealed class MyLevemetesScreen
         {
             StartListFetch();
         }
+        StartBoostCountFetch();
     }
 
     private void StartListFetch()
@@ -156,8 +158,9 @@ public sealed class MyLevemetesScreen
         }
     }
 
-    public void Draw()
+    public void Draw(IOsShell shell)
     {
+        _shell = shell;
         if (_section == Section.List)
         {
             DrawList();
@@ -364,7 +367,8 @@ public sealed class MyLevemetesScreen
             ImGui.SetCursorScreenPos(new Vector2(br.X - renewW - Px(10f), tl.Y + (rowH - btnH) * 0.5f));
             PushThemeButton(ThemeService.Current);
             ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, btnH * 0.5f);
-            if (_renewBusy)
+            var renewBusy = _renewBusy;
+            if (renewBusy)
             {
                 ImGui.BeginDisabled();
             }
@@ -372,7 +376,7 @@ public sealed class MyLevemetesScreen
             {
                 StartRenew(ad.Id);
             }
-            if (_renewBusy)
+            if (renewBusy)
             {
                 ImGui.EndDisabled();
             }
@@ -514,6 +518,7 @@ public sealed class MyLevemetesScreen
             StartListFetch();
         }
         DrawDeleteConfirm();
+        DrawBoostOverlay();
     }
 
     private void DrawEditorBody(float w, float pad)
@@ -684,7 +689,8 @@ public sealed class MyLevemetesScreen
         ImGui.SetCursorPosX(pad);
         PushThemeButton(t);
         ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(10f));
-        if (_saving)
+        var saving = _saving;
+        if (saving)
         {
             ImGui.BeginDisabled();
         }
@@ -692,7 +698,7 @@ public sealed class MyLevemetesScreen
         {
             SaveAd();
         }
-        if (_saving)
+        if (saving)
         {
             ImGui.EndDisabled();
         }
@@ -701,6 +707,9 @@ public sealed class MyLevemetesScreen
 
         if (_editId != Guid.Empty)
         {
+            ImGui.Spacing();
+            DrawBoostRow(w, pad);
+
             ImGui.Spacing();
             ImGui.SetCursorPosX(pad);
             PushDangerButton();

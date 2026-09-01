@@ -126,7 +126,8 @@ public partial class MyProfileScreen
         ImGui.SetCursorPosX(padX);
         PushThemeButton(t);
         ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(10f));
-        if (_holidaySaving)
+        var holidaySaving = _holidaySaving;
+        if (holidaySaving)
         {
             ImGui.BeginDisabled();
         }
@@ -134,7 +135,7 @@ public partial class MyProfileScreen
         {
             SaveHoliday();
         }
-        if (_holidaySaving)
+        if (holidaySaving)
         {
             ImGui.EndDisabled();
         }

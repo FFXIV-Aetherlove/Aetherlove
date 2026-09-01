@@ -13,7 +13,8 @@ namespace AetherOS.Apps.Aetherling;
 /// turn sharing off it simply stops being in the list.</summary>
 /// <param name="Stage">The rung of the growth ladder: 0-2 hatchling forms, 3 adult.</param>
 public sealed record AetherlingPartyPet(
-    Guid AccountId, short Stage, string Palette, IReadOnlyList<string> Accessories, string? Name);
+    Guid AccountId, short Stage, string Palette, IReadOnlyList<string> Accessories, string? Name,
+    string Shell = "");
 
 /// <summary>What the app needs from the plugin. Declared here and implemented over there, so the app never
 /// references the hub, the session or the audio stack.</summary>
@@ -32,6 +33,11 @@ public interface IAetherlingHost
 
     /// <summary>Whether the loop is silenced. Persisted by the app, honoured across restarts.</summary>
     bool BgmMuted { get; set; }
+
+    /// <summary>How loud the loop plays, 0 to 1, under the music's own level. Persisted by the app
+    /// beside the mute, and separate from it: muting keeps the level so unmuting returns to the
+    /// volume the owner chose rather than to full.</summary>
+    float BgmVolume { get; set; }
 
     /// <summary>Where the ceremony sheets live, so the app can hand paths to the texture cache.</summary>
     string AssetRoot { get; }
@@ -154,10 +160,13 @@ public interface IAetherlingHost
     /// mute and the same duck as the ceremony's loop, and replaces whatever was playing. Calling it again
     /// with the same file and a new speed only retunes: speed is tape speed, so pitch and tempo rise
     /// together.</summary>
-    void StartGameBgm(string fileName, float speed = 1f);
+    void StartGameBgm(string fileName, float speed = 1f, float levelScale = 1f);
 
     /// <summary>Stops the loop and gives the game its music back.</summary>
     void StopBgm();
+
+    /// <summary>Stops the loop over a fade of the caller's own length.</summary>
+    void StopBgm(double fadeSeconds);
 
     /// <summary>Plays the shell breaking, once.</summary>
     void PlayCrack();

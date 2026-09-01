@@ -7,6 +7,7 @@ using AetherLove.Os;
 using AetherLove.Services;
 using AetherLove.Services.Localization;
 using AetherLove.UI;
+using AetherLove.Widgets;
 using AetherOS.Sdk;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -96,6 +97,14 @@ public sealed partial class HomeScreen
     /// <summary>The grid cell the home menu was opened over, so anything it creates lands where the player
     /// was pointing rather than in the first free cell somewhere else entirely.</summary>
     private (int Page, int Slot)? _menuCell;
+
+    /// <summary>The rows and their doings for whichever context menu is being built this frame. One pair
+    /// serves both the page's menu and a tile's, because only one of them is ever open.</summary>
+    private readonly List<OsMenu.MenuRow> _ctxRows = [];
+    private readonly List<Action> _ctxActions = [];
+
+    /// <summary>Whether a tile's menu is showing its move-to-folder page rather than its rows.</summary>
+    private bool _tileMenuFolders;
 
     /// <summary>Whether the app awaiting the remove confirm is sitting in the open folder rather than on the
     /// grid, which decides whether the removal can play the tile's shrink or has to be immediate.</summary>
@@ -418,6 +427,16 @@ public sealed partial class HomeScreen
             if (app.Available)
             {
                 shown.Add(app.Id);
+            }
+        }
+        // An external plugin that is installed but not loaded right now is absent from the app list entirely,
+        // unlike a switched-off first-party app, so without this its cell reads as empty and the next app to
+        // be placed takes it.
+        foreach (var id in _shell.DormantExternalIds())
+        {
+            if (!foldered.Contains(id))
+            {
+                keep.Add(id);
             }
         }
         foreach (var folder in os.Folders)
@@ -1237,7 +1256,7 @@ public sealed partial class HomeScreen
             _pressPos = ImGui.GetMousePos();
         }
 
-        if (_pressId == id && ImGui.IsItemActive()
+        if (_pressId == id && ImGui.IsItemActive() && !IconsLocked
             && _dragId == null && (ImGui.GetMousePos() - _pressPos).Length() > DragThreshold)
         {
             _dragId = id;
@@ -1463,7 +1482,7 @@ public sealed partial class HomeScreen
                 // Remembered here rather than read when the menu is used: by then the popup owns the cursor.
                 var spot = DropTarget(layout);
                 _menuCell = spot is { InDock: false, Page: >= 0, Slot: >= 0 } ? (spot.Page, spot.Slot) : null;
-                ImGui.OpenPopup("##homeCtx");
+                OsMenu.Open("##homeCtx", insideWindow: true);
             }
         }
         DrawHomeContextMenu();
@@ -1501,127 +1520,100 @@ public sealed partial class HomeScreen
     /// inside a child window with an id stack of its own.</para></summary>
     private void DrawTileContextMenu(string id, bool inFolder)
     {
-        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Px(8f, 8f));
-        ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, Px(6f, 6f));
-        ImGui.PushStyleColor(ImGuiCol.PopupBg, new Vector4(0.10f, 0.09f, 0.12f, 0.98f));
-        ImGui.PushStyleColor(ImGuiCol.Border, ThemeService.Current.AccentWithAlpha(0.35f));
-        if (ImGui.BeginPopupContextItem($"##tileCtx_{id}"))
+        var menuId = $"##tileCtx_{id}";
+        if (ImGui.IsItemHovered() && ImGui.IsMouseClicked(ImGuiMouseButton.Right))
         {
-            // The pill normally clears by opening the app, which is a chore for a folder of them.
-            if (NewInside(id).Count > 0
-                && SharedUiHelpers.DrawIconMenuItem(FontAwesomeIcon.Check, Loc.T("os.tile_menu_mark_seen")))
-            {
-                _shell.MarkAppsSeen(NewInside(id));
-                ImGui.CloseCurrentPopup();
-            }
-
-            if (IsFolderId(id))
-            {
-                if (SharedUiHelpers.DrawIconMenuItem(FontAwesomeIcon.FolderMinus, Loc.T("os.tile_menu_remove_folder")))
-                {
-                    _folderDeleteId = id;
-                    ImGui.CloseCurrentPopup();
-                }
-            }
-            else
-            {
-                if (inFolder && SharedUiHelpers.DrawIconMenuItem(
-                    FontAwesomeIcon.FolderOpen, Loc.T("os.tile_menu_take_out")))
-                {
-                    if (FindFolder(_openFolderId) is { } folder && folder.AppIds.Contains(id))
-                    {
-                        if (AccessibilityService.ReduceMotion)
-                        {
-                            CommitFolderRemoval(folder, id);
-                        }
-                        else
-                        {
-                            _folderEjecting[id] = 0f;
-                        }
-                    }
-                    ImGui.CloseCurrentPopup();
-                }
-                DrawMoveToFolderMenu(id);
-                if (SharedUiHelpers.DrawIconMenuItem(FontAwesomeIcon.TrashAlt, Loc.T("os.tile_menu_remove_app")))
-                {
-                    RequestRemove(id, inFolder);
-                    ImGui.CloseCurrentPopup();
-                }
-            }
-            ImGui.EndPopup();
+            _tileMenuFolders = false;
+            OsMenu.Open(menuId, insideWindow: true);
         }
-        ImGui.PopStyleColor(2);
-        ImGui.PopStyleVar(2);
+
+        _ctxRows.Clear();
+        _ctxActions.Clear();
+        if (_tileMenuFolders)
+        {
+            BuildMoveToFolderPage(id, menuId);
+        }
+        else
+        {
+            BuildTileMenuPage(id, inFolder, menuId);
+        }
+
+        var picked = OsMenu.Draw(menuId, _ctxRows);
+        if (picked >= 0)
+        {
+            _ctxActions[picked]();
+        }
     }
 
-    /// <summary>The "move to folder" flyout on an app tile: every folder there is, minus the one the app
-    /// already sits in. Absent entirely when that leaves nothing, since an empty flyout only teaches that the
-    /// row does nothing.
-    ///
-    /// <para>The row's own label is blank padding measured against
-    /// <see cref="SharedUiHelpers.DrawIconMenuItem"/>'s layout, with the icon and text drawn by hand at that
-    /// helper's offsets, so a real ImGui submenu still lines up with the hand-rolled rows around it.</para>
-    /// </summary>
-    private void DrawMoveToFolderMenu(string appId)
+    private void BuildTileMenuPage(string id, bool inFolder, string menuId)
+    {
+        // The pill normally clears by opening the app, which is a chore for a folder of them.
+        if (NewInside(id).Count > 0)
+        {
+            CtxRow(FontAwesomeIcon.Check, Loc.T("os.tile_menu_mark_seen"), () => _shell.MarkAppsSeen(NewInside(id)));
+        }
+
+        if (IsFolderId(id))
+        {
+            CtxRow(FontAwesomeIcon.FolderMinus, Loc.T("os.tile_menu_remove_folder"), () => _folderDeleteId = id);
+            return;
+        }
+
+        if (inFolder)
+        {
+            CtxRow(FontAwesomeIcon.FolderOpen, Loc.T("os.tile_menu_take_out"), () =>
+            {
+                if (FindFolder(_openFolderId) is { } folder && folder.AppIds.Contains(id))
+                {
+                    if (AccessibilityService.ReduceMotion)
+                    {
+                        CommitFolderRemoval(folder, id);
+                    }
+                    else
+                    {
+                        _folderEjecting[id] = 0f;
+                    }
+                }
+            });
+        }
+        if (FoldersFor(id).Count > 0)
+        {
+            CtxRow(FontAwesomeIcon.FolderOpen, Loc.T("os.tile_menu_move_to_folder"), () =>
+            {
+                _tileMenuFolders = true;
+                OsMenu.Restart(menuId);
+            }, flyout: true);
+        }
+        CtxRow(FontAwesomeIcon.TrashAlt, Loc.T("os.tile_menu_remove_app"), () => RequestRemove(id, inFolder));
+    }
+
+    /// <summary>Every folder there is, minus the one the app already sits in, as a page of the tile's own
+    /// menu. Absent entirely when that leaves nothing, since an empty list only teaches that the row does
+    /// nothing.</summary>
+    private void BuildMoveToFolderPage(string id, string menuId)
+    {
+        CtxRow(FontAwesomeIcon.ChevronLeft, Loc.T("common.back"), () =>
+        {
+            _tileMenuFolders = false;
+            OsMenu.Restart(menuId);
+        }, flyout: false, keepsOpen: true);
+        foreach (var folder in FoldersFor(id))
+        {
+            var target = folder;
+            CtxRow(FontAwesomeIcon.Folder, Os.OsFolders.DisplayName(target), () => MoveIntoFolder(id, target));
+        }
+    }
+
+    private static List<OsFolder> FoldersFor(string appId)
     {
         var current = FolderContaining(appId);
-        var folders = UiHost.Configuration.Os.Folders.Where(f => f != current).ToList();
-        if (folders.Count == 0)
-        {
-            return;
-        }
+        return UiHost.Configuration.Os.Folders.Where(f => f != current).ToList();
+    }
 
-        var dl = ImGui.GetWindowDrawList();
-        var style = ImGui.GetStyle();
-        var label = Loc.T("os.tile_menu_move_to_folder");
-        var labelSz = ImGui.CalcTextSize(label);
-        var spaceW = MathF.Max(1f, ImGui.CalcTextSize(" ").X);
-        var padCount = (int)MathF.Ceiling(MathF.Max(0f, Px(38f) - style.FramePadding.X + labelSz.X) / spaceW);
-        var itemPos = ImGui.GetCursorScreenPos();
-        ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing,
-            new Vector2(style.ItemSpacing.X, style.FramePadding.Y * 2f));
-        var open = ImGui.BeginMenu($"{new string(' ', padCount)}##mvfolder");
-        ImGui.PopStyleVar();
-
-        var fontSize = ImGui.GetFontSize();
-        ImGui.PushFont(UiHost.PluginInterface.UiBuilder.FontIcon);
-        var icon = FontAwesomeIcon.FolderOpen.ToIconString();
-        var iconSz = ImGui.CalcTextSize(icon);
-        dl.AddText(ImGui.GetFont(), fontSize,
-            new Vector2(itemPos.X + Px(10f) + (Px(20f) - iconSz.X) * 0.5f,
-                        itemPos.Y + (labelSz.Y - iconSz.Y) * 0.5f),
-            0xFFEEEEEE, icon);
-        ImGui.PopFont();
-        dl.AddText(new Vector2(itemPos.X + Px(38f), itemPos.Y), 0xFFEEEEEE, label);
-        if (!open)
-        {
-            return;
-        }
-
-        var subDl = ImGui.GetWindowDrawList();
-        var inset = Px(30f);
-        var rowW = folders.Max(f => inset + ImGui.CalcTextSize(Os.OsFolders.DisplayName(f)).X + Px(12f));
-        foreach (var folder in folders)
-        {
-            var pos = ImGui.GetCursorScreenPos();
-            var rowH = ImGui.GetFrameHeight();
-            if (ImGui.Selectable($"##mvf_{folder.Id}", false, ImGuiSelectableFlags.None,
-                new Vector2(rowW, rowH)))
-            {
-                MoveIntoFolder(appId, folder);
-                ImGui.CloseCurrentPopup();
-            }
-            if (ImGui.IsItemHovered())
-            {
-                SharedUiHelpers.HandOnHover();
-            }
-            IconDraw.AddCentered(subDl, FontAwesomeIcon.Folder, fontSize,
-                new Vector2(pos.X + Px(14f), pos.Y + rowH * 0.5f), 0xFFEEEEEE);
-            var name = Os.OsFolders.DisplayName(folder);
-            var nameSz = ImGui.CalcTextSize(name);
-            subDl.AddText(new Vector2(pos.X + inset, pos.Y + (rowH - nameSz.Y) * 0.5f), 0xFFEEEEEE, name);
-        }
-        ImGui.EndMenu();
+    private void CtxRow(FontAwesomeIcon icon, string label, Action act, bool flyout = false, bool keepsOpen = false)
+    {
+        _ctxRows.Add(new OsMenu.MenuRow(icon, label, flyout, flyout || keepsOpen));
+        _ctxActions.Add(act);
     }
 
     private static OsFolder? FolderContaining(string appId) =>
@@ -1656,42 +1648,57 @@ public sealed partial class HomeScreen
 
     /// <summary>The home right-click menu: enter icon-arrange (wiggle) mode, or jump to the Settings wallpaper
     /// and home-screen page.</summary>
+    /// <summary>Whether the grid is pinned. Everything else stays available: a locked screen still opens
+    /// apps, still removes and files them from the menus, and still adds new ones.</summary>
+    private static bool IconsLocked => UiHost.Configuration.Os.IconsLocked;
+
+    /// <summary>Flips the lock and drops any drag already in flight, so locking mid-hold cannot leave a
+    /// tile stuck to the cursor.</summary>
+    private void ToggleIconLock()
+    {
+        var os = UiHost.Configuration.Os;
+        os.IconsLocked = !os.IconsLocked;
+        UiHost.Configuration.Save();
+        if (os.IconsLocked)
+        {
+            _dragId = null;
+            _pressId = null;
+            _folderDragId = null;
+            _folderPressId = null;
+        }
+    }
+
     private void DrawHomeContextMenu()
     {
-        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Px(8f, 8f));
-        ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, Px(6f, 6f));
-        ImGui.PushStyleColor(ImGuiCol.PopupBg, new Vector4(0.10f, 0.09f, 0.12f, 0.98f));
-        ImGui.PushStyleColor(ImGuiCol.Border, ThemeService.Current.AccentWithAlpha(0.35f));
-        if (ImGui.BeginPopup("##homeCtx"))
+        _ctxRows.Clear();
+        _ctxActions.Clear();
+        CtxRow(FontAwesomeIcon.Plus, Loc.T("os.home_menu_add_app"), () =>
         {
-            if (SharedUiHelpers.DrawIconMenuItem(FontAwesomeIcon.Plus, Loc.T("os.home_menu_add_app")))
-            {
-                SetAddAppsOpen(true);
-                _addAppsSearch = "";
-                ImGui.CloseCurrentPopup();
-            }
-            if (SharedUiHelpers.DrawIconMenuItem(FontAwesomeIcon.FolderPlus, Loc.T("os.home_menu_add_folder")))
-            {
-                _newFolderName = "";
-                _newFolderPrompt = true;
-                _newFolderFocus = true;
-                ImGui.CloseCurrentPopup();
-            }
-            if (_shell.NewApps().Any()
-                && SharedUiHelpers.DrawIconMenuItem(FontAwesomeIcon.CheckDouble, Loc.T("os.home_menu_mark_seen")))
-            {
-                _shell.MarkAppsSeen(_shell.NewApps().ToList());
-                ImGui.CloseCurrentPopup();
-            }
-            if (SharedUiHelpers.DrawIconMenuItem(FontAwesomeIcon.Image, Loc.T("os.home_menu_wallpaper")))
-            {
-                _shell.SendIntent("settings", OsIntents.Create(OsIntents.OpenWallpaper));
-                ImGui.CloseCurrentPopup();
-            }
-            ImGui.EndPopup();
+            SetAddAppsOpen(true);
+            _addAppsSearch = "";
+        });
+        CtxRow(FontAwesomeIcon.FolderPlus, Loc.T("os.home_menu_add_folder"), () =>
+        {
+            _newFolderName = "";
+            _newFolderPrompt = true;
+            _newFolderFocus = true;
+        });
+        if (_shell.NewApps().Any())
+        {
+            CtxRow(FontAwesomeIcon.CheckDouble, Loc.T("os.home_menu_mark_seen"),
+                () => _shell.MarkAppsSeen(_shell.NewApps().ToList()));
         }
-        ImGui.PopStyleColor(2);
-        ImGui.PopStyleVar(2);
+        CtxRow(IconsLocked ? FontAwesomeIcon.LockOpen : FontAwesomeIcon.Lock,
+            Loc.T(IconsLocked ? "os.home_menu_unlock_icons" : "os.home_menu_lock_icons"),
+            ToggleIconLock);
+        CtxRow(FontAwesomeIcon.Image, Loc.T("os.home_menu_wallpaper"),
+            () => _shell.SendIntent("settings", OsIntents.Create(OsIntents.OpenWallpaper)));
+
+        var picked = OsMenu.Draw("##homeCtx", _ctxRows);
+        if (picked >= 0)
+        {
+            _ctxActions[picked]();
+        }
     }
 
     private void DrawClock(ImDrawListPtr dl, Vector2 origin, Vector2 avail)
@@ -2554,7 +2561,7 @@ public sealed partial class HomeScreen
             _folderPressId = appId;
             _folderPressPos = ImGui.GetMousePos();
         }
-        if (_folderPressId == appId && ImGui.IsItemActive() && _folderDragId == null
+        if (_folderPressId == appId && ImGui.IsItemActive() && _folderDragId == null && !IconsLocked
             && (ImGui.GetMousePos() - _folderPressPos).Length() > DragThreshold)
         {
             _folderDragId = appId;
@@ -2667,7 +2674,6 @@ public sealed partial class HomeScreen
     {
         w = ImGui.GetContentRegionAvail().X;
         var dl = ImGui.GetWindowDrawList();
-        var added = new HashSet<string>(UiHost.Configuration.Os.ExternalApps);
         var query = _addAppsSearch.Trim();
         var restorable = RestorableApps(query);
         var plugins = UiHost.PluginInterface.InstalledPlugins
@@ -2704,7 +2710,9 @@ public sealed partial class HomeScreen
         foreach (var pl in plugins)
         {
             var visual = new Os.ExternalApp(pl.InternalName, pl.Name);
-            if (DrawAddRow(dl, w, pl.InternalName, visual, pl.Name, added.Contains(pl.InternalName)))
+            // Asked of the live wrappers, not of the config list: an entry left behind by a plugin that was
+            // unloaded when AetherOS last looked would otherwise read "Added" with no tile to remove it from.
+            if (DrawAddRow(dl, w, pl.InternalName, visual, pl.Name, _shell.HasExternalApp(pl.InternalName)))
             {
                 _shell.AddExternalApp(pl.InternalName);
             }

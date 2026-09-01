@@ -1,0 +1,14 @@
+{
+  "name": "Gold Belly Medal",
+  "slot": "outfit",
+  "tier": "seasonal",
+  "file": "outfit_goldmedal.png",
+  "anchor": "head",
+  "origin": [
+    75,
+    -94
+  ],
+  "width": 150,
+  "height": 44,
+  "behind": false
+}

@@ -47,6 +47,7 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IKeyState KeyState { get; private set; } = null!;
     [PluginService] internal static ITargetManager TargetManager { get; private set; } = null!;
     [PluginService] internal static ISigScanner SigScanner { get; private set; } = null!;
+    [PluginService] internal static IGameInteropProvider GameInterop { get; private set; } = null!;
     [PluginService] internal static IToastGui ToastGui { get; private set; } = null!;
 
     internal static string ServerBaseUrl => AetherLove.Shared.AetherConstants.ServerBaseUrl;
@@ -162,6 +163,7 @@ public sealed class Plugin : IDalamudPlugin
         services.AddSingleton<Services.Echo.EchoStateService>();
         services.AddSingleton<Services.Together.TogetherStateService>();
         services.AddSingleton<Services.Together.WayfinderRunStateService>();
+        services.AddSingleton<Services.Together.LumiRaceRunStateService>();
         services.AddSingleton<Services.Translation.TranslationService>();
         services.AddSingleton<Services.Echo.EchoSyncEngine>();
         services.AddSingleton<Services.EchoShareContext>();
@@ -215,6 +217,7 @@ public sealed class Plugin : IDalamudPlugin
 
         services.AddSingleton<Os.AppStorageService>();
         services.AddSingleton<Os.AudioService>();
+        services.AddSingleton<Os.ServerBarService>();
         services.AddSingleton<Os.AppCapabilities>();
         services.AddSingleton<AetherOS.Sdk.IAppCapabilities>(sp => sp.GetRequiredService<Os.AppCapabilities>());
         services.AddSingleton<Os.ISocialBridge, Os.SocialBridgeService>();
@@ -430,7 +433,8 @@ public sealed class Plugin : IDalamudPlugin
         services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Groove.GrooveApp(
             () => Services.Localization.Loc.T("os.app_groove"),
             sp.GetRequiredService<AetherOS.Apps.Groove.IGrooveHost>(),
-            sp.GetRequiredService<AetherOS.Apps.Groove.GrooveSettings>()));
+            sp.GetRequiredService<AetherOS.Apps.Groove.GrooveSettings>(),
+            sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>()));
         services.AddSingleton<Os.WayfinderHostService>();
         services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Wayfinder.WayfinderApp(
             () => Services.Localization.Loc.T("os.app_wayfinder"),
@@ -480,6 +484,11 @@ public sealed class Plugin : IDalamudPlugin
         services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Together.TogetherApp(
             () => Services.Localization.Loc.T("os.app_together"),
             sp.GetRequiredService<Os.TogetherHostService>(),
+            sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>()));
+        services.AddSingleton<Os.RacerHostService>();
+        services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Racer.RacerApp(
+            () => Services.Localization.Loc.T("os.app_racer"),
+            sp.GetRequiredService<Os.RacerHostService>(),
             sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>()));
         services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Notes.NotesApp(
             () => Services.Localization.Loc.T("os.app_notes"),

@@ -25,6 +25,7 @@
     <InternalsVisibleTo Include="AetherOS.Apps.Groove" />
     <InternalsVisibleTo Include="AetherOS.Apps.EchoVidya" />
     <InternalsVisibleTo Include="AetherOS.Apps.Aetherling" />
+    <InternalsVisibleTo Include="AetherOS.Apps.Racer" />
     <InternalsVisibleTo Include="AetherOS.Apps.Notes" />
     <InternalsVisibleTo Include="AetherOS.Apps.Calculator" />
     <InternalsVisibleTo Include="AetherOS.Apps.Timers" />

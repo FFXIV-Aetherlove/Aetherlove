@@ -1,0 +1,14 @@
+{
+  "name": "Swirl Lollipop",
+  "slot": "arms",
+  "tier": "seasonal",
+  "file": "arms_lollipop.png",
+  "anchor": "handL",
+  "origin": [
+    66,
+    118
+  ],
+  "width": 120,
+  "height": 130,
+  "behind": false
+}

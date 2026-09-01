@@ -86,11 +86,35 @@ internal static class Program
         {
             WindowlessRenderingEnabled = true,
             LogSeverity = LogSeverity.Disable,
+            // CEF allows one instance per cache directory, and the default is shared per user: a second
+            // host (an orphan that has not died yet, a test harness beside the game) then fails
+            // Cef.Initialize outright. Every launch gets its own; there is nothing worth keeping in it
+            // between runs, the page carries a version parameter and media is streamed.
+            RootCachePath = Path.Combine(Path.GetTempPath(),
+                "aetheros-echo-cache-" + Environment.ProcessId),
         };
+        // CEF's helpers (renderer, GPU, utility) are CefSharp's own CefSharp.BrowserSubprocess.exe, and it
+        // must stay that way: pointing BrowserSubprocessPath at this exe with SelfHost.Main looked like it
+        // worked (pages ran their JS) while the YouTube iframe silently never initialised. That exe is a
+        // framework-dependent .NET app, so the launcher hands every child a DOTNET_ROOT that resolves; see
+        // EchoHostClient.Start.
+
         // Off-screen rendering normally forces software decode. Asking for GPU compositing anyway is what
         // makes 720p video plausible rather than a slideshow; if this turns out to misbehave on some
         // machines it is the first knob to try turning off.
         settings.CefCommandLineArgs["autoplay-policy"] = "no-user-gesture-required";
+        // Chrome-style bootstrap honours the registry keys where third parties (Adobe, antivirus vendors)
+        // register their extensions for every Chromium on the machine. A headless video player must load
+        // none of that: the Acrobat extension crashes off-screen and raises a Windows toast on every launch.
+        settings.CefCommandLineArgs["disable-extensions"] = "1";
+        settings.CefCommandLineArgs["disable-component-update"] = "1";
+        // Chromium opens LISTENING sockets for things a video player never uses: cast/DIAL device
+        // discovery and WebRTC's mDNS responder. Windows Firewall prompts the player for each one, naming
+        // CefSharp.BrowserSubprocess.exe, which is both alarming and pointless. Off at every level.
+        settings.CefCommandLineArgs["disable-background-networking"] = "1";
+        settings.CefCommandLineArgs["media-router"] = "0";
+        settings.CefCommandLineArgs["disable-features"] =
+            "MediaRouter,DialMediaRouteProvider,WebRtcHideLocalIpsWithMdns,CastMediaRouteProvider";
         // The OffScreen CefSettings ctor pre-adds this switch (headless is assumed silent), muting the whole
         // browser process regardless of anything the page or the player does.
         settings.CefCommandLineArgs.Remove("mute-audio");
@@ -115,7 +139,11 @@ internal static class Program
         browser.CreateBrowser();
 
         var player = new PlayerBridge(browser);
-        player.StateChanged += pipe.SendState;
+        player.StateChanged += state =>
+        {
+            lastPlaying = state.Playing;
+            pipe.SendState(state);
+        };
         player.PageReady += pipe.SendReady;
         player.Log += pipe.SendLog;
 
@@ -166,6 +194,11 @@ internal static class Program
         watchdog.Start();
     }
 
+    private static (int Width, int Height) currentSize = (DefaultWidth, DefaultHeight);
+
+    private static volatile string? currentSource;
+    private static volatile bool lastPlaying;
+
     private static void Handle(ControlCommand command, ChromiumWebBrowser browser, PlayerBridge player)
     {
         switch (command.Type)
@@ -173,10 +206,30 @@ internal static class Program
             case ControlCommands.Load:
                 if (command.VideoId is { Length: > 0 } videoId)
                 {
-                    player.Load(videoId, command.Start ?? 0d, command.Epoch ?? 0L);
+                    player.Load(videoId, command.Start ?? 0d, command.Epoch ?? 0L, command.Source);
+                    currentSource = command.Source;
+                    if (string.Equals(command.Source, "twitch", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // The activation click, once the embed has had time to come up. See ClickCenter.
+                        var size = currentSize;
+                        _ = Task.Run(async () =>
+                        {
+                            await Task.Delay(2500).ConfigureAwait(false);
+                            player.ClickCenter(size.Width, size.Height);
+                        });
+                    }
                 }
                 break;
             case ControlCommands.Play:
+                // Twitch demands real user activation to START playback, and pausing spends it: a scripted
+                // resume is ignored exactly like the scripted start was. A play command that arrives while
+                // their player is actually paused gets a real click, which is both the activation and,
+                // landing on their overlay, the resume itself. Gated on the last polled state so a click
+                // can never toggle a playing stream into a pause.
+                if (string.Equals(currentSource, "twitch", StringComparison.OrdinalIgnoreCase) && !lastPlaying)
+                {
+                    player.ClickCenter(currentSize.Width, currentSize.Height);
+                }
                 player.Play();
                 break;
             case ControlCommands.Pause:
@@ -189,7 +242,14 @@ internal static class Program
                 player.SetVolume(command.Volume ?? 1d);
                 break;
             case ControlCommands.Size:
+                if (command.Width is { } cw && command.Height is { } ch)
+                {
+                    currentSize = (cw, ch);
+                }
                 Resize(browser, command.Width, command.Height);
+                break;
+            case ControlCommands.ToLive:
+                player.ToLive();
                 break;
             case ControlCommands.Captions:
                 player.SetCaptions(command.On ?? false);

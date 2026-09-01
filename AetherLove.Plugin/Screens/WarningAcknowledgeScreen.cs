@@ -127,8 +127,9 @@ public sealed class WarningAcknowledgeScreen
             ImGui.PushStyleColor(ImGuiCol.ButtonActive, t.ButtonActive);
             ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
 
-            var btnLabel = _submitting ? Loc.T("common.acknowledging") : Loc.T("common.i_understand");
-            if (_submitting)
+            var submitting = _submitting;
+            var btnLabel = submitting ? Loc.T("common.acknowledging") : Loc.T("common.i_understand");
+            if (submitting)
             {
                 ImGui.BeginDisabled();
             }
@@ -136,7 +137,7 @@ public sealed class WarningAcknowledgeScreen
             {
                 StartAcknowledge();
             }
-            if (_submitting)
+            if (submitting)
             {
                 ImGui.EndDisabled();
             }

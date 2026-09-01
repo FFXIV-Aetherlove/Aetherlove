@@ -132,7 +132,7 @@ public sealed partial class AetherLoveApp : IAetherApp, IAppSettings
         _rateLimit = rateLimit;
         _saveErr = saveErr;
 
-        _settings = new SettingsScreen(_router, hub, signal, tokens, chatCache, _shell, bootstrap);
+        _settings = new SettingsScreen(_router, hub, signal, tokens, chatCache, _shell, bootstrap, caps);
         _profile = new ProfileScreen(_router, hub, flairCatalog, bootstrap, _settings, _shell, caps);
         _deck = new DeckScreen(_router, _profile, hub, pendingMatch, notifications, ownAvatar, host, flairCatalog, _settings);
         _profile.OnProfileHidden = id => _deck.RemoveCard(id);

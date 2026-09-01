@@ -109,6 +109,7 @@ internal static class CommonEs
         ["common.close_plugin_tip"] = "Consejo: usa el botón Minimizar en la parte inferior para mantener visible la pequeña burbuja flotante con su indicador de notificaciones.",
         ["common.close_plugin_dont_ask"] = "No volver a mostrar esta ventana",
         ["common.close"] = "Cerrar",
+        ["common.back"] = "Atrás",
 
         // Save-error modal
         ["common.save_error_title"] = "Algo salió mal",
