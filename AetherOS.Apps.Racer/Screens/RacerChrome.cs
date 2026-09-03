@@ -92,7 +92,8 @@ internal static class RacerChrome
     /// <summary>A page button in one of the flag's colours: the shape every racer screen uses to get
     /// anywhere. <paramref name="blocked"/> dims it and rides underneath as the reason.</summary>
     public static bool FlagButton(OsAppContext ctx, string id, string label, Vector4 fill, Vector4 ink,
-        string? blocked = null, bool enabled = true, bool chequered = false, bool fullWidth = false)
+        string? blocked = null, bool enabled = true, bool chequered = false, bool fullWidth = false,
+        string? tooltip = null)
     {
         // A button on a page indents itself off the phone's edge; one inside a panel is already inset by
         // the panel, so it takes the width it is given.
@@ -113,10 +114,17 @@ internal static class RacerChrome
         {
             HandOnHover();
         }
+        if (hovered && tooltip is { Length: > 0 })
+        {
+            ImGui.SetTooltip(tooltip);
+        }
 
         var dl = ImGui.GetWindowDrawList();
         var br = tl + new Vector2(width, height);
         var dim = live ? 1f : 0.45f;
+        // The cloth fades further than the words: a resting button still has to be read, and a label at
+        // the body's own dim was the thing nobody could.
+        var inkDim = live ? 1f : 0.8f;
         var body = fill with { W = fill.W * dim * (hovered && live ? 1f : 0.92f) };
         dl.AddRectFilled(tl + new Vector2(0f, Px(3)), br + new Vector2(0f, Px(3)), 0x66000000u, height * 0.28f);
         dl.AddRectFilled(tl, br, ImGui.ColorConvertFloat4ToU32(body), height * 0.28f);
@@ -133,7 +141,7 @@ internal static class RacerChrome
 
         var size = ImGui.CalcTextSize(label);
         dl.AddText(tl + new Vector2((width - size.X) * 0.5f, (height - size.Y) * 0.5f),
-            ImGui.ColorConvertFloat4ToU32(ink with { W = ink.W * dim }), label);
+            ImGui.ColorConvertFloat4ToU32(ink with { W = ink.W * inkDim }), label);
 
         if (blocked is { Length: > 0 })
         {

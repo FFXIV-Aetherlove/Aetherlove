@@ -172,6 +172,9 @@ public sealed class RacerApp : IAetherApp
                 break;
             case View.Intro:
                 _intro.Draw(ctx);
+                // Said before six pages about racing rather than after them: a player whose creature
+                // cannot race yet learns that first, with the door to the food shelf in hand.
+                _home.DrawGateOverlay(ctx);
                 break;
             default:
                 _home.Draw(ctx);

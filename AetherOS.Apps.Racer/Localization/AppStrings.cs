@@ -44,7 +44,7 @@ public static class AppStrings
         ["os.racer_intro_start"] = "Let's race",
         ["os.racer_gate_title"] = "You need an Aetherling",
         ["os.racer_gate_hatch"] = "Hatch an Aetherling in the Aetherling app, then come back and race it.",
-        ["os.racer_gate_grow"] = "Your Aetherling races once it grows up. Keep feeding it and come back.",
+        ["os.racer_gate_grow"] = "{0} is not an adult yet. Feed it crystals from the store to grow it into a healthy racer before you play Lumi Race.",
         ["os.racer_gate_ok"] = "Got it",
         ["os.racer_race_together"] = "Race Together",
         ["os.racer_waiting_title"] = "Waiting for the others",
@@ -225,6 +225,13 @@ public static class AppStrings
         ["os.racer_diff_help_easy"] = "An easy track matches your element. Your Lumi runs its best race there.",
         ["os.racer_diff_help_normal"] = "A normal track is next to yours on the wheel. The neutral track counts too. Your Lumi gets a small boost.",
         ["os.racer_diff_help_hard"] = "A hard track is far from yours on the wheel. Your Lumi gets no boost, and some of the field is attuned to that ground.",
+
+        // added after update 2.6.2 (racer)
+        ["os.racer_gate_title_grow"] = "{0} is not an adult yet",
+        ["os.racer_gate_store"] = "Open the store",
+        ["os.racer_gate_your_pet"] = "Your Aetherling",
+        ["os.racer_race_wait"] = "Race (wait {0})",
+        ["os.racer_rest_hover"] = "{0} needs to rest between races!",
     };
 
     // added after update 2.5.1 (racer)
@@ -265,7 +272,7 @@ public static class AppStrings
         ["os.racer_intro_start"] = "Auf geht's",
         ["os.racer_gate_title"] = "Du brauchst ein Aetherling",
         ["os.racer_gate_hatch"] = "Lass in der Aetherling-App ein Aetherling schlüpfen, dann komm zurück und lass es rennen.",
-        ["os.racer_gate_grow"] = "Dein Aetherling rennt, sobald es erwachsen ist. Füttere es weiter und komm zurück.",
+        ["os.racer_gate_grow"] = "{0} ist noch nicht erwachsen. Füttere es mit Kristallen aus dem Store, damit es zu einem gesunden Rennläufer heranwächst, bevor du Lumi Race spielst.",
         ["os.racer_gate_ok"] = "Alles klar",
         ["os.racer_race_together"] = "Zusammen rennen",
         ["os.racer_waiting_title"] = "Warten auf die anderen",
@@ -446,6 +453,13 @@ public static class AppStrings
         ["os.racer_diff_help_easy"] = "Eine leichte Strecke passt zu deinem Element. Dort läuft dein Lumi sein bestes Rennen.",
         ["os.racer_diff_help_normal"] = "Eine normale Strecke liegt im Rad neben deiner. Die neutrale zählt auch. Dein Lumi bekommt einen kleinen Schub.",
         ["os.racer_diff_help_hard"] = "Eine schwere Strecke liegt im Rad weit von deiner entfernt. Dein Lumi bekommt keinen Schub, und ein Teil des Feldes gehört zu diesem Boden.",
+
+        // added after update 2.6.2 (racer)
+        ["os.racer_gate_title_grow"] = "{0} ist noch nicht erwachsen",
+        ["os.racer_gate_store"] = "Store öffnen",
+        ["os.racer_gate_your_pet"] = "Dein Aetherling",
+        ["os.racer_race_wait"] = "Rennen (noch {0})",
+        ["os.racer_rest_hover"] = "{0} muss sich zwischen den Rennen ausruhen!",
     };
 
     // added after update 2.5.1 (racer)
@@ -486,7 +500,7 @@ public static class AppStrings
         ["os.racer_intro_start"] = "A correr",
         ["os.racer_gate_title"] = "Necesitas un Aetherling",
         ["os.racer_gate_hatch"] = "Haz nacer un Aetherling en la app Aetherling y vuelve para correr con él.",
-        ["os.racer_gate_grow"] = "Tu Aetherling corre cuando se hace adulto. Sigue alimentándolo y vuelve.",
+        ["os.racer_gate_grow"] = "{0} todavía no es adulto. Dale cristales de la tienda para que crezca y sea un corredor sano antes de jugar a Lumi Race.",
         ["os.racer_gate_ok"] = "Entendido",
         ["os.racer_race_together"] = "Correr juntos",
         ["os.racer_waiting_title"] = "Esperando a los demás",
@@ -667,6 +681,13 @@ public static class AppStrings
         ["os.racer_diff_help_easy"] = "Una pista fácil coincide con tu elemento. Ahí tu Lumi hace su mejor carrera.",
         ["os.racer_diff_help_normal"] = "Una pista normal está al lado de la tuya en la rueda. La neutral también cuenta. Tu Lumi recibe un pequeño impulso.",
         ["os.racer_diff_help_hard"] = "Una pista difícil está lejos de la tuya en la rueda. Tu Lumi no recibe impulso, y parte del grupo está ligado a ese terreno.",
+
+        // added after update 2.6.2 (racer)
+        ["os.racer_gate_title_grow"] = "{0} todavía no es adulto",
+        ["os.racer_gate_store"] = "Abrir la tienda",
+        ["os.racer_gate_your_pet"] = "Tu Aetherling",
+        ["os.racer_race_wait"] = "Carrera (espera {0})",
+        ["os.racer_rest_hover"] = "¡{0} necesita descansar entre carreras!",
     };
 
     // added after update 2.5.1 (racer)
@@ -707,7 +728,7 @@ public static class AppStrings
         ["os.racer_intro_start"] = "En piste",
         ["os.racer_gate_title"] = "Il te faut un Aetherling",
         ["os.racer_gate_hatch"] = "Fais éclore un Aetherling dans l'app Aetherling, puis reviens le faire courir.",
-        ["os.racer_gate_grow"] = "Ton Aetherling court une fois adulte. Continue à le nourrir et reviens.",
+        ["os.racer_gate_grow"] = "{0} n'est pas encore adulte. Donne-lui des cristaux de la boutique pour qu'il devienne un coureur en pleine forme avant de jouer à Lumi Race.",
         ["os.racer_gate_ok"] = "Compris",
         ["os.racer_race_together"] = "Courir ensemble",
         ["os.racer_waiting_title"] = "En attente des autres",
@@ -888,6 +909,13 @@ public static class AppStrings
         ["os.racer_diff_help_easy"] = "Une piste facile correspond à ton élément. Ton Lumi y fait sa meilleure course.",
         ["os.racer_diff_help_normal"] = "Une piste normale est voisine de la tienne sur la roue. La neutre compte aussi. Ton Lumi reçoit un petit bonus.",
         ["os.racer_diff_help_hard"] = "Une piste difficile est loin de la tienne sur la roue. Ton Lumi n'y gagne aucun bonus, et une partie du peloton est liée à ce terrain.",
+
+        // added after update 2.6.2 (racer)
+        ["os.racer_gate_title_grow"] = "{0} n'est pas encore adulte",
+        ["os.racer_gate_store"] = "Ouvrir la boutique",
+        ["os.racer_gate_your_pet"] = "Ton Aetherling",
+        ["os.racer_race_wait"] = "Course (attends {0})",
+        ["os.racer_rest_hover"] = "{0} doit se reposer entre deux courses !",
     };
 
     // added after update 2.5.1 (racer)
@@ -928,7 +956,7 @@ public static class AppStrings
         ["os.racer_intro_start"] = "Vamos correr",
         ["os.racer_gate_title"] = "Precisas de um Aetherling",
         ["os.racer_gate_hatch"] = "Faz nascer um Aetherling na app Aetherling e volta para correr com ele.",
-        ["os.racer_gate_grow"] = "O teu Aetherling corre quando ficar adulto. Continua a alimentá-lo e volta.",
+        ["os.racer_gate_grow"] = "{0} ainda não é adulto. Dê cristais da loja para ele crescer e virar um corredor saudável antes de jogar Lumi Race.",
         ["os.racer_gate_ok"] = "Entendi",
         ["os.racer_race_together"] = "Correr juntos",
         ["os.racer_waiting_title"] = "À espera dos outros",
@@ -1109,6 +1137,13 @@ public static class AppStrings
         ["os.racer_diff_help_easy"] = "Uma pista fácil combina com o teu elemento. Aí o teu Lumi faz a sua melhor corrida.",
         ["os.racer_diff_help_normal"] = "Uma pista normal fica ao lado da tua na roda. A neutra também conta. O teu Lumi recebe um pequeno impulso.",
         ["os.racer_diff_help_hard"] = "Uma pista difícil está longe da tua na roda. O teu Lumi não ganha impulso, e parte do grupo está ligada a esse terreno.",
+
+        // added after update 2.6.2 (racer)
+        ["os.racer_gate_title_grow"] = "{0} ainda não é adulto",
+        ["os.racer_gate_store"] = "Abrir a loja",
+        ["os.racer_gate_your_pet"] = "Seu Aetherling",
+        ["os.racer_race_wait"] = "Corrida (espere {0})",
+        ["os.racer_rest_hover"] = "{0} precisa descansar entre as corridas!",
     };
 
     // added after update 2.5.1 (racer)
@@ -1149,7 +1184,7 @@ public static class AppStrings
         ["os.racer_intro_start"] = "К забегу",
         ["os.racer_gate_title"] = "Нужен Этерлинг",
         ["os.racer_gate_hatch"] = "Вырасти Этерлинга в приложении Aetherling, а потом возвращайся на забег.",
-        ["os.racer_gate_grow"] = "Этерлинг побежит, когда вырастет. Продолжай кормить его и возвращайся.",
+        ["os.racer_gate_grow"] = "{0} ещё не вырос. Покорми его кристаллами из магазина, чтобы он вырос в здорового гонщика, прежде чем играть в Lumi Race.",
         ["os.racer_gate_ok"] = "Понятно",
         ["os.racer_race_together"] = "Бежать вместе",
         ["os.racer_waiting_title"] = "Ждём остальных",
@@ -1330,6 +1365,13 @@ public static class AppStrings
         ["os.racer_diff_help_easy"] = "У лёгкой трассы твоя стихия. Там твой Луми бежит свой лучший забег.",
         ["os.racer_diff_help_normal"] = "Средняя трасса стоит на колесе рядом с твоей. Нейтральная тоже считается. Твой Луми получает небольшую прибавку.",
         ["os.racer_diff_help_hard"] = "Сложная трасса на круге далеко от твоей. Твой Луми не получает прибавки, а часть соперников принадлежит этой стихии.",
+
+        // added after update 2.6.2 (racer)
+        ["os.racer_gate_title_grow"] = "{0} ещё не вырос",
+        ["os.racer_gate_store"] = "Открыть магазин",
+        ["os.racer_gate_your_pet"] = "Твой эфирёнок",
+        ["os.racer_race_wait"] = "Забег (подожди {0})",
+        ["os.racer_rest_hover"] = "{0} должен отдохнуть между забегами!",
     };
 
     public static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> Packs =

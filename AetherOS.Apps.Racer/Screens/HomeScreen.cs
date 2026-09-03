@@ -50,7 +50,22 @@ internal sealed class HomeScreen(
 
     public void OnShow()
     {
+        // The gate says its piece on every visit while the creature cannot race, not once a session: a
+        // player who dismissed it and came back an hour later is asking again.
+        _gateAsked = false;
         Refresh();
+    }
+
+    /// <summary>The gate over a page that is not this one (the introduction), so a player whose creature
+    /// cannot race hears it before six pages about racing. Drains the state itself, since this screen's
+    /// own frame is not running underneath.</summary>
+    public void DrawGateOverlay(OsAppContext ctx)
+    {
+        DrainState();
+        if (_state is { } state)
+        {
+            DrawGate(ctx, state);
+        }
     }
 
     public void Draw(OsAppContext ctx)
@@ -97,17 +112,7 @@ internal sealed class HomeScreen(
 
     private void Drain()
     {
-        if (_pendingState is { } state)
-        {
-            _pendingState = null;
-            _state = state;
-            _serverOffset = state.ServerNowUtc - DateTimeOffset.UtcNow;
-            if (!_gateAsked && (!state.PetHatched || !state.PetAdult))
-            {
-                _gateAsked = true;
-                _gateOpen = true;
-            }
-        }
+        DrainState();
         if (_pendingStart is { } start)
         {
             _pendingStart = null;
@@ -119,6 +124,22 @@ internal sealed class HomeScreen(
             _pendingError = null;
             _busy = false;
             _error = error;
+        }
+    }
+
+    private void DrainState()
+    {
+        if (_pendingState is not { } state)
+        {
+            return;
+        }
+        _pendingState = null;
+        _state = state;
+        _serverOffset = state.ServerNowUtc - DateTimeOffset.UtcNow;
+        if (!_gateAsked && (!state.PetHatched || !state.PetAdult))
+        {
+            _gateAsked = true;
+            _gateOpen = true;
         }
     }
 
@@ -150,8 +171,9 @@ internal sealed class HomeScreen(
             0x00000000u, 0x00000000u, 0xB0000000u, 0xB0000000u);
     }
 
-    /// <summary>What the player has to go and do before they can race, said once and dismissed. The
-    /// race button dims for it.</summary>
+    /// <summary>What the player has to go and do before they can race, said on every visit while it
+    /// holds. A creature that has not grown up is named, told what grows it, and handed the door to the
+    /// food shelf; one with no creature at all is sent to hatch one. The race button dims for both.</summary>
     private void DrawGate(OsAppContext ctx, LumiRaceStateDto state)
     {
         if (!_gateOpen)
@@ -159,18 +181,31 @@ internal sealed class HomeScreen(
             return;
         }
 
+        var grow = state.PetHatched;
+        var name = string.IsNullOrWhiteSpace(state.PetName) ? ctx.Localize("os.racer_gate_your_pet") : state.PetName;
         var dismissed = DrawPageOverlayPanel("racerGate", ImGui.GetWindowPos(), ImGui.GetWindowSize(),
-            ref _gateHeight, Px(210f), innerW =>
+            ref _gateHeight, Px(grow ? 260f : 210f), innerW =>
             {
                 using (ctx.TitleFont?.Push())
                 {
-                    RacerChrome.CenteredText(ctx.Localize("os.racer_gate_title"));
+                    RacerChrome.CenteredText(grow
+                        ? string.Format(ctx.Localize("os.racer_gate_title_grow"), name)
+                        : ctx.Localize("os.racer_gate_title"));
                 }
                 ImGui.Dummy(new Vector2(1f, Px(8f)));
                 OnboardingUi.DrawCenteredParagraph(
-                    ctx.Localize(state.PetHatched ? "os.racer_gate_grow" : "os.racer_gate_hatch"),
+                    grow ? string.Format(ctx.Localize("os.racer_gate_grow"), name) : ctx.Localize("os.racer_gate_hatch"),
                     innerW - Px(24f), new Vector4(0.86f, 0.88f, 0.94f, 1f));
                 ImGui.Dummy(new Vector2(1f, Px(12f)));
+                if (grow && OnboardingUi.DrawPrimaryButton(ctx.Localize("os.racer_gate_store"), true))
+                {
+                    _gateOpen = false;
+                    ctx.Shell.SendIntent("store", OsIntents.CreatePath(OsIntents.StoreOpen, "consumables"));
+                }
+                if (grow)
+                {
+                    ImGui.Dummy(new Vector2(1f, Px(6f)));
+                }
                 if (OnboardingUi.DrawPrimaryButton(ctx.Localize("os.racer_gate_ok"), true))
                 {
                     _gateOpen = false;
@@ -192,8 +227,29 @@ internal sealed class HomeScreen(
         var label = together
             ? ctx.Localize("os.racer_race_together")
             : ctx.Localize(practice ? "os.racer_race_practice" : "os.racer_race_now");
+
+        // Why the button will not answer, on hover, so the reason survives the popup being closed: no
+        // creature, a creature not grown up, or one still resting. The rest is worn on the button itself
+        // too, as a countdown in its label, rather than a caption under a dimmed one: the caption was the
+        // line nobody could read.
+        var name = string.IsNullOrWhiteSpace(state.PetName) ? ctx.Localize("os.racer_gate_your_pet") : state.PetName;
+        string? tooltip = null;
+        if (state.Enabled && !state.PetHatched)
+        {
+            tooltip = ctx.Localize("os.racer_gate_title");
+        }
+        else if (state.Enabled && !state.PetAdult)
+        {
+            tooltip = string.Format(ctx.Localize("os.racer_gate_title_grow"), name);
+        }
+        else if (reason is null && RaceWait(state) is { } left)
+        {
+            label = string.Format(ctx.Localize("os.racer_race_wait"), $"{(int)left.TotalMinutes:0}:{left.Seconds:00}");
+            reason = string.Empty;
+            tooltip = string.Format(ctx.Localize("os.racer_rest_hover"), name);
+        }
         if (RacerChrome.FlagButton(ctx, "##racerRace", label,
-            RacerChrome.DutchRed, RacerChrome.WhiteInk, reason, !_busy, chequered: true))
+            RacerChrome.DutchRed, RacerChrome.WhiteInk, reason, !_busy, chequered: true, tooltip: tooltip))
         {
             if (together)
             {
@@ -335,13 +391,13 @@ internal sealed class HomeScreen(
         {
             return string.Empty;
         }
-        if (state.NextRaceAtUtc is { } at && at > ServerNow)
-        {
-            var left = at - ServerNow;
-            return string.Format(ctx.Localize("os.racer_next_race"), $"{(int)left.TotalMinutes:0}:{left.Seconds:00}");
-        }
         return null;
     }
+
+    /// <summary>How long the creature still rests before the next race, or null when it may race now.
+    /// Worn on the race button rather than returned as a reason, so it never becomes a caption.</summary>
+    private TimeSpan? RaceWait(LumiRaceStateDto state) =>
+        state.NextRaceAtUtc is { } at && at > ServerNow ? at - ServerNow : null;
 
     /// <summary>Party members learn their reward from the refreshed state after playback; the begin
     /// reply carries the race alone.</summary>
