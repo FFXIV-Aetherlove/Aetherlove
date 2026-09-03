@@ -1,0 +1,41 @@
+{
+  "name": "Squirrel Swoop",
+  "slot": "tail",
+  "tier": "seasonal",
+  "file": "",
+  "anchor": "tail",
+  "origin": [
+    0,
+    0
+  ],
+  "width": 0,
+  "height": 0,
+  "behind": true,
+  "tail": {
+    "nudge": [
+      -3,
+      2
+    ],
+    "dir": 238,
+    "curl": -158,
+    "len": 148,
+    "segs": 28,
+    "profile": [
+      0,
+      7,
+      0.25,
+      20,
+      0.6,
+      26,
+      0.85,
+      20,
+      1,
+      9
+    ],
+    "fur": 0.3,
+    "furStep": 2,
+    "tipFrac": 0,
+    "shade": 0.84,
+    "response": 0.8
+  }
+}

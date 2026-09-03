@@ -252,6 +252,104 @@
       "body": "#D8894A",
       "accent": "#F6CA5C",
       "eye": "#5A3A1E"
+    },
+    {
+      "name": "Candyfloss",
+      "tier": "seasonal",
+      "body": "#F472B6",
+      "accent": "#FFFDF6",
+      "eye": "#8E1E5A"
+    },
+    {
+      "name": "Lipstick",
+      "tier": "seasonal",
+      "body": "#D8433A",
+      "accent": "#FFB6D9",
+      "eye": "#4A1220"
+    },
+    {
+      "name": "Valentine",
+      "tier": "seasonal",
+      "body": "#FFB6D9",
+      "accent": "#D8433A",
+      "eye": "#7A2A4A"
+    },
+    {
+      "name": "Borealis",
+      "tier": "seasonal",
+      "body": "#7FE0C8",
+      "accent": "#C8A8F0",
+      "eye": "#1F4A44"
+    },
+    {
+      "name": "Ocean",
+      "tier": "seasonal",
+      "body": "#4A90C2",
+      "accent": "#9FE0EE",
+      "eye": "#1E3A5A"
+    },
+    {
+      "name": "Cinder",
+      "tier": "seasonal",
+      "body": "#E86A3A",
+      "accent": "#F6CA5C",
+      "eye": "#5A2A1E"
+    },
+    {
+      "name": "Glacier",
+      "tier": "seasonal",
+      "body": "#CFEFF7",
+      "accent": "#9FB8D8",
+      "eye": "#3A5A7A"
+    },
+    {
+      "name": "Abyss",
+      "tier": "seasonal",
+      "body": "#3A3448",
+      "accent": "#8E86B8",
+      "eye": "#151221"
+    },
+    {
+      "name": "Honey",
+      "tier": "seasonal",
+      "body": "#F0B840",
+      "accent": "#FFF2C8",
+      "eye": "#6B4A12"
+    },
+    {
+      "name": "Mint",
+      "tier": "seasonal",
+      "body": "#9EDCB0",
+      "accent": "#FFFDF6",
+      "eye": "#2E5A3E"
+    },
+    {
+      "name": "Storm",
+      "tier": "seasonal",
+      "body": "#6B7A8E",
+      "accent": "#F6D02F",
+      "eye": "#232A33"
+    },
+    {
+      "name": "Grape",
+      "tier": "seasonal",
+      "body": "#8E5AB8",
+      "accent": "#F6C1DC",
+      "eye": "#3A1E52"
+    },
+    {
+      "name": "Copper",
+      "tier": "seasonal",
+      "body": "#C27A4A",
+      "accent": "#9EDCC8",
+      "eye": "#5A3220"
+    },
+    {
+      "name": "Rosewood",
+      "tier": "seasonal",
+      "body": "#B85A6A",
+      "accent": "#F2E4BC",
+      "eye": "#4A222A"
     }
   ]
 }

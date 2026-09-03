@@ -1,0 +1,39 @@
+{
+  "name": "Devil Tail",
+  "slot": "tail",
+  "tier": "seasonal",
+  "file": "",
+  "anchor": "tail",
+  "origin": [
+    0,
+    0
+  ],
+  "width": 0,
+  "height": 0,
+  "behind": true,
+  "tail": {
+    "nudge": [
+      -2,
+      2
+    ],
+    "dir": 220,
+    "curl": -74,
+    "len": 126,
+    "segs": 26,
+    "profile": [
+      0,
+      4,
+      0.78,
+      3,
+      0.9,
+      10,
+      1,
+      1
+    ],
+    "fur": 0,
+    "furStep": 3,
+    "tipFrac": 0.85,
+    "shade": 0.8,
+    "response": 1.5
+  }
+}

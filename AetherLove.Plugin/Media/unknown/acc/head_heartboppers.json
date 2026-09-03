@@ -1,0 +1,14 @@
+{
+  "name": "Heart Boppers",
+  "slot": "head",
+  "tier": "seasonal",
+  "file": "head_heartboppers.png",
+  "anchor": "head",
+  "origin": [
+    70,
+    84
+  ],
+  "width": 150,
+  "height": 110,
+  "behind": false
+}

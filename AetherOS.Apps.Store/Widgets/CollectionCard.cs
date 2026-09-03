@@ -7,6 +7,7 @@ using AetherLove.UI;
 using AetherOS.Sdk;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
+using Dalamud.Interface.Textures.TextureWraps;
 
 namespace AetherOS.Apps.Store;
 
@@ -19,48 +20,113 @@ internal static class CollectionCard
     private const float BannerH = 116f;
     private const float RowH = 54f;
 
-    internal sealed record Result(Guid? OpenProduct, StoreProductDto? AddToCart);
+    /// <summary>How wide-to-tall a banner may be drawn: a strip can be no flatter than 4:1 and no squarer
+    /// than 1.6:1, so a square upload cannot turn the card into a poster.</summary>
+    private const float FlattestBanner = 4f;
+    private const float SquarestBanner = 1.6f;
+
+    /// <summary>How many picks the card lists before it hands over to the browse screen; a card that lists
+    /// thirty rows is a page, not a shelf.</summary>
+    private const int MaxRows = 5;
+
+    internal sealed record Result(Guid? OpenProduct, StoreProductDto? AddToCart, bool OpenCollection = false);
 
     public static Result Draw(
         OsAppContext ctx, StoreCollectionDto collection, StoreMediaCache media, StoreCart cart, float winW)
     {
         var dl = ImGui.GetWindowDrawList();
         var cardW = winW - Px(PadX) * 2f;
-        var cardH = Px(BannerH) + Px(RowH) * collection.Products.Length + Px(10f);
+        var visual = collection.HasImage ? media.GetCollection(collection.Id, collection.ImageVersion) : null;
+        var wrap = visual?.Tex?.GetWrapOrDefault();
+        var bannerH = wrap is null ? Px(BannerH) : BannerHeight(wrap.Width, wrap.Height, cardW);
+        var shown = Math.Min(collection.Products.Length, MaxRows);
+        var overflow = collection.Products.Length > MaxRows;
+        var cardH = bannerH + Px(RowH) * (shown + (overflow ? 1 : 0)) + Px(10f);
         ImGui.SetCursorPosX(Px(PadX));
         var tl = ImGui.GetCursorScreenPos();
         var (top, bottom, accent) = StoreFx.CardColors(collection.AccentColor);
 
         dl.AddRectFilled(tl, tl + new Vector2(cardW, cardH), OsDrawShared.White(0.055f), Px(18f));
-        DrawBanner(ctx, dl, collection, media, tl, cardW, top, bottom, accent);
+        var openCollection = DrawBanner(ctx, dl, collection, wrap, tl, cardW, bannerH, top, bottom, accent);
 
         Guid? open = null;
         StoreProductDto? add = null;
-        var y = tl.Y + Px(BannerH);
-        for (var i = 0; i < collection.Products.Length; i++)
+        var y = tl.Y + bannerH;
+        for (var i = 0; i < shown; i++)
         {
             var product = collection.Products[i];
             var rowTl = new Vector2(tl.X, y);
-            var result = DrawRow(ctx, dl, product, media, cart, rowTl, cardW, i, collection.Products.Length);
+            var result = DrawRow(ctx, dl, product, media, cart, rowTl, cardW, i, shown + (overflow ? 1 : 0));
             open ??= result.OpenProduct;
             add ??= result.AddToCart;
             y += Px(RowH);
         }
+        if (overflow && DrawViewMore(dl, collection, new Vector2(tl.X, y), cardW, accent))
+        {
+            openCollection = true;
+        }
 
         ImGui.SetCursorScreenPos(new Vector2(ImGui.GetWindowPos().X, tl.Y + cardH));
         ImGui.Dummy(new Vector2(0f, Px(14f)));
-        return new Result(open, add);
+        return new Result(open, add, openCollection);
     }
 
-    private static void DrawBanner(
-        OsAppContext ctx, ImDrawListPtr dl, StoreCollectionDto collection, StoreMediaCache media,
-        Vector2 tl, float cardW, Vector4 top, Vector4 bottom, Vector4 accent)
+    /// <summary>The last row when the card could not list everything: one wide button into the browse
+    /// screen filtered to this collection, with the count the card left out.</summary>
+    private static bool DrawViewMore(
+        ImDrawListPtr dl, StoreCollectionDto collection, Vector2 tl, float cardW, Vector4 accent)
     {
-        var br = tl + new Vector2(cardW, Px(BannerH));
-        var visual = collection.HasImage ? media.GetCollection(collection.Id, collection.ImageVersion) : null;
-        if (visual?.Tex?.GetWrapOrDefault() is { } wrap)
+        var size = new Vector2(cardW, Px(RowH));
+        ImGui.SetCursorScreenPos(tl);
+        var pressed = ImGui.InvisibleButton($"##collMore{collection.Id:N}", size);
+        var hovered = ImGui.IsItemHovered();
+        if (hovered)
         {
-            var (uv0, uv1) = OsDrawShared.CoverUv(wrap.Width, wrap.Height, cardW, Px(BannerH));
+            HandOnHover();
+            dl.AddRectFilled(tl, tl + size, OsDrawShared.White(0.04f), Px(18f), ImDrawFlags.RoundCornersBottom);
+        }
+
+        var label = Loc.T("os.store_collection_view_more", collection.Products.Length - MaxRows);
+        var labelSz = ImGui.CalcTextSize(label);
+        var iconPx = Px(11f);
+        var gap = Px(6f);
+        var startX = tl.X + (cardW - labelSz.X - iconPx - gap) * 0.5f;
+        var color = ImGui.GetColorU32(accent with { W = hovered ? 1f : 0.9f });
+        dl.AddText(new Vector2(startX, tl.Y + (size.Y - labelSz.Y) * 0.5f), color, label);
+        IconDraw.AddCentered(dl, FontAwesomeIcon.ChevronRight, iconPx,
+            new Vector2(startX + labelSz.X + gap + iconPx * 0.5f, tl.Y + size.Y * 0.5f), color);
+        return pressed;
+    }
+
+    /// <summary>The banner is drawn whole, at the art's own ratio, rather than cover-cropped into a fixed
+    /// strip: a banner is composed for its frame and a crop takes the edges off it. Bounded at both ends,
+    /// and within the bounds the cover crop below is a no-op.</summary>
+    private static float BannerHeight(int artW, int artH, float cardW)
+    {
+        if (artW <= 0 || artH <= 0)
+        {
+            return Px(BannerH);
+        }
+        var natural = cardW * artH / artW;
+        return Math.Clamp(natural, cardW / FlattestBanner, cardW / SquarestBanner);
+    }
+
+    /// <summary>The banner is the card's door: pressing it opens the browse screen on this collection. The
+    /// button goes first so it wins the click over nothing, and the rows below never overlap it.</summary>
+    private static bool DrawBanner(
+        OsAppContext ctx, ImDrawListPtr dl, StoreCollectionDto collection, IDalamudTextureWrap? wrap,
+        Vector2 tl, float cardW, float bannerH, Vector4 top, Vector4 bottom, Vector4 accent)
+    {
+        var br = tl + new Vector2(cardW, bannerH);
+        ImGui.SetCursorScreenPos(tl);
+        var pressed = ImGui.InvisibleButton($"##collHead{collection.Id:N}", new Vector2(cardW, bannerH));
+        if (ImGui.IsItemHovered())
+        {
+            HandOnHover();
+        }
+        if (wrap is not null)
+        {
+            var (uv0, uv1) = OsDrawShared.CoverUv(wrap.Width, wrap.Height, cardW, bannerH);
             dl.AddImageRounded(wrap.Handle, tl, br, uv0, uv1, 0xFFFFFFFFu, Px(18f),
                 ImDrawFlags.RoundCornersTop);
         }
@@ -83,6 +149,7 @@ internal static class CollectionCard
                 OsDrawShared.Ellipsize(StoreLoc.Title(collection), 1f, cardW - Px(32f)));
         }
         StoreFx.Sweep(dl, tl, br, 2.4f, ctx.ReduceMotion, 0.55f);
+        return pressed;
     }
 
     private static Result DrawRow(

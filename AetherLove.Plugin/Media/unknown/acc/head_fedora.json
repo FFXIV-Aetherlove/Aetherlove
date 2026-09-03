@@ -1,0 +1,14 @@
+{
+  "name": "M'lady Fedora",
+  "slot": "head",
+  "tier": "seasonal",
+  "file": "head_fedora.png",
+  "anchor": "head",
+  "origin": [
+    70,
+    76
+  ],
+  "width": 150,
+  "height": 104,
+  "behind": false
+}

@@ -1,0 +1,14 @@
+{
+  "name": "Doot Horn",
+  "slot": "arms",
+  "tier": "seasonal",
+  "file": "arms_doothorn.png",
+  "anchor": "handL",
+  "origin": [
+    76,
+    106
+  ],
+  "width": 124,
+  "height": 134,
+  "behind": false
+}

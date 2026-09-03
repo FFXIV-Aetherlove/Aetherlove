@@ -1,0 +1,14 @@
+{
+  "name": "Spectrum Visor",
+  "slot": "glasses",
+  "tier": "seasonal",
+  "file": "glasses_rgbvisor.png",
+  "anchor": "face",
+  "origin": [
+    68,
+    9
+  ],
+  "width": 137,
+  "height": 74,
+  "behind": false
+}

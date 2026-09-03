@@ -1,0 +1,14 @@
+{
+  "name": "Party Cone",
+  "slot": "head",
+  "tier": "seasonal",
+  "file": "head_partycone.png",
+  "anchor": "head",
+  "origin": [
+    75,
+    96
+  ],
+  "width": 160,
+  "height": 126,
+  "behind": false
+}

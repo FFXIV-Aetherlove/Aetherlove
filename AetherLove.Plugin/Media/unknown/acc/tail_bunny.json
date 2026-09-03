@@ -1,0 +1,37 @@
+{
+  "name": "Bunny Puff",
+  "slot": "tail",
+  "tier": "seasonal",
+  "file": "",
+  "anchor": "tail",
+  "origin": [
+    0,
+    0
+  ],
+  "width": 0,
+  "height": 0,
+  "behind": true,
+  "tail": {
+    "nudge": [
+      -10,
+      6
+    ],
+    "dir": 186,
+    "curl": -26,
+    "len": 46,
+    "segs": 10,
+    "profile": [
+      0,
+      9,
+      0.45,
+      17,
+      1,
+      12
+    ],
+    "fur": 0.5,
+    "furStep": 1,
+    "tipFrac": 0,
+    "shade": 0.7,
+    "response": 1.3
+  }
+}

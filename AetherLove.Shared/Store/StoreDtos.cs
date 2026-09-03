@@ -218,7 +218,8 @@ public sealed record StoreProductQueryDto(
     bool OnSaleOnly,
     int Skip,
     int Take,
-    StoreSort Sort = StoreSort.Featured);
+    StoreSort Sort = StoreSort.Featured,
+    Guid? CollectionId = null);
 
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record StoreProductPageDto(StoreProductDto[] Items, int TotalCount);

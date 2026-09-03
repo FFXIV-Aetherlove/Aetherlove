@@ -1,0 +1,14 @@
+{
+  "name": "VR Headset",
+  "slot": "glasses",
+  "tier": "seasonal",
+  "file": "glasses_vrheadset.png",
+  "anchor": "face",
+  "origin": [
+    68,
+    12
+  ],
+  "width": 137,
+  "height": 80,
+  "behind": false
+}

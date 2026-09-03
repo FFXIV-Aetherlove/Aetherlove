@@ -1,0 +1,31 @@
+{
+  "name": "Mouse Ears",
+  "slot": "ears",
+  "tier": "seasonal",
+  "file": "",
+  "anchor": "earL",
+  "origin": [
+    0,
+    0
+  ],
+  "width": 0,
+  "height": 0,
+  "behind": true,
+  "ears": {
+    "nudge": [
+      1,
+      -2
+    ],
+    "baseHalfWidth": 22,
+    "height": 46,
+    "bowOut": 0.85,
+    "bowIn": 0.75,
+    "lean": 16,
+    "inner": 0.6,
+    "floppy": 0.25,
+    "droop": 0,
+    "tuft": 0,
+    "tipWidth": 1.1,
+    "fur": 0
+  }
+}

@@ -23,7 +23,7 @@ internal sealed class BrowseScreen(
 {
     internal sealed record Seed(
         Guid? CategoryId, string? Tag, string? SearchText, StoreSort Sort,
-        bool OnSaleOnly = false);
+        bool OnSaleOnly = false, Guid? CollectionId = null);
 
     private const float PadX = 16f;
     private const float CardH = 168f;
@@ -31,6 +31,7 @@ internal sealed class BrowseScreen(
     private readonly EntranceAnimation _entrance = new();
     private Guid? _categoryId;
     private Guid? _rootId;
+    private Guid? _collectionId;
     private string? _tag;
     private string _search = string.Empty;
     private string _appliedSearch = string.Empty;
@@ -44,6 +45,7 @@ internal sealed class BrowseScreen(
     private bool _sortSheetOpen;
     private string? _pendingCategoryKey;
     private DateTime _pendingCategoryAt = DateTime.MinValue;
+    private bool _scrollToTop;
 
     /// <summary>The root the bottom bar should light up, so the bar and the grid never disagree.</summary>
     public Guid? RootCategoryId => _rootId;
@@ -52,6 +54,7 @@ internal sealed class BrowseScreen(
     {
         _categoryId = seed.CategoryId;
         _rootId = seed.CategoryId;
+        _collectionId = seed.CollectionId;
         _tag = seed.Tag;
         _search = seed.SearchText ?? string.Empty;
         _appliedSearch = _search;
@@ -61,6 +64,9 @@ internal sealed class BrowseScreen(
         _minPrice = 0;
         _maxPrice = 0;
         _pendingCategoryKey = null;
+        // A fresh seed is a new list and starts at its top; coming back from a product (OnShow alone) keeps
+        // the row the user left.
+        _scrollToTop = true;
         OnShow();
     }
 
@@ -89,6 +95,11 @@ internal sealed class BrowseScreen(
     public void Draw(OsAppContext ctx)
     {
         _entrance.BeginFrame();
+        if (_scrollToTop)
+        {
+            _scrollToTop = false;
+            ImGui.SetScrollY(0f);
+        }
         var winW = ImGui.GetWindowSize().X;
         ResolvePendingCategory();
 
@@ -122,7 +133,7 @@ internal sealed class BrowseScreen(
         _appliedSearch.Length == 0 ? null : _appliedSearch,
         _minPrice > 0 ? _minPrice : null,
         _maxPrice > 0 ? _maxPrice : null,
-        _onSaleOnly, _sort);
+        _onSaleOnly, _sort, _collectionId);
 
     private void ResolvePendingCategory()
     {
@@ -217,7 +228,7 @@ internal sealed class BrowseScreen(
 
     private bool HasAnyFilter() =>
         _onSaleOnly || _hideOwned || _minPrice > 0 || _maxPrice > 0 || _tag is not null
-        || _appliedSearch.Length > 0;
+        || _collectionId is not null || _appliedSearch.Length > 0;
 
     /// <summary>Takes every narrowing off at once, which is the only useful thing to offer when a search
     /// has produced nothing.</summary>
@@ -228,6 +239,7 @@ internal sealed class BrowseScreen(
         _minPrice = 0;
         _maxPrice = 0;
         _tag = null;
+        _collectionId = null;
         _search = string.Empty;
         _appliedSearch = string.Empty;
         _searchEditStamp = -1.0;
@@ -322,6 +334,12 @@ internal sealed class BrowseScreen(
         if (_tag is { } tag)
         {
             yield return ("##fpTag", $"#{tag}", () => _tag = null);
+        }
+        if (_collectionId is { } collectionId)
+        {
+            var collection = state.Front?.Collections.FirstOrDefault(c => c.Id == collectionId);
+            var label = collection is null ? Loc.T("os.store_filter_collection") : StoreLoc.Title(collection);
+            yield return ("##fpCollection", label, () => _collectionId = null);
         }
     }
 
@@ -473,6 +491,7 @@ internal sealed class BrowseScreen(
         if (_categoryId is not { } current
             || _appliedSearch.Length > 0
             || _tag is not null
+            || _collectionId is not null
             || _onSaleOnly
             || state.Front is not { } front)
         {
@@ -856,6 +875,7 @@ internal sealed class BrowseScreen(
             _minPrice = 0;
             _maxPrice = 0;
             _tag = null;
+            _collectionId = null;
         }
         ImGui.SameLine();
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + Px(6f));

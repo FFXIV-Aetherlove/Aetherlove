@@ -1,0 +1,37 @@
+{
+  "name": "Mouse Tail",
+  "slot": "tail",
+  "tier": "seasonal",
+  "file": "",
+  "anchor": "tail",
+  "origin": [
+    0,
+    0
+  ],
+  "width": 0,
+  "height": 0,
+  "behind": true,
+  "tail": {
+    "nudge": [
+      -3,
+      3
+    ],
+    "dir": 212,
+    "curl": -58,
+    "len": 118,
+    "segs": 26,
+    "profile": [
+      0,
+      4.5,
+      0.5,
+      3.5,
+      1,
+      1.6
+    ],
+    "fur": 0,
+    "furStep": 3,
+    "tipFrac": 0,
+    "shade": 0.8,
+    "response": 1.6
+  }
+}

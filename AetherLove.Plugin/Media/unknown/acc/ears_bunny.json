@@ -1,0 +1,31 @@
+{
+  "name": "Bunny Ears",
+  "slot": "ears",
+  "tier": "seasonal",
+  "file": "",
+  "anchor": "earL",
+  "origin": [
+    0,
+    0
+  ],
+  "width": 0,
+  "height": 0,
+  "behind": true,
+  "ears": {
+    "nudge": [
+      0,
+      -3
+    ],
+    "baseHalfWidth": 14,
+    "height": 92,
+    "bowOut": 0.2,
+    "bowIn": 0.05,
+    "lean": 8,
+    "inner": 0.55,
+    "floppy": 0.55,
+    "droop": 0,
+    "tuft": 0,
+    "tipWidth": 0.35,
+    "fur": 0.04
+  }
+}

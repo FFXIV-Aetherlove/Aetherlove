@@ -1,0 +1,14 @@
+{
+  "name": "Heart Eyes",
+  "slot": "glasses",
+  "tier": "seasonal",
+  "file": "glasses_hearteyes.png",
+  "anchor": "face",
+  "origin": [
+    75,
+    22
+  ],
+  "width": 150,
+  "height": 96,
+  "behind": false
+}

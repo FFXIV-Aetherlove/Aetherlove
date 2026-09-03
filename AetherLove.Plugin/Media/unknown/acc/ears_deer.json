@@ -1,0 +1,31 @@
+{
+  "name": "Deer Ears",
+  "slot": "ears",
+  "tier": "seasonal",
+  "file": "",
+  "anchor": "earL",
+  "origin": [
+    0,
+    0
+  ],
+  "width": 0,
+  "height": 0,
+  "behind": true,
+  "ears": {
+    "nudge": [
+      2,
+      -2
+    ],
+    "baseHalfWidth": 15,
+    "height": 58,
+    "bowOut": 0.45,
+    "bowIn": -0.05,
+    "lean": 34,
+    "inner": 0.5,
+    "floppy": 0.3,
+    "droop": 0,
+    "tuft": 0.2,
+    "tipWidth": 0.15,
+    "fur": 0.07
+  }
+}

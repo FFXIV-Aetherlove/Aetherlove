@@ -115,10 +115,10 @@ internal sealed class StoreState(IStoreHost host)
 
     public sealed record BrowseFilter(
         Guid? CategoryId, string? Tag, string? SearchText,
-        int? MinPrice, int? MaxPrice, bool OnSaleOnly, StoreSort Sort)
+        int? MinPrice, int? MaxPrice, bool OnSaleOnly, StoreSort Sort, Guid? CollectionId = null)
     {
         public string Signature =>
-            $"{CategoryId:N}|{Tag}|{SearchText}|{MinPrice}|{MaxPrice}|{OnSaleOnly}|{(short)Sort}";
+            $"{CategoryId:N}|{Tag}|{SearchText}|{MinPrice}|{MaxPrice}|{OnSaleOnly}|{(short)Sort}|{CollectionId:N}";
     }
 
     private const int BrowsePageSize = 24;
@@ -191,7 +191,7 @@ internal sealed class StoreState(IStoreHost host)
         {
             var page = await host.GetStoreProductsAsync(new StoreProductQueryDto(
                 filter.CategoryId, filter.Tag, filter.SearchText, filter.MinPrice, filter.MaxPrice,
-                filter.OnSaleOnly, skip, BrowsePageSize, filter.Sort)).ConfigureAwait(false);
+                filter.OnSaleOnly, skip, BrowsePageSize, filter.Sort, filter.CollectionId)).ConfigureAwait(false);
             if (generation != Volatile.Read(ref _browseGeneration) || filter.Signature != _browseSignature)
             {
                 return;

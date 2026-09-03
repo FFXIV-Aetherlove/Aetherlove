@@ -133,6 +133,10 @@ internal sealed class HomeScreen(
                 {
                     openDetail(id);
                 }
+                else if (result.OpenCollection)
+                {
+                    openBrowse(new BrowseScreen.Seed(null, null, null, StoreSort.Featured, CollectionId: pinned.Id));
+                }
             });
         }
 

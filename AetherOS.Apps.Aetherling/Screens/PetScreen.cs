@@ -34,6 +34,10 @@ internal sealed partial class PetScreen(IAetherlingHost host, PetRuntime pet)
     private const float HopArc = 0.34f;
     private const float HopSway = 0.13f;
 
+    /// <summary>The top of the stage card the mood bar and its sentence occupy, in design pixels: the
+    /// creature is centred in what is left below it.</summary>
+    private const float StageHeadroom = 62f;
+
     private AetherlingDto? _core;
     private double _lastFrameTime;
     private float _settle = 1f;
@@ -332,9 +336,16 @@ internal sealed partial class PetScreen(IAetherlingHost host, PetRuntime pet)
         // What it is wearing decides where it stands. A hat needs headroom and a nook needs floor, so the
         // creature is sized and lifted against its own worn extent rather than a constant that was measured
         // on a bare pet and clips the tall hats off the top of the card.
+        // Centred in the room under the mood header rather than stood on the card's floor: the card's height
+        // moves with the wheel button and the feeding timer, and a creature anchored to its floor drifted
+        // with them. The worn extent is the block that gets centred, so a hat or a nook does not push it off.
         var footprint = pet.AccessoryFootprint();
-        var petSize = MathF.Min(size.X * 0.74f, (size.Y - Px(24f)) / (1f + footprint.Y + footprint.W));
-        var bottom = new Vector2(centreX, br.Y - Px(20f) - (petSize * footprint.W));
+        var headroom = Px(StageHeadroom);
+        var room = size.Y - headroom - Px(12f);
+        var petSize = MathF.Min(size.X * 0.74f, room / (1f + footprint.Y + footprint.W));
+        var blockH = petSize * (1f + footprint.Y + footprint.W);
+        var blockTop = tl.Y + headroom + ((room - blockH) * 0.5f);
+        var bottom = new Vector2(centreX, blockTop + (petSize * (1f + footprint.Y)));
         if (pet.Ready)
         {
             var pose = pet.Pose;

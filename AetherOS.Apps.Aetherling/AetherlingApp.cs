@@ -393,13 +393,22 @@ public sealed class AetherlingApp : IAetherApp
 
         SyncBgm();
 
-        // No mute button once it is out: there is no loop to silence, and the toggle would restart one.
-        // The games carry their own, because a run holds ImGui's active id and would kill this one.
-        if (_view is View.Adopt or View.Core)
+        // The games carry their own chip, because a run holds ImGui's active id and would kill this one;
+        // the moments (the introduction, growing up, a ceremony) have no corner to spare.
+        if (MuteVisible)
         {
             DrawMute(ctx);
         }
     }
+
+    private bool _chirpOnRelease;
+
+    private bool MuteVisible => _view switch
+    {
+        View.Games or View.PetIntro or View.AdultOnboarding => false,
+        View.Pet => !_pet.CeremonyRunning && !_pet.HoldingPage,
+        _ => true,
+    };
 
     /// <summary>The app's only navigation. Drawn over whichever page is up, and left out of the pages that
     /// are a moment rather than a place (the birth, the introduction, growing up) and of a live minigame,
@@ -674,13 +683,18 @@ public sealed class AetherlingApp : IAetherApp
         _core.BeginArrival();
     }
 
+    /// <summary>The noises chip, top right of every page that has a corner to give: the creature's chitter
+    /// and the wheel's jingle, the one level the settings page calls "How loud". The music (the growth loop
+    /// and the minigames' tracks) is deliberately not under it; the games carry their own chip for that and
+    /// the settings page keeps the switch. Same place and dress as the games' chip, so it never seems to
+    /// move.</summary>
     private void DrawMute(OsAppContext ctx)
     {
         var dl = ImGui.GetWindowDrawList();
         var origin = ImGui.GetWindowPos();
         var size = ImGui.GetWindowSize();
-        var side = Px(26f);
-        var tl = new Vector2(origin.X + size.X - side - Px(14f), origin.Y + Px(14f));
+        var side = Px(32f);
+        var tl = new Vector2(origin.X + size.X - side - Px(12f), origin.Y + Px(10f));
 
         ImGui.SetCursorScreenPos(tl);
         var pressed = ImGui.InvisibleButton("##aetherlingMute", new Vector2(side, side));
@@ -688,45 +702,41 @@ public sealed class AetherlingApp : IAetherApp
         if (hovered)
         {
             HandOnHover();
-            ImGui.SetTooltip(ctx.Localize(_host.BgmMuted ? "os.aetherling_unmute" : "os.aetherling_mute"));
+            ImGui.SetTooltip(ctx.Localize(_host.SoundsMuted ? "os.aetherling_unmute" : "os.aetherling_mute"));
         }
         if (pressed)
         {
-            var muted = !_host.BgmMuted;
-            _host.BgmMuted = muted;
-            _storage.Set(MutedKey, (bool?)muted);
-            // Unmuting picks the loop back up on the next frame, at whatever tempo the state calls for.
-            // Naming one here would have to name the ceremony's, which is the wrong one for a growing pet.
+            _host.SoundsMuted = !_host.SoundsMuted;
+            SaveSoundSettings();
         }
 
         var centre = tl + new Vector2(side * 0.5f, side * 0.5f);
-        var alpha = hovered ? 0.75f : 0.32f;
-        dl.AddCircleFilled(centre, side * 0.5f, Look.U32(Look.Crystal with { W = hovered ? 0.14f : 0.06f }), 20);
-        IconDraw.AddCentered(dl, _host.BgmMuted ? FontAwesomeIcon.VolumeMute : FontAwesomeIcon.VolumeDown,
-            Px(12f), centre, Look.U32(Look.CrystalPale, alpha));
+        dl.AddCircleFilled(centre, side * 0.5f, Look.U32(new Vector4(0f, 0f, 0f, hovered ? 0.5f : 0.32f)), 24);
+        IconDraw.AddCentered(dl, _host.SoundsMuted ? FontAwesomeIcon.VolumeMute : FontAwesomeIcon.VolumeDown,
+            Px(11f), centre, Look.U32(Look.CrystalPale, 0.9f));
 
-        DrawBgmVolume(dl, tl, new Vector2(side, side));
+        DrawSoundVolume(dl, tl, new Vector2(side, side));
     }
 
-    /// <summary>The level under the chip. Shared with the minigames' own chip because it is one
-    /// loop: a player who turned the pet's music down has turned this app's music down.</summary>
-    private void DrawBgmVolume(ImDrawListPtr dl, Vector2 chipTl, Vector2 chipSize)
+    /// <summary>The level under the chip, the same number the settings page's slider moves. One chirp when
+    /// the hand lets go, because a volume nobody hears is a number.</summary>
+    private void DrawSoundVolume(ImDrawListPtr dl, Vector2 chipTl, Vector2 chipSize)
     {
-        var muted = _host.BgmMuted;
-        var volume = _host.BgmVolume;
-        if (!VolumeBar.Draw("aetherlingBgm", dl, chipTl, chipSize, ref muted, ref volume,
+        var muted = _host.SoundsMuted;
+        var volume = _host.SoundVolume;
+        if (VolumeBar.Draw("aetherlingSound", dl, chipTl, chipSize, ref muted, ref volume,
             Look.U32(Look.Crystal, 0.85f), Look.U32(Look.CrystalPale, 0.18f),
             Look.U32(Look.CrystalPale, 0.95f), UiScale.S))
         {
-            return;
+            _host.SoundVolume = volume;
+            _host.SoundsMuted = muted;
+            SaveSoundSettings();
+            _chirpOnRelease = !muted;
         }
-
-        _host.BgmVolume = volume;
-        _storage.Set(BgmVolumeKey, (float?)volume);
-        if (muted != _host.BgmMuted)
+        if (_chirpOnRelease && !ImGui.IsMouseDown(ImGuiMouseButton.Left))
         {
-            _host.BgmMuted = muted;
-            _storage.Set(MutedKey, (bool?)muted);
+            _chirpOnRelease = false;
+            _host.PlayChirp();
         }
     }
 }

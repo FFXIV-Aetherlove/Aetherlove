@@ -124,6 +124,10 @@ public static class AppStrings
         ["os.store_wishlist_remove"] = "Remove from wishlist",
         ["os.store_add_to_wishlist"] = "Add to wishlist",
         ["os.store_in_wishlist"] = "In your wishlist",
+
+        // added after update 2.6.1 (store)
+        ["os.store_collection_view_more"] = "View more ({0})",
+        ["os.store_filter_collection"] = "Collection",
     };
 
     private static readonly IReadOnlyDictionary<string, string> De = new Dictionary<string, string>
@@ -245,6 +249,10 @@ public static class AppStrings
         ["os.store_wishlist_remove"] = "Von der Wunschliste nehmen",
         ["os.store_add_to_wishlist"] = "Zur Wunschliste",
         ["os.store_in_wishlist"] = "Auf deiner Wunschliste",
+
+        // added after update 2.6.1 (store)
+        ["os.store_collection_view_more"] = "Mehr anzeigen ({0})",
+        ["os.store_filter_collection"] = "Kollektion",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Es = new Dictionary<string, string>
@@ -366,6 +374,10 @@ public static class AppStrings
         ["os.store_wishlist_remove"] = "Quitar de la lista",
         ["os.store_add_to_wishlist"] = "Añadir a la lista",
         ["os.store_in_wishlist"] = "En tu lista de deseos",
+
+        // added after update 2.6.1 (store)
+        ["os.store_collection_view_more"] = "Ver más ({0})",
+        ["os.store_filter_collection"] = "Colección",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Fr = new Dictionary<string, string>
@@ -487,6 +499,10 @@ public static class AppStrings
         ["os.store_wishlist_remove"] = "Retirer de la liste",
         ["os.store_add_to_wishlist"] = "À ma liste de souhaits",
         ["os.store_in_wishlist"] = "Dans ta liste de souhaits",
+
+        // added after update 2.6.1 (store)
+        ["os.store_collection_view_more"] = "Voir plus ({0})",
+        ["os.store_filter_collection"] = "Collection",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Pt = new Dictionary<string, string>
@@ -608,6 +624,10 @@ public static class AppStrings
         ["os.store_wishlist_remove"] = "Tirar da lista",
         ["os.store_add_to_wishlist"] = "Adicionar à lista",
         ["os.store_in_wishlist"] = "Na sua lista de desejos",
+
+        // added after update 2.6.1 (store)
+        ["os.store_collection_view_more"] = "Ver mais ({0})",
+        ["os.store_filter_collection"] = "Coleção",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Ru = new Dictionary<string, string>
@@ -729,6 +749,10 @@ public static class AppStrings
         ["os.store_wishlist_remove"] = "Убрать из списка",
         ["os.store_add_to_wishlist"] = "В список желаний",
         ["os.store_in_wishlist"] = "В списке желаний",
+
+        // added after update 2.6.1 (store)
+        ["os.store_collection_view_more"] = "Показать ещё ({0})",
+        ["os.store_filter_collection"] = "Коллекция",
     };
 
     public static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> Packs =

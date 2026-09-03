@@ -193,6 +193,15 @@ public sealed class PetCatalogue
         ["Debug Duck"] = "arm-rubberduck",
         ["Spectator Popcorn"] = "arm-popcorn",
         ["Rubber Chicken"] = "arm-rubberchicken",
+        ["Doot Horn"] = "arm-doothorn",
+        ["World's Tiniest Violin"] = "arm-tinyviolin",
+        ["Pro Gamepad"] = "arm-gamepad",
+        ["Hyper Fuel Can"] = "arm-energydrink",
+        ["Glowmouse"] = "arm-rgbmouse",
+        ["Pocket Console"] = "arm-handheld",
+        ["Heart Balloon"] = "arm-heartballoon",
+        ["Love-Text Phone"] = "arm-lovephone",
+        ["Single Rose"] = "arm-rose",
     };
 
     /// <summary>Job abbreviation to the arm refs it carries, the client twin of the server's

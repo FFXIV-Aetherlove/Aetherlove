@@ -1,0 +1,14 @@
+{
+  "name": "Heart Lenses",
+  "slot": "glasses",
+  "tier": "seasonal",
+  "file": "glasses_heartlenses.png",
+  "anchor": "face",
+  "origin": [
+    75,
+    22
+  ],
+  "width": 150,
+  "height": 96,
+  "behind": false
+}

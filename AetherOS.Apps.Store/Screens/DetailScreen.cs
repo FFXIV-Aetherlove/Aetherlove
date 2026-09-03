@@ -34,11 +34,13 @@ internal sealed class DetailScreen(
     private StoreProductDto[] _related = [];
     private int _relatedGeneration;
     private Vector2 _boltFrom;
+    private bool _scrollToTop;
 
     /// <summary>Opens a product as a fresh errand, from anywhere outside this screen.</summary>
     public void Show(Guid productId)
     {
         _trail.Clear();
+        _scrollToTop = true;
         Load(productId);
     }
 
@@ -47,6 +49,7 @@ internal sealed class DetailScreen(
     public void ShowChild(Guid productId)
     {
         _trail.Add(_productId);
+        _scrollToTop = true;
         Load(productId);
     }
 
@@ -61,6 +64,7 @@ internal sealed class DetailScreen(
         }
         var parent = _trail[^1];
         _trail.RemoveAt(_trail.Count - 1);
+        _scrollToTop = true;
         Load(parent);
         return true;
     }
@@ -112,6 +116,13 @@ internal sealed class DetailScreen(
     public void Draw(OsAppContext ctx)
     {
         _entrance.BeginFrame();
+        // The body child keeps its scroll under its own id, so a product opened after another one would
+        // otherwise start where the last one was left.
+        if (_scrollToTop)
+        {
+            _scrollToTop = false;
+            ImGui.SetScrollY(0f);
+        }
         var winW = ImGui.GetWindowSize().X;
         var dl = ImGui.GetWindowDrawList();
 

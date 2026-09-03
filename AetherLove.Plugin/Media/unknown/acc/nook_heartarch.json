@@ -1,0 +1,14 @@
+{
+  "name": "Heart Balloon Arch",
+  "slot": "nook",
+  "tier": "seasonal",
+  "file": "nook_heartarch.png",
+  "anchor": "body",
+  "origin": [
+    115,
+    -30
+  ],
+  "width": 231,
+  "height": 120,
+  "behind": true
+}

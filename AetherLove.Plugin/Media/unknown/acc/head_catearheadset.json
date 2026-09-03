@@ -1,0 +1,14 @@
+{
+  "name": "RGB Cat-Ear Headset",
+  "slot": "head",
+  "tier": "seasonal",
+  "file": "head_catearheadset.png",
+  "anchor": "head",
+  "origin": [
+    75,
+    44
+  ],
+  "width": 150,
+  "height": 104,
+  "behind": false
+}

@@ -1,0 +1,14 @@
+{
+  "name": "Budget Crown",
+  "slot": "head",
+  "tier": "seasonal",
+  "file": "head_cardboardcrown.png",
+  "anchor": "head",
+  "origin": [
+    70,
+    92
+  ],
+  "width": 150,
+  "height": 120,
+  "behind": false
+}

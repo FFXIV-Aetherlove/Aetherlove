@@ -1,0 +1,14 @@
+{
+  "name": "Backwards Cap",
+  "slot": "head",
+  "tier": "seasonal",
+  "file": "head_backwardscap.png",
+  "anchor": "head",
+  "origin": [
+    70,
+    72
+  ],
+  "width": 150,
+  "height": 100,
+  "behind": false
+}

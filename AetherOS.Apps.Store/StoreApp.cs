@@ -246,7 +246,10 @@ public sealed class StoreApp : IAetherApp
         var barH = showBar ? Px(StoreBottomBar.Height) : 0f;
 
         PushScrollbarStyle(StorePalette.Blue with { W = 0.85f }, StorePalette.BlueLight, StorePalette.BlueDark);
-        using (var body = ImRaii.Child("##storeBody", new Vector2(0f, -barH), false))
+        // One child per view rather than one shared body: ImGui keeps a window's scroll under its id, so a
+        // detour into Detail and back lands on the same row of the grid, and a product opened from halfway
+        // down does not start halfway down itself. A view that wants the top asks for it on its own show.
+        using (var body = ImRaii.Child($"##storeBody{_view}", new Vector2(0f, -barH), false))
         {
             if (body)
             {
