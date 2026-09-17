@@ -142,8 +142,8 @@ public sealed record LumiRaceStateDto(
     short StampsPerDay = 0,
     short StampsThisWeek = 0,
     short StampsPerWeek = 0,
-    /// <summary>Seconds between races. Carried so the pages that state the rule read the server's own
-    /// number rather than a copy of it that can drift.</summary>
+    /// <summary>Retired with the rest time between races: always 0, as <see cref="NextRaceAtUtc"/> is always
+    /// null. Both stay on the wire so a released client still reads the state.</summary>
     int GateSeconds = 0,
     /// <summary>When the current sparks week rolls, for the practice popup's countdown.</summary>
     DateTimeOffset? WeekResetAtUtc = null,

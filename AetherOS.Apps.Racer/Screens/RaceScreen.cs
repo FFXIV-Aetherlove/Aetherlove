@@ -2013,7 +2013,7 @@ internal sealed partial class RaceScreen(IRacerHost host, Action back, Action op
             y += measured.Y;
         }
 
-        DrawCardResult(ctx, origin, size, dto, ink, result.Reward.StampAwarded, ref y);
+        DrawCardResult(ctx, origin, size, ink, result.Reward.StampAwarded, ref y);
         y += Px(16);
         if (result.Reward.StampAwarded)
         {

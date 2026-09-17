@@ -70,10 +70,6 @@ public static partial class AppStrings
         ["os.racer_card_locked"] = "Du hast diese Karte noch nicht. Preispäckchen können sie dir geben.",
         // In-race notice and the result line
         ["os.racer_notice_gold_used"] = "Goldkarte eingesetzt",
-        ["os.racer_result_card_na"] = "{0} konnte auf dieser Strecke oder bei diesem Wetter nicht eingesetzt werden.",
-        ["os.racer_result_card_no_chance"] = "{0} bekam nie eine Chance.",
-        ["os.racer_result_card_missed"] = "{0} hat den Moment verpasst.",
-        ["os.racer_result_card_used"] = "{0} wurde eingesetzt. Abschnitt: {1}.",
         ["os.racer_replay_unavailable"] = "Dieses Rennen hat neuere Karten benutzt, als dein Plugin kennt. Aktualisiere das Plugin, um es anzusehen. Das Ergebnis zählt trotzdem.",
         // Pack reveal and the starter grant
         ["os.racer_pack_prize_card"] = "Rennkarte",
@@ -475,8 +471,6 @@ public static partial class AppStrings
         ["os.racer_pack_accessory"] = "Accessoire",
         ["os.racer_pack_colour"] = "Farbe",
         ["os.racer_card_move_silver"] = "In Silberplatz {0} verschieben",
-        ["os.racer_result_card_used_plain"] = "{0} wurde in diesem Rennen eingesetzt.",
-        ["os.racer_result_silvers"] = "Silberkarten: {0}",
         ["os.racer_hand_explain"] = "Rennkarten geben deinem {0} Boni in Rennen. Eine Goldkarte ist eine aktive Karte, die {0} von selbst einsetzt. Silberkarten sind passive Buffs verschiedener Art. Wähl deine Karten.",
         ["os.racer_hand_enter_the_cup"] = "Am Pokal teilnehmen",
         ["os.racer_hand_none_gold"] = "Du hast noch keine Goldkarten. Preispäckchen können dir welche geben.",

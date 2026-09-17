@@ -25,11 +25,10 @@ internal sealed partial class HomeScreen
         var together = caps.Party.InParty;
         var reason = RaceReason(ctx, state);
         var practice = !together && IsPractice(state);
-        var coolingDown = IsCoolingDown(state);
         var hasPacks = state.PendingPacks.Length > 0;
         var ticketH = MathF.Min((size.X - gap) / 2 * 477 / 619, size.Y * (hasPacks ? .40f : .47f));
         var ticketSize = new Vector2((size.X - gap) / 2, ticketH);
-        if (HomeArtwork.Ticket(ctx, host, "##racerRace", HomePanel.Race, origin, ticketSize, reason is null && !_busy, coolingDown ? reason : null, statusOnHover: true))
+        if (HomeArtwork.Ticket(ctx, host, "##racerRace", HomePanel.Race, origin, ticketSize, reason is null && !_busy, null))
         {
             if (together)
             {

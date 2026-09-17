@@ -300,11 +300,6 @@ internal sealed class RaceSelectionScreen(
         {
             return string.Empty;
         }
-        if (state.NextRaceAtUtc is { } at && at > ServerNow)
-        {
-            var left = at - ServerNow;
-            return string.Format(ctx.Localize("os.racer_next_race"), $"{(int)left.TotalMinutes:0}:{left.Seconds:00}");
-        }
         return null;
     }
 

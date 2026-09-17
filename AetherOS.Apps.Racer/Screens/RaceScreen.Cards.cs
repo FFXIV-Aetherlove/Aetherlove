@@ -156,11 +156,8 @@ internal sealed partial class RaceScreen
     private const int ResultCardFreeRows = int.MaxValue;
     private const int ResultCardWrapCache = 16;
 
-    private const string SilverNameSeparator = ", ";
-
     private RaceSupportSession? _cardSession;
     private RaceCardNotices? _notices;
-    private RaceSupportEvent? _playerGold;
     private int _cardPlayerSlot = -1;
     private bool _replayRefused;
     private int _noticeCursor;
@@ -168,8 +165,8 @@ internal sealed partial class RaceScreen
     private readonly Dictionary<(string Text, float Room, int Rows, float FontPx), (string[] Lines, float Scale)> _resultCardWraps = new();
 
     /// <summary>Resolves the race's cards before anything steps. The resolved copy is run to its end here, with
-    /// its own session when the race carries cards, so the playback rate and the player's Gold outcome come
-    /// from the same run the server stored.</summary>
+    /// its own session when the race carries cards, so the playback rate comes from the same run the server
+    /// stored.</summary>
     private void BeginCards(LumiRaceDto dto, AetherRaceLive.Race live, AetherRaceLive.Race resolved)
     {
         EndCards();
@@ -194,7 +191,6 @@ internal sealed partial class RaceScreen
         }
 
         _notices = new RaceCardNotices(dto.Field.Length);
-        _playerGold = TerminalGoldLine(outcome, dto.PlayerSlot);
         _cardPlayerSlot = dto.PlayerSlot;
     }
 
@@ -202,7 +198,6 @@ internal sealed partial class RaceScreen
     {
         _cardSession = null;
         _notices = null;
-        _playerGold = null;
         _cardPlayerSlot = -1;
         _replayRefused = false;
         _noticeCursor = 0;
@@ -275,22 +270,6 @@ internal sealed partial class RaceScreen
         }
 
         return result;
-    }
-
-    /// <summary>The last line the slot's Gold logged other than its window opening: Fired or Denied, or null for
-    /// a runner without a Gold.</summary>
-    private static RaceSupportEvent? TerminalGoldLine(RaceSupportSession session, int slot)
-    {
-        RaceSupportEvent? terminal = null;
-        foreach (var line in session.Events)
-        {
-            if (line.Slot == slot && line.Outcome != RaceSupportOutcome.Window)
-            {
-                terminal = line;
-            }
-        }
-
-        return terminal;
     }
 
     /// <summary>A race time as the seconds it takes to show at the race's playback pace.</summary>
@@ -630,69 +609,15 @@ internal sealed partial class RaceScreen
         }
     }
 
-    /// <summary>The card lines under the result headline: what the player's Gold did and which Silvers ran with
-    /// it, or the notice that this build cannot replay the race. When a stamp panel follows, the lines share
-    /// two rows: a Gold line that needs both drops the Silvers line, and anything longer is squeezed and then
-    /// cut short, so the panel never reaches the Continue button.</summary>
-    private void DrawCardResult(OsAppContext ctx, Vector2 origin, Vector2 size, LumiRaceDto dto, uint ink, bool stampFollows, ref float y)
+    /// <summary>The notice under the result headline that this build cannot replay the race. What the cards did
+    /// is not said here: the race itself showed it.</summary>
+    private void DrawCardResult(OsAppContext ctx, Vector2 origin, Vector2 size, uint ink, bool stampFollows, ref float y)
     {
-        var rows = stampFollows ? ResultCardStampRows : ResultCardFreeRows;
         if (_replayRefused)
         {
+            var rows = stampFollows ? ResultCardStampRows : ResultCardFreeRows;
             ResultCardLine(ctx.Localize("os.racer_replay_unavailable"), origin, size, ink, rows, ref y);
-            return;
         }
-
-        if (_cardSession is not { } session || dto.PlayerSlot < 0 || dto.PlayerSlot >= dto.Field.Length)
-        {
-            return;
-        }
-
-        var hand = session.HandOf(dto.PlayerSlot);
-        if (_playerGold is { } gold && hand.Gold.Card is { } card)
-        {
-            rows -= ResultCardLine(GoldOutcomeLine(ctx, card, gold), origin, size, ink, rows, ref y);
-        }
-
-        var first = hand.Silver1.Card;
-        var second = hand.Silver2.Card;
-        if (rows <= 0 || (first is null && second is null))
-        {
-            return;
-        }
-
-        var names = first is not null && second is not null
-            ? CardStrings.NameOf(ctx, first) + SilverNameSeparator + CardStrings.NameOf(ctx, second)
-            : CardStrings.NameOf(ctx, (first ?? second)!);
-        ResultCardLine(string.Format(ctx.Localize("os.racer_result_silvers"), names), origin, size, ink, rows, ref y);
-    }
-
-    /// <summary>What the Gold did, from its terminal line: used at a section, missed its moment, never got a
-    /// chance, or could not be used on this course or sky.</summary>
-    private static string GoldOutcomeLine(OsAppContext ctx, RaceCard card, RaceSupportEvent line)
-    {
-        var name = CardStrings.NameOf(ctx, card);
-        if (line.Outcome == RaceSupportOutcome.Fired)
-        {
-            var key = line.Section.Length > 0 ? SectionKey(line.Section) : string.Empty;
-            var section = key.Length > 0 ? ctx.Localize(key) : string.Empty;
-            if (section.Length == 0 || section == key)
-            {
-                return string.Format(ctx.Localize("os.racer_result_card_used_plain"), name);
-            }
-
-            // Scenic section names are titled ("The lower road"); inside a sentence they start lowercase in every table.
-            section = char.ToLowerInvariant(section[0]) + section[1..];
-            return string.Format(ctx.Localize("os.racer_result_card_used"), name, section);
-        }
-
-        var outcome = line.Reason switch
-        {
-            RaceSupportReasons.StaticIneligible or RaceSupportReasons.UnknownCard or RaceSupportReasons.WrongBand => "os.racer_result_card_na",
-            RaceSupportReasons.TriggerNeverMet => "os.racer_result_card_no_chance",
-            _ => "os.racer_result_card_missed",
-        };
-        return string.Format(ctx.Localize(outcome), name);
     }
 
     /// <summary>One centred caption line under the headline, in at most <paramref name="maxRows"/> rows. A line a

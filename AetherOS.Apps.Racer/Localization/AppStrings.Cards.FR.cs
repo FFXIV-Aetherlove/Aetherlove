@@ -70,10 +70,6 @@ public static partial class AppStrings
         ["os.racer_card_locked"] = "Tu n'as pas encore cette carte. Les paquets de récompenses peuvent te la donner.",
         // In-race notice and the result line
         ["os.racer_notice_gold_used"] = "A utilisé une carte Or",
-        ["os.racer_result_card_na"] = "{0} ne pouvait pas servir sur cette piste ni par cette météo.",
-        ["os.racer_result_card_no_chance"] = "{0} n'a jamais eu d'occasion.",
-        ["os.racer_result_card_missed"] = "{0} a raté son moment.",
-        ["os.racer_result_card_used"] = "{0} a été utilisée dans {1}.",
         ["os.racer_replay_unavailable"] = "Cette course a utilisé des cartes plus récentes que celles que ton plugin connaît. Mets le plugin à jour pour la regarder. Le résultat compte quand même.",
         // Pack reveal and the starter grant
         ["os.racer_pack_prize_card"] = "Carte de course",
@@ -475,8 +471,6 @@ public static partial class AppStrings
         ["os.racer_pack_accessory"] = "Accessoire",
         ["os.racer_pack_colour"] = "Couleur",
         ["os.racer_card_move_silver"] = "Déplacer dans l'emplacement Argent {0}",
-        ["os.racer_result_card_used_plain"] = "{0} a été utilisée pendant cette course.",
-        ["os.racer_result_silvers"] = "Cartes Argent : {0}",
         ["os.racer_hand_explain"] = "Les cartes de course donnent des bonus à ton {0} pendant les courses. Une carte Or est une carte active que {0} utilise de lui-même. Les cartes Argent sont des bonus passifs de différents types. Choisis tes cartes.",
         ["os.racer_hand_enter_the_cup"] = "Participer à la coupe",
         ["os.racer_hand_none_gold"] = "Tu n'as pas encore de cartes Or. Les paquets de récompenses peuvent t'en donner.",

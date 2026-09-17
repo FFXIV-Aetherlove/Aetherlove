@@ -70,10 +70,6 @@ public static partial class AppStrings
         ["os.racer_card_locked"] = "Ainda não tens esta carta. Os pacotes de prémios podem dar-ta.",
         // In-race notice and the result line
         ["os.racer_notice_gold_used"] = "Usou uma carta de ouro",
-        ["os.racer_result_card_na"] = "{0} não podia ser usada nesta pista nem com este tempo.",
-        ["os.racer_result_card_no_chance"] = "{0} nunca teve oportunidade.",
-        ["os.racer_result_card_missed"] = "{0} perdeu o momento.",
-        ["os.racer_result_card_used"] = "{0} foi usada durante {1}.",
         ["os.racer_replay_unavailable"] = "Esta corrida usou cartas mais recentes do que as que o teu plugin conhece. Atualiza o plugin para a veres. O resultado conta na mesma.",
         // Pack reveal and the starter grant
         ["os.racer_pack_prize_card"] = "Carta de corrida",
@@ -475,8 +471,6 @@ public static partial class AppStrings
         ["os.racer_pack_accessory"] = "Acessório",
         ["os.racer_pack_colour"] = "Cor",
         ["os.racer_card_move_silver"] = "Mover para a posição de prata {0}",
-        ["os.racer_result_card_used_plain"] = "{0} foi usada nesta corrida.",
-        ["os.racer_result_silvers"] = "Cartas de prata: {0}",
         ["os.racer_hand_explain"] = "As cartas de corrida dão bónus ao teu {0} durante as corridas. Uma carta de ouro é uma carta ativa que o {0} usa sozinho. As cartas de prata são bónus passivos de vários tipos. Escolhe as tuas cartas.",
         ["os.racer_hand_enter_the_cup"] = "Entrar na taça",
         ["os.racer_hand_none_gold"] = "Ainda não tens cartas de ouro. Os pacotes de prémios podem dar-te algumas.",

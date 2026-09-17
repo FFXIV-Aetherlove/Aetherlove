@@ -338,19 +338,8 @@ internal sealed partial class HomeScreen(
         {
             return string.Empty;
         }
-        if (IsCoolingDown(state))
-        {
-            var at = state.NextRaceAtUtc!.Value;
-            var left = at - ServerNow;
-            return string.Format(ctx.Localize("os.racer_next_race"), $"{(int)left.TotalMinutes:0}:{left.Seconds:00}");
-        }
         return null;
     }
-
-    /// <summary>Whether the race button is only waiting out the gap between two races. That wait is the one
-    /// refusal the button explains in a tooltip.</summary>
-    private bool IsCoolingDown(LumiRaceStateDto state) =>
-        state.Enabled && state.PetHatched && state.PetAdult && state.NextRaceAtUtc is { } at && at > ServerNow;
 
     /// <summary>Party members learn their reward from the refreshed state after playback; the begin
     /// reply carries the race alone.</summary>

@@ -70,10 +70,6 @@ public static partial class AppStrings
         ["os.racer_card_locked"] = "Aún no tienes esta carta. Puede salir en un sobre de premios.",
         // In-race notice and the result line
         ["os.racer_notice_gold_used"] = "Usó una carta de Oro",
-        ["os.racer_result_card_na"] = "{0} no se podía usar en esta pista ni con este clima.",
-        ["os.racer_result_card_no_chance"] = "{0} nunca tuvo ocasión.",
-        ["os.racer_result_card_missed"] = "{0} perdió su momento.",
-        ["os.racer_result_card_used"] = "{0} se usó en {1}.",
         ["os.racer_replay_unavailable"] = "Esta carrera usó cartas más nuevas que las que conoce tu plugin. Actualiza el plugin para verla. El resultado cuenta igual.",
         // Pack reveal and the starter grant
         ["os.racer_pack_prize_card"] = "Carta de carreras",
@@ -475,8 +471,6 @@ public static partial class AppStrings
         ["os.racer_pack_accessory"] = "Accesorio",
         ["os.racer_pack_colour"] = "Color",
         ["os.racer_card_move_silver"] = "Mover a la ranura de Plata {0}",
-        ["os.racer_result_card_used_plain"] = "{0} se usó en esta carrera.",
-        ["os.racer_result_silvers"] = "Cartas de Plata: {0}",
         ["os.racer_hand_explain"] = "Las cartas de carrera dan bonificaciones a tu {0} durante las carreras. Una carta de Oro es una carta activa que {0} usa por su cuenta. Las cartas de Plata son mejoras pasivas de distintos tipos. Elige tus cartas.",
         ["os.racer_hand_enter_the_cup"] = "Entrar en la copa",
         ["os.racer_hand_none_gold"] = "Aún no tienes cartas de Oro. Los sobres de premios pueden darte algunas.",

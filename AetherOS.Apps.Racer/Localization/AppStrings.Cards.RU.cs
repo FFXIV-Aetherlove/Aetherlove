@@ -70,10 +70,6 @@ public static partial class AppStrings
         ["os.racer_card_locked"] = "У тебя пока нет этой карты. Её можно получить из набора с призами.",
         // In-race notice and the result line
         ["os.racer_notice_gold_used"] = "Использована золотая карта",
-        ["os.racer_result_card_na"] = "{0}: не работает на этой трассе или в такую погоду.",
-        ["os.racer_result_card_no_chance"] = "{0}: шанса так и не было.",
-        ["os.racer_result_card_missed"] = "{0}: момент упущен.",
-        ["os.racer_result_card_used"] = "{0}: использована на участке {1}.",
         ["os.racer_replay_unavailable"] = "В этом забеге были карты новее, чем знает твой плагин. Обнови плагин, чтобы посмотреть забег. Результат всё равно засчитан.",
         // Pack reveal and the starter grant
         ["os.racer_pack_prize_card"] = "Гоночная карта",
@@ -475,8 +471,6 @@ public static partial class AppStrings
         ["os.racer_pack_accessory"] = "Аксессуар",
         ["os.racer_pack_colour"] = "Цвет",
         ["os.racer_card_move_silver"] = "Переложить в серебряный слот {0}",
-        ["os.racer_result_card_used_plain"] = "{0}: использована в этом забеге.",
-        ["os.racer_result_silvers"] = "Серебряные карты: {0}",
         ["os.racer_hand_explain"] = "Карты для забега дают твоему {0} бонусы в забегах. Золотая карта активная, {0} использует её сам. Серебряные карты дают разные пассивные бонусы. Выбери свои карты.",
         ["os.racer_hand_enter_the_cup"] = "Участвовать в кубке",
         ["os.racer_hand_none_gold"] = "У тебя пока нет золотых карт. Их можно получить из наборов с призами.",

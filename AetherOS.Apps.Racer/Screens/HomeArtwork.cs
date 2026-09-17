@@ -62,10 +62,8 @@ internal static class HomeArtwork
         ImGui.GetWindowDrawList().AddImage(art.Value, at, at + size, uvMin, uvMax);
     }
 
-    /// <summary>A home ticket with an optional status plate along its foot. <paramref name="statusOnHover"/> shows the
-    /// plate only while the pointer is on the ticket.</summary>
-    public static bool Ticket(OsAppContext ctx, IRacerHost host, string id, HomePanel panel, Vector2 at, Vector2 size, bool enabled, string? status,
-        bool statusOnHover = false)
+    /// <summary>A home ticket with an optional status plate along its foot.</summary>
+    public static bool Ticket(OsAppContext ctx, IRacerHost host, string id, HomePanel panel, Vector2 at, Vector2 size, bool enabled, string? status)
     {
         ImGui.SetCursorScreenPos(at);
         var pressed = ImGui.InvisibleButton(id, size) && enabled;
@@ -75,7 +73,7 @@ internal static class HomeArtwork
             HandOnHover();
         }
         Draw(ctx, host, panel, at, size, hovered, enabled);
-        if (!string.IsNullOrEmpty(status) && (hovered || !statusOnHover))
+        if (!string.IsNullOrEmpty(status))
         {
             var badgeAt = at + new Vector2(size.X * .08f, size.Y * .79f);
             var badgeSize = new Vector2(size.X * .84f, size.Y * .21f);

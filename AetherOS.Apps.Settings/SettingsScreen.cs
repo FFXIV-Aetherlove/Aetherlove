@@ -56,6 +56,7 @@ public sealed partial class SettingsScreen
     public void OnShow()
     {
         _view = View.Hub;
+        _ownedThemesRequested = false;
         _openApp = null;
         _resetHomeOpen = false;
         _devToast = null;
@@ -1193,7 +1194,10 @@ public sealed partial class SettingsScreen
     private enum PremiumThemeState { Busy, Failed }
 
     private AetherLove.Shared.Store.OwnedThemeDto[] _ownedThemes = [];
-    private bool _ownedThemesRequested;
+
+    /// <summary>Cleared every time Settings comes to the front, so a skin bought in the Store a moment ago
+    /// is on the shelf without a plugin reload. The last list stays drawn while the new one is on the wire.</summary>
+    private volatile bool _ownedThemesRequested;
 
     // Written from the enable task, read by the draw thread.
     private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, PremiumThemeState> _themeStates = new();
@@ -1210,6 +1214,13 @@ public sealed partial class SettingsScreen
             if (await _host.GetOwnedThemesAsync().ConfigureAwait(false) is { } themes)
             {
                 _ownedThemes = themes;
+            }
+            else
+            {
+                // A failed read asks again rather than leaving the shelf empty until the plugin reloads; the
+                // pause keeps an offline phone from asking every frame.
+                await Task.Delay(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+                _ownedThemesRequested = false;
             }
         });
     }

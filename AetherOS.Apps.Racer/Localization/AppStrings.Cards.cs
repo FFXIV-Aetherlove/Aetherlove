@@ -98,10 +98,6 @@ public static partial class AppStrings
         ["os.racer_card_locked"] = "You do not have this card yet. Prize packs can give it to you.",
         // In-race notice and the result line
         ["os.racer_notice_gold_used"] = "Used a Gold card",
-        ["os.racer_result_card_na"] = "{0} could not be used on this course or in this weather.",
-        ["os.racer_result_card_no_chance"] = "{0} never got a chance.",
-        ["os.racer_result_card_missed"] = "{0} missed its moment.",
-        ["os.racer_result_card_used"] = "{0} was used at {1}.",
         ["os.racer_replay_unavailable"] = "This race used newer cards than your plugin knows. Update the plugin to watch it. The result still counts.",
         // Pack reveal and the starter grant
         ["os.racer_pack_prize_card"] = "Racing card",
@@ -503,8 +499,6 @@ public static partial class AppStrings
         ["os.racer_pack_accessory"] = "Accessory",
         ["os.racer_pack_colour"] = "Colour",
         ["os.racer_card_move_silver"] = "Move to Silver slot {0}",
-        ["os.racer_result_card_used_plain"] = "{0} was used in this race.",
-        ["os.racer_result_silvers"] = "Silver cards: {0}",
         ["os.racer_hand_explain"] = "Race cards give your {0} bonuses during races. A Gold card is an active card that {0} uses on its own. Silver cards are passive buffs of different kinds. Select your cards.",
         ["os.racer_hand_enter_the_cup"] = "Enter the cup",
         ["os.racer_hand_none_gold"] = "You have no Gold cards yet. Prize packs can give you some.",

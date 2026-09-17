@@ -31,8 +31,6 @@ internal sealed partial class RaceOnboardingScreen(IRacerHost host, Action done)
 
     private const short DefaultStampsPerWeek = 5;
 
-    private const int DefaultGateSeconds = 300;
-
     /// <summary>Starlight Cups a player can enter each week. Neither the state read nor
     /// <see cref="LumiCupRules"/> carries it.</summary>
     private const int CupsPerWeek = 1;
@@ -443,26 +441,18 @@ internal sealed partial class RaceOnboardingScreen(IRacerHost host, Action done)
             ImGui.ColorConvertFloat4ToU32(new Vector4(0.95f, 0.72f, 0.20f, fade)));
     }
 
-    /// <summary>The gate as words: whole minutes when it is a whole number of minutes, seconds otherwise.</summary>
-    private static string RestText(OsAppContext ctx, int seconds) =>
-        seconds % 60 == 0
-            ? string.Format(ctx.Localize("os.racer_rest_minutes"), seconds / 60)
-            : string.Format(ctx.Localize("os.racer_rest_seconds"), seconds);
-
-    /// <summary>The racing and resting page's bullet list: the weekly cup, the stamped races a day, the stamps a
-    /// week, the rest between races and practice paying nothing. A left-aligned block centred on the paper, each
+    /// <summary>The racing limits page's bullet list: the weekly cup, the stamped races a day, the stamps a
+    /// week and practice paying nothing. A left-aligned block centred on the paper, each
     /// item's wrapped lines hung under its first, the numbers read off the server's state.</summary>
     private void DrawRules(OsAppContext ctx, ImDrawListPtr dl, Vector2 stage, Vector2 size, float fade)
     {
         var day = _state?.StampsPerDay is > 0 and { } perDay ? perDay : DefaultStampsPerDay;
         var week = _state?.StampsPerWeek is > 0 and { } perWeek ? perWeek : DefaultStampsPerWeek;
-        var gate = _state?.GateSeconds is > 0 and { } seconds ? seconds : DefaultGateSeconds;
         string[] items =
         [
             string.Format(ctx.Localize("os.racer_intro_limit_cup"), CupsPerWeek),
             string.Format(ctx.Localize("os.racer_intro_limit_races"), day),
             string.Format(ctx.Localize("os.racer_intro_limit_week"), week),
-            string.Format(ctx.Localize("os.racer_intro_limit_gate"), RestText(ctx, gate).Replace(' ', NoBreakSpace)),
             ctx.Localize("os.racer_intro_limit_practice"),
         ];
 
