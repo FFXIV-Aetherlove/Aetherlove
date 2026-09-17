@@ -21,10 +21,9 @@ public sealed partial class OsOnboardingScreen
             return;
         }
         _langFlagsLoaded = true;
-        var dir = Path.GetDirectoryName(Plugin.PluginInterface.AssemblyLocation.FullName) ?? "";
-        for (int i = 0; i < LanguageEntries.Length; i++)
+        for (var i = 0; i < LanguageEntries.Length; i++)
         {
-            var path = Path.Combine(dir, "Media", LanguageEntries[i].FlagFile);
+            var path = Services.Media.MediaPaths.Shipped(LanguageEntries[i].FlagFile);
             if (File.Exists(path))
             {
                 _langFlags[i] = Plugin.TextureProvider.GetFromFile(path);

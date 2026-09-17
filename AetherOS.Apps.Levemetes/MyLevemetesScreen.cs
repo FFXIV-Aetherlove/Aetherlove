@@ -74,6 +74,7 @@ public sealed partial class MyLevemetesScreen
     private int _editCategoryIdx = -1;
     private string _editTitle = "";
     private string _editDescription = "";
+    private readonly SoftWrapInputField _editDescriptionField = new();
     private readonly bool[] _editRegions = new bool[RegionValues.Length];
     private readonly bool[] _editWeekdayHours = new bool[24];
     private readonly bool[] _editWeekendHours = new bool[24];
@@ -565,7 +566,7 @@ public sealed partial class MyLevemetesScreen
         }
         ImGui.SetCursorPosX(pad);
         var descBefore = _editDescription;
-        InputTextMultilineWithPaste("##leveEditDesc", ref _editDescription,
+        _editDescriptionField.Draw("##leveEditDesc", ref _editDescription,
             LevemetesLimits.DescriptionRawMaxLength, new Vector2(w, Px(110f)));
         if (EmojiText.EffectiveLength(_editDescription) > LevemetesLimits.DescriptionMaxLength)
         {
@@ -943,7 +944,7 @@ public sealed partial class MyLevemetesScreen
             Kind: _editKindIdx == 0 ? (short)LevemeteKind.LookingFor : (short)LevemeteKind.Offering,
             Category: LevemetesScreen.KnownCategories[_editCategoryIdx],
             Title: title,
-            Description: _editDescription.Trim(),
+            Description: _editDescriptionField.Value(_editDescription).Trim(),
             RegionMask: regionMask,
             WeekdayHoursMask: HoursToMask(_editWeekdayHours),
             WeekendHoursMask: HoursToMask(_editWeekendHours),

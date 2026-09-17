@@ -5,11 +5,11 @@ public static class Loc
 {
     public static string T(string key)
     {
-        if (LanguageProvider.Current.Strings.TryGetValue(key, out var value))
+        if (LanguageProvider.CurrentStrings.TryGetValue(key, out var value))
         {
             return value;
         }
-        if (LanguageProvider.English.Strings.TryGetValue(key, out var english))
+        if (LanguageProvider.EnglishStrings.TryGetValue(key, out var english))
         {
             return english;
         }

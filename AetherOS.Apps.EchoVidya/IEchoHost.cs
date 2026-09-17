@@ -1,22 +1,13 @@
 namespace AetherOS.Apps.EchoVidya;
 
-/// <summary>The parts of Echo only the plugin can do: own the popout window and the runtime install.</summary>
+/// <summary>The parts of Echo only the plugin can do: own the popout window and know whether the playback
+/// host is on disk. The host itself arrives through the phone's asset sync, never through the app.</summary>
 public interface IEchoHost
 {
     bool RuntimeReady { get; }
 
-    AetherLove.Services.Echo.EchoInstallState InstallState { get; }
-
-    void BeginInstall();
-
-    /// <summary>Asks whether a newer playback host is published, and starts fetching it when one is.</summary>
-    void CheckForUpdate();
-
-    /// <summary>A newer playback host is published and not yet installed. While true the app blocks on the
-    /// update gate: nobody gets to find out mid-video that their player is outdated.</summary>
-    bool UpdatePending { get; }
-
-    void CancelInstall();
+    /// <summary>The playback host bundle arrived but did not unpack. The phone tries again on its own.</summary>
+    bool PlayerFailed { get; }
 
     bool WindowOpen { get; }
 

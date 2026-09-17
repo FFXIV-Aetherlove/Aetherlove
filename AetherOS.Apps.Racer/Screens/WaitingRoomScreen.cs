@@ -14,11 +14,7 @@ namespace AetherOS.Apps.Racer.Screens;
 internal sealed class WaitingRoomScreen(
     IRacerHost host,
     IAppCapabilities caps,
-    Action back,
-    Func<bool> muted,
-    Action toggleMute,
-    Func<float> volume,
-    Action<float> setVolume)
+    Action back)
 {
     private LumiRaceStateDto? _state;
     private LumiRaceStateDto? _pending;
@@ -40,17 +36,13 @@ internal sealed class WaitingRoomScreen(
         }
 
         var avail = ImGui.GetContentRegionAvail();
-        using var body = ImRaii.Child("##racerWait", avail, false, ImGuiWindowFlags.NoScrollbar);
+        using var body = ImRaii.Child("##racerWait", avail, false, ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoBackground);
         if (!body)
         {
             return;
         }
 
-        var origin = ImGui.GetWindowPos();
         var size = ImGui.GetWindowSize();
-        RacerBackdrop.Draw(ctx, host, origin, size, dim: 0.72f);
-        RacerChrome.DrawMuteChip(ctx, muted(), toggleMute, volume(), setVolume);
-
         var party = caps.Party;
         // Only a gathering is a lobby. A begun run stays Active until the sweep resolves it a few
         // minutes after the race, and reading that as a lobby showed the finished roster as
@@ -59,13 +51,6 @@ internal sealed class WaitingRoomScreen(
         var running = live is { Status: (short)LumiRacePartyRunStatus.Active };
         var run = live is { Status: (short)LumiRacePartyRunStatus.Gathering } ? live : null;
 
-        ImGui.Dummy(new Vector2(1f, size.Y * 0.34f));
-        using (ctx.TitleFont?.Push())
-        {
-            RacerChrome.CenteredText(ctx.Localize("os.racer_waiting_title"));
-        }
-
-        ImGui.Dummy(new Vector2(1f, Px(8)));
         var joined = 0;
         var mine = false;
         if (run is not null)
@@ -93,7 +78,7 @@ internal sealed class WaitingRoomScreen(
         }
 
         ImGui.Dummy(new Vector2(1f, Px(10)));
-        DrawRoster(run);
+        DrawRoster(ctx, run);
         ImGui.Dummy(new Vector2(1f, Px(14)));
         DrawActions(ctx, run, party, mine, joined, running);
 
@@ -103,15 +88,14 @@ internal sealed class WaitingRoomScreen(
             RacerChrome.CenteredMuted(error);
         }
 
-        ImGui.SetCursorPosY(size.Y - Px(56));
-        if (RacerChrome.FlagButton(ctx, "##racerWaitBack", ctx.Localize("os.racer_back"),
-            RacerChrome.DutchWhite, RacerChrome.DarkInk))
+        ImGui.Dummy(new Vector2(1, Px(14)));
+        if (GrandstandFrame.ActionButton(ctx, host, "##racerWaitBack", ctx.Localize("os.racer_back"), secondary: true))
         {
             back();
         }
     }
 
-    private static void DrawRoster(LumiRacePartyRunDto? run)
+    private void DrawRoster(OsAppContext ctx, LumiRacePartyRunDto? run)
     {
         if (run is null)
         {
@@ -119,15 +103,13 @@ internal sealed class WaitingRoomScreen(
         }
         foreach (var member in run.Members)
         {
-            var line = member.Joined ? member.Name : member.Name + " ...";
-            if (member.Joined)
-            {
-                RacerChrome.CenteredText(line);
-            }
-            else
-            {
-                RacerChrome.CenteredMuted(line);
-            }
+            var at = ImGui.GetCursorScreenPos() + new Vector2(Px(12), 0);
+            var size = new Vector2(ImGui.GetContentRegionAvail().X - Px(24), Px(50));
+            GrandstandFrame.Panel(ctx, host, "paper", at, size);
+            var icon = member.Joined ? Dalamud.Interface.FontAwesomeIcon.Check : Dalamud.Interface.FontAwesomeIcon.Clock;
+            AetherLove.UI.IconDraw.AddCentered(ImGui.GetWindowDrawList(), icon, Px(16), at + new Vector2(Px(24), size.Y / 2), GrandstandFrame.Ink);
+            GrandstandFrame.Label(ctx, member.Name, at + new Vector2(Px(44), 0), size - new Vector2(Px(58), 0), GrandstandFrame.Ink);
+            ImGui.Dummy(new Vector2(1, size.Y + Px(8)));
         }
     }
 
@@ -141,8 +123,7 @@ internal sealed class WaitingRoomScreen(
                 // A just-finished race keeps its run Active until the sweep resolves it, and the server
                 // refuses a second gathering while one exists; the button says so instead of erroring.
                 var wait = running ? ctx.Localize("os.racer_party_running") : null;
-                if (RacerChrome.FlagButton(ctx, "##racerPartyStart", ctx.Localize("os.racer_party_start"),
-                    RacerChrome.DutchRed, RacerChrome.WhiteInk, wait, !_busy, chequered: true))
+                if (GrandstandFrame.ActionButton(ctx, host, "##racerPartyStart", ctx.Localize("os.racer_party_start"), !_busy, wait))
                 {
                     Call(() => host.StartPartyGatherAsync()!);
                 }
@@ -157,10 +138,9 @@ internal sealed class WaitingRoomScreen(
 
         if (!mine)
         {
-            if (RacerChrome.FlagButton(ctx, "##racerPartyJoin", ctx.Localize("os.racer_party_join"),
-                RacerChrome.CardBlue, RacerChrome.WhiteInk, null, !_busy))
+            if (GrandstandFrame.ActionButton(ctx, host, "##racerPartyJoin", ctx.Localize("os.racer_party_join"), !_busy))
             {
-                Call(() => host.JoinPartyRunAsync(run.RunId));
+                Call(async () => await host.JoinPartyRunAsync(run.RunId));
             }
             return;
         }
@@ -173,23 +153,22 @@ internal sealed class WaitingRoomScreen(
         // Counting the roster rather than the racers on it offered a begin the server was always going
         // to refuse; the rule is said up front instead, where the button can honour it.
         var tooFew = joinedCount < 2 ? ctx.Localize("os.racer_party_need_two") : null;
-        if (RacerChrome.FlagButton(ctx, "##racerPartyBegin", ctx.Localize("os.racer_party_begin"),
-            RacerChrome.DutchRed, RacerChrome.WhiteInk, tooFew, !_busy, chequered: true))
+        if (GrandstandFrame.ActionButton(ctx, host, "##racerPartyBegin", ctx.Localize("os.racer_party_begin"), !_busy, tooFew))
         {
             _busy = true;
-            Call(() => host.BeginPartyRunAsync(run.RunId));
+            Call(async () => await host.BeginPartyRunAsync(run.RunId));
         }
         ImGui.Dummy(new Vector2(1f, Px(8)));
-        if (RacerChrome.FlagButton(ctx, "##racerPartyCancel", ctx.Localize("os.racer_party_cancel"),
-            RacerChrome.DutchWhite, RacerChrome.DarkInk, null, !_busy))
+        if (GrandstandFrame.ActionButton(ctx, host, "##racerPartyCancel", ctx.Localize("os.racer_party_cancel"), !_busy, secondary: true, secondaryIcon: Dalamud.Interface.FontAwesomeIcon.Times))
         {
-            Call(() => host.CancelPartyRunAsync(run.RunId).ContinueWith(_ => (LumiRacePartyRunDto?)null)!);
+            Call(async () => { await host.CancelPartyRunAsync(run.RunId).ConfigureAwait(false); return null; });
         }
     }
 
     private void Call(Func<Task<LumiRacePartyRunDto?>> call)
     {
         _error = null;
+        _busy = true;
         _ = Task.Run(async () =>
         {
             try

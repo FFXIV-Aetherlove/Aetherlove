@@ -60,5 +60,8 @@ internal static class NotificationsEn
 
         // added after update 2.5.3
         ["notif.realtor_entry_results"] = "The lottery results are out. Go and see if you won Plot {0}, Ward {1}, {2}.",
+
+        // added after update 2.7.0 (free company houses)
+        ["notif.realtor_estate_fc"] = "{0}: you last entered your Free Company house {2} days ago. The game demolishes it after 45 days without a visit from any member. About {1} days can be left.",
     };
 }

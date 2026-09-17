@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
@@ -50,6 +50,8 @@ public sealed class SessionBootstrapper : IDisposable
     private readonly SiblingBadgeStore _siblingBadges;
     private readonly OwnAvatarCache _ownAvatar;
     private readonly OsAvatarCache _osAvatar;
+    private readonly Assets.AssetSyncService _assets;
+    private readonly Crypto.AccountEncryptionService _encryption;
 
     private readonly object _gate = new();
     private readonly CancellationTokenSource _retryCts = new();
@@ -80,8 +82,11 @@ public sealed class SessionBootstrapper : IDisposable
         Yapper.YapperDmCryptoService yapperDmCrypto,
         SiblingBadgeStore siblingBadges,
         OwnAvatarCache ownAvatar,
-        OsAvatarCache osAvatar)
+        OsAvatarCache osAvatar,
+        Assets.AssetSyncService assets,
+        Crypto.AccountEncryptionService encryption)
     {
+        _encryption = encryption;
         _log = log;
         _tokens = tokens;
         _signal = signal;
@@ -100,6 +105,7 @@ public sealed class SessionBootstrapper : IDisposable
         _siblingBadges = siblingBadges;
         _ownAvatar = ownAvatar;
         _osAvatar = osAvatar;
+        _assets = assets;
     }
 
     public SessionBootstrapResult LastResult => _lastResult;
@@ -157,6 +163,19 @@ public sealed class SessionBootstrapper : IDisposable
             ServerNotice = string.Empty;
             _lastConnection = status;
             _notifications.NewMatches = status.NewMatchCount;
+            if (status.AssetCollectionHash.Length > 0
+                && !string.Equals(status.AssetCollectionHash, _assets.LocalCollectionHash, StringComparison.Ordinal))
+            {
+                // A full-screen phone on a startup step only plans: the ladder's update gate starts the download.
+                if (!_signal.IsPhoneOpen || _router.Current is Screen.Home or Screen.App or Screen.AssetUpdate)
+                {
+                    _assets.RequestSync(Assets.AssetSyncReason.Reconnect);
+                }
+                else
+                {
+                    _ = _assets.RequestCheck();
+                }
+            }
             await SyncHangoutsAsync(status, ct).ConfigureAwait(false);
         }
         catch (OutdatedClientException)
@@ -186,7 +205,7 @@ public sealed class SessionBootstrapper : IDisposable
         get
         {
             var c = _lastConnection;
-            if (c is null || !c.HasKeyBundle)
+            if (c is null || (!c.HasKeyBundle && !_encryption.HasKeyring && _encryption.State != Shared.Crypto.EncryptionState.RecoveryRequired))
             {
                 return false;
             }
@@ -195,7 +214,8 @@ public sealed class SessionBootstrapper : IDisposable
             {
                 return false;
             }
-            return !_keys.HasLocalKey;
+            return (!_keys.HasLocalKey && c.HasKeyBundle) || (_encryption.HasKeyring && !_encryption.CanRecover)
+                || _encryption.State == Shared.Crypto.EncryptionState.RecoveryRequired;
         }
     }
 
@@ -421,6 +441,11 @@ public sealed class SessionBootstrapper : IDisposable
         {
             return Screen.OsOnboarding;
         }
+        if (_assets.RequiredPending && _lastResult is SessionBootstrapResult.SignedInActive
+                                                   or SessionBootstrapResult.SignedInOnboarding)
+        {
+            return Screen.AssetUpdate;
+        }
         if (_lastResult is SessionBootstrapResult.SignedInActive
                         or SessionBootstrapResult.SignedInOnboarding)
         {
@@ -460,7 +485,9 @@ public sealed class SessionBootstrapper : IDisposable
     public void ApplyDeferredStartupRouting()
     {
         var next = ResolveNextStartupScreen();
-        if (next == Screen.Home && _router.Current is not (Screen.Offline or Screen.Splash))
+        // The asset gate is not forced here either: the phone window moves a full-screen phone onto it and a
+        // closed or minimised one syncs behind the scenes.
+        if ((next is Screen.Home or Screen.AssetUpdate) && _router.Current is not (Screen.Offline or Screen.Splash))
         {
             return;
         }
@@ -588,7 +615,7 @@ public sealed class SessionBootstrapper : IDisposable
                 {
                     _log.Information("[SessionBootstrapper] Hub returned 401; wiping tokens and routing to sign-in.");
                     _tokens.Clear();
-                    _keys.Clear();
+                    _log.Warning("[SessionBootstrapper] Authentication rejected; local encryption material retained.");
                     return Settle(SessionBootstrapResult.NoSession, null);
                 }
 
@@ -622,14 +649,16 @@ public sealed class SessionBootstrapper : IDisposable
             AdoptActiveProfile(status.ProfileId);
             _chatCache.EnsureOwner(status.ProfileId);
             await FetchAccountInfoAsync(ct).ConfigureAwait(false);
+            await _assets.RequestCheck().WaitAsync(ct).ConfigureAwait(false);
             await SyncHangoutsAsync(status, ct).ConfigureAwait(false);
+            await _encryption.SynchronizeAsync(ct).ConfigureAwait(false);
             await TryAutoUnlockAsync(ct).ConfigureAwait(false);
             await TryAutoProvisionAsync(ct).ConfigureAwait(false);
             // Fire-and-forget: messenger state is account-level and non-blocking for the profile session.
             _ = _messengerSync.SyncAsync(CancellationToken.None);
             // Same for the yapper DM keypair: provisioned at login so peers can DM this user before
             // they ever open the Yapper app; a no-op for accounts without a yapper profile.
-            _ = _yapperDmCrypto.EnsureProvisionedAsync(CancellationToken.None);
+            _yapperDmCrypto.ProvisionInBackground();
 
             if (status.Status == ProfileLifecycle.Onboarding)
             {
@@ -918,109 +947,28 @@ public sealed class SessionBootstrapper : IDisposable
     /// before its first chat rather than waiting for the recovery gate.</summary>
     public Task EnsureActiveProfileKeysAsync(CancellationToken ct = default) => TryAutoProvisionAsync(ct);
 
-    /// <summary>Creates and publishes the active profile's key bundle when the server has none (a freshly
-    /// created sibling, or a profile whose upload was lost). Local keys without a server bundle are orphans
-    /// (peers can never fetch their public half), so a fresh keypair is always generated.
-    ///
-    /// Wrapped under the stored account KEK when there is one. Every account migrated from 1.x has NO stored
-    /// KEK (it shipped with multi-profile) and no account verifier (the migration could not derive one), so
-    /// those fall back to wrapping under a sibling profile's unlocked key: recovery stays passphrase-backed
-    /// through that sibling. Silent; with neither the recovery gate prompts.</summary>
+    /// <summary>Resumes or creates the active profile identity through the account keyring.</summary>
     private async Task TryAutoProvisionAsync(CancellationToken ct)
     {
-        if (_lastConnection is not { HasKeyBundle: false } conn
-            || conn.Status is ProfileLifecycle.Deleted or ProfileLifecycle.Banned)
+        if (_lastConnection is not { HasKeyBundle: false } || _config.Auth.ActiveProfileId is not { } profileId)
         {
-            ProfileKeysPending = false;
-            return;
-        }
-        var kek = _keys.Kek;
-        var accountKeys = _keys.AccountKeys;
-        if (kek is null && _keys.FindSiblingKey() is null && accountKeys is null)
-        {
-            // The dead end this used to be: nothing on the device can wrap a new key. Say so.
-            ProfileKeysPending = true;
-            _log.Warning("[SessionBootstrapper] The profile has no key bundle and nothing on this device can provision one; the recovery screen must.");
             return;
         }
         try
         {
-            var pass = await _hub.GetAccountPassphraseAsync(ct).ConfigureAwait(false);
-            // A stale KEK must not mint a bundle no other device can reopen. A missing verifier is the
-            // migrated-account case, where the KEK came from a successful unlock and is trusted.
-            if (kek is not null && pass is not null
-                && !_crypto.CheckPassphraseVerifier(pass.Verifier, pass.VerifierNonce, kek))
+            var pair = await _encryption.EnsureIdentityAsync("love", profileId, ct).ConfigureAwait(false);
+            ProfileKeysPending = pair is null;
+            if (pair is not null && _lastConnection?.ProfileId == profileId)
             {
-                kek = null;
+                _lastConnection = _lastConnection with { HasKeyBundle = true };
             }
-
-            // The server's list is what makes a sibling safe to wrap under: a locally stashed key can belong to
-            // a profile deleted on another device, whose bundle is gone, which would strand this one.
-            var sibling = kek is null || pass is null
-                ? await ResolveWrapSiblingAsync(ct).ConfigureAwait(false)
-                : null;
-
-            // A KEK-wrapped bundle MUST carry the KDF parameters that reproduce that KEK, or no other device
-            // can ever reopen it. With no account parameters published the stored KEK came from unlocking a
-            // sibling bundle, so borrow that bundle's; failing that, do not KEK-wrap at all.
-            var kdf = _keys.KekParams is { } recorded
-                ? new KdfParams(recorded.Salt, recorded.MemoryKb, recorded.Iterations, recorded.Parallelism)
-                : pass is not null
-                    ? new KdfParams(pass.KdfSalt, pass.KdfMemoryKb, pass.KdfIterations, pass.KdfParallelism)
-                    : sibling?.Kdf;
-            if (kek is not null && kdf?.IsUsable != true)
-            {
-                kek = null;
-            }
-            if (kek is null && sibling is null && accountKeys is null)
-            {
-                ProfileKeysPending = true;
-                _log.Warning("[SessionBootstrapper] No usable KEK, sibling key or account keypair to wrap a new profile key; the recovery screen must.");
-                return;
-            }
-
-            var (pubKey, privKey) = _crypto.GenerateIdentityKeyPair();
-            byte[]? siblingWrapped = null;
-            byte[]? siblingNonce = null;
-            if (sibling is { } sib)
-            {
-                (siblingWrapped, siblingNonce) =
-                    _crypto.Encrypt(_crypto.DeriveSiblingWrapKey(sib.PrivateKey, pubKey), privKey);
-            }
-            // Without a KEK the canonical wrap fields carry the sibling wrap, so a later passphrase unlock
-            // fails the KEK attempt and falls through to the sibling chain. With neither, they carry the
-            // ACCOUNT-keypair wrap (the only-profile-deleted case), which the unlock ladder also tries.
-            var (wrapped, wrapNonce) = kek is not null
-                ? _crypto.WrapPrivateKey(privKey, kek)
-                : sibling is not null
-                    ? (siblingWrapped!, siblingNonce!)
-                    : _crypto.WrapPrivateKey(privKey,
-                        _crypto.DeriveProfileAccountWrapKey(accountKeys!.Value.PrivateKey, pubKey));
-            var stamped = kek is not null ? kdf! : KdfParams.Unusable();
-
-            await _hub.UploadKeyBundleAsync(new Shared.Messaging.KeyBundleDto(
-                    pubKey, wrapped, stamped.Salt, stamped.MemoryKb, stamped.Iterations, stamped.Parallelism,
-                    wrapNonce,
-                    WrapProfileId: siblingWrapped is null ? null : sibling!.Value.ProfileId,
-                    ProfileWrappedPrivateKey: siblingWrapped,
-                    ProfileWrapNonce: siblingNonce), ct)
-                .ConfigureAwait(false);
-            _keys.Store(pubKey, privKey);
-            _lastConnection = conn with { HasKeyBundle = true };
-            ProfileKeysPending = false;
-            _log.Information("[SessionBootstrapper] Profile key bundle provisioned ({Mode}).",
-                kek is not null ? "account KEK" : sibling is not null ? "sibling profile wrap" : "account keypair wrap");
         }
         catch (Exception ex)
         {
-            ProfileKeysPending = true;
-            _log.Warning(ex, "[SessionBootstrapper] Auto-provisioning failed; the recovery gate will prompt.");
+            _log.Warning("[SessionBootstrapper] Profile provisioning deferred ({Reason}).", ex.GetType().Name);
         }
     }
 
-    /// <summary>Best-effort account snapshot fetch. Non-fatal: the AetherLove session stands on its own during
-    /// the migration window even if the account read fails or the server predates the method. A multi-profile
-    /// account also seeds the sibling badge store so the app tile total is right before the picker ever opens.</summary>
     private async Task FetchAccountInfoAsync(CancellationToken ct)
     {
         try

@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
+using AetherLove;
 using AetherLove.Services;
 using AetherLove.Services.Localization;
 using AetherLove.Services.Realtor;
@@ -13,6 +15,30 @@ namespace AetherOS.Apps.Realtor;
 /// <summary>Small shared bits for the Realtor screens: district icon/color mapping and duration text.</summary>
 internal static class RealtorUi
 {
+    private static readonly Dictionary<uint, string> _zoneNames = [];
+
+    /// <summary>The residential zone's own name in the player's client language, so it matches the district
+    /// rows without depending on PaissaDB having answered. Empty when the sheet has no such row.</summary>
+    public static string ZoneName(uint territoryTypeId)
+    {
+        if (_zoneNames.TryGetValue(territoryTypeId, out var cached))
+        {
+            return cached;
+        }
+        var name = string.Empty;
+        try
+        {
+            name = UiHost.DataManager.GetExcelSheet<Lumina.Excel.Sheets.TerritoryType>()
+                .GetRowOrDefault(territoryTypeId)?.PlaceName.ValueNullable?.Name.ExtractText() ?? string.Empty;
+        }
+        catch (Exception ex)
+        {
+            UiHost.Log.Debug($"[Realtor] Zone name lookup failed: {ex.Message}");
+        }
+        _zoneNames[territoryTypeId] = name;
+        return name;
+    }
+
     /// <summary>Runs a screen's body inside the scrolling region that fills everything below the cursor.
     /// Every Realtor screen lists an unbounded number of rows (worlds, districts, open plots), so without
     /// this the overflow is simply unreachable. Measure width inside <paramref name="draw"/> rather than

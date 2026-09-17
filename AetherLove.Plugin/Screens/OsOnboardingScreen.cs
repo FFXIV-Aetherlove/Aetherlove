@@ -44,6 +44,7 @@ public sealed partial class OsOnboardingScreen
     private const int TotalSteps = 10;
     private const int PassphraseMinLength = 8;
 
+    private readonly Services.Crypto.AccountEncryptionService _encryption;
     private readonly ScreenRouter _router;
     private readonly AetherHubContext _hub;
     private readonly SessionBootstrapper _bootstrap;
@@ -86,8 +87,10 @@ public sealed partial class OsOnboardingScreen
         OsAvatarCache osAvatar,
         ImageRequirementsModal imageReqModal,
         SelfieCaptureOverlay selfieOverlay,
-        AetherOS.Apps.Camera.ICameraLibrary cameraRoll)
+        AetherOS.Apps.Camera.ICameraLibrary cameraRoll,
+        Services.Crypto.AccountEncryptionService encryption)
     {
+        _encryption = encryption;
         _router = router;
         _hub = hub;
         _bootstrap = bootstrap;
@@ -102,6 +105,7 @@ public sealed partial class OsOnboardingScreen
 
     public void OnShow()
     {
+        _ = _encryption.SynchronizeAsync();
         _step = Step.Welcome;
         _tosAccepted = false;
         _passphrase = string.Empty;
@@ -195,7 +199,8 @@ public sealed partial class OsOnboardingScreen
                         DrawPassphraseConfirm();
                         break;
                     case Step.Profile:
-                        DrawProfile();
+                        if (!_encryption.BackupSaved) { DrawRecoveryBackup(); }
+                        else { DrawProfile(); }
                         break;
                     case Step.Translations:
                         DrawTranslations();
@@ -243,7 +248,7 @@ public sealed partial class OsOnboardingScreen
             Step.Passphrase => _passphrase.Length >= PassphraseMinLength && _passphrase == _passphraseConfirm,
             Step.PassphraseConfirm => _passphraseUploaded || (_passphraseCopied && !_passphraseProcessing),
             // Name and avatar are both mandatory on the combined profile step.
-            Step.Profile => _osName.Trim().Length >= AetherLove.Shared.ProfileLimits.DisplayNameMinLength
+            Step.Profile => _encryption.BackupSaved && _osName.Trim().Length >= AetherLove.Shared.ProfileLimits.DisplayNameMinLength
                             && _avatarConfirmed,
             _ => true,
         };
@@ -446,8 +451,16 @@ public sealed partial class OsOnboardingScreen
         ImGui.Dummy(new Vector2(0f, Px(26f)));
         if (DrawPrimaryButton(Loc.T("os_onboarding.done_start"), true))
         {
-            Os.OsBootIntro.Play();
-            _router.Navigate(_bootstrap.ResolveNextStartupScreen());
+            var next = _bootstrap.ResolveNextStartupScreen();
+            if (next == Screen.AssetUpdate)
+            {
+                Os.OsBootIntro.PlayOnNextHome();
+            }
+            else
+            {
+                Os.OsBootIntro.Play();
+            }
+            _router.Navigate(next);
         }
     }
 
@@ -720,39 +733,28 @@ public sealed partial class OsOnboardingScreen
         {
             try
             {
-                var (pubKey, privKey) = _crypto.GenerateIdentityKeyPair();
-                var salt = new byte[Services.Crypto.CryptoService.KdfSaltLength];
-                RandomNumberGenerator.Fill(salt);
-                const int MemoryKb = 64 * 1024;
-                const int Iterations = 3;
-                const int Parallelism = 1;
-                var kek = _crypto.DeriveKEK(passphrase, salt, MemoryKb, Iterations, Parallelism);
-                var (wrapped, wrapNonce) = _crypto.WrapPrivateKey(privKey, kek);
-                var bundle = new KeyBundleDto(
-                    PublicKey: pubKey,
-                    EncryptedPrivateKey: wrapped,
-                    KdfSalt: salt,
-                    KdfMemoryKb: MemoryKb,
-                    KdfIterations: Iterations,
-                    KdfParallelism: Parallelism,
-                    WrapNonce: wrapNonce);
-                await _hub.UploadKeyBundleAsync(bundle, CancellationToken.None).ConfigureAwait(false);
-                // The same passphrase/KEK covers the whole account: publish its parameters + verifier so a
-                // second profile's bundle can be wrapped under it and other devices can validate the
-                // passphrase, and keep the KEK locally so nothing ever re-prompts on this install.
-                try
+                var pass = await _hub.GetAccountPassphraseAsync();
+                var salt = pass?.KdfSalt ?? RandomNumberGenerator.GetBytes(16);
+                var memory = pass?.KdfMemoryKb ?? 65536;
+                var iterations = pass?.KdfIterations ?? 3;
+                var parallelism = pass?.KdfParallelism ?? 1;
+                var kek = _crypto.DeriveKEK(passphrase, salt, memory, iterations, parallelism);
+                if (pass is null)
                 {
-                    var (verifier, verifierNonce) = _crypto.CreatePassphraseVerifier(kek);
-                    await _hub.SetAccountPassphraseAsync(
-                        new AccountPassphraseDto(salt, MemoryKb, Iterations, Parallelism, verifier, verifierNonce),
-                        CancellationToken.None).ConfigureAwait(false);
+                    var verifier = _crypto.CreatePassphraseVerifier(kek);
+                    await _hub.SetAccountPassphraseAsync(new AccountPassphraseDto(salt, memory, iterations, parallelism, verifier.Verifier, verifier.Nonce));
                 }
-                catch (Exception ex)
+                else if (!_crypto.CheckPassphraseVerifier(pass.Verifier, pass.VerifierNonce, kek))
                 {
-                    Plugin.Log.Warning(ex, "[OsOnboarding] SetAccountPassphrase failed; sibling provisioning will fall back.");
+                    throw new InvalidOperationException("Existing passphrase required.");
                 }
-                _keyStorage.Store(pubKey, privKey);
-                _keyStorage.StoreKek(kek, salt, MemoryKb, Iterations, Parallelism);
+                _keyStorage.StoreKek(kek, salt, memory, iterations, parallelism);
+                if (!await _encryption.SynchronizeAsync()) { throw new InvalidOperationException("Keyring setup incomplete."); }
+                if (await _encryption.EnsureIdentityAsync("love", Plugin.Configuration.Auth.ActiveProfileId ?? Guid.Empty) is null
+                    || await _encryption.EnsureIdentityAsync("messenger", Guid.Empty) is null)
+                {
+                    throw new InvalidOperationException("Identity setup incomplete.");
+                }
                 _passphraseUploaded = true;
                 _advanceFromPassphrasePending = true;
             }

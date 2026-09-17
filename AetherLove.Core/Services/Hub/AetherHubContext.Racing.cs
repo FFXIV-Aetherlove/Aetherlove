@@ -10,6 +10,30 @@ namespace AetherLove.Services.Hub;
 /// <summary>Lumi racing passthroughs.</summary>
 public sealed partial class AetherHubContext
 {
+    public async Task<LumiRacePackDto> ClaimLumiRaceStampCardAsync(int cardNumber, CancellationToken ct = default)
+    {
+        try
+        {
+            return await (await ConnAsync(ct)).InvokeAsync<LumiRacePackDto>("ClaimLumiRaceStampCardAsync", cardNumber, ct).ConfigureAwait(false);
+        }
+        catch (HubException ex) when (RateLimitException.TryParse(ex) is { } limit)
+        {
+            throw limit;
+        }
+    }
+
+    public async Task<LumiCupStateDto> GetLumiCupAsync(CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<LumiCupStateDto>("GetLumiCupAsync", ct).ConfigureAwait(false);
+
+    public async Task<LumiCupDto> EnterLumiCupAsync(CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<LumiCupDto>("EnterLumiCupAsync", ct).ConfigureAwait(false);
+
+    public async Task<LumiCupDto> StartLumiCupRaceAsync(Guid cupId, int completed, CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<LumiCupDto>("StartLumiCupRaceAsync", cupId, completed, ct).ConfigureAwait(false);
+
+    public async Task<LumiCupDto> FinishLumiCupRaceAsync(Guid cupId, Guid raceId, CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<LumiCupDto>("FinishLumiCupRaceAsync", cupId, raceId, ct).ConfigureAwait(false);
+
     public async Task<LumiRaceStateDto> GetLumiRaceStateAsync(CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync<LumiRaceStateDto>("GetLumiRaceStateAsync", ct).ConfigureAwait(false);
 
@@ -117,4 +141,21 @@ public sealed partial class AetherHubContext
 
     public async Task<LumiRacePartyRunDto?> GetLumiRacePartyRunAsync(CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync<LumiRacePartyRunDto?>("GetLumiRacePartyRunAsync", ct).ConfigureAwait(false);
+
+    public async Task<LumiRaceCardsDto> GetLumiRaceCardsAsync(CancellationToken ct = default) =>
+        await (await ConnAsync(ct)).InvokeAsync<LumiRaceCardsDto>("GetLumiRaceCardsAsync", ct).ConfigureAwait(false);
+
+    public async Task<LumiRaceCardsDto> SetLumiRaceCardHandAsync(LumiRaceCardHandDto hand, CancellationToken ct = default)
+    {
+        try
+        {
+            return await (await ConnAsync(ct))
+                .InvokeAsync<LumiRaceCardsDto>("SetLumiRaceCardHandAsync", hand, ct)
+                .ConfigureAwait(false);
+        }
+        catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl)
+        {
+            throw rl;
+        }
+    }
 }

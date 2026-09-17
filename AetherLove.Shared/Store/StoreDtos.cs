@@ -90,7 +90,11 @@ public sealed record StoreThemeGeometryDto(
     float HomeCenterYOffset,
     float HomeHitWidth,
     float HomeHitHeight,
-    uint? TourAccent);
+    uint? TourAccent,
+    float? StatusBarCenterY = null,
+    bool StatusBarHomeHeader = false,
+    float StatusBarBackgroundOpacity = 0f,
+    bool StatusBarCentered = false);
 
 /// <summary>A theme the caller owns, for the pickers. Delisted products stay listed: purchases are
 /// permanent. A ThemePack with no colors configured never reaches this list.</summary>
@@ -105,23 +109,30 @@ public sealed record OwnedThemeDto(
     string? NamePortuguese,
     StoreThemeColorsDto Colors,
     bool HasBezel,
-    bool HasBackground,
     StoreThemeGeometryDto? Geometry = null);
 
 /// <summary>The clean full-size assets of a theme, served only to an owner. The client seals these at
-/// rest; they are never memoized server-side.</summary>
+/// rest; they are never memoized server-side. A skin is the frame and its palette; it carries no
+/// wallpaper, the phone keeps drawing whichever background the user chose.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record StoreThemeAssetsDto(
     StoreThemeColorsDto Colors,
     byte[]? Bezel,
-    byte[]? Background,
     StoreThemeGeometryDto? Geometry = null);
+
+/// <summary>Where the screen sits inside a skin's bezel image, as fractions of the bitmap's width and
+/// height, so a preview can lay the user's own wallpaper under the frame without knowing the authored
+/// geometry. Public knowledge: four numbers say nothing a shopper could build a frame from.</summary>
+[MessagePackObject(keyAsPropertyName: true)]
+public sealed record StoreSkinScreenDto(float Left, float Top, float Right, float Bottom);
 
 /// <summary>A sellable product. The server owns every number: DiscountPercent is the resolved effective
 /// item discount and DiscountedPriceSparks the exact per-unit price checkout will charge the caller,
 /// supporter discount included. OwnedQuantity is the caller's, so the DTO is per-caller in that one
 /// field. BundleItems is empty for normal products; BundleWorthSparks is the sum of the children's
-/// current effective prices for the savings line.</summary>
+/// current effective prices for the savings line. FreeSkinEligible is per-caller too: true on a phone
+/// skin while the account's one free skin is still unclaimed, in which case the first skin bought costs
+/// nothing and DiscountedPriceSparks is what any skin after it costs.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record StoreProductDto(
     Guid Id,
@@ -154,9 +165,9 @@ public sealed record StoreProductDto(
     StoreBundleItemDto[] BundleItems,
     int BundleWorthSparks,
     StoreThemeColorsDto? ThemeColors = null,
-    bool HasBackground = false,
     int ImageVersion = 0,
-    int BackgroundVersion = 0);
+    bool FreeSkinEligible = false,
+    StoreSkinScreenDto? SkinScreen = null);
 
 /// <summary>An active or upcoming sale window; EndsAtUtc is the real end time the client counts down to.</summary>
 [MessagePackObject(keyAsPropertyName: true)]

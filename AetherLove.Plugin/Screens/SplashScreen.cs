@@ -73,8 +73,7 @@ public sealed class SplashScreen : IDisposable
 
         if (_logoTexture == null)
         {
-            var dir = Path.GetDirectoryName(Plugin.PluginInterface.AssemblyLocation.FullName) ?? "";
-            var logoPath = Path.Combine(dir, "Media", LogoFileName);
+            var logoPath = Services.Media.MediaPaths.Shipped(LogoFileName);
             _logoTexture = File.Exists(logoPath)
                 ? Plugin.TextureProvider.GetFromFile(logoPath)
                 : null;

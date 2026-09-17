@@ -44,6 +44,7 @@ public partial class MyProfileScreen
 
     private string _displayName = "";
     private string _bio = "";
+    private readonly SoftWrapInputField _bioField = new();
     private readonly bool[] _ownRegions = new bool[RegionValues.Length];
     private int _raceIdx;
     private int _genderIdx;
@@ -403,7 +404,7 @@ public partial class MyProfileScreen
 
     private BasicProfileDto BuildBasicProfileDto() => new(
         DisplayName: _displayName,
-        Bio: _bio,
+        Bio: _bioField.Value(_bio),
         Race: RaceValues[Math.Clamp(_raceIdx, 0, RaceValues.Length - 1)],
         Gender: GenderValues[Math.Clamp(_genderIdx, 0, GenderValues.Length - 1)],
         Region: MaskOr(RegionValues, _ownRegions, (a, b) => (Region)((short)a | (short)b)),
@@ -616,7 +617,7 @@ public partial class MyProfileScreen
         }
         ImGui.SetNextItemWidth(w - Px(8f));
         var bioBefore = _bio;
-        InputTextMultilineWithPaste("##edBio", ref _bio, AetherLove.Shared.EmojiText.MaxBioRawLength,
+        _bioField.Draw("##edBio", ref _bio, AetherLove.Shared.EmojiText.MaxBioRawLength,
             new Vector2(w - Px(8f), Px(68f)));
         // Lock the field at the user-visible limit: undo an edit that pushed it over.
         if (AetherLove.Shared.EmojiText.EffectiveLength(_bio) > AetherLove.Shared.EmojiText.MaxBioLength)
@@ -624,7 +625,7 @@ public partial class MyProfileScreen
             _bio = bioBefore;
         }
 
-        var parsedBio = ParsedMessage.Parse(_bio);
+        var parsedBio = ParsedMessage.Parse(_bioField.Value(_bio));
         var effectiveLen = AetherLove.Shared.EmojiText.EffectiveLength(_bio);
         ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
         ImGui.TextColored(

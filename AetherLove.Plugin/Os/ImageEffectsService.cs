@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Numerics;
 using System.Threading.Tasks;
 using AetherOS.Sdk;
 using SixLabors.ImageSharp;
@@ -133,6 +134,36 @@ public sealed class ImageEffectsService : IImageEffects
             {
                 Plugin.Log.Warning(ex, "[ImageEffects] Upload prepare failed.");
                 onDone(null, 1f);
+            }
+        });
+    }
+
+    public void Crop(string sourcePath, Vector4 crop, Action<string?> onDone)
+    {
+        Task.Run(() =>
+        {
+            try
+            {
+                using var img = Image.Load(sourcePath);
+                var x = (int)Math.Clamp(crop.X, 0f, img.Width - 1f);
+                var y = (int)Math.Clamp(crop.Y, 0f, img.Height - 1f);
+                var w = (int)Math.Clamp(crop.Z, 1f, img.Width - x);
+                var h = (int)Math.Clamp(crop.W, 1f, img.Height - y);
+                if (x == 0 && y == 0 && w >= img.Width && h >= img.Height)
+                {
+                    onDone(sourcePath);
+                    return;
+                }
+                img.Mutate(c => c.Crop(new Rectangle(x, y, w, h)));
+                Directory.CreateDirectory(_dir);
+                var path = Path.Combine(_dir, $"{Guid.NewGuid():N}.png");
+                img.Save(path, new PngEncoder());
+                onDone(path);
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.Warning(ex, "[ImageEffects] Crop failed.");
+                onDone(null);
             }
         });
     }

@@ -28,6 +28,7 @@ public partial class MyProfileScreen
         public Guid? Id;
         public string Name = "";
         public string Bio = "";
+        public readonly SoftWrapInputField BioField = new();
 
         public ISharedImmediateTexture? ServerImageTex;
         public bool HasServerImage;
@@ -429,7 +430,7 @@ public partial class MyProfileScreen
             }
         }
         var bioBefore = row.Bio;
-        InputTextMultilineWithPaste($"##rpBio{id}", ref row.Bio, EmojiText.MaxBioRawLength,
+        row.BioField.Draw($"##rpBio{id}", ref row.Bio, EmojiText.MaxBioRawLength,
             new Vector2(innerW, Px(68f)));
         // Lock the field at the user-visible limit: undo an edit that pushed it over.
         if (EmojiText.EffectiveLength(row.Bio) > EmojiText.MaxBioLength)
@@ -445,7 +446,7 @@ public partial class MyProfileScreen
         {
             ImGui.TextColored(muted, Loc.T("profile.preview"));
             ImGui.PushStyleColor(ImGuiCol.Text, UiColors.BioText);
-            ParsedMessage.Parse(row.Bio).DrawWrapped($"##rpBioPrev{id}", innerW);
+            ParsedMessage.Parse(row.BioField.Value(row.Bio)).DrawWrapped($"##rpBioPrev{id}", innerW);
             ImGui.PopStyleColor();
         }
 
@@ -710,11 +711,14 @@ public partial class MyProfileScreen
         _imgPendingPick.Begin(handle, PhotoSpec.PortraitWidth, PhotoSpec.PortraitHeight,
             onValid: () => _imgCropPopup.Open(
                 Loc.T("profile.rp_crop_image"),
+                path,
                 handle,
                 1.6f,
-                cropRect =>
+                pick =>
                 {
-                    slot.StagedCrop = cropRect;
+                    slot.StagedPath = pick.Path;
+                    slot.StagedHandle = pick.Preview;
+                    slot.StagedCrop = pick.Crop;
                     slot.StagedConfirmed = true;
                     slot.PendingRemove = false;
                 },
@@ -778,11 +782,14 @@ public partial class MyProfileScreen
         _imgPendingPick.Begin(handle, PhotoSpec.PortraitWidth, PhotoSpec.PortraitHeight,
             onValid: () => _imgCropPopup.Open(
                 Loc.T("profile.rp_crop_image"),
+                path,
                 handle,
                 1.6f,
-                cropRect =>
+                pick =>
                 {
-                    row.StagedCrop = cropRect;
+                    row.StagedPath = pick.Path;
+                    row.StagedHandle = pick.Preview;
+                    row.StagedCrop = pick.Crop;
                     row.StagedConfirmed = true;
                     row.PendingRemoveImage = false;
                 },
@@ -810,7 +817,7 @@ public partial class MyProfileScreen
         var ct = _cts.Token;
 
         var request = new SaveCharactersRequest(
-            _rpRows.Select(r => new CharacterSaveDto(r.Id, r.Name.Trim(), r.Bio.Trim())).ToArray());
+            _rpRows.Select(r => new CharacterSaveDto(r.Id, r.Name.Trim(), r.BioField.Value(r.Bio).Trim())).ToArray());
         var stagedRows = _rpRows.ToArray();
 
         _ = Task.Run(async () =>

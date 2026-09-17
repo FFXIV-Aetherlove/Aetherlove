@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
@@ -69,10 +69,17 @@ public sealed class PhotosApp : IAetherApp, IAppSettings
     private readonly IAppCapabilities caps;
     private readonly Dictionary<string, float> aspectCache = new();
 
+    /// <summary>Longer edge of a grid tile's thumbnail, and of an album cover's, at any phone scale.</summary>
+    private const int ThumbPixels = 256;
+    private const int CoverPixels = 512;
+
     private View view = View.Albums;
     private string albumId = "";
     private string photoId = "";
     private Action<string>? cameraReply;
+
+    /// <summary>Work handed back by worker-thread callbacks (a baked import), run at the top of the next Draw.</summary>
+    private readonly ConcurrentQueue<Action> pendingUi = new();
     private bool pickerArmed;
     private string pickerReturnApp = "messenger";
     private bool newAlbumPrompt;
@@ -139,6 +146,10 @@ public sealed class PhotosApp : IAetherApp, IAppSettings
 
     public void Draw(OsAppContext ctx)
     {
+        while (this.pendingUi.TryDequeue(out var pending))
+        {
+            pending();
+        }
         switch (this.view)
         {
             case View.Albums:
@@ -319,7 +330,7 @@ public sealed class PhotosApp : IAetherApp, IAppSettings
         var rounding = ctx.Px(16f);
 
         dl.AddRectFilled(tl + ctx.Px(0f, 3f), br + ctx.Px(0f, 3f), U32(ShadowColor), rounding);
-        var tex = album.CoverPath == null ? null : this.caps.Textures.Get(album.CoverPath);
+        var tex = album.CoverPath == null ? null : this.caps.Textures.GetThumbnail(album.CoverPath, CoverPixels);
         if (tex is { } handle)
         {
             var (uv0, uv1) = CoverUv(this.AspectOf(album.CoverPath!), size.X / size.Y);
@@ -740,11 +751,28 @@ public sealed class PhotosApp : IAetherApp, IAppSettings
         var btnH = ctx.Px(38f);
         var gap = ctx.Px(10f);
         var btnW = (winW - pad * 2f - gap) * 0.5f;
-        if (PillButton(ctx, "##photosImport", FontAwesomeIcon.FolderOpen, ctx.Localize("os.photos_import"), new Vector2(winPos.X + pad, rowTL.Y), new Vector2(btnW, btnH)))
+        if (PillButton(ctx, "##photosImport", FontAwesomeIcon.FileImport, ctx.Localize("os.photos_import"), new Vector2(winPos.X + pad, rowTL.Y), new Vector2(btnW, btnH)))
         {
             var albumId = album.Id;
-            var request = new ImagePickRequest(ctx.Localize("os.photos_import"), ctx.Localize("profile.image_files_filter") + "{.png,.jpg,.jpeg}");
-            this.caps.Images.PickFile(request, path => this.library.AddPhoto(albumId, path, null));
+            var request = new ImageCropRequest(ctx.Localize("os.photos_import"),
+                ctx.Localize("profile.image_files_filter") + "{.png,.jpg,.jpeg}",
+                ctx.Localize("common.adjust_picture"), 1f, 1, 1, FreeForm: true);
+            this.caps.Images.PickAndCrop(request, pick =>
+            {
+                var name = pick.SourceName;
+                this.caps.Effects.Crop(pick.Path, pick.Crop, baked =>
+                {
+                    if (baked is null)
+                    {
+                        return;
+                    }
+                    this.pendingUi.Enqueue(() =>
+                    {
+                        this.library.AddPhoto(albumId, baked, name);
+                        this.resetAlbumScroll = true;
+                    });
+                });
+            });
         }
         if (PillButton(ctx, "##photosSelfie", FontAwesomeIcon.Camera, ctx.Localize("os.photos_selfie"), new Vector2(winPos.X + pad + btnW + gap, rowTL.Y), new Vector2(btnW, btnH)))
         {
@@ -776,6 +804,8 @@ public sealed class PhotosApp : IAetherApp, IAppSettings
         var origin = ImGui.GetCursorScreenPos();
         var dl = ImGui.GetWindowDrawList();
         var headerH = ImGui.GetTextLineHeight() + ctx.Px(10f);
+        var viewTop = ImGui.GetWindowPos().Y - cell;
+        var viewBottom = ImGui.GetWindowPos().Y + ImGui.GetWindowSize().Y + cell;
         var y = origin.Y;
         var i = 0;
         while (i < photos.Count)
@@ -793,6 +823,10 @@ public sealed class PhotosApp : IAetherApp, IAppSettings
                 var col = (j - start) % 3;
                 var row = (j - start) / 3;
                 var tl = new Vector2(winPos.X + pad + col * (cell + gap), y + row * (cell + gap));
+                if (tl.Y + cell < viewTop || tl.Y > viewBottom)
+                {
+                    continue;
+                }
                 this.DrawThumb(ctx, photos[j], tl, cell);
             }
             var rows = (i - start + 2) / 3;
@@ -829,7 +863,7 @@ public sealed class PhotosApp : IAetherApp, IAppSettings
         var br = tl + new Vector2(side, side);
         var rounding = ctx.Px(10f);
 
-        var tex = this.caps.Textures.Get(photo.Path);
+        var tex = this.caps.Textures.GetThumbnail(photo.Path, ThumbPixels);
         if (tex is { } handle)
         {
             var (uv0, uv1) = CoverUv(this.AspectOf(photo.Path), 1f);

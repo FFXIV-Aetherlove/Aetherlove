@@ -41,6 +41,7 @@ internal sealed class SettingsScreen
     private volatile bool _renaming;
     private string _editName = string.Empty;
     private string _editBio = string.Empty;
+    private readonly SoftWrapInputField _editBioField = new();
     private volatile string? _profileError;
     private volatile bool _profileSaving;
     private volatile YapperUserRowDto[]? _blocked;
@@ -306,12 +307,12 @@ internal sealed class SettingsScreen
         ImGui.Spacing();
         DrawSectionHeader(Loc.T("os.yapper_settings_bio"), PadX);
         ImGui.SetCursorPosX(Px(PadX));
-        ImGui.InputTextMultiline("##yapEditBio", ref _editBio, YapperLimits.BioRawMaxLength,
+        _editBioField.Draw("##yapEditBio", ref _editBio, YapperLimits.BioRawMaxLength,
             new Vector2(winW - Px(PadX) * 2f, Px(70f)));
 
         ImGui.Spacing();
         ImGui.SetCursorPosX(Px(PadX));
-        var dirty = _editName.Trim() != me.DisplayName || _editBio.Trim() != (me.Bio ?? string.Empty);
+        var dirty = _editName.Trim() != me.DisplayName || _editBioField.Value(_editBio).Trim() != (me.Bio ?? string.Empty);
         using (ImRaii.Disabled(_profileSaving || !dirty || _editName.Trim().Length == 0))
         {
             if (DrawPill(Loc.T("os.yapper_edit_save"), "yapEditSave", winW - Px(PadX) * 2f,
@@ -641,7 +642,7 @@ internal sealed class SettingsScreen
     private void SaveProfile()
     {
         var name = _editName.Trim();
-        var bio = _editBio.Trim();
+        var bio = _editBioField.Value(_editBio).Trim();
         _profileSaving = true;
         _profileError = null;
         _ = Task.Run(async () =>

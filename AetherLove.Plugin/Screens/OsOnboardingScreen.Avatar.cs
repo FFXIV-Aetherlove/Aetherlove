@@ -1,4 +1,4 @@
-﻿using System.Numerics;
+using System.Numerics;
 using AetherLove.Services;
 using AetherLove.Services.Localization;
 using AetherLove.Shared;
@@ -146,9 +146,16 @@ public sealed partial class OsOnboardingScreen
         _pendingPick.Begin(handle, PhotoSpec.AvatarSize, PhotoSpec.AvatarSize,
             onValid: () => _cropPopup.Open(
                 Loc.T("onboarding.crop_avatar"),
+                path,
                 handle,
                 1.0f,
-                cropRect => { _avatarCropRect = cropRect; _avatarConfirmed = true; },
+                pick =>
+                {
+                    _avatarPath = pick.Path;
+                    _avatarHandle = pick.Preview;
+                    _avatarCropRect = pick.Crop;
+                    _avatarConfirmed = true;
+                },
                 onCancel: Unload),
             onReject: Unload);
     }

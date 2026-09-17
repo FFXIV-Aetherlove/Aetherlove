@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Numerics;
 using System.Threading;
@@ -431,9 +431,16 @@ public partial class OnboardingScreen
             _pendingPick.Begin(handle, PhotoSpec.AvatarSize, PhotoSpec.AvatarSize,
                 onValid: () => _cropPopup.Open(
                     Loc.T("onboarding.crop_avatar"),
+                    path,
                     handle,
                     1.0f,
-                    cropRect => { _avatarCropRect = cropRect; _avatarConfirmed = true; },
+                    pick =>
+                    {
+                        _avatarPath = pick.Path;
+                        _avatarHandle = pick.Preview;
+                        _avatarCropRect = pick.Crop;
+                        _avatarConfirmed = true;
+                    },
                     onCancel: Unload),
                 onReject: Unload);
         }
@@ -476,9 +483,16 @@ public partial class OnboardingScreen
             _pendingPick.Begin(handle, PhotoSpec.PortraitWidth, PhotoSpec.PortraitHeight,
                 onValid: () => _cropPopup.Open(
                     label,
+                    path,
                     handle,
                     1.6f,
-                    cropRect => { _photos[target].CropRect = cropRect; _photos[target].Confirmed = true; },
+                    pick =>
+                    {
+                        _photos[target].Path = pick.Path;
+                        _photos[target].Handle = pick.Preview;
+                        _photos[target].CropRect = pick.Crop;
+                        _photos[target].Confirmed = true;
+                    },
                     onCancel: Restore),
                 onReject: Restore);
         }

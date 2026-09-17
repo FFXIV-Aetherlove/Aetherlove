@@ -1,4 +1,5 @@
 using System;
+using System.Numerics;
 
 namespace AetherOS.Sdk;
 
@@ -39,4 +40,9 @@ public interface IImageEffects
     /// The callback also receives the applied scale factor (1 when unchanged) so recorded crop rects can be
     /// adjusted, and may fire on a worker thread. A null path means the image could not be processed.</summary>
     void PrepareUpload(string sourcePath, int maxWidth, int maxHeight, Action<string?, float> onDone);
+
+    /// <summary>Writes the crop rectangle (x, y, width, height in source pixels) of an image to a host-managed
+    /// temporary PNG and hands back its path; a crop covering the whole image returns the source path unchanged.
+    /// The callback may fire on a worker thread. A null path means the image could not be processed.</summary>
+    void Crop(string sourcePath, Vector4 crop, Action<string?> onDone);
 }

@@ -3,13 +3,29 @@ using System.Collections.Generic;
 
 namespace AetherOS.Apps.Realtor;
 
-/// <summary>One character's own private estate, and when the clock on it last started over.
+/// <summary>Which house a record is about. Stored as a number, so the order is fixed; a book written before
+/// Free Company tracking has no value and reads as Personal.</summary>
+public enum EstateKind
+{
+    Personal = 0,
+    FreeCompany = 1,
+}
+
+/// <summary>One house a character answers for, and when the clock on it last started over: its own private
+/// estate, or the house of its Free Company.
 ///
-/// Private estates only. Free Company houses reset on any member entering and apartments follow their own
-/// rules, neither of which this client can observe, so tracking them here would produce confident nonsense.</summary>
+/// A Free Company house resets when ANY member enters, and this client only sees its own characters. So a
+/// Free Company count is the longest the absence can be, never the exact figure, and the copy says so.
+/// Apartments and shared estates are not tracked: a tenant's visit does not reset the owner's clock.</summary>
 public sealed class EstateRecord
 {
     public ulong ContentId { get; set; }
+
+    public EstateKind Kind { get; set; }
+
+    /// <summary>The game's id for the house. Only filled for Free Company records, where it lets a visit by
+    /// one character reset the record of every other character in the same company.</summary>
+    public ulong HouseId { get; set; }
 
     public string Character { get; set; } = string.Empty;
 
@@ -126,13 +142,14 @@ public static class EstateRisk
     }
 }
 
-/// <summary>Every character on this install that owns a private estate, with how long since it was entered.
+/// <summary>Every house this install tracks, private and Free Company, with how long since it was entered.
 /// Populated plugin-side from game memory; usable logged out, and current character first.</summary>
 public interface IEstateWatch
 {
     IReadOnlyList<EstateRecord> Estates { get; }
 
-    /// <summary>The logged-in character's own estate, or null when it has none or nobody is logged in.</summary>
+    /// <summary>The logged-in character's own private estate, or null when it has none or nobody is logged
+    /// in. Never a Free Company house: this is the house the home teleport goes to.</summary>
     EstateRecord? Current { get; }
 
     /// <summary>Whether a home teleport can be offered, which means Lifestream is installed and has its
@@ -142,9 +159,9 @@ public interface IEstateWatch
     /// <summary>Asks Lifestream to take this character home.</summary>
     void TeleportHome();
 
-    /// <summary>How many characters are far enough from home to warrant saying so; drives the tile badge, so
-    /// it is read every frame and must not do real work.</summary>
-    int AtRiskCount { get; }
+    /// <summary>Forgets one house and its day count. The watcher records it again, counting from nothing,
+    /// the next time that character is logged in and still has the house.</summary>
+    void Remove(ulong contentId, EstateKind kind);
 
     /// <summary>Bumped on every capture so the app can invalidate per-frame memos.</summary>
     int Version { get; }

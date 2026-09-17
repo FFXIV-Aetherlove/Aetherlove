@@ -28,4 +28,5 @@ public sealed record AetherAccountInfoDto(
     // .ModeratorMessages, which carry only the profile-sourced AetherLove track. Null means "none".
     WarningDto[]? StaffWarnings = null,
     ModeratorMessageDto[]? StaffMessages = null,
-    string? EquippedFrameRef = null);
+    string? EquippedFrameRef = null,
+    long EncryptionGeneration = 0);

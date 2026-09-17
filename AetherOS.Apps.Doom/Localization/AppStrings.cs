@@ -22,7 +22,7 @@ public static class AppStrings
         ["os.doom_quit"] = "Leave the cabinet",
         ["os.doom_back"] = "Back",
         ["os.doom_missing_title"] = "No cartridge",
-        ["os.doom_missing_wad"] = "The cabinet cannot find its game data. Reinstalling the plugin should put it back.",
+        ["os.doom_missing_wad"] = "The cabinet cannot find its game data. Restart the phone to download it again.",
         ["os.doom_missing_engine"] = "The cabinet would not start. Check the plugin log for what went wrong.",
     };
 
@@ -43,7 +43,7 @@ public static class AppStrings
         ["os.doom_quit"] = "Automat verlassen",
         ["os.doom_back"] = "Zurück",
         ["os.doom_missing_title"] = "Kein Modul",
-        ["os.doom_missing_wad"] = "Der Automat findet seine Spieldaten nicht. Eine Neuinstallation des Plugins bringt sie zurück.",
+        ["os.doom_missing_wad"] = "Der Automat findet seine Spieldaten nicht. Starte das Telefon neu, um sie erneut zu laden.",
         ["os.doom_missing_engine"] = "Der Automat ist nicht angesprungen. Im Plugin-Log steht, woran es lag.",
     };
 
@@ -64,7 +64,7 @@ public static class AppStrings
         ["os.doom_quit"] = "Salir de la máquina",
         ["os.doom_back"] = "Volver",
         ["os.doom_missing_title"] = "Sin cartucho",
-        ["os.doom_missing_wad"] = "La máquina no encuentra los datos del juego. Reinstalar el plugin debería devolverlos.",
+        ["os.doom_missing_wad"] = "La máquina no encuentra los datos del juego. Reinicia el teléfono para descargarlos de nuevo.",
         ["os.doom_missing_engine"] = "La máquina no arrancó. Mira el registro del plugin para ver qué falló.",
     };
 
@@ -85,7 +85,7 @@ public static class AppStrings
         ["os.doom_quit"] = "Quitter la borne",
         ["os.doom_back"] = "Retour",
         ["os.doom_missing_title"] = "Pas de cartouche",
-        ["os.doom_missing_wad"] = "La borne ne trouve pas ses données de jeu. Réinstaller le plugin devrait les remettre.",
+        ["os.doom_missing_wad"] = "La borne ne trouve pas ses données de jeu. Redémarrez le téléphone pour les télécharger à nouveau.",
         ["os.doom_missing_engine"] = "La borne n'a pas démarré. Le journal du plugin indique pourquoi.",
     };
 
@@ -106,7 +106,7 @@ public static class AppStrings
         ["os.doom_quit"] = "Sair da máquina",
         ["os.doom_back"] = "Voltar",
         ["os.doom_missing_title"] = "Sem cartucho",
-        ["os.doom_missing_wad"] = "A máquina não encontra os dados do jogo. Reinstalar o plugin deve trazê-los de volta.",
+        ["os.doom_missing_wad"] = "A máquina não encontra os dados do jogo. Reinicia o telefone para os transferir outra vez.",
         ["os.doom_missing_engine"] = "A máquina não arrancou. Vê o registo do plugin para saber o que falhou.",
     };
 
@@ -127,7 +127,7 @@ public static class AppStrings
         ["os.doom_quit"] = "Отойти от автомата",
         ["os.doom_back"] = "Назад",
         ["os.doom_missing_title"] = "Картриджа нет",
-        ["os.doom_missing_wad"] = "Автомат не нашёл игровые данные. Переустановка плагина должна их вернуть.",
+        ["os.doom_missing_wad"] = "Автомат не нашёл игровые данные. Перезапустите телефон, чтобы загрузить их снова.",
         ["os.doom_missing_engine"] = "Автомат не завёлся. Загляни в лог плагина, там будет причина.",
     };
 

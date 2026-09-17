@@ -57,26 +57,12 @@ public sealed partial class AetherHubContext
         }
     }
 
-    public async Task<AetherlingDto> ChargeAethercoreAsync(CancellationToken ct = default)
+    public async Task<AetherlingDto> HatchAethercoreAsync(string? job, CancellationToken ct = default)
     {
         try
         {
             return await (await ConnAsync(ct))
-                .InvokeAsync<AetherlingDto>("ChargeAethercoreAsync", ct)
-                .ConfigureAwait(false);
-        }
-        catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl)
-        {
-            throw rl;
-        }
-    }
-
-    public async Task<AetherlingDto> HatchAethercoreAsync(CancellationToken ct = default)
-    {
-        try
-        {
-            return await (await ConnAsync(ct))
-                .InvokeAsync<AetherlingDto>("HatchAethercoreAsync", ct)
+                .InvokeAsync<AetherlingDto>("HatchAethercoreAsync", job, ct)
                 .ConfigureAwait(false);
         }
         catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl)
@@ -116,12 +102,12 @@ public sealed partial class AetherHubContext
         }
     }
 
-    public async Task<AetherlingDto> FeedAetherlingAsync(short element, string? job, CancellationToken ct = default)
+    public async Task<AetherlingDto> FeedAetherlingAsync(short element, CancellationToken ct = default)
     {
         try
         {
             return await (await ConnAsync(ct))
-                .InvokeAsync<AetherlingDto>("FeedAetherlingAsync", element, job, ct)
+                .InvokeAsync<AetherlingDto>("FeedAetherlingAsync", element, ct)
                 .ConfigureAwait(false);
         }
         catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl)

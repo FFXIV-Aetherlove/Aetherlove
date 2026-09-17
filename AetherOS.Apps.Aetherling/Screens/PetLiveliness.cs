@@ -88,7 +88,7 @@ internal sealed class PetLiveliness(IAetherlingHost host, PetRuntime pet)
     {
         _mirrorCooldown = MathF.Max(0f, _mirrorCooldown - dt);
 
-        if (host.Snapshot is not { HatchedAtUtc: not null } snapshot)
+        if (host.Snapshot is not { Adult: not null } snapshot)
         {
             return;
         }

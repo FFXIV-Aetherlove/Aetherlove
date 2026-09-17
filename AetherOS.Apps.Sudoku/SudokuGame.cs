@@ -48,8 +48,13 @@ public sealed class SudokuGame
 
     public SudokuOutcome Outcome { get; private set; } = SudokuOutcome.Playing;
 
+    /// <summary>A practice run: one chosen difficulty, no clock, no score and no strike limit.</summary>
+    public bool IsPractice => this.practiceDifficulty != null;
+
+    private SudokuDifficulty? practiceDifficulty;
+
     /// <summary>The rung the run is on, which is also the rung the next grid will be dug at.</summary>
-    public SudokuDifficulty Difficulty => SudokuScoring.LadderAt(this.Solved);
+    public SudokuDifficulty Difficulty => this.practiceDifficulty ?? SudokuScoring.LadderAt(this.Solved);
 
     /// <summary>Highest rung reached, for the leaderboard's second metric.</summary>
     public SudokuDifficulty Peak { get; private set; }
@@ -89,6 +94,17 @@ public sealed class SudokuGame
 
     public void Start()
     {
+        Reset(null);
+    }
+
+    public void StartPractice(SudokuDifficulty difficulty)
+    {
+        Reset(difficulty);
+    }
+
+    private void Reset(SudokuDifficulty? practice)
+    {
+        this.practiceDifficulty = practice;
         this.Solved = 0;
         this.Strikes = 0;
         this.Score = 0;
@@ -100,7 +116,7 @@ public sealed class SudokuGame
         this.LastWasOvertime = false;
         this.StrikeStamp = 0;
         this.LastStrikeCell = -1;
-        this.pending = GenerateAsync(SudokuDifficulty.Easy);
+        this.pending = GenerateAsync(this.Difficulty);
     }
 
     private Task<SudokuPuzzle> GenerateAsync(SudokuDifficulty difficulty)
@@ -158,8 +174,8 @@ public sealed class SudokuGame
         }
     }
 
-    /// <summary>Writes a digit. Returns false when the digit was wrong, which costs a strike; the cell is
-    /// left empty rather than showing a wrong answer, so the board always reads as truth.</summary>
+    /// <summary>Writes a digit. Returns false when the digit was wrong, which costs a strike outside practice;
+    /// the cell is left empty rather than showing a wrong answer, so the board always reads as truth.</summary>
     public bool Place(int cell, int digit)
     {
         if (this.Outcome != SudokuOutcome.Playing || this.Puzzle == null
@@ -170,10 +186,14 @@ public sealed class SudokuGame
 
         if (this.Puzzle.Solution[cell] != digit)
         {
-            this.Strikes++;
-            this.puzzleMistakes++;
             this.StrikeStamp++;
             this.LastStrikeCell = cell;
+            if (this.IsPractice)
+            {
+                return false;
+            }
+            this.Strikes++;
+            this.puzzleMistakes++;
             if (this.Strikes >= MaxStrikes)
             {
                 this.Outcome = SudokuOutcome.OutOfStrikes;
@@ -234,8 +254,8 @@ public sealed class SudokuGame
         // would record the rung this clear UNLOCKED rather than the one it actually beat.
         var cleared = this.Difficulty;
         // Overtime pays zero but the grid still counts: the clock costs points, never progress.
-        this.LastWasOvertime = this.PuzzleSeconds >= SudokuScoring.LimitFor(cleared);
-        var award = this.LastWasOvertime
+        this.LastWasOvertime = !this.IsPractice && this.PuzzleSeconds >= SudokuScoring.LimitFor(cleared);
+        var award = this.LastWasOvertime || this.IsPractice
             ? (PuzzleScore?)null
             : SudokuScoring.Score(cleared, this.PuzzleSeconds, this.puzzleMistakes, this.Integrity);
         this.LastAward = award;

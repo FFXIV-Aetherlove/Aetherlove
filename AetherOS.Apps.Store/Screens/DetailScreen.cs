@@ -18,7 +18,7 @@ namespace AetherOS.Apps.Store;
 /// and the buying block, where a quantity stepper sits beside the pulsing add-to-cart CTA with its bolt
 /// flight to the cart, over a rule from the wishlist toggle.</summary>
 internal sealed class DetailScreen(
-    IStoreHost host, StoreState state, StoreMediaCache media, StoreMediaCache backgrounds, StoreCart cart,
+    IStoreHost host, StoreState state, StoreMediaCache media, StoreCart cart,
     StoreWishlist wishlist, Action addedToCart, Action<BrowseScreen.Seed> openBrowse)
 {
     private const float PadX = 16f;
@@ -216,9 +216,17 @@ internal sealed class DetailScreen(
         // Price block.
         ImGui.SetCursorPosX(Px(PadX));
         var priceTl = ImGui.GetCursorScreenPos();
-        StoreChips.Price(dl, priceTl, product.DiscountedPriceSparks * _quantity,
+        StoreChips.Price(dl, priceTl, StorePrice.Shown(product) * _quantity,
             product.PriceSparks * _quantity, 1.35f);
         ImGui.Dummy(new Vector2(0f, ImGui.GetTextLineHeight() * 1.4f + Px(6f)));
+        if (product.FreeSkinEligible)
+        {
+            ImGui.SetCursorPosX(Px(PadX));
+            ImGui.PushTextWrapPos(winW - Px(PadX));
+            ImGui.TextColored(StoreChips.GoldColor, Loc.T("os.store_free_skin_hint"));
+            ImGui.PopTextWrapPos();
+            ImGui.Dummy(new Vector2(0f, Px(6f)));
+        }
 
         // Description.
         ImGui.SetCursorPosX(Px(PadX));
@@ -257,7 +265,7 @@ internal sealed class DetailScreen(
     }
 
     /// <summary>Phone skins get a try-before-you-buy: a second phone beside the real one, wearing the
-    /// server's watermarked copy of the frame.</summary>
+    /// server's watermarked copy of the frame over the user's own wallpaper.</summary>
     private void DrawSkinPreviewButton(float winW, StoreProductDto product)
     {
         if (!StoreImageSpec.IsPhoneSkin(product.ItemKind) || !product.HasImage)
@@ -268,13 +276,13 @@ internal sealed class DetailScreen(
         ImGui.SetCursorPosX(Px(PadX));
         if (StoreUi.Button(Loc.T("os.store_preview_skin"), winW - Px(PadX) * 2f))
         {
-            host.ShowSkinPreview(StoreLoc.Name(product), product.Id);
+            host.ShowSkinPreview(StoreLoc.Name(product), product.Id, product.SkinScreen);
         }
     }
 
-    /// <summary>A theme is a set, so it gets a manifest card: one row per thing the pack installs, with the
-    /// palette carried as swatch dots on its own row. The whole look is judged in the preview window, so no
-    /// full-size wallpaper is laid out on the page.</summary>
+    /// <summary>A skin is a set, so it gets a manifest card: the frame and the palette, the palette carried
+    /// as swatch dots on its own row. A skin brings no wallpaper; the phone keeps the background the user
+    /// chose, which is also what the preview window shows under the frame.</summary>
     private void DrawThemeIncluded(float winW, StoreProductDto product)
     {
         if (product.ThemeColors is not { } colors)
@@ -292,12 +300,8 @@ internal sealed class DetailScreen(
         var rows = new List<(FontAwesomeIcon Icon, string Label)>
         {
             (FontAwesomeIcon.MobileAlt, Loc.T("os.store_included_skin")),
+            (FontAwesomeIcon.Palette, Loc.T("os.store_theme_colors")),
         };
-        if (product.HasBackground)
-        {
-            rows.Add((FontAwesomeIcon.Image, Loc.T("os.store_theme_background")));
-        }
-        rows.Add((FontAwesomeIcon.Palette, Loc.T("os.store_theme_colors")));
 
         var dl = ImGui.GetWindowDrawList();
         var cardW = winW - Px(PadX) * 2f;
@@ -327,7 +331,6 @@ internal sealed class DetailScreen(
         }
         ImGui.SetCursorScreenPos(new Vector2(ImGui.GetWindowPos().X, tl.Y + rowH * rows.Count));
         ImGui.Dummy(new Vector2(0f, Px(4f)));
-        _ = backgrounds;
     }
 
     /// <summary>The palette as a right-aligned run of dots, growing leftward from the given right edge.</summary>

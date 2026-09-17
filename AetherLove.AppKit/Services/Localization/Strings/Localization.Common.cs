@@ -1,4 +1,4 @@
-﻿namespace AetherLove.Services.Localization;
+namespace AetherLove.Services.Localization;
 
 internal static class CommonEn
 {
@@ -223,5 +223,11 @@ internal static class CommonEn
         ["picker.save"] = "Save",
         ["picker.file_name_hint"] = "File name...",
         ["picker.selected_count"] = "{0} selected",
+        // added after update 2.6.1 (picture adjust)
+        ["common.adjust_picture"] = "Adjust picture",
+        ["common.use_picture"] = "Use this picture",
+        ["common.rotate_left"] = "Rotate left",
+        ["common.rotate_right"] = "Rotate right",
+        ["common.crop_free_hint"] = "Drag the corner to crop. Use the arrows to rotate.",
     };
 }

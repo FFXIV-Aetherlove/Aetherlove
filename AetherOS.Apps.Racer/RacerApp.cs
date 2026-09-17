@@ -19,9 +19,19 @@ public sealed class RacerApp : IAetherApp
         Waiting,
         Intro,
         Selection,
+        Cup,
+        Bonus,
+        Packs,
+        Inspect,
+        Hand,
     }
 
-    private const string IntroKey = "racer.introSeen";
+    /// <summary>The onboarding version this player has finished. Bump <see cref="IntroVersion"/> when the
+    /// pages change enough that every player should read them again; the old <c>racer.introSeen</c> flag is
+    /// no longer read.</summary>
+    private const string IntroVersionKey = "racer.introVersion";
+
+    private const int IntroVersion = 2;
     private const string MutedKey = "muted";
     private const string VolumeKey = "volume";
 
@@ -36,12 +46,20 @@ public sealed class RacerApp : IAetherApp
     private readonly Screens.DifficultyHelpScreen _difficultyHelp;
     private readonly Screens.WaitingRoomScreen _waiting;
     private readonly Screens.RaceOnboardingScreen _intro;
+    private readonly Screens.CupScreen _cup;
+
+    private readonly Screens.GrandstandFrame _frame;
+    private readonly Screens.PacksScreen _packs;
+    private readonly Screens.Cards.AlbumScreen _album;
+    private readonly Screens.Cards.CardInspectScreen _inspect;
+    private readonly Screens.Cards.RaceHandScreen _raceHand;
 
     private View _view = View.Home;
 
     private readonly Screens.RaceSelectionScreen _selection;
     private bool _muted;
     private float _volume = 1f;
+    private const float CupFadeSeconds = 2f;
     private Guid? _openedPartyRace;
     private AetherLove.Shared.Racing.LumiRaceDto? _pendingParty;
     private AetherLove.Shared.Racing.LumiRaceRewardDto? _pendingPartyReward;
@@ -51,19 +69,25 @@ public sealed class RacerApp : IAetherApp
         _name = name;
         _host = host;
         _caps = caps;
+        Screens.RacerFonts.Preload();
         _storage = caps.Storage("racer");
         _muted = _storage.Get<bool?>(MutedKey) == true;
         _volume = _storage.Get<float?>(VolumeKey) ?? 1f;
         _host.SetBgmVolume(_volume);
-        _race = new Screens.RaceScreen(host, BackToHome, () => _muted, ToggleMute, () => _volume, SetVolume);
-        _home = new Screens.HomeScreen(host, caps, OpenRace, OpenSelection, OpenStats, OpenStamps,
-            OpenWaiting, ReplayIntro, () => _muted, ToggleMute, () => _volume, SetVolume);
-        _selection = new Screens.RaceSelectionScreen(host, OpenRace, BackToHome, OpenDifficultyHelp,
-            () => _muted, ToggleMute, () => _volume, SetVolume);
-        _stats = new Screens.StatsScreen(host, BackToHome, () => _muted, ToggleMute, () => _volume, SetVolume);
-        _stamps = new Screens.StampsScreen(host, BackToHome, () => _muted, ToggleMute, () => _volume, SetVolume);
-        _difficultyHelp = new Screens.DifficultyHelpScreen(host, OpenSelection, () => _muted, ToggleMute, () => _volume, SetVolume);
-        _waiting = new Screens.WaitingRoomScreen(host, caps, BackToHome, () => _muted, ToggleMute, () => _volume, SetVolume);
+        _race = new Screens.RaceScreen(host, BackToHome, OpenStamps, () => _muted, ToggleMute, () => _volume, SetVolume);
+        _cup = new Screens.CupScreen(host, caps, OpenCupRace, BackToHome, OpenCupHand);
+        _home = new Screens.HomeScreen(host, caps, OpenRace, OpenSelection, OpenCup, OpenPacks, OpenStamps,
+            OpenWaiting);
+        _frame = new Screens.GrandstandFrame(host, BackToHome, OpenBonus, OpenStats, ReplayIntro, () => _muted, ToggleMute, () => _volume, SetVolume);
+        _packs = new Screens.PacksScreen(host, () => _home.OnShow());
+        _album = new Screens.Cards.AlbumScreen(host, _storage, OpenInspect);
+        _inspect = new Screens.Cards.CardInspectScreen(host, BackFromInspect);
+        _raceHand = new Screens.Cards.RaceHandScreen(host, _storage, OpenRace, EnterCup);
+        _selection = new Screens.RaceSelectionScreen(host, OpenSoloHand, BackToHome, OpenDifficultyHelp);
+        _stats = new Screens.StatsScreen(host);
+        _stamps = new Screens.StampsScreen(host, OpenPacks);
+        _difficultyHelp = new Screens.DifficultyHelpScreen(host, OpenSelection);
+        _waiting = new Screens.WaitingRoomScreen(host, caps, BackToHome);
         _intro = new Screens.RaceOnboardingScreen(host, FinishIntro);
     }
 
@@ -92,13 +116,17 @@ public sealed class RacerApp : IAetherApp
 
     public void OnForeground()
     {
-        if (_storage.Get<bool?>(IntroKey) != true)
+        if ((_storage.Get<int?>(IntroVersionKey) ?? 0) < IntroVersion)
         {
             _intro.Show();
             _view = View.Intro;
         }
         _home.OnShow();
-        if (!_muted && _view != View.Race)
+        if (_view == View.Cup)
+        {
+            _cup.OnShow();
+        }
+        if (!_muted && _view is not (View.Race or View.Cup))
         {
             _host.StartMenuBgm();
         }
@@ -112,6 +140,16 @@ public sealed class RacerApp : IAetherApp
 
     public void Draw(OsAppContext ctx)
     {
+        // The grandstand and the racers draw from two packs; until both have downloaded there is only the wait.
+        foreach (var pack in new[] { AetherLove.Shared.Assets.AssetPacks.Racer, AetherLove.Shared.Assets.AssetPacks.Aetherling })
+        {
+            if (!_caps.Assets.IsReady(pack))
+            {
+                DrawAssetsPendingCard(pack, _caps.Assets.Progress(pack), ctx.ReduceMotion);
+                return;
+            }
+        }
+
         // A party race the host began arrives by push, and the pushed run carries no viewer slot, so
         // the stage opens from a per-viewer fetch. Watched here rather than on a screen: it must fire
         // whichever one is up.
@@ -152,32 +190,59 @@ public sealed class RacerApp : IAetherApp
 
         switch (_view)
         {
+            case View.Bonus:
+                _frame.Draw(ctx, 1, "os.racer_bonus_cards", () => _album.Draw(ctx), contentPage: true,
+                    backgroundName: "album-elemental-circuit-bg", contentInk: Screens.GrandstandFrame.Ink,
+                    contentInset: 26f);
+                break;
+            case View.Inspect:
+                _frame.Draw(ctx, 1, null, () => _inspect.Draw(ctx), true, contentPage: true);
+                break;
+            case View.Hand:
+                _frame.Draw(ctx, -1, "os.racer_hand_title", () => _raceHand.Draw(ctx, BackFromHand), true, contentPage: true,
+                    overlay: () => _raceHand.DrawOverlays(ctx), overlayOpen: _raceHand.PickerOpen);
+                break;
+            case View.Packs:
+                _frame.Draw(ctx, -1, _packs.IsOpening ? null : "os.racer_packs_title", () => _packs.Draw(ctx), contentPage: true);
+                break;
+            case View.Cup:
+                _cup.Drain();
+                if (_cup.ShowingPodium)
+                {
+                    _cup.Draw(ctx);
+                }
+                else
+                {
+                    _frame.Draw(ctx, -1, "os.racer_cup_title", () => _cup.Draw(ctx, framed: true), true, contentPage: true);
+                }
+
+                break;
             case View.Selection:
-                _selection.Draw(ctx);
+                _frame.Draw(ctx, -1, "os.racer_pick_title", () => _selection.Draw(ctx), contentPage: true);
                 break;
             case View.Race:
                 _race.Draw(ctx);
                 break;
             case View.Stats:
-                _stats.Draw(ctx);
+                _frame.Draw(ctx, 2, null, () => _stats.Draw(ctx), true, contentPage: true);
                 break;
             case View.Stamps:
-                _stamps.Draw(ctx);
+                _frame.Draw(ctx, -1, "os.racer_stamp_card", () => _stamps.Draw(ctx), contentPage: true);
                 break;
             case View.DifficultyHelp:
-                _difficultyHelp.Draw(ctx);
+                _frame.Draw(ctx, -1, "os.racer_diff_help_title", () => _difficultyHelp.Draw(ctx), true, contentPage: true);
                 break;
             case View.Waiting:
-                _waiting.Draw(ctx);
+                _frame.Draw(ctx, -1, "os.racer_waiting_title", () => _waiting.Draw(ctx), contentPage: true);
                 break;
             case View.Intro:
-                _intro.Draw(ctx);
-                // Said before six pages about racing rather than after them: a player whose creature
-                // cannot race yet learns that first, with the door to the food shelf in hand.
-                _home.DrawGateOverlay(ctx);
+                // The gate is said before the pages about racing rather than after them: a player whose
+                // creature cannot race yet learns that first.
+                _frame.Draw(ctx, -1, null, () => _intro.Draw(ctx), true, contentPage: true,
+                    overlay: () => _home.DrawGateOverlay(ctx), overlayOpen: _home.GateOpen);
                 break;
             default:
-                _home.Draw(ctx);
+                _frame.Draw(ctx, 0, null, () => _home.Draw(ctx), overlay: () => _home.DrawOverlays(ctx), overlayOpen: _home.OverlayOpen);
                 break;
         }
     }
@@ -194,7 +259,70 @@ public sealed class RacerApp : IAetherApp
 
     private void OpenStats()
     {
+        _stats.OnShow();
         _view = View.Stats;
+    }
+
+    /// <summary>The Album, reloaded from the server every time the tab is chosen.</summary>
+    private void OpenBonus()
+    {
+        _album.OnShow();
+        _view = View.Bonus;
+    }
+
+    /// <summary>A card up close, from the Album.</summary>
+    private void OpenInspect(AetherLove.Shared.Racing.Cards.RaceCard card, Screens.Cards.OwnedCard owned)
+    {
+        _inspect.Show(card, owned);
+        _view = View.Inspect;
+    }
+
+    /// <summary>Back from a card to the Album as it was left: no reload, so its scroll and filters survive.</summary>
+    private void BackFromInspect() => _view = View.Bonus;
+
+    /// <summary>A chosen offer goes to the race hand screen, which saves the hand and starts the race.</summary>
+    private void OpenSoloHand(AetherLove.Shared.Racing.LumiRaceOfferDto offer)
+    {
+        _raceHand.ShowSolo(offer);
+        _view = View.Hand;
+    }
+
+    private void OpenCupHand()
+    {
+        _raceHand.ShowCup();
+        _view = View.Hand;
+    }
+
+    private void EnterCup()
+    {
+        _view = View.Cup;
+        _cup.Enter();
+    }
+
+    /// <summary>Back from the hand to the page that opened it, as it was left.</summary>
+    private void BackFromHand() => _view = _raceHand.ForCup ? View.Cup : View.Selection;
+
+    private void OpenPacks()
+    {
+        _packs.OnShow();
+        _view = View.Packs;
+    }
+
+    private void OpenCup()
+    {
+        _cup.OnShow();
+        _view = View.Cup;
+        _host.FadeOutBgm(CupFadeSeconds);
+    }
+
+    private void OpenCupRace(AetherLove.Shared.Racing.LumiRaceStartResultDto result)
+    {
+        _race.Begin(result, () =>
+        {
+            _cup.FinishRace();
+            _view = View.Cup;
+        });
+        _view = View.Race;
     }
 
     private void OpenWaiting()
@@ -205,7 +333,7 @@ public sealed class RacerApp : IAetherApp
 
     private void FinishIntro()
     {
-        _storage.Set(IntroKey, true);
+        _storage.Set(IntroVersionKey, (int?)IntroVersion);
         BackToHome();
     }
 
@@ -272,7 +400,7 @@ public sealed class RacerApp : IAetherApp
         {
             _race.ResumeBgm();
         }
-        else
+        else if (_view != View.Cup)
         {
             _host.StartMenuBgm();
         }

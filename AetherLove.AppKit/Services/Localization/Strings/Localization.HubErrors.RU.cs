@@ -185,7 +185,8 @@ internal static class HubErrorsRu
         ["huberror.lumirace_disabled"] = "Забеги сейчас отключены.",
         ["huberror.lumirace_no_pet"] = "Чтобы участвовать в забегах, нужен вылупившийся эфирёнок.",
         ["huberror.lumirace_not_adult"] = "Этерлинг побежит, когда вырастет. Продолжай его кормить.",
-        ["huberror.lumirace_gated"] = "Следующий забег откроется через {0} мин.",
+        ["huberror.lumirace_gated"] = "Следующий забег откроется через {0}.",
+        ["huberror.lumirace_card_not_ready"] = "Заполните карточку штампов, прежде чем обменять её на набор.",
         ["huberror.lumirace_pack_none"] = "Открывать нечего.",
         ["huberror.lumirace_run_exists"] = "Групповой забег уже открыт.",
         ["huberror.lumirace_run_not_found"] = "Сейчас нет группового забега.",
@@ -193,11 +194,25 @@ internal static class HubErrorsRu
         ["huberror.lumirace_too_few"] = "Сначала должны присоединиться хотя бы два участника.",
         ["huberror.lumirace_no_offer"] = "Этих забегов больше нет. Открой страницу заново, и появятся три новых.",
 
+        // added after update 2.7.0 (starlight cup)
+        ["huberror.lumirace_cup_in_party"] = "Звёздный кубок проходят в одиночку. Сначала выйди из группы.",
+
+        // added after update 2.7.0 (racing cards)
+        ["huberror.lumirace_card_unknown"] = "Этой карты больше нет в игре.",
+        ["huberror.lumirace_card_not_owned"] = "У тебя нет этой карты.",
+        ["huberror.lumirace_card_wrong_band"] = "Эта карта не подходит для этого слота. Золотая идёт в первый слот, серебряные в два других.",
+        ["huberror.lumirace_card_duplicate"] = "Эта копия уже у тебя в руке. Выбери другую копию.",
+        ["huberror.lumirace_hand_shape"] = "Такой набор карт нельзя выставить. Открой альбом и попробуй ещё раз.",
+
         // listing boosts (added after update 2.5.2)
         ["huberror.boost_none_owned"] = "У тебя нет продвижения для этого. Возьми одно в магазине.",
         ["huberror.boost_target_not_found"] = "Это не твоё.",
         ["huberror.boost_cap_reached"] = "Больше дней добавить нельзя. Продвижение длится максимум {0} дней.",
         ["huberror.boost_style_invalid"] = "Выбери один из четырёх эффектов.",
         ["huberror.boost_target_not_live"] = "Это пока не опубликовано. Продвинь, когда будет активно.",
+
+        // added after update 2.7.0 (move photos)
+        ["huberror.main_photo_must_be_sfw"] = "Главное фото должно быть SFW.",
+        ["huberror.photo_still_checking"] = "Мы ещё проверяем это фото. Попробуйте через минуту.",
     };
 }

@@ -2,19 +2,23 @@ using AetherOS.Sdk;
 
 namespace AetherOS.Apps.Realtor;
 
-/// <summary>The Realtor app's own preferences, read once and written straight through on change. Both keys
-/// default ON: a new user should see everything the app knows, and opt out of the noisier parts.</summary>
+/// <summary>The Realtor app's own preferences, read once and written straight through on change. They
+/// default ON, since a new user should see everything the app knows and opt out of the noisier parts. Free
+/// Company tracking is the exception and defaults OFF: its count is only an upper bound, so the player
+/// opts in knowing that.</summary>
 public sealed class RealtorSettings
 {
     public const string ShowStaleKey = "showStale";
     public const string NotifyPhaseKey = "notifyPhase";
     public const string NotifyEstateKey = "notifyEstate";
+    public const string TrackFcEstateKey = "trackFcEstate";
 
     private readonly IAppStorage _storage;
     private bool _loaded;
     private bool _showStale = true;
     private bool _notifyPhase = true;
     private bool _notifyEstate = true;
+    private bool _trackFcEstate;
 
     public RealtorSettings(IAppStorage storage) => _storage = storage;
 
@@ -67,6 +71,23 @@ public sealed class RealtorSettings
         }
     }
 
+    /// <summary>Whether Free Company houses are listed, counted and warned about. Independent of
+    /// <see cref="NotifyEstate"/>, which covers private estates only.</summary>
+    public bool TrackFcEstate
+    {
+        get
+        {
+            Load();
+            return _trackFcEstate;
+        }
+        set
+        {
+            Load();
+            _trackFcEstate = value;
+            _storage.Set(TrackFcEstateKey, value);
+        }
+    }
+
     private void Load()
     {
         if (_loaded)
@@ -77,5 +98,6 @@ public sealed class RealtorSettings
         _showStale = _storage.Get<bool?>(ShowStaleKey) ?? true;
         _notifyPhase = _storage.Get<bool?>(NotifyPhaseKey) ?? true;
         _notifyEstate = _storage.Get<bool?>(NotifyEstateKey) ?? true;
+        _trackFcEstate = _storage.Get<bool?>(TrackFcEstateKey) ?? false;
     }
 }

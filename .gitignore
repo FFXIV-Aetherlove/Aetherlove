@@ -448,3 +448,9 @@ desktop.ini
 # Tuning readings from the gated race balance harness, regenerated on every run.
 race-balance-report.txt
 race-locals-sweep.txt
+
+# Disposable art previews, captures, exports and logs.
+/output/
+
+# Pack zips the server builds at boot from AetherLove.Server/PhoneAssets; regenerated on every start.
+AetherLove.Server/AssetCache/

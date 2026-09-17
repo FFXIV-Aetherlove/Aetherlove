@@ -21,8 +21,7 @@ public static class CustomIcons
         }
         try
         {
-            var dir = Path.GetDirectoryName(UiHost.PluginInterface.AssemblyLocation.FullName) ?? string.Empty;
-            var path = Path.Combine(dir, "Media", "icons", name + ".png");
+            var path = Services.Media.MediaPaths.Shipped(Services.Media.MediaPaths.Icons, name + ".png");
             if (File.Exists(path))
             {
                 var tex = UiHost.TextureProvider.GetFromFile(path);

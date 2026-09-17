@@ -74,6 +74,12 @@ public sealed class CalculatorApp : IAetherApp
     public IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> Strings =>
         Localization.AppStrings.Packs;
 
+    public IReadOnlyDictionary<string, string>? DebugState => new Dictionary<string, string>
+    {
+        ["lastResult"] = _session.History.Count > 0 ? _session.History[^1].Result : "",
+        ["mode"] = _settings.Mode.ToString(),
+    };
+
     public void Open()
     {
     }

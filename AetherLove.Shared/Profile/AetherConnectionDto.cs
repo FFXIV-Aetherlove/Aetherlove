@@ -75,4 +75,6 @@ public sealed record AetherConnectionDto(
     bool EchoEnabled = true,
     string? EquippedFrameRef = null,
     bool AetherlingEnabled = true,
-    Shared.Aetherling.AetherlingDto? Aetherling = null);
+    Shared.Aetherling.AetherlingDto? Aetherling = null,
+    // The server's asset collection hash; the phone re-syncs when it differs from what it holds.
+    string AssetCollectionHash = "");

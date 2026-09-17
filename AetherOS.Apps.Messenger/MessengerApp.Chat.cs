@@ -106,6 +106,7 @@ public sealed partial class MessengerApp
     private readonly Dictionary<Guid, float> _pinAnim = new();
     private const float PinDropDuration = 0.32f;
     private bool _pinnedListOpen;
+    private Guid? _verifyChat;
     private Guid? _pendingReactionPickerId;
     private bool _openedChatFromCategory;
     private readonly HashSet<Guid> _undecryptedRows = new();
@@ -255,6 +256,18 @@ public sealed partial class MessengerApp
         RefreshAutocomplete();
 
         DrawChatHeader(open);
+        if (_verifyChat == open.ChatId && open.Contact is { } verifyContact)
+        {
+            using var verification = ImRaii.Child("##messengerVerification", ImGui.GetContentRegionAvail(), false);
+            if (verification)
+            {
+                if (SharedUiHelpers.Button(Loc.T("verify.back"), new Vector2(0, Px(32)))) { _verifyChat = null; }
+                var fingerprint = _crypto.AccountPublicKey is { Length: 32 } own && verifyContact.PeerPublicKey is { Length: 32 } peer
+                    ? AetherLove.Services.Crypto.CryptoService.VerificationFingerprint(own, peer) : null;
+                EncryptionVerificationPanel.Draw($"messenger/{_store.MyAccountId:N}/{open.ChatId:N}", verifyContact.PeerName, fingerprint);
+            }
+            return;
+        }
 
         var removed = open.Contact?.RemovedByPeer == true;
         DrawMessages(open, removed);
@@ -380,6 +393,11 @@ public sealed partial class MessengerApp
 
     private void DrawChatMenu(OpenChatInfo open)
     {
+        if (open.Kind == MessengerChatKind.Direct && DrawIconMenuItem(FontAwesomeIcon.Lock, Loc.T("verify.title")))
+        {
+            ImGui.CloseCurrentPopup();
+            _verifyChat = open.ChatId;
+        }
         if (DrawIconMenuItem(FontAwesomeIcon.Search, Loc.T("chat.menu_search")))
         {
             ImGui.CloseCurrentPopup();

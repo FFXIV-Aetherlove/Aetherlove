@@ -60,5 +60,8 @@ internal static class NotificationsRu
 
         // added after update 2.5.3
         ["notif.realtor_entry_results"] = "Итоги лотереи объявлены. Загляни и проверь, выиграл ли ты участок {0}, район {1}, {2}.",
+
+        // added after update 2.7.0 (free company houses)
+        ["notif.realtor_estate_fc"] = "{0}: последний раз ты заходил в дом своей свободной компании {2} дн. назад. Игра сносит его после 45 дней без визита любого участника. Может оставаться примерно {1} дн.",
     };
 }

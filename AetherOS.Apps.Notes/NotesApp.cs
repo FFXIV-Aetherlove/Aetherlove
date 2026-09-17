@@ -54,6 +54,12 @@ public sealed class NotesApp : IAetherApp
 
     public IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> Strings => Localization.AppStrings.Packs;
 
+    public IReadOnlyDictionary<string, string>? DebugState => new Dictionary<string, string>
+    {
+        ["noteCount"] = _store.All.Count.ToString(),
+        ["openNoteId"] = _editor.CurrentNoteId?.ToString() ?? "",
+    };
+
     public void Open()
     {
     }

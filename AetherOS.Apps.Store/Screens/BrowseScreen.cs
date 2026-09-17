@@ -347,7 +347,7 @@ internal sealed class BrowseScreen(
     /// where it started.</summary>
     private void DrawSortSheet(OsAppContext ctx, float winW)
     {
-        var origin = ImGui.GetWindowPos() + new Vector2(0f, ImGui.GetScrollY());
+        var origin = ImGui.GetWindowPos();
         var avail = ImGui.GetWindowSize();
         ImGui.SetCursorScreenPos(origin);
         using var layer = ImRaii.Child("##storeSortLayer", avail, false,
@@ -818,7 +818,7 @@ internal sealed class BrowseScreen(
     /// the scrim's click-catcher last.</summary>
     private void DrawFilterSheet(OsAppContext ctx, float winW)
     {
-        var origin = ImGui.GetWindowPos() + new Vector2(0f, ImGui.GetScrollY());
+        var origin = ImGui.GetWindowPos();
         var avail = ImGui.GetWindowSize();
         ImGui.SetCursorScreenPos(origin);
         using var layer = ImRaii.Child("##storeFilterSheet", avail, false,

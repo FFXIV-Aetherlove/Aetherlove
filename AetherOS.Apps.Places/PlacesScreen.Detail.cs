@@ -37,6 +37,7 @@ public partial class PlacesScreen
     private readonly EmojiPickerPopup _reviewEmojiPicker = new();
     private int _composeRating;
     private string _composeText = "";
+    private readonly SoftWrapInputField _composeTextField = new();
     private volatile bool _reviewSubmitting;
     private volatile string? _reviewError;
     private bool _confirmDeleteReview;
@@ -699,7 +700,7 @@ public partial class PlacesScreen
         ImGui.SetCursorPosX(pad);
         var textBefore = _composeText;
         ImGui.SetNextItemWidth(cardW);
-        InputTextMultilineWithPaste("##reviewText", ref _composeText, EmojiText.MaxBioRawLength,
+        _composeTextField.Draw("##reviewText", ref _composeText, EmojiText.MaxBioRawLength,
             new Vector2(cardW, Px(56f)));
         if (EmojiText.EffectiveLength(_composeText) > PlacesLimits.ReviewMaxLength)
         {
@@ -774,7 +775,7 @@ public partial class PlacesScreen
         _browseStale = true;
         var venueId = detail.Summary.Id;
         var rating = (short)_composeRating;
-        var text = _composeText;
+        var text = _composeTextField.Value(_composeText);
         var ct = _cts.Token;
         _ = Task.Run(async () =>
         {

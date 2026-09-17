@@ -809,6 +809,8 @@ internal sealed class AetherFileDialog
         const float Gap = 8f;
         var perRow = Math.Max(1, (int)((ImGui.GetContentRegionAvail().X + Gap) / (Cell + Gap)));
         var textH = ImGui.GetTextLineHeight();
+        var viewTop = ImGui.GetWindowPos().Y - Cell;
+        var viewBottom = ImGui.GetWindowPos().Y + ImGui.GetWindowSize().Y + Cell;
         for (var i = 0; i < visible.Count; i++)
         {
             var e = visible[i];
@@ -829,6 +831,7 @@ internal sealed class AetherFileDialog
                     ImGui.GetColorU32(ThemeService.Current.AccentLight with { W = 0.85f }));
             }
             else if (LooksLikeImage(e.Ext)
+                && tl.Y + Cell >= viewTop && tl.Y <= viewBottom
                 && UiHost.TextureProvider.GetFromFile(e.Path).GetWrapOrDefault() is { } wrap)
             {
                 var fit = MathF.Min(Cell / wrap.Width, Cell / wrap.Height);

@@ -84,15 +84,6 @@ public sealed record EchoRoomCardDto(
     string OwnerName,
     string? NowPlayingTitle);
 
-/// <summary>The current playback host build. <see cref="Sha256"/> is verified against the download before
-/// anything is executed.</summary>
-[MessagePackObject(keyAsPropertyName: true)]
-public sealed record EchoHostManifestDto(
-    string Version,
-    string Url,
-    string Sha256,
-    long SizeBytes);
-
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record EchoMemberLeftDto(Guid RoomId, Guid AccountId);
 

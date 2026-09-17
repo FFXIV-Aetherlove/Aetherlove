@@ -16,7 +16,7 @@ internal sealed class CardFlipOverlay(
     LumiRacePackDto pack,
     int stamps,
     Action<OsAppContext> playThud,
-    Action backToMain)
+    Action backToMain, bool compact = false)
 {
     /// <summary>How long the turn takes, and how long the pack is held before the rip screen takes it.</summary>
     private const float TurnSeconds = 1.15f;
@@ -34,6 +34,8 @@ internal sealed class CardFlipOverlay(
     public bool Dismissed { get; private set; }
 
     public LumiRacePackDto Pack => pack;
+
+    public void BeginTurn() => _turn = 0f;
 
     public void Draw(OsAppContext ctx)
     {
@@ -57,10 +59,10 @@ internal sealed class CardFlipOverlay(
             _turn = MathF.Min(1f, _turn + (dt / (ctx.ReduceMotion ? 0.25f : TurnSeconds)));
         }
 
-        dl.AddRectFilled(origin, origin + size,
-            ImGui.ColorConvertFloat4ToU32(new Vector4(0f, 0f, 0f, 0.72f * MathF.Min(1f, _age * 4f))));
+        GrandstandFrame.Panel(ctx, host, "navy", origin, size);
+        GrandstandFrame.Sparkles(ctx, origin, size);
 
-        var (stageTopLeft, stageSize) = RacerCard.Stage(origin, size);
+        var (stageTopLeft, stageSize) = compact ? PackArtwork.Stage(origin, size) : RacerCard.Stage(origin, size);
         var centre = stageTopLeft + (stageSize * 0.5f);
 
         if (!turning)
@@ -229,12 +231,9 @@ internal sealed class CardFlipOverlay(
     private void DrawTurningPack(OsAppContext ctx, ImDrawListPtr dl, Vector2 tl, Vector2 tr, Vector2 br,
         Vector2 bl, uint ink)
     {
-        var path = Path.Combine(host.PetAssetRoot, "racer", "foil-pack.png");
+        var path = Path.Combine(host.PetAssetRoot, "racer", PackArtwork.For(pack.PackId) + ".png");
         if (ctx.Capabilities.Textures.Get(path) is { } tex)
         {
-            // Drawn the right way round even though this is the back coming over: the rip screen
-            // draws the pack unmirrored in the same place, and a mirror that snaps straight at the
-            // handover reads as a glitch, not as physics.
             dl.AddImageQuad(tex, tl, tr, br, bl,
                 new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(0f, 1f), ink);
         }

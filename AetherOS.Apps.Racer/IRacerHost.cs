@@ -12,6 +12,15 @@ public interface IRacerHost
 {
     Task<LumiRaceStateDto> GetStateAsync(CancellationToken ct = default);
 
+    /// <summary>The Starlight Cup: this week's reservation, or the older unfinished one that blocks it.</summary>
+    Task<LumiCupStateDto> GetCupAsync(CancellationToken ct = default);
+
+    /// <summary>Reserves this week's cup. The server picks the week, so a stale screen cannot enter a
+    /// week that has already rolled over.</summary>
+    Task<LumiCupDto> EnterCupAsync(CancellationToken ct = default);
+    Task<LumiCupDto> StartCupRaceAsync(Guid cupId, int completed, CancellationToken ct = default);
+    Task<LumiCupDto> FinishCupRaceAsync(Guid cupId, Guid raceId, CancellationToken ct = default);
+
     /// <summary>Races the caller's standing offer at that grade. <paramref name="courseKey"/> names the
     /// course the card showed, which the server checks against the offer it dealt.</summary>
     Task<LumiRaceStartResultDto> StartRaceAsync(short difficulty, string? courseKey = null,
@@ -21,6 +30,7 @@ public interface IRacerHost
     Task<LumiRaceLogEntryDto[]> GetRaceLogAsync(int limit, CancellationToken ct = default);
 
     Task<LumiRacePackDto> RevealPackAsync(Guid packId, CancellationToken ct = default);
+    Task<LumiRacePackDto> ClaimStampCardAsync(int cardNumber, CancellationToken ct = default);
 
     Task<LumiRacePartyRunDto> StartPartyGatherAsync(CancellationToken ct = default);
 
@@ -38,6 +48,13 @@ public interface IRacerHost
 
     /// <summary>A dealt pack's two prizes, with the copy and art its cards show.</summary>
     Task<LumiRacePrizeDto[]> GetPackPrizesAsync(Guid packId, CancellationToken ct = default);
+
+    /// <summary>The racing card album: every owned card and the saved hand.</summary>
+    Task<LumiRaceCardsDto> GetCardsAsync(CancellationToken ct = default);
+
+    /// <summary>Saves the whole proposed hand. The server checks it as one and refuses the whole change on
+    /// the first fault, leaving the stored hand as it was; the reply is the album after the save.</summary>
+    Task<LumiRaceCardsDto> SetCardHandAsync(LumiRaceCardHandDto hand, CancellationToken ct = default);
 
     /// <summary>A store product's art, so a prize card can show the item rather than its name.</summary>
     Task<byte[]?> GetStoreProductImageAsync(Guid productId, CancellationToken ct = default);

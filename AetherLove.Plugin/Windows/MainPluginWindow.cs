@@ -61,6 +61,7 @@ public class MainPluginWindow : Window, IDisposable
         WarningAcknowledgeScreen warningsAckScreen,
         ModeratorMessageScreen moderatorMessageScreen,
         StaffNoticeScreen staffNoticeScreen,
+        AssetUpdateScreen assetUpdateScreen,
         PassphraseUnlockScreen passphraseUnlockScreen,
         EncryptionRecoveryScreen encryptionRecoveryScreen,
         OfflineScreen offlineScreen,
@@ -72,6 +73,7 @@ public class MainPluginWindow : Window, IDisposable
         OsAvatarCache osAvatar,
         Services.Auth.SessionBootstrapper bootstrap,
         Services.Signal.AetherSignalService signal,
+        Services.Assets.AssetSyncService assets,
         Os.OsShell osShell,
         Os.NotificationShade osShade,
         Os.StatusBar osStatusBar,
@@ -103,6 +105,7 @@ public class MainPluginWindow : Window, IDisposable
         _warningsAckScreen = warningsAckScreen;
         _moderatorMessageScreen = moderatorMessageScreen;
         _staffNoticeScreen = staffNoticeScreen;
+        _assetUpdateScreen = assetUpdateScreen;
         _passphraseUnlockScreen = passphraseUnlockScreen;
         _encryptionRecoveryScreen = encryptionRecoveryScreen;
         _offlineScreen = offlineScreen;
@@ -114,6 +117,7 @@ public class MainPluginWindow : Window, IDisposable
         _osAvatar = osAvatar;
         _bootstrap = bootstrap;
         _signal = signal;
+        _assets = assets;
         _osShell = osShell;
         _osShade = osShade;
         _osStatusBar = osStatusBar;
@@ -139,6 +143,8 @@ public class MainPluginWindow : Window, IDisposable
     private readonly Os.NewAppOffer _newAppOffer;
     private readonly Os.TranslationOffer _translationOffer;
     private readonly Os.TogetherOnboarding _partyIntro;
+    private readonly AssetUpdateScreen _assetUpdateScreen;
+    private readonly Services.Assets.AssetSyncService _assets;
 
     public void SetMiniWindow(MiniWindow mini) => _miniWindow = mini;
 
@@ -550,13 +556,30 @@ public class MainPluginWindow : Window, IDisposable
             _router.Navigate(Screen.SessionExpired);
         }
 
+        // Only a full-screen phone is moved onto the update gate; a closed phone or the bubble syncs behind
+        // the scenes without a notification.
+        _assets.DrainEvents();
+        var assetSnapshot = _assets.Snapshot;
+        if (assetSnapshot.RequiredPending && !assetSnapshot.ShownOnScreen
+            && _router.Current is Screen.Home or Screen.App)
+        {
+            _assetUpdateScreen.RequestLiveReturn();
+            _router.Navigate(Screen.AssetUpdate);
+        }
+
         switch (_router.Current)
         {
             case Screen.Splash:
                 _splashScreen.Draw();
                 break;
             case Screen.Home:
+                var homeOrigin = ImGui.GetCursorScreenPos();
+                var homeAvail = ImGui.GetContentRegionAvail();
+                if (ThemeService.Current.StatusBarHomeHeader && !Os.FlatBatteryOverlay.Active)
+                    _osStatusBar.Draw(homeOrigin, homeAvail, _signal.IsConnected, homeHeader: true, inputOnly: true);
                 _homeScreen.Draw();
+                if (ThemeService.Current.StatusBarHomeHeader && !Os.FlatBatteryOverlay.Active)
+                    _osStatusBar.Draw(homeOrigin, homeAvail, _signal.IsConnected, homeHeader: true);
                 break;
             case Screen.App:
                 DrawSurfaceApp();
@@ -575,6 +598,9 @@ public class MainPluginWindow : Window, IDisposable
                 break;
             case Screen.StaffNotice:
                 _staffNoticeScreen.Draw();
+                break;
+            case Screen.AssetUpdate:
+                _assetUpdateScreen.Draw();
                 break;
             case Screen.PassphraseUnlock:
                 _passphraseUnlockScreen.Draw();
@@ -607,7 +633,8 @@ public class MainPluginWindow : Window, IDisposable
             return;
         }
 
-        if (_router.Current is Screen.Home || ShowsHomeIndicator(_router.Current))
+        if ((_router.Current is Screen.Home || ShowsHomeIndicator(_router.Current))
+            && !(_router.Current is Screen.Home && ThemeService.Current.StatusBarHomeHeader))
         {
             _osStatusBar.Draw(ImGui.GetWindowPos(), ImGui.GetWindowSize(), _signal.IsConnected);
         }
@@ -688,6 +715,9 @@ public class MainPluginWindow : Window, IDisposable
                 break;
             case Screen.StaffNotice:
                 _staffNoticeScreen.OnShow();
+                break;
+            case Screen.AssetUpdate:
+                _assetUpdateScreen.OnShow();
                 break;
             case Screen.PassphraseUnlock:
                 _passphraseUnlockScreen.OnShow();

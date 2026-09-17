@@ -68,6 +68,7 @@ public class ProfileScreen
 
     private bool _reportPendingOpen;
     private string _reportReason = string.Empty;
+    private readonly SoftWrapInputField _reportReasonField = new();
     private bool _reportAgree;
     private volatile bool _reportSubmitting;
     private volatile string? _reportError;
@@ -1918,7 +1919,7 @@ public class ProfileScreen
         ImGui.PopTextWrapPos();
         ImGui.Spacing();
         ImGui.SetNextItemWidth(availW);
-        InputTextMultilineWithPaste("##profReportReason", ref _reportReason, 500,
+        _reportReasonField.Draw("##profReportReason", ref _reportReason, 500,
             new Vector2(availW, Px(90f)));
         ImGui.Spacing();
 
@@ -2054,7 +2055,7 @@ public class ProfileScreen
             return;
         }
         var peerId = _profile.ProfileId;
-        var reason = _reportReason;
+        var reason = _reportReasonField.Value(_reportReason);
 
         _reportSubmitting = true;
         _reportError = null;

@@ -14,6 +14,7 @@ public partial class MyProfileScreen
 {
     private bool _holidayOn;
     private string _holidayMessage = string.Empty;
+    private readonly SoftWrapInputField _holidayMessageField = new();
     private volatile bool _holidaySaving;
     private float _holidaySavedTimer;
     private volatile string? _holidaySaveError;
@@ -106,7 +107,7 @@ public partial class MyProfileScreen
         ImGui.SetCursorPosX(padX);
         DrawFieldLabel(Loc.T("profile.holiday_msg_label"), t);
         ImGui.SetCursorPosX(padX);
-        InputTextMultilineWithPaste("##holidayMsg", ref _holidayMessage,
+        _holidayMessageField.Draw("##holidayMsg", ref _holidayMessage,
             AetherLove.Shared.EmojiText.MaxHolidayMessageLength, new Vector2(w, Px(64f)));
 
         if (_holidaySaveError is not null)
@@ -149,7 +150,7 @@ public partial class MyProfileScreen
         _holidaySaving = true;
         _holidaySaveError = null;
         var on = _holidayOn;
-        var msg = _holidayMessage.Trim();
+        var msg = _holidayMessageField.Value(_holidayMessage).Trim();
         var ct = _cts.Token;
         _ = Task.Run(async () =>
         {

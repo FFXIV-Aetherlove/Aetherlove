@@ -32,6 +32,7 @@ public partial class ChatListScreen
     private readonly ChatEventBus _events;
     private readonly CryptoService _crypto;
     private readonly KeyStorageService _keys;
+    private readonly AccountEncryptionService _encryption;
     private readonly NotificationCenter _notifications;
     private readonly ChatCategoryStore _categories;
     private readonly ChatSyncService _sync;
@@ -93,6 +94,7 @@ public partial class ChatListScreen
         ChatEventBus events,
         CryptoService crypto,
         KeyStorageService keys,
+        AccountEncryptionService encryption,
         NotificationCenter notifications,
         ChatCategoryStore categories,
         ChatSyncService sync)
@@ -102,6 +104,7 @@ public partial class ChatListScreen
         _events = events;
         _crypto = crypto;
         _keys = keys;
+        _encryption = encryption;
         _notifications = notifications;
         _categories = categories;
         _sync = sync;
@@ -461,7 +464,7 @@ public partial class ChatListScreen
         }
         try
         {
-            var bytes = _crypto.Decrypt(key, m.LastMessageNonce, m.LastMessageCiphertext);
+            var bytes = DecryptWithHistory(m, key, m.LastMessageNonce, m.LastMessageCiphertext);
             var text = Encoding.UTF8.GetString(bytes).Replace('\n', ' ').Replace('\r', ' ').Trim();
             if (VenueShare.TryParse(text, out _))
             {
@@ -497,6 +500,17 @@ public partial class ChatListScreen
         catch
         {
             return null;
+        }
+    }
+
+    private byte[] DecryptWithHistory(MatchSummaryDto match, byte[] key, byte[] nonce, byte[] ciphertext)
+    {
+        try { return _crypto.Decrypt(key, nonce, ciphertext); }
+        catch (System.Security.Cryptography.CryptographicException)
+        {
+            var peers = (_sync.Cache.GetPeerKeyHistory(match.PeerProfileId) ?? []).Select(h => h.PublicKey).Prepend(match.PeerPublicKey);
+            return _encryption.TryDecryptHistory("love", UiHost.Configuration.Auth.ActiveProfileId ?? Guid.Empty, peers, ciphertext, nonce)
+                ?? throw new System.Security.Cryptography.CryptographicException("Message keys unavailable.");
         }
     }
 
@@ -782,7 +796,7 @@ public partial class ChatListScreen
         {
             try
             {
-                var text = Encoding.UTF8.GetString(_crypto.Decrypt(key, em.Nonce, em.Ciphertext));
+                var text = Encoding.UTF8.GetString(DecryptWithHistory(m, key, em.Nonce, em.Ciphertext));
                 if (text.Contains(query, StringComparison.OrdinalIgnoreCase))
                 {
                     return em.Id;

@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
+using AetherLove.Services.Crypto;
 using System.Threading;
 using System.Threading.Tasks;
 using AetherLove.Services.Hub;
@@ -18,10 +20,12 @@ public sealed class MessengerSyncService
     private readonly MessengerStore _store;
     private readonly MessengerCryptoService _crypto;
     private readonly IPluginLog _log;
+    private readonly AccountEncryptionService _encryption;
     private readonly SemaphoreSlim _gate = new(1, 1);
 
-    public MessengerSyncService(AetherHubContext hub, MessengerStore store, MessengerCryptoService crypto, IPluginLog log)
+    public MessengerSyncService(AetherHubContext hub, MessengerStore store, MessengerCryptoService crypto, IPluginLog log, AccountEncryptionService encryption)
     {
+        _encryption = encryption;
         _hub = hub;
         _store = store;
         _crypto = crypto;
@@ -119,14 +123,19 @@ public sealed class MessengerSyncService
                 {
                     continue;
                 }
-                // The wrapper may have left since; without their public key the wrap can't open.
-                if (wrapperKeys.GetValueOrDefault(wrap.WrapperAccountId) is not { Length: > 0 } wrapperPub)
+                if (_encryption.FindGroupKey(groupId, wrap.Epoch) is { } archived)
+                {
+                    _store.StoreGroupKey(groupId, wrap.Epoch, archived);
+                    continue;
+                }
+                if ((wrap.WrapperPublicKey ?? wrapperKeys.GetValueOrDefault(wrap.WrapperAccountId)) is not { Length: 32 } wrapperPub)
                 {
                     continue;
                 }
-                if (_crypto.UnwrapGroupKey(wrap.WrappedKey, wrap.Nonce, wrapperPub) is { } key)
+                if (_crypto.UnwrapGroupKey(wrap.WrappedKey, wrap.Nonce, wrapperPub, wrap.RecipientPublicKey) is { } key)
                 {
                     _store.StoreGroupKey(groupId, wrap.Epoch, key);
+                    await _encryption.ArchiveGroupKeyAsync(groupId, wrap.Epoch, key, ct).ConfigureAwait(false);
                 }
             }
         }
@@ -153,7 +162,21 @@ public sealed class MessengerSyncService
                 await EnsureGroupKeysAsync(group.GroupId, ct).ConfigureAwait(false);
                 if (_store.GroupKey(group.GroupId, group.KeyEpoch) is null)
                 {
-                    _store.StoreGroupKey(group.GroupId, group.KeyEpoch, MessengerCryptoService.GenerateGroupKey());
+                    var state = await _hub.GetMessengerGroupEpochAsync(group.GroupId, group.KeyEpoch, ct).ConfigureAwait(false);
+                    if (state.Established)
+                    {
+                        continue;
+                    }
+                    var candidate = MessengerCryptoService.GenerateGroupKey();
+                    var initial = group.Members.Where(m => m.PublicKey is { Length: 32 }).Select(m =>
+                    {
+                        var wrapped = _crypto.WrapGroupKey(candidate, m.PublicKey!)!.Value;
+                        return new MessengerGroupKeyWrapDto(m.AccountId, wrapped.WrappedKey, wrapped.Nonce, m.PublicKey);
+                    }).ToArray();
+                    await _hub.UploadMessengerGroupKeysAsync(new UploadGroupKeysRequest(group.GroupId, group.KeyEpoch,
+                        initial, SHA256.HashData(candidate), _crypto.AccountPublicKey), ct).ConfigureAwait(false);
+                    _store.StoreGroupKey(group.GroupId, group.KeyEpoch, candidate);
+                    await _encryption.ArchiveGroupKeyAsync(group.GroupId, group.KeyEpoch, candidate, ct).ConfigureAwait(false);
                 }
                 for (var epoch = 1; epoch <= group.KeyEpoch; epoch++)
                 {
@@ -177,13 +200,13 @@ public sealed class MessengerSyncService
                         }
                         if (_crypto.WrapGroupKey(key, pub) is { } wrapped)
                         {
-                            wraps.Add(new MessengerGroupKeyWrapDto(target, wrapped.WrappedKey, wrapped.Nonce));
+                            wraps.Add(new MessengerGroupKeyWrapDto(target, wrapped.WrappedKey, wrapped.Nonce, pub));
                         }
                     }
                     if (wraps.Count > 0)
                     {
                         await _hub.UploadMessengerGroupKeysAsync(
-                                new UploadGroupKeysRequest(group.GroupId, epoch, wraps.ToArray()), ct)
+                                new UploadGroupKeysRequest(group.GroupId, epoch, wraps.ToArray(), SHA256.HashData(key), _crypto.AccountPublicKey), ct)
                             .ConfigureAwait(false);
                     }
                 }

@@ -174,7 +174,7 @@ internal sealed class WishlistScreen(
         if (product is not null)
         {
             StoreChips.Price(dl, new Vector2(textX, tl.Y + Px(28f)),
-                product.DiscountedPriceSparks, product.PriceSparks, 0.95f);
+                StorePrice.Shown(product), product.PriceSparks, 0.95f);
         }
 
         IconDraw.AddCentered(dl, FontAwesomeIcon.Star, Px(13f), starC,

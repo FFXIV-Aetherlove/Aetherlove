@@ -12,12 +12,8 @@ public sealed class CoreAssets
     /// <summary>The crystal's own sheets.</summary>
     public const string CeremonyFolder = "ceremony";
 
-    /// <summary>What comes out of it. Named for as little as the folder above it is.</summary>
-    public const string HatchlingFolder = "1";
-
-    /// <summary>The two later young forms and the grown shape, numbered like the first.</summary>
-    public const string Hatchling2Folder = "2";
-    public const string Hatchling3Folder = "3";
+    /// <summary>The trueform, what comes out of the crystal. The number is a leftover of the
+    /// retired growth ladder; the folder kept its name so nothing on disk moved.</summary>
     public const string AdultFolder = "4";
 
     /// <summary>The wearables and the palette file, beside the sheet folders.</summary>

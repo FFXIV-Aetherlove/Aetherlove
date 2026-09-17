@@ -185,7 +185,8 @@ internal static class HubErrorsDe
         ["huberror.lumirace_disabled"] = "Rennen sind gerade abgeschaltet.",
         ["huberror.lumirace_no_pet"] = "Du brauchst ein geschlüpftes Aetherling, um zu rennen.",
         ["huberror.lumirace_not_adult"] = "Dein Aetherling rennt, sobald es erwachsen ist. Füttere es weiter.",
-        ["huberror.lumirace_gated"] = "Das nächste Rennen öffnet in {0} Minuten.",
+        ["huberror.lumirace_gated"] = "Das nächste Rennen öffnet in {0}.",
+        ["huberror.lumirace_card_not_ready"] = "Vervollständige eine Stempelkarte, bevor du sie gegen ein Päckchen eintauschst.",
         ["huberror.lumirace_pack_none"] = "Es gibt kein Päckchen zum Öffnen.",
         ["huberror.lumirace_run_exists"] = "Ein Gruppenrennen ist bereits offen.",
         ["huberror.lumirace_run_not_found"] = "Gerade gibt es kein Gruppenrennen.",
@@ -193,11 +194,25 @@ internal static class HubErrorsDe
         ["huberror.lumirace_too_few"] = "Mindestens zwei Rennteilnehmer müssen zuerst beitreten.",
         ["huberror.lumirace_no_offer"] = "Diese Rennen stehen nicht mehr zur Auswahl. Öffne die Seite erneut, dann gibt es drei neue.",
 
+        // added after update 2.7.0 (starlight cup)
+        ["huberror.lumirace_cup_in_party"] = "Der Sternenlicht-Pokal ist solo. Verlass zuerst deine Gruppe.",
+
+        // added after update 2.7.0 (racing cards)
+        ["huberror.lumirace_card_unknown"] = "Diese Karte gibt es nicht mehr im Spiel.",
+        ["huberror.lumirace_card_not_owned"] = "Diese Karte besitzt du nicht.",
+        ["huberror.lumirace_card_wrong_band"] = "Diese Karte passt nicht in diesen Platz. Gold kommt in den ersten Platz, Silber in die anderen beiden.",
+        ["huberror.lumirace_card_duplicate"] = "Dieses Exemplar ist schon in deiner Hand. Wähle ein anderes Exemplar.",
+        ["huberror.lumirace_hand_shape"] = "Diese Hand ist ungültig. Öffne das Album und versuch es noch einmal.",
+
         // listing boosts (added after update 2.5.2)
         ["huberror.boost_none_owned"] = "Du hast dafür keinen Boost. Hol dir einen im Store.",
         ["huberror.boost_target_not_found"] = "Das gehört dir nicht.",
         ["huberror.boost_cap_reached"] = "Du kannst keine Tage mehr drauflegen. Ein Boost läuft höchstens {0} Tage.",
         ["huberror.boost_style_invalid"] = "Wähle einen der vier Effekte.",
         ["huberror.boost_target_not_live"] = "Das ist noch nicht online. Booste es, sobald es live ist.",
+
+        // added after update 2.7.0 (move photos)
+        ["huberror.main_photo_must_be_sfw"] = "Das Hauptfoto muss SFW sein.",
+        ["huberror.photo_still_checking"] = "Wir prüfen dieses Foto noch. Versuche es in einer Minute erneut.",
     };
 }

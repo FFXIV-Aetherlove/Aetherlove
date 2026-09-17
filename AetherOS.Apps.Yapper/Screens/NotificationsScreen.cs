@@ -20,6 +20,7 @@ internal sealed class NotificationsScreen
     private readonly YapperMediaCache _mediaCache;
     private readonly Action<Guid> _openYap;
     private readonly Action<Guid> _openProfile;
+    private readonly Action _openMyFollowers;
     private readonly Action _markedRead;
 
     private List<YapperNotificationDto> _rows = [];
@@ -33,12 +34,13 @@ internal sealed class NotificationsScreen
     private const float FlashSeconds = 1.8f;
 
     public NotificationsScreen(IYapperHost host, YapperMediaCache mediaCache,
-        Action<Guid> openYap, Action<Guid> openProfile, Action markedRead)
+        Action<Guid> openYap, Action<Guid> openProfile, Action openMyFollowers, Action markedRead)
     {
         _host = host;
         _mediaCache = mediaCache;
         _openYap = openYap;
         _openProfile = openProfile;
+        _openMyFollowers = openMyFollowers;
         _markedRead = markedRead;
     }
 
@@ -176,6 +178,12 @@ internal sealed class NotificationsScreen
             if (row.YapId is { } yapId)
             {
                 _openYap(yapId);
+            }
+            else if (row.Kind == YapperNotificationKind.Follow && row.ActorCount > 1)
+            {
+                // A coalesced follow row stores only its newest actor, so the other followers are
+                // unreachable through it; the followers list is newest-first and holds them all.
+                _openMyFollowers();
             }
             else if (row.Actor is { } actor)
             {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using AetherLove.Services.Hub;
@@ -20,6 +20,11 @@ public sealed class RacerHostService(
     public Task<LumiRaceStateDto> GetStateAsync(CancellationToken ct = default) =>
         hub.GetLumiRaceStateAsync(ct);
 
+    public Task<LumiCupStateDto> GetCupAsync(CancellationToken ct = default) => hub.GetLumiCupAsync(ct);
+    public Task<LumiCupDto> EnterCupAsync(CancellationToken ct = default) => hub.EnterLumiCupAsync(ct);
+    public Task<LumiCupDto> StartCupRaceAsync(Guid cupId, int completed, CancellationToken ct = default) => hub.StartLumiCupRaceAsync(cupId, completed, ct);
+    public Task<LumiCupDto> FinishCupRaceAsync(Guid cupId, Guid raceId, CancellationToken ct = default) => hub.FinishLumiCupRaceAsync(cupId, raceId, ct);
+
     public Task<LumiRaceStartResultDto> StartRaceAsync(short difficulty, string? courseKey = null,
         CancellationToken ct = default) =>
         hub.StartLumiRaceAsync(difficulty, courseKey, ct);
@@ -29,6 +34,9 @@ public sealed class RacerHostService(
 
     public Task<LumiRacePackDto> RevealPackAsync(Guid packId, CancellationToken ct = default) =>
         hub.RevealLumiRacePackAsync(packId, ct);
+
+    public Task<LumiRacePackDto> ClaimStampCardAsync(int cardNumber, CancellationToken ct = default) =>
+        hub.ClaimLumiRaceStampCardAsync(cardNumber, ct);
 
     public Task<LumiRacePartyRunDto> StartPartyGatherAsync(CancellationToken ct = default) =>
         hub.StartLumiRacePartyGatherAsync(ct);
@@ -57,6 +65,12 @@ public sealed class RacerHostService(
     public Task<LumiRacePrizeDto[]> GetPackPrizesAsync(Guid packId, CancellationToken ct = default) =>
         hub.GetLumiRacePackPrizesAsync(packId, ct);
 
+    public Task<LumiRaceCardsDto> GetCardsAsync(CancellationToken ct = default) =>
+        hub.GetLumiRaceCardsAsync(ct);
+
+    public Task<LumiRaceCardsDto> SetCardHandAsync(LumiRaceCardHandDto hand, CancellationToken ct = default) =>
+        hub.SetLumiRaceCardHandAsync(hand, ct);
+
     public Task<byte[]?> GetStoreProductImageAsync(Guid productId, CancellationToken ct = default) =>
         hub.GetStoreProductImageAsync(productId, ct);
 
@@ -64,7 +78,6 @@ public sealed class RacerHostService(
 
     public string SoundRoot => aetherling.SoundRoot;
 
-    /// <summary>The delivered art names its own files; unknown keys fall through to silence.</summary>
     private static string? CourseTrack(string courseKey) => courseKey switch
     {
         "ember-dash" => "race_ember.ogg",
@@ -74,6 +87,21 @@ public sealed class RacerHostService(
         "levin-run" => "race_levin.ogg",
         "stone-ladder" => "race_stone.ogg",
         "frostline" => "race_frost.ogg",
+        "long-burn" => "race_long_burn.ogg",
+        "the-knot" => "race_the_knot.ogg",
+        "riven-straight" => "race_riven_straight.ogg",
+        "hollow-way" => "race_hollow_way.ogg",
+        "squall-line" => "race_squall_line.ogg",
+        "millrace" => "race_millrace.ogg",
+        "glassway" => "race_glassway.ogg",
+        "the-ring" => "race_the_ring.ogg",
+        "the-bellows" => "race_the_bellows.ogg",
+        "double-helix" => "race_double_helix.ogg",
+        "quarry-drop" => "race_quarry_drop.ogg",
+        "spillway" => "race_spillway.ogg",
+        "skybridge" => "race_skybridge.ogg",
+        "looking-glass" => "race_looking_glass.ogg",
+        "grandstand-dash" => "race_grandstand_dash.ogg",
         _ => null,
     };
 

@@ -3,20 +3,6 @@ using MessagePack;
 
 namespace AetherLove.Shared.Aetherling;
 
-/// <summary>The rungs of the ladder an Aethercore climbs. APPEND-ONLY, and the value IS the number of
-/// charges the core has taken, so a stage can never be renumbered without rewriting live rows.</summary>
-public enum AetherlingStage : short
-{
-    Dormant = 0,
-    Stirring = 1,
-    Fissured = 2,
-    Quickening = 3,
-
-    /// <summary>The last rung a charge can reach. The hatch that follows is free, so it deliberately does
-    /// NOT add a rung: the value has to keep meaning "charges taken".</summary>
-    Kindling = 4,
-}
-
 /// <summary>The six elements a grown Aetherling can lean toward. APPEND-ONLY: stored rows carry the
 /// number, so values are never renumbered. Light and dark are deliberately absent until their phase.</summary>
 public enum AetherlingElement : short
@@ -35,7 +21,7 @@ public static class AetherlingLimits
 {
     public const int NameMaxLength = 14;
 
-    /// <summary>What a freshly hatched one is called until the player says otherwise.</summary>
+    /// <summary>What a newborn is called until the player names it.</summary>
     public const string DefaultName = "Lumi";
 
     /// <summary>Most accessories one look may equip at once. Raised from 12 to 25 (owner, 2026-08-28):
@@ -43,53 +29,46 @@ public static class AetherlingLimits
     /// reaching the old cap in ordinary play. The stored column holds far more than this.</summary>
     public const int MaxEquippedAccessories = 25;
 
+    /// <summary>The most meals a day the client ever shows: the slots, the tooltip and the tour clamp the
+    /// server's FeedsPerDay to this, so a test fixture with an unlimited appetite still draws five slots.</summary>
+    public const int ShownFeedsPerDay = 5;
+
     /// <summary>The store ref of the consumable that buys a rename. Both sides name it: the server spends
     /// it, the client checks for it before offering the pill.</summary>
     public const string NameChangeRef = "name-change";
 }
 
-/// <summary>One account's Aethercore. Null on the wire means the account never bought one.
+/// <summary>One account's Aethercore. Null on the wire means the account never bought one. A core
+/// with a null <see cref="Adult"/> is a crystal waiting to be broken, whatever else it carries: the
+/// hatch and the adulting are one moment since 2.7, and a pet hatched under the old ladder but never
+/// grown up goes back into its crystal until its owner breaks it.
 /// <para>
-/// <see cref="ServerNowUtc"/> rides along on purpose: the gate between stages is wall-clock arithmetic
-/// the server owns, and a client that computed the countdown from its own clock would let anyone skip
-/// every wait by changing the system time. The client subtracts against this stamp instead.
+/// <see cref="ServerNowUtc"/> rides along on purpose: the daily appetite and the wheel are wall-clock
+/// arithmetic the server owns, and a client counting down from its own clock would let anyone skip a
+/// wait by changing the system time. The client subtracts against this stamp instead.
 /// </para></summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record AetherlingDto(
-    short CoreStage,
-    DateTimeOffset StageEnteredAtUtc,
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset ServerNowUtc,
     int SparksSpent,
-    int NextChargeSparks,
-    int GateMinutes,
-    short MaxStage,
     DateTimeOffset? HatchedAtUtc = null,
     string? PetName = null,
     bool NameChosen = false,
-    AetherlingGrowthDto? Growth = null,
     AetherlingAdultDto? Adult = null,
     AetherlingLookDto? Look = null,
     AetherlingScratchCardDto[]? Cards = null,
     DateTimeOffset? OnboardingDoneAtUtc = null,
     AetherlingEmotesDto? Emotes = null,
     bool SharesWithParty = true,
-    AetherlingWheelStateDto? Wheel = null);
-
-/// <summary>The growth ladder: 9 fed crystals from hatchling to adult. The client derives the worn
-/// form from <see cref="GrowthFed"/> alone (0-2 first form, 3-5 second, 6-8 third, 9 adult) and renders
-/// the feed countdown against <c>ServerNowUtc</c>, never its own clock.</summary>
-[MessagePackObject(keyAsPropertyName: true)]
-public sealed record AetherlingGrowthDto(
-    short GrowthFed,
-    DateTimeOffset? LastFedAtUtc,
-    int FeedGateMinutes,
-    short FeedsPerStage);
+    AetherlingWheelStateDto? Wheel = null,
+    DateTimeOffset? PromotedAtUtc = null,
+    DateTimeOffset? LastFedAtUtc = null);
 
 /// <summary>The grown pet: the element it was born with, the element it is attuned to now, and the
 /// lifetime diet ledger the radar and the signature turns read. Counts only ever go up.
 ///
-/// <para><see cref="Element"/> is the one rolled at the adulting and never changes.
+/// <para><see cref="Element"/> is the one rolled when the crystal broke and never changes.
 /// <see cref="AttunedElement"/> is what the creature currently answers to: the worn form's element,
 /// or the born one while it wears none. Everything that asks "which element is this pet" (races, the
 /// games' powers) means the attuned one; only "what did it hatch as" means the born one. It is zero

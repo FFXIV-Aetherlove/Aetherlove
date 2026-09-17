@@ -7,6 +7,7 @@ using AetherLove.Services;
 using AetherLove.Services.Echo;
 using AetherLove.Services.Hub;
 using AetherLove.Services.Localization;
+using AetherLove.Shared.Assets;
 using AetherLove.Shared.EchoVidya;
 using AetherLove.UI;
 using AetherOS.Sdk;
@@ -37,7 +38,6 @@ internal sealed class HomeScreen
     private readonly EchoStateService _state;
     private readonly IEchoHost _host;
     private readonly Action _openRoom;
-    private readonly Action _openSetup;
     private readonly EntranceAnimation _entrance = new();
 
     private string _watchInput = string.Empty;
@@ -48,14 +48,12 @@ internal sealed class HomeScreen
     private volatile bool _joined;
     private bool _joinOpen;
 
-    public HomeScreen(AetherHubContext hub, EchoStateService state, IEchoHost host, Action openRoom,
-        Action openSetup)
+    public HomeScreen(AetherHubContext hub, EchoStateService state, IEchoHost host, Action openRoom)
     {
         _hub = hub;
         _state = state;
         _host = host;
         _openRoom = openRoom;
-        _openSetup = openSetup;
     }
 
     public void OnShow()
@@ -94,7 +92,7 @@ internal sealed class HomeScreen
 
         if (!_host.RuntimeReady)
         {
-            DrawRuntimeNotice(winW);
+            DrawPlayerPending(ctx, winW);
         }
 
         if (_state.Room is { } room && _state.EndReason is null)
@@ -182,21 +180,18 @@ internal sealed class HomeScreen
         }
     }
 
-    private void DrawRuntimeNotice(float winW)
+    /// <summary>The player is the phone's <c>echo-host</c> asset bundle: this only says where it stands, because
+    /// the asset sync fetches it and retries on its own.</summary>
+    private void DrawPlayerPending(OsAppContext ctx, float winW)
     {
-        DrawInfoCallout(Loc.T("os.echo_home_runtime_missing"), UiColors.Amber, FontAwesomeIcon.CloudDownloadAlt);
-        ImGui.Dummy(new Vector2(0f, Px(10f)));
-
-        ImGui.SetCursorPosX(Px(PadX));
-        ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(10f));
-        PushThemeButton(ThemeService.Current);
-        if (Button($"{Loc.T("os.echo_home_runtime_setup")}##echoSetup",
-                new Vector2(winW - Px(PadX) * 2f, Px(RowHeight))))
-        {
-            _openSetup();
-        }
-        PopThemeButton();
-        ImGui.PopStyleVar();
+        var (done, total) = ctx.Capabilities.Assets.Progress(AssetPacks.EchoHost);
+        var failed = _host.PlayerFailed;
+        var text = failed
+            ? Loc.T("os.echo_home_player_failed")
+            : total > 0
+                ? Loc.T("os.echo_home_player_pending", FormatMegabytes(done, ctx.Culture), FormatMegabytes(total, ctx.Culture))
+                : Loc.T("os.echo_home_player_waiting");
+        DrawInfoCallout(text, failed ? UiColors.Danger : UiColors.Amber, FontAwesomeIcon.CloudDownloadAlt);
         ImGui.Dummy(new Vector2(0f, Px(14f)));
     }
 

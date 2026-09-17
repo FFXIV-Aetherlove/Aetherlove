@@ -63,6 +63,10 @@ internal sealed class ResolveStep
 
     public bool PrismCombo { get; set; }
 
+    /// <summary>A step that only dresses tiles: the colour a Prism took is handed its power here, and the
+    /// step that follows sets all of it off. Nothing clears and nothing falls.</summary>
+    public bool Charge { get; set; }
+
     public int LargestGroup { get; set; }
 }
 
@@ -227,41 +231,51 @@ internal sealed class LumiLinkBoard
         var b = _cells[c2, r2]!;
         Swap(c1, r1, c2, r2);
 
-        var first = new ResolveStep();
-        var handled = false;
-        if (a.Special != Special.None && b.Special != Special.None)
+        if (a.Special != Special.None && b.Special != Special.None
+            && (a.Special == Special.Prism) != (b.Special == Special.Prism))
         {
-            ComboInto(first, c2, r2, a, c1, r1, b);
-            handled = true;
-        }
-        else if (a.Special == Special.Prism || b.Special == Special.Prism)
-        {
-            var (prismC, prismR, prism, otherKind) = a.Special == Special.Prism
-                ? (c2, r2, a, b.Kind)
-                : (c1, r1, b, a.Kind);
-            // The Prism's own removal must not fire its fallback (most common kind) on top of the swap.
-            prism.Special = Special.None;
-            ClearKind(first, otherKind, ClearCause.Prism);
-            RemoveAt(first, prismC, prismR, ClearCause.Prism);
-            first.Points += GameScoring.LumiLinkPrismPerCell * first.Cleared.Count;
-            handled = true;
-        }
-
-        if (handled)
-        {
-            ApplyGravity(first);
-            steps.Add(first);
+            var prismIsA = a.Special == Special.Prism;
+            var (prismCol, prismRow) = prismIsA ? (c2, r2) : (c1, r1);
+            steps.AddRange(PrismCharge(prismIsA ? a : b, prismCol, prismRow, prismIsA ? b : a));
         }
         else
         {
-            // The swapped cells are where a minted special wants to land.
-            var resolved = ResolveMatches(1, (c2, r2), (c1, r1));
-            if (resolved is null)
+            var first = new ResolveStep();
+            var handled = false;
+            if (a.Special != Special.None && b.Special != Special.None)
             {
-                Swap(c1, r1, c2, r2);
-                return steps;
+                ComboInto(first, c2, r2, a, c1, r1, b);
+                handled = true;
             }
-            steps.Add(resolved);
+            else if (a.Special == Special.Prism || b.Special == Special.Prism)
+            {
+                var (prismC, prismR, prism, otherKind) = a.Special == Special.Prism
+                    ? (c2, r2, a, b.Kind)
+                    : (c1, r1, b, a.Kind);
+                // The Prism's own removal must not fire its fallback (most common kind) on top of the swap.
+                prism.Special = Special.None;
+                ClearKind(first, otherKind, ClearCause.Prism);
+                RemoveAt(first, prismC, prismR, ClearCause.Prism);
+                first.Points += GameScoring.LumiLinkPrismPerCell * first.Cleared.Count;
+                handled = true;
+            }
+
+            if (handled)
+            {
+                ApplyGravity(first);
+                steps.Add(first);
+            }
+            else
+            {
+                // The swapped cells are where a minted special wants to land.
+                var resolved = ResolveMatches(1, (c2, r2), (c1, r1));
+                if (resolved is null)
+                {
+                    Swap(c1, r1, c2, r2);
+                    return steps;
+                }
+                steps.Add(resolved);
+            }
         }
 
         var cascade = 2;
@@ -599,6 +613,37 @@ internal sealed class LumiLinkBoard
         }
     }
 
+    /// <summary>A Prism swapped with another special. Every tile of that special's colour takes the same
+    /// power, on a step of its own so the player sees the colour light up, and the step after that sets
+    /// all of it off at once.</summary>
+    private List<ResolveStep> PrismCharge(Piece prism, int prismCol, int prismRow, Piece partner)
+    {
+        var gift = partner.Special;
+        var kind = partner.Kind;
+
+        var charge = new ResolveStep { Charge = true };
+        for (var c = 0; c < Columns; c++)
+        {
+            for (var r = 0; r < Rows; r++)
+            {
+                if (_cells[c, r] is { Special: Special.None } piece && piece.Kind == kind)
+                {
+                    piece.Special = gift;
+                    charge.Minted.Add(new MintedSpecial(piece, c, r, gift));
+                }
+            }
+        }
+
+        var blast = new ResolveStep { PrismCombo = true };
+        // The Prism's own removal must not fire its fallback colour on top of the blast.
+        prism.Special = Special.None;
+        RemoveAt(blast, prismCol, prismRow, ClearCause.Prism);
+        ClearKind(blast, kind, ClearCause.Prism);
+        blast.Points = GameScoring.LumiLinkPrismPerCell * blast.Cleared.Count;
+        ApplyGravity(blast);
+        return [charge, blast];
+    }
+
     /// <summary>Special on special: the genre's combo table. Both pieces are consumed.</summary>
     private void ComboInto(ResolveStep step, int ca, int ra, Piece a, int cb, int rb, Piece b)
     {
@@ -627,25 +672,6 @@ internal sealed class LumiLinkBoard
             }
             step.Points += GameScoring.LumiLinkPrismPrism;
             step.PrismCombo = true;
-            return;
-        }
-        if (sa == Special.Prism || sb == Special.Prism)
-        {
-            var other = sa == Special.Prism ? sb : sa;
-            var kind = sa == Special.Prism ? b.Kind : a.Kind;
-            // Every piece of that kind becomes the other special and fires.
-            for (var c = 0; c < Columns; c++)
-            {
-                for (var r = 0; r < Rows; r++)
-                {
-                    if (_cells[c, r] is { } p && p.Kind == kind && p.Special == Special.None)
-                    {
-                        p.Special = IsBolt(other) ? ((c + r) % 2 == 0 ? Special.BoltRow : Special.BoltColumn) : other;
-                    }
-                }
-            }
-            ClearKind(step, kind, ClearCause.Prism);
-            step.Points += GameScoring.LumiLinkPrismPerCell * step.Cleared.Count;
             return;
         }
         if (bothBolt)

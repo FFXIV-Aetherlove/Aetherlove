@@ -24,7 +24,7 @@ internal sealed class PetRendererService(IAetherlingHost host, PetRuntime own) :
     private readonly List<Guid> _stale = [];
 
     public void Draw(ImDrawListPtr dl, Guid key, Vector2 bottomCentre, float size,
-        short stage, string palette, IReadOnlyList<string> accessories, bool reduceMotion,
+        string palette, IReadOnlyList<string> accessories, bool reduceMotion,
         string shell = "")
     {
         if (!_companions.TryGetValue(key, out var companion))
@@ -34,7 +34,7 @@ internal sealed class PetRendererService(IAetherlingHost host, PetRuntime own) :
             companion.Runtime.SetPhaseSeed(key.ToString());
             _companions[key] = companion;
         }
-        var folder = PetState.FormFolderForStage(stage, shell);
+        var folder = PetState.ShellFolderFor(shell);
         if (companion.Folder != folder)
         {
             companion.Folder = folder;
@@ -56,7 +56,7 @@ internal sealed class PetRendererService(IAetherlingHost host, PetRuntime own) :
 
     public bool DrawOwn(ImDrawListPtr dl, Vector2 bottomCentre, float size, bool reduceMotion)
     {
-        if (host.Snapshot is not { HatchedAtUtc: not null } core)
+        if (host.Snapshot is not { Adult: not null } core)
         {
             return false;
         }

@@ -5,20 +5,18 @@ using AetherOS.Sdk;
 
 namespace AetherLove.Os;
 
-/// <summary>The folders the OS ships, and only as one-time seeds: Media and Utilities are ordinary user
-/// folders the moment they exist, and the decision to seed them is latched so one the user renames, empties
-/// or deletes is never rebuilt. Nothing here owns a folder afterwards.
-///
-/// <para>Arcade used to be an exception that gathered every game every frame. It is gone: adopting on
-/// folder membership meant a game moved into a folder of the player's own was stolen straight back, and an
-/// Arcade folder would spring into existence to hold it. An Arcade folder somebody already has is a normal
-/// folder now, renameable and deletable, and keeps only its tile art.</para></summary>
+/// <summary>The folders the OS seeds for an untouched home layout. Every seeded folder is an ordinary user
+/// folder the moment it exists, and nothing here owns or rebuilds it afterwards.</summary>
 internal static class OsFolders
 {
     public const string ArcadeId = IOsShell.ArcadeFolderId;
 
     private const string MediaId = "folder:media";
     private const string UtilitiesId = "folder:utilities";
+
+    private static readonly string[] ArcadeAppIds =
+        ["snake", "stacker", "breaker", "meteor", "invaders", "muncher", "plappy", "doom", "sudoku",
+         "racooner", "skyswarm", "eordle"];
 
     /// <summary>What the Media folder is seeded with. Only ever read once, by <see cref="EnsureMedia"/>.</summary>
     private static readonly string[] MediaAppIds = ["groove", "echo"];
@@ -28,9 +26,15 @@ internal static class OsFolders
 
     public static string DisplayName(OsFolder folder) => folder.Name;
 
-    /// <summary>Gives an Arcade folder somebody already has a name, if it never got one. It used to draw
-    /// shipped tile art instead of the stacked mini-icons every other folder wears, and an unnamed folder
-    /// behind a picture reads fine right up until the picture goes. True when the config changed.</summary>
+    /// <summary>Adds the starter Arcade folder while the home layout is still empty. The caller owns the
+    /// fresh-layout check; after this seed the folder has exactly the same lifecycle as one made by the user.</summary>
+    public static void SeedArcade(OsConfig os)
+    {
+        var folder = new OsFolder { Id = ArcadeId, Name = Loc.T("os.folder_arcade") };
+        folder.AppIds.AddRange(ArcadeAppIds);
+        os.Folders.Add(folder);
+    }
+
     public static bool NameArcade(OsConfig os)
     {
         if (os.Folders.FirstOrDefault(f => f.Id == ArcadeId) is not { } arcade
@@ -43,9 +47,8 @@ internal static class OsFolders
     }
 
     /// <summary>Seeds the Media folder with Groove and Echo, once, and only for someone meeting BOTH of them
-    /// for the first time: anyone who already has one placed keeps their own arrangement. Unlike Arcade this
-    /// is a plain user folder from the moment it exists, and the decision is latched, so one the user renames,
-    /// empties or deletes is never rebuilt. True when the config changed.</summary>
+    /// for the first time: anyone who already has one placed keeps their own arrangement. The decision is
+    /// latched, so one the user renames, empties or deletes is never rebuilt. True when the config changed.</summary>
     public static bool EnsureMedia(OsConfig os)
     {
         if (os.MediaFolderSeeded)

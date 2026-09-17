@@ -1,4 +1,4 @@
-﻿namespace AetherLove.Services.Localization;
+namespace AetherLove.Services.Localization;
 
 internal static class CommonEs
 {
@@ -214,5 +214,11 @@ internal static class CommonEs
         ["picker.save"] = "Guardar",
         ["picker.file_name_hint"] = "Nombre del archivo...",
         ["picker.selected_count"] = "{0} seleccionados",
+        // added after update 2.6.1 (picture adjust)
+        ["common.adjust_picture"] = "Ajustar imagen",
+        ["common.use_picture"] = "Usar esta imagen",
+        ["common.rotate_left"] = "Girar a la izquierda",
+        ["common.rotate_right"] = "Girar a la derecha",
+        ["common.crop_free_hint"] = "Arrastra la esquina para recortar. Usa las flechas para girar.",
     };
 }

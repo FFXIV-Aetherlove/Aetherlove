@@ -3,40 +3,43 @@
 
 using System.Collections.Generic;
 using System.IO;
+using AetherLove.Services.Media;
 using Dalamud.Interface.Textures;
 
 namespace AetherLove.Emoji;
 
-/// <summary>Loads and caches every emoji PNG from <c>Media/emoji/</c>.</summary>
+/// <summary>Every emoji PNG from the downloaded <c>emoji/</c> pack, keyed by file name. The set is loaded
+/// on demand and swapped whole, so a pack that lands mid-session shows up after one <see cref="Reload"/>
+/// and readers never see a half-filled table.</summary>
 public sealed class EmojiService
 {
-    private readonly Dictionary<string, ISharedImmediateTexture> _emoji =
-        new(System.StringComparer.OrdinalIgnoreCase);
+    private IReadOnlyDictionary<string, ISharedImmediateTexture> _emoji =
+        new Dictionary<string, ISharedImmediateTexture>(System.StringComparer.OrdinalIgnoreCase);
 
-    public EmojiService()
+    /// <summary>True once at least one emoji has been found on disk.</summary>
+    public bool Ready => _emoji.Count > 0;
+
+    /// <summary>Rescans the emoji folder and replaces the table. Safe to call any time; a missing folder
+    /// leaves the table empty, which every consumer already treats as "no emoji yet".</summary>
+    public void Reload()
     {
-        Load();
-    }
-
-    private void Load()
-    {
-        var dir = Path.Combine(
-            Path.GetDirectoryName(UiHost.PluginInterface.AssemblyLocation.FullName)!,
-            "Media", "emoji");
-
+        var dir = MediaPaths.Downloaded(MediaPaths.Emoji);
+        var found = new Dictionary<string, ISharedImmediateTexture>(System.StringComparer.OrdinalIgnoreCase);
         if (!Directory.Exists(dir))
         {
-            UiHost.Log.Warning("[EmojiService] emoji folder not found: " + dir);
+            UiHost.Log.Information("[EmojiService] No emoji folder yet at " + dir);
+            _emoji = found;
             return;
         }
 
         foreach (var file in Directory.GetFiles(dir, "*.png"))
         {
             var key = Path.GetFileNameWithoutExtension(file);
-            _emoji[key] = UiHost.TextureProvider.GetFromFile(file);
+            found[key] = UiHost.TextureProvider.GetFromFile(file);
         }
 
-        UiHost.Log.Information($"[EmojiService] Loaded {_emoji.Count} emoji.");
+        _emoji = found;
+        UiHost.Log.Information($"[EmojiService] Loaded {found.Count} emoji.");
     }
 
     public ISharedImmediateTexture? GetEmoji(string name)

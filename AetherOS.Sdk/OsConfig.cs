@@ -57,7 +57,9 @@ public class OsConfig
     /// <summary>Absolute path of the user-uploaded wallpaper copy.</summary>
     public string CustomWallpaperPath { get; set; } = string.Empty;
 
-    /// <summary>Which purchased theme's wallpaper is in use, when the mode is Premium.</summary>
+    /// <summary>Retired 2026-09-10 with the premium wallpaper mode: a skin no longer ships a background.
+    /// Kept so a config written before that still loads; a mode of Premium now resolves to the theme
+    /// gradient and nothing reads this.</summary>
     public Guid PremiumWallpaperProductId { get; set; }
 
     /// <summary>0..0.98 dark overlay on image wallpapers; the top end blacks the wallpaper out almost entirely.</summary>

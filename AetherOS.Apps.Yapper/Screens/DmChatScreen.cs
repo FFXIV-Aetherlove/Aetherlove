@@ -1459,9 +1459,9 @@ internal sealed partial class DmChatScreen
         {
             h += Px(AutocompleteRowH);
         }
-        if (!CanSend(peerKey))
+        if (KeyNotice(peer, peerKey) is { } notice)
         {
-            h += ImGui.GetTextLineHeight() + ImGui.GetStyle().ItemSpacing.Y;
+            h += ImGui.CalcTextSize(notice, false, KeyNoticeWrapWidth()).Y + ImGui.GetStyle().ItemSpacing.Y;
         }
         if (_chatError is not null)
         {
@@ -1486,6 +1486,23 @@ internal sealed partial class DmChatScreen
 
     private bool CanSend(byte[]? peerKey)
         => peerKey is not null && _host.HasDmKeys && !_sending;
+
+    /// <summary>The line under the composer that says whose keys are missing, or null when there is nothing
+    /// to say. Null while the thread loads: which key is missing is not known until it has.</summary>
+    private string? KeyNotice(YapAuthorDto? peer, byte[]? peerKey)
+    {
+        if (!_loaded || peer is null)
+        {
+            return null;
+        }
+        if (!_host.HasDmKeys)
+        {
+            return Loc.T("os.yapper_dm_keys_pending");
+        }
+        return peerKey is null ? Loc.T("huberror.yap_dm_keys_missing", $"{peer.Handle}") : null;
+    }
+
+    private static float KeyNoticeWrapWidth() => ImGui.GetWindowSize().X - Px(20f);
 
     private void RefreshAutocomplete()
     {
@@ -1764,12 +1781,12 @@ internal sealed partial class DmChatScreen
             SendCurrentInput(peerKey!);
             _reclaimInputFocus = true;
         }
-        if (!canSend)
+        if (KeyNotice(peer, peerKey) is { } notice)
         {
             ImGui.SetCursorPosX(Px(10f));
-            ImGui.TextColored(UiColors.Muted, !_host.HasDmKeys || peer is null || !_loaded
-                ? Loc.T("os.yapper_dm_keys_pending")
-                : Loc.T("huberror.yap_dm_keys_missing", $"{peer.Handle}"));
+            ImGui.PushTextWrapPos(Px(10f) + KeyNoticeWrapWidth());
+            ImGui.TextColored(UiColors.Muted, notice);
+            ImGui.PopTextWrapPos();
         }
         if (_chatError is { } err)
         {

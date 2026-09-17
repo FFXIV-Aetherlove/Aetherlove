@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Security.Cryptography;
 using System.Text;
 using Org.BouncyCastle.Crypto.Agreement;
@@ -30,8 +30,16 @@ public sealed class CryptoService
         return (pubBytes, privKey);
     }
 
+    public bool IsKeyPair(byte[] publicKey, byte[] privateKey)
+        => publicKey.Length == 32 && privateKey.Length == 32
+            && new X25519PrivateKeyParameters(privateKey, 0).GeneratePublicKey().GetEncoded().AsSpan().SequenceEqual(publicKey);
+
     public byte[] DeriveKEK(string passphrase, byte[] salt, int memoryKb, int iterations, int parallelism)
     {
+        if (!AetherLove.Shared.Crypto.KeyEnvelopeLimits.ValidKdf(salt, memoryKb, iterations, parallelism))
+        {
+            throw new CryptographicException("Unsupported KDF parameters.");
+        }
         var pwBytes = Encoding.UTF8.GetBytes(passphrase);
         var output = new byte[AesGcmKeyLength];
         var gen = new Argon2BytesGenerator();
@@ -42,7 +50,14 @@ public sealed class CryptoService
             .WithMemoryAsKB(memoryKb)
             .WithParallelism(parallelism)
             .Build());
-        gen.GenerateBytes(pwBytes, output);
+        try
+        {
+            gen.GenerateBytes(pwBytes, output);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(pwBytes);
+        }
         return output;
     }
 
@@ -63,7 +78,7 @@ public sealed class CryptoService
 
     public byte[]? UnwrapPrivateKey(byte[] encryptedPrivateKey, byte[] wrapNonce, byte[] kek)
     {
-        if (encryptedPrivateKey.Length < AesGcmTagLength)
+        if (encryptedPrivateKey.Length != X25519KeyLength + AesGcmTagLength || wrapNonce.Length != AesGcmNonceLength || kek.Length != AesGcmKeyLength)
         {
             return null;
         }
@@ -88,13 +103,24 @@ public sealed class CryptoService
 
     public byte[] DeriveSharedSecret(byte[] myPrivateKey, byte[] peerPublicKey)
     {
-        var priv = new X25519PrivateKeyParameters(myPrivateKey, 0);
-        var pub = new X25519PublicKeyParameters(peerPublicKey, 0);
-        var agreement = new X25519Agreement();
-        agreement.Init(priv);
-        var shared = new byte[agreement.AgreementSize];
-        agreement.CalculateAgreement(pub, shared, 0);
-        return shared;
+        if (myPrivateKey.Length != 32 || peerPublicKey.Length != 32)
+        {
+            throw new CryptographicException("Invalid X25519 key length.");
+        }
+        try
+        {
+            var priv = new X25519PrivateKeyParameters(myPrivateKey, 0);
+            var pub = new X25519PublicKeyParameters(peerPublicKey, 0);
+            var agreement = new X25519Agreement();
+            agreement.Init(priv);
+            var shared = new byte[agreement.AgreementSize];
+            agreement.CalculateAgreement(pub, shared, 0);
+            return shared;
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        {
+            throw new CryptographicException("Invalid X25519 public key.", ex);
+        }
     }
 
     /// <summary>HKDF-SHA256 on the shared secret. Salt must be deterministic across the pair.</summary>
@@ -170,7 +196,7 @@ public sealed class CryptoService
 
     public byte[] Decrypt(byte[] messageKey, byte[] nonce, byte[] ciphertextAndTag)
     {
-        if (ciphertextAndTag.Length < AesGcmTagLength)
+        if (nonce.Length != AesGcmNonceLength || messageKey.Length != AesGcmKeyLength || ciphertextAndTag.Length < AesGcmTagLength)
         {
             throw new CryptographicException("Ciphertext shorter than auth tag.");
         }

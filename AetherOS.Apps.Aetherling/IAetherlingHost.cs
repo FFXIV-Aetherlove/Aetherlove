@@ -11,9 +11,8 @@ namespace AetherOS.Apps.Aetherling;
 /// <summary>One party member's Aetherling, as much of it as this client needs to draw one. Read fresh from
 /// the host every frame and never stored: it is somebody else's pet, and the moment they leave the party or
 /// turn sharing off it simply stops being in the list.</summary>
-/// <param name="Stage">The rung of the growth ladder: 0-2 hatchling forms, 3 adult.</param>
 public sealed record AetherlingPartyPet(
-    Guid AccountId, short Stage, string Palette, IReadOnlyList<string> Accessories, string? Name,
+    Guid AccountId, string Palette, IReadOnlyList<string> Accessories, string? Name,
     string Shell = "");
 
 /// <summary>What the app needs from the plugin. Declared here and implemented over there, so the app never
@@ -41,6 +40,10 @@ public interface IAetherlingHost
 
     /// <summary>Where the ceremony sheets live, so the app can hand paths to the texture cache.</summary>
     string AssetRoot { get; }
+
+    /// <summary>Where the downloaded music library lives. A track missing from it is silence, so a
+    /// picker checks here before naming one.</summary>
+    string BgmRoot { get; }
 
     /// <summary>The app's interact-lab hooks, parked here at startup for the dev window. Null until the
     /// app exists; the lab shows "no app" rather than caring why.</summary>
@@ -76,12 +79,9 @@ public interface IAetherlingHost
     /// <summary>Buys the one Aethercore this account will ever have. Throws the server's refusal.</summary>
     Task<AetherlingDto> PurchaseAsync(CancellationToken ct = default);
 
-    /// <summary>Moves the core one stage up. Throws the server's refusal, gate included.</summary>
-    Task<AetherlingDto> ChargeAsync(CancellationToken ct = default);
-
-    /// <summary>Breaks the core open once its last hold has elapsed. Free, and safe to call twice: the
-    /// server answers the second one with the first one's result.</summary>
-    Task<AetherlingDto> HatchAsync(CancellationToken ct = default);
+    /// <summary>Breaks the crystal: the birth. The job decides the arms card. Idempotent: the server
+    /// answers a second call with the first one's result.</summary>
+    Task<AetherlingDto> HatchAsync(string? job, CancellationToken ct = default);
 
     /// <summary>The one free naming. Throws the server's refusal, which covers a name that is empty, too
     /// long, or one the moderator would not have.</summary>
@@ -90,9 +90,7 @@ public interface IAetherlingHost
     /// <summary>The caller's spark balance, null when it cannot be read.</summary>
     Task<long?> GetSparkBalanceAsync(CancellationToken ct = default);
 
-    /// <summary>Feeds one crystal of an element. The host rides the player's current job along,
-    /// because the feed that grows the pet up decides the arms card from it. Throws the server's
-    /// refusal (gate, appetite, no crystal).</summary>
+    /// <summary>Feeds one crystal of an element. Throws the server's refusal (appetite, no crystal).</summary>
     Task<AetherlingDto> FeedAsync(short element, CancellationToken ct = default);
 
     /// <summary>Stores the whole look, validated server-side against ownership.</summary>
@@ -156,7 +154,7 @@ public interface IAetherlingHost
     /// Calling it again with a different tempo crossfades.</summary>
     void StartBgm(float speed);
 
-    /// <summary>Starts a minigame's loop, named by its file under the plugin's bgm folder. Rides the same
+    /// <summary>Starts a minigame's loop, named by its file in the music library. Rides the same
     /// mute and the same duck as the ceremony's loop, and replaces whatever was playing. Calling it again
     /// with the same file and a new speed only retunes: speed is tape speed, so pitch and tempo rise
     /// together.</summary>

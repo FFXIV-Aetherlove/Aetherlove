@@ -31,7 +31,7 @@ public sealed class StoreApp : IAetherApp
     private readonly StoreCart _cart;
     private readonly StoreWishlist _wishlist;
     private readonly StoreMediaCache _media;
-    private readonly StoreMediaCache _backgrounds;
+    private readonly PhoneSkinsIntro _intro;
     private readonly HomeScreen _home;
     private readonly BrowseScreen _browse;
     private readonly DetailScreen _detail;
@@ -57,14 +57,12 @@ public sealed class StoreApp : IAetherApp
         _cart = new StoreCart(caps.Storage("store"));
         _wishlist = new StoreWishlist(caps.Storage("store"));
         _media = new StoreMediaCache(host, System.IO.Path.Combine(caps.Storage("store").Directory, "MediaCache"));
-        // Theme wallpapers key on the same product id as the shelf art, so they need their own cache.
-        _backgrounds = new StoreMediaCache(
-            host, System.IO.Path.Combine(caps.Storage("store").Directory, "MediaCache", "bg"));
         _boosts = new BoostsSheet(_host, _state);
+        _intro = new PhoneSkinsIntro(caps.Storage("store"), OpenSkinsShelf);
         _home = new HomeScreen(
             _state, _media, _cart, caps.Storage("store"), OpenDetail, OpenBrowse, AddedToCart, _boosts.Open);
         _browse = new BrowseScreen(_state, _media, OpenDetail);
-        _detail = new DetailScreen(_host, _state, _media, _backgrounds, _cart, _wishlist, AddedToCart, OpenBrowse);
+        _detail = new DetailScreen(_host, _state, _media, _cart, _wishlist, AddedToCart, OpenBrowse);
         _cartScreen = new CartScreen(_host, _state, _media, _cart, BackHome, ShowSuccess, OpenWaysToEarn);
         _wishlistScreen = new WishlistScreen(_state, _media, _wishlist, BackHome, OpenDetail);
         _success = new SuccessScreen(_host, _media, BackHome, _boosts.Open);
@@ -129,6 +127,14 @@ public sealed class StoreApp : IAetherApp
         var seed = slash < 0 ? null : path[(slash + 1)..];
         _view = View.Browse;
         _browse.OpenDeepLink(categoryKey, seed);
+    }
+
+    /// <summary>The skins shelf, the way the intro notice and the Settings button both reach it: by the
+    /// shelf's stable key, resolved against the category tree like any other deep link.</summary>
+    private void OpenSkinsShelf()
+    {
+        _view = View.Browse;
+        _browse.OpenDeepLink(PhoneSkinsIntro.SkinsCategoryKey, null);
     }
 
     /// <summary>Only the server knows which row carries a given kind and ref, so the page opens once the
@@ -289,6 +295,7 @@ public sealed class StoreApp : IAetherApp
         }
 
         _boosts.Draw();
+        _intro.Draw(_state);
     }
 
     private void DrawHeader(OsAppContext ctx)

@@ -1,4 +1,4 @@
-﻿namespace AetherLove.Shared.Arcade;
+namespace AetherLove.Shared.Arcade;
 
 /// <summary>The games with server-tracked scores. Append-only: values are stored in the database.
 /// Despite the name this is the score domain, not the arcade cabinet: the Aetherling pet games from 11
@@ -28,6 +28,9 @@ public enum ArcadeGame : short
 
     /// <summary>The marble-chain shooter, a companion game.</summary>
     Gyre = 16,
+
+    /// <summary>The bubble shooter, a companion game.</summary>
+    AetherPop = 17,
 }
 
 /// <summary>Which leaderboard window to fetch.</summary>

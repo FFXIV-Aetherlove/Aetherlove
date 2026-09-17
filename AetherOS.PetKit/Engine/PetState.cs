@@ -8,7 +8,7 @@ using AetherOS.PetKit.Rendering;
 namespace AetherOS.PetKit.Engine;
 
 /// <summary>Pure reads over the server snapshot and the store inventory: which form is on
-/// screen, what the gates say, what is owned. The server owns every fact here; this only
+/// screen, what is owned. The server owns every fact here; this only
 /// translates them for surfaces.</summary>
 public static class PetState
 {
@@ -45,48 +45,12 @@ public static class PetState
         return ShellFolders.Contains(folder) ? folder : CoreAssets.AdultFolder;
     }
 
-    /// <summary>The sheet folder for the pet's current form: the growth ladder below adulthood,
-    /// then the worn shell (the dev override outranks it).</summary>
-    public static string FormFolder(AetherlingDto? dto)
-    {
-        if (dto?.Adult is not null)
-        {
-            return string.IsNullOrEmpty(ShellOverride)
-                ? ShellFolderFor(dto.Look?.Shell)
-                : ShellOverride;
-        }
-        var fed = dto?.Growth?.GrowthFed ?? 0;
-        var perStage = Math.Max((short)1, dto?.Growth?.FeedsPerStage ?? 3);
-        if (fed >= perStage * 2)
-        {
-            return CoreAssets.Hatchling3Folder;
-        }
-        return fed >= perStage ? CoreAssets.Hatchling2Folder : CoreAssets.HatchlingFolder;
-    }
-
-    /// <summary>The body for a rung of the growth ladder, for a creature whose snapshot this client will
-    /// never see: a party member's. Same ladder <see cref="FormFolder"/> walks, named by the number the
-    /// wire carries rather than by anything asset-shaped; the shell ref rides the same wire.</summary>
-    public static string FormFolderForStage(short stage, string? shell = null) => stage switch
-    {
-        >= 3 => ShellFolderFor(shell),
-        2 => CoreAssets.Hatchling3Folder,
-        1 => CoreAssets.Hatchling2Folder,
-        _ => CoreAssets.HatchlingFolder,
-    };
-
-    /// <summary>Time left on the growth feed gate, computed against the server's clock through
-    /// the caller's stored offset; zero when feedable or grown.</summary>
-    public static TimeSpan FeedGateRemaining(AetherlingDto dto, TimeSpan serverOffset)
-    {
-        if (dto.Adult is not null || dto.Growth?.LastFedAtUtc is not { } last)
-        {
-            return TimeSpan.Zero;
-        }
-        var serverNow = DateTimeOffset.UtcNow + serverOffset;
-        var readyAt = last.AddMinutes(dto.Growth.FeedGateMinutes);
-        return readyAt > serverNow ? readyAt - serverNow : TimeSpan.Zero;
-    }
+    /// <summary>The sheet folder for the pet on screen: the worn shell, the trueform for none, with
+    /// the dev override outranking both. A null or pre-break snapshot draws the trueform.</summary>
+    public static string FormFolder(AetherlingDto? dto) =>
+        string.IsNullOrEmpty(ShellOverride)
+            ? ShellFolderFor(dto?.Look?.Shell)
+            : ShellOverride;
 
     /// <summary>Adult meals left today, from the snapshot's own counters.</summary>
     public static int AdultFeedsLeft(AetherlingDto dto) =>

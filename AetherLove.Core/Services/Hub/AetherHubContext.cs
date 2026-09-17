@@ -243,6 +243,16 @@ public sealed partial class AetherHubContext
         catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl) { throw rl; }
     }
 
+    /// <summary>Swap two portrait slots by server order (1 = main, 2+ = extras).</summary>
+    public async Task MovePhotoAsync(int fromOrder, int toOrder, CancellationToken ct = default)
+    {
+        try
+        {
+            await (await ConnAsync(ct)).InvokeAsync("MovePhotoAsync", fromOrder, toOrder, ct).ConfigureAwait(false);
+        }
+        catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl) { throw rl; }
+    }
+
     public async Task DeleteProfileAsync(CancellationToken ct = default) =>
         await (await ConnAsync(ct)).InvokeAsync("DeleteProfileAsync", ct).ConfigureAwait(false);
 

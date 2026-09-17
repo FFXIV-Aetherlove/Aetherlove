@@ -125,6 +125,12 @@ public static class AppStrings
         ["os.store_add_to_wishlist"] = "Add to wishlist",
         ["os.store_in_wishlist"] = "In your wishlist",
 
+        // added after update 2.7.0 (store)
+        ["os.store_skins_intro_title"] = "Phone Skins are here",
+        ["os.store_skins_intro_body"] = "New frames for your phone are in the Store. Everyone can pick one skin for free.",
+        ["os.store_skins_intro_open"] = "Show me the skins",
+        ["os.store_skins_intro_later"] = "Not now",
+        ["os.store_free_skin_hint"] = "You still have 1 free phone skin to pick.",
         // added after update 2.6.1 (store)
         ["os.store_collection_view_more"] = "View more ({0})",
         ["os.store_filter_collection"] = "Collection",
@@ -250,6 +256,12 @@ public static class AppStrings
         ["os.store_add_to_wishlist"] = "Zur Wunschliste",
         ["os.store_in_wishlist"] = "Auf deiner Wunschliste",
 
+        // added after update 2.7.0 (store)
+        ["os.store_skins_intro_title"] = "Handy-Designs sind da",
+        ["os.store_skins_intro_body"] = "Neue Rahmen für dein Handy sind im Store. Jeder kann sich ein Design gratis aussuchen.",
+        ["os.store_skins_intro_open"] = "Designs ansehen",
+        ["os.store_skins_intro_later"] = "Jetzt nicht",
+        ["os.store_free_skin_hint"] = "Du hast noch 1 gratis Handy-Design zur Auswahl.",
         // added after update 2.6.1 (store)
         ["os.store_collection_view_more"] = "Mehr anzeigen ({0})",
         ["os.store_filter_collection"] = "Kollektion",
@@ -375,6 +387,12 @@ public static class AppStrings
         ["os.store_add_to_wishlist"] = "Añadir a la lista",
         ["os.store_in_wishlist"] = "En tu lista de deseos",
 
+        // added after update 2.7.0 (store)
+        ["os.store_skins_intro_title"] = "Llegaron los diseños del teléfono",
+        ["os.store_skins_intro_body"] = "Hay marcos nuevos para tu teléfono en la tienda. Todos pueden elegir un diseño gratis.",
+        ["os.store_skins_intro_open"] = "Ver los diseños",
+        ["os.store_skins_intro_later"] = "Ahora no",
+        ["os.store_free_skin_hint"] = "Todavía puedes elegir 1 diseño del teléfono gratis.",
         // added after update 2.6.1 (store)
         ["os.store_collection_view_more"] = "Ver más ({0})",
         ["os.store_filter_collection"] = "Colección",
@@ -500,6 +518,12 @@ public static class AppStrings
         ["os.store_add_to_wishlist"] = "À ma liste de souhaits",
         ["os.store_in_wishlist"] = "Dans ta liste de souhaits",
 
+        // added after update 2.7.0 (store)
+        ["os.store_skins_intro_title"] = "Les habillages du téléphone sont là",
+        ["os.store_skins_intro_body"] = "De nouveaux cadres pour votre téléphone sont dans la boutique. Tout le monde peut choisir un habillage gratuit.",
+        ["os.store_skins_intro_open"] = "Voir les habillages",
+        ["os.store_skins_intro_later"] = "Pas maintenant",
+        ["os.store_free_skin_hint"] = "Il vous reste 1 habillage de téléphone gratuit à choisir.",
         // added after update 2.6.1 (store)
         ["os.store_collection_view_more"] = "Voir plus ({0})",
         ["os.store_filter_collection"] = "Collection",
@@ -625,6 +649,12 @@ public static class AppStrings
         ["os.store_add_to_wishlist"] = "Adicionar à lista",
         ["os.store_in_wishlist"] = "Na sua lista de desejos",
 
+        // added after update 2.7.0 (store)
+        ["os.store_skins_intro_title"] = "Chegaram os visuais do telefone",
+        ["os.store_skins_intro_body"] = "Há molduras novas para seu telefone na loja. Todo mundo pode escolher um visual de graça.",
+        ["os.store_skins_intro_open"] = "Ver os visuais",
+        ["os.store_skins_intro_later"] = "Agora não",
+        ["os.store_free_skin_hint"] = "Você ainda pode escolher 1 visual do telefone de graça.",
         // added after update 2.6.1 (store)
         ["os.store_collection_view_more"] = "Ver mais ({0})",
         ["os.store_filter_collection"] = "Coleção",
@@ -750,6 +780,12 @@ public static class AppStrings
         ["os.store_add_to_wishlist"] = "В список желаний",
         ["os.store_in_wishlist"] = "В списке желаний",
 
+        // added after update 2.7.0 (store)
+        ["os.store_skins_intro_title"] = "Появилось оформление телефона",
+        ["os.store_skins_intro_body"] = "В магазине появились новые рамки для телефона. Каждый может выбрать одно оформление бесплатно.",
+        ["os.store_skins_intro_open"] = "Показать оформления",
+        ["os.store_skins_intro_later"] = "Не сейчас",
+        ["os.store_free_skin_hint"] = "Вы ещё можете выбрать 1 бесплатное оформление телефона.",
         // added after update 2.6.1 (store)
         ["os.store_collection_view_more"] = "Показать ещё ({0})",
         ["os.store_filter_collection"] = "Коллекция",

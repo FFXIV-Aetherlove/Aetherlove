@@ -19,6 +19,7 @@ public sealed class RealtorApp : IAetherApp, IAppSettings
     private readonly Func<string> _name;
     private readonly IHousingLotteryWatch _lottery;
     private readonly IEstateWatch _estates;
+    private readonly EstateView _estateView;
     private readonly IRealtorAlerts _alerts;
     private readonly RealtorSettings _settings;
     private readonly SettingsScreen _settingsScreen;
@@ -44,6 +45,7 @@ public sealed class RealtorApp : IAetherApp, IAppSettings
         var filters = new RealtorFilters(_storage);
         _settings = new RealtorSettings(_storage);
         _settingsScreen = new SettingsScreen(_settings);
+        _estateView = new EstateView(estates, _settings);
         var clock = new LotteryClock(_storage);
         _clock = clock;
         _home = new HomeScreen(data, filters, clock, _settings, estates, OpenWorldPick, OpenDistrict, OpenTour,
@@ -51,7 +53,7 @@ public sealed class RealtorApp : IAetherApp, IAppSettings
         _district = new DistrictScreen(data, filters, clock, _settings, BackToHome);
         _worldPick = new WorldPickScreen(data, BackToHome, PickWorld);
         _tour = new TourScreen(FinishTour);
-        _realty = new OwnedRealtyScreen(estates, BackToHome);
+        _realty = new OwnedRealtyScreen(_estateView, BackToHome);
     }
 
     private bool ShouldAutoRunTour()
@@ -82,7 +84,7 @@ public sealed class RealtorApp : IAetherApp, IAppSettings
     public FontAwesomeIcon Icon => FontAwesomeIcon.Home;
     public Vector4 TileTop => new(0.86f, 0.51f, 0.26f, 1f);
     public Vector4 TileBottom => new(0.52f, 0.22f, 0.10f, 1f);
-    public int Badge => _estates.AtRiskCount;
+    public int Badge => _estateView.AtRiskCount;
     public bool HasSurface => true;
 
     public System.Collections.Generic.IReadOnlyDictionary<string, System.Collections.Generic.IReadOnlyDictionary<string, string>> Strings => Localization.AppStrings.Packs;
@@ -159,13 +161,13 @@ public sealed class RealtorApp : IAetherApp, IAppSettings
 
     public void DrawSettings(OsAppContext ctx, Action? onBack) => _settingsScreen.Draw(ctx, onBack);
 
-    /// <summary>A character that has not been home to its own private estate in long enough that the game is
-    /// warning about it. Built as the same card the district and realty rows use rather than a coloured slab,
+    /// <summary>A character that has not entered one of its houses in long enough that the game is warning
+    /// about it. Built as the same card the district and realty rows use rather than a coloured slab,
     /// so it reads as part of the app; the tint and the icon carry the alarm on their own.</summary>
     private void DrawEstateBanner(OsAppContext ctx)
     {
         var now = DateTime.UtcNow;
-        var estates = _estates.Estates;
+        var estates = _estateView.Estates;
         if (EstateRisk.Worst(estates, now) is not { } worst)
         {
             return;
@@ -176,7 +178,8 @@ public sealed class RealtorApp : IAetherApp, IAppSettings
         var tint = RealtorUi.RiskRed;
 
         var who = worst.World.Length > 0 ? $"{worst.Character} ({worst.World})" : worst.Character;
-        var title = Loc.T("os.realtor_estate_title", EstateRisk.DaysLeft(daysAway));
+        var title = Loc.T(worst.Kind == EstateKind.FreeCompany ? "os.realtor_estate_fc_title" : "os.realtor_estate_title",
+            EstateRisk.DaysLeft(daysAway));
         var detail = others > 0
             ? Loc.T("os.realtor_estate_detail_more", who, daysAway, others)
             : Loc.T("os.realtor_estate_detail", who, daysAway);

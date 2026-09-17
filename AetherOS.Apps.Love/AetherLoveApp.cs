@@ -85,6 +85,7 @@ public sealed partial class AetherLoveApp : IAetherApp, IAppSettings
         ChatEventBus chatEvents,
         CryptoService crypto,
         KeyStorageService keys,
+        AccountEncryptionService encryption,
         ChatCategoryStore categories,
         ChatSyncService chatSync,
         ChatCacheStore chatCache,
@@ -162,10 +163,10 @@ public sealed partial class AetherLoveApp : IAetherApp, IAppSettings
         };
         _match = new MatchScreen(effects, ownAvatar, pendingMatch, bootstrap);
 
-        _chatList = new ChatListScreen(_router, hub, chatEvents, crypto, keys, notifications, categories, chatSync);
+        _chatList = new ChatListScreen(_router, hub, chatEvents, crypto, keys, encryption, notifications, categories, chatSync);
         _chatCategory = new ChatCategoryScreen(_chatList);
         _encVerify = new EncryptionVerificationScreen(_router, keys);
-        _chat = new ChatScreen(_shell, _router, _chatList, _profile, _encVerify, hub, crypto, keys, chatEvents,
+        _chat = new ChatScreen(_shell, _router, _chatList, _profile, _encVerify, hub, crypto, keys, encryption, chatEvents,
             notifications, chatSync, _settings, venueShare, partyInviteShare, hangoutShare, newsShare, calendarShare,
             levemeteShare, marketShare, hangoutOpener, messengerStore, marketData, marketIndex, caps);
         _myProfile = new MyProfileScreen(_shell, _profile, hub, ownAvatar, rateLimit, saveErr, imageReq, caps,

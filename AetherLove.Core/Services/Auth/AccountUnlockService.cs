@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -31,10 +31,12 @@ public sealed class AccountUnlockService
     private readonly KeyStorageService _keys;
     private readonly Configuration _config;
     private readonly IPluginLog _log;
+    private readonly AccountEncryptionService _encryption;
 
     public AccountUnlockService(AetherHubContext hub, CryptoService crypto, KeyStorageService keys,
-        Configuration config, IPluginLog log)
+        Configuration config, IPluginLog log, AccountEncryptionService encryption)
     {
+        _encryption = encryption;
         _hub = hub;
         _crypto = crypto;
         _keys = keys;
@@ -45,6 +47,14 @@ public sealed class AccountUnlockService
     public async Task<AccountUnlockOutcome> UnlockAsync(string passphrase, KeyBundleDto activeBundle,
         CancellationToken ct = default)
     {
+        if (await _encryption.UnlockAsync(passphrase, ct).ConfigureAwait(false))
+        {
+            return _keys.HasLocalKey ? AccountUnlockOutcome.Success : AccountUnlockOutcome.Unrecoverable;
+        }
+        if (_encryption.HasPassphraseWrap)
+        {
+            return AccountUnlockOutcome.WrongPassphrase;
+        }
         var activeId = _config.Auth.ActiveProfileId ?? Guid.Empty;
         var siblings = await _hub.GetSiblingKeyBundlesAsync(ct).ConfigureAwait(false);
         var pass = await _hub.GetAccountPassphraseAsync(ct).ConfigureAwait(false);
@@ -141,18 +151,6 @@ public sealed class AccountUnlockService
             }
         }
 
-        if (!opened.ContainsKey(activeId))
-        {
-            if (passphraseIsCurrent is false)
-            {
-                _log.Debug("[AccountUnlock] The typed passphrase fails the account verifier; retired bundles stay untouched.");
-            }
-            else if (await TryReactivateRetiredAsync(retired, keks, opened, ct).ConfigureAwait(false) is { } back)
-            {
-                bundles[activeId] = back.Dto;
-                opened[activeId] = (back.Priv, back.ViaKek);
-            }
-        }
         if (!opened.TryGetValue(activeId, out var active))
         {
             if (passphraseIsCurrent == true)
@@ -244,6 +242,7 @@ public sealed class AccountUnlockService
         }
         _log.Information("[AccountUnlock] Unlock complete: {Opened}/{Total} profile bundle(s) unlocked, {Converged} rewrapped, canonical='{Source}'.",
             opened.Count, bundles.Count, converged, canonical?.Source ?? "(none)");
+        await _encryption.SynchronizeAsync(ct).ConfigureAwait(false);
         return AccountUnlockOutcome.Success;
     }
 
@@ -253,7 +252,7 @@ public sealed class AccountUnlockService
         var sets = new List<(string Source, byte[] Salt, int Mem, int Iter, int Par)>();
         void Add(string source, byte[]? salt, int mem, int iter, int par)
         {
-            if (salt is null || salt.Length < CryptoService.KdfSaltLength || mem <= 0 || iter <= 0 || par <= 0)
+            if (!AetherLove.Shared.Crypto.KeyEnvelopeLimits.ValidKdf(salt, mem, iter, par) || sets.Count >= AetherLove.Shared.Crypto.KeyEnvelopeLimits.MaxKdfCandidates)
             {
                 return;
             }
@@ -264,7 +263,7 @@ public sealed class AccountUnlockService
                     return;
                 }
             }
-            sets.Add((source, salt, mem, iter, par));
+            sets.Add((source, salt!, mem, iter, par));
         }
         if (pass is not null)
         {
@@ -326,26 +325,6 @@ public sealed class AccountUnlockService
     /// <summary>Republishes a retired keypair the passphrase still opens, so pre-repair history decrypts
     /// again. Only reached when the verifier does not disprove the passphrase, so a reset-revoked key can
     /// never be resurrected by the old passphrase.</summary>
-    private async Task<(KeyBundleDto Dto, byte[] Priv, Candidate ViaKek)?> TryReactivateRetiredAsync(
-        KeyBundleDto[] retired, List<Candidate> keks,
-        Dictionary<Guid, (byte[] Priv, Candidate? ViaKek)> opened, CancellationToken ct)
-    {
-        foreach (var old in retired)
-        {
-            foreach (var c in keks)
-            {
-                if (_crypto.UnwrapPrivateKey(old.EncryptedPrivateKey, old.WrapNonce, c.Kek) is not { } priv)
-                {
-                    continue;
-                }
-                _log.Information("[AccountUnlock] A RETIRED bundle opened via '{Source}'; republishing that original keypair.", c.Source);
-                var dto = ComposeBundle(old.PublicKey, priv, c, Guid.Empty, opened);
-                await _hub.ReplaceKeyBundleAsync(dto, ct).ConfigureAwait(false);
-                return (dto, priv, c);
-            }
-        }
-        return null;
-    }
 
     private async Task UnlockAccountBundleAsync(KeyBundleDto acct, List<Candidate> keks,
         Dictionary<Guid, (byte[] Priv, Candidate? ViaKek)> opened, byte[] activePriv, Guid activeId,

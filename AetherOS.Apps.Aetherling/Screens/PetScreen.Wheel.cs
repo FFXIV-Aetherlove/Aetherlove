@@ -9,16 +9,15 @@ using Dalamud.Bindings.ImGui;
 
 namespace AetherOS.Apps.Aetherling.Screens;
 
-/// <summary>The wheel's way in: a round button under the stage that turns while a spin is waiting and
-/// greys with a countdown once today's is used. The overlay itself lives in <see cref="WheelOverlay"/>.</summary>
 internal sealed partial class PetScreen
 {
     private const float WheelButtonSize = 44f;
 
-    /// <summary>How much taller the band under the stage gets while the button is shown.</summary>
-    private const float WheelRowExtra = 30f;
-
     private WheelOverlay? _wheel;
+    private bool _wheelEntrancePending = true;
+    private double _wheelEntranceAt = double.NegativeInfinity;
+
+    public void AnimateWheelOnEntry() => _wheelEntrancePending = true;
 
     /// <summary>The overlay, built on first use so a page that never opens it builds nothing.</summary>
     internal WheelOverlay Wheel => _wheel ??= BuildWheel();
@@ -75,6 +74,7 @@ internal sealed partial class PetScreen
     private void DrawWheelButton(OsAppContext ctx, ImDrawListPtr dl, Vector2 tl, AetherlingDto core, double now)
     {
         var side = Px(WheelButtonSize);
+        WheelRect = (tl, tl + new Vector2(side, side));
         var centre = tl + new Vector2(side * 0.5f, side * 0.5f);
         var radius = side * 0.5f;
         var serverNow = DateTimeOffset.UtcNow + ServerOffset(core);
@@ -102,7 +102,14 @@ internal sealed partial class PetScreen
         {
             Look.Halo(dl, centre, radius * 1.6f, Look.Spark, 0.10f + (0.04f * Look.Breathe(now, 2.4f)));
         }
-        var turn = spent || ctx.ReduceMotion ? 0f : (float)(now * 0.35);
+        if (_wheelEntrancePending)
+        {
+            _wheelEntrancePending = false;
+            _wheelEntranceAt = spent || ctx.ReduceMotion ? double.NegativeInfinity : now;
+        }
+        var progress = Math.Clamp((float)((now - _wheelEntranceAt - 1.0) / 1.8), 0f, 1f);
+        var turn = spent || ctx.ReduceMotion || progress >= 1f
+            ? 0f : MathF.Tau * 2f * (1f - MathF.Pow(1f - progress, 3f));
         for (var i = 0; i < 8; i++)
         {
             var start = turn + (i * MathF.PI * 0.25f);
@@ -132,18 +139,8 @@ internal sealed partial class PetScreen
         }
     }
 
-    /// <summary>The home screen's "new" pill, redrawn here because an app cannot reach the shell's.</summary>
     private static void DrawNewPip(OsAppContext ctx, ImDrawListPtr dl, Vector2 corner)
     {
-        var label = ctx.Localize("os.aetherling_wheel_new");
-        var scale = 0.72f;
-        var textSize = ImGui.CalcTextSize(label) * scale;
-        var padX = Px(5f);
-        var height = textSize.Y + Px(4f);
-        var tl = new Vector2(corner.X - padX, corner.Y - (height * 0.5f));
-        var br = tl + new Vector2(textSize.X + (padX * 2f), height);
-        dl.AddRectFilled(tl, br, Look.U32(new Vector4(0.86f, 0.13f, 0.16f, 1f)), height * 0.5f);
-        dl.AddRect(tl, br, Look.U32(new Vector4(1f, 1f, 1f, 0.55f)), height * 0.5f, ImDrawFlags.RoundCornersAll, 1f);
-        Look.Centred(dl, label, tl.X + ((br.X - tl.X) * 0.5f), tl.Y + Px(2f), Look.U32(new Vector4(1f, 1f, 1f, 1f)), scale);
+        dl.AddCircleFilled(corner + new Vector2(Px(WheelButtonSize), Px(2f)), Px(3.5f), Look.U32(Look.Crystal));
     }
 }

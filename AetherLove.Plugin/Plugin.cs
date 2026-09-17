@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using AetherLove.Config;
@@ -70,6 +70,8 @@ public sealed class Plugin : IDalamudPlugin
         LanguageProvider.Initialise(Configuration);
         EmojiService = new EmojiService();
         UiHost.SetEmojiService(EmojiService);
+        // Returning players have the emoji pack on disk already; the asset sync reloads it when it changes.
+        EmojiService.Reload();
 
         var configDir = PluginInterface.ConfigDirectory.FullName;
         if (!Directory.Exists(configDir))
@@ -124,6 +126,7 @@ public sealed class Plugin : IDalamudPlugin
         services.AddSingleton<Widgets.SaveErrorModal>();
         services.AddSingleton<Widgets.ImageRequirementsModal>();
         services.AddSingleton<Services.Crypto.CryptoService>();
+        services.AddSingleton<Services.Crypto.AccountEncryptionService>();
         services.AddSingleton<Services.Crypto.KeyStorageService>();
         services.AddSingleton<ChatEventBus>();
         services.AddSingleton<Services.Chat.ChatCacheStore>();
@@ -149,6 +152,16 @@ public sealed class Plugin : IDalamudPlugin
             c.BaseAddress = new Uri(ServerBaseUrl);
             c.Timeout = TimeSpan.FromSeconds(15);
         });
+
+        // A pack download runs for minutes on a slow line; the sync's own cancellation is the only timeout.
+        services.AddHttpClient<Services.Assets.AssetLibrary>(c =>
+        {
+            c.BaseAddress = new Uri(ServerBaseUrl);
+            c.Timeout = System.Threading.Timeout.InfiniteTimeSpan;
+        });
+        services.AddSingleton<Services.Assets.AssetSyncService>();
+        services.AddSingleton<Services.Audio.BgmLibrary>();
+        services.AddSingleton<Os.AssetUpdateCoordinator>();
 
         services.AddSingleton<Services.Yapper.YapperNotificationRelay>();
         services.AddSingleton<Services.Yapper.YapperDmCryptoService>();
@@ -200,7 +213,6 @@ public sealed class Plugin : IDalamudPlugin
         services.AddSingleton<OsAvatarCache>();
         services.AddSingleton<AvatarRingService>();
         services.AddSingleton<Services.Store.PremiumThemeService>();
-        services.AddSingleton<Os.IPremiumWallpaperSource, Os.PremiumWallpaperSourceService>();
         services.AddSingleton<FlairCatalog>();
 
         services.AddSingleton<SplashScreen>();
@@ -209,6 +221,7 @@ public sealed class Plugin : IDalamudPlugin
         services.AddSingleton<WarningAcknowledgeScreen>();
         services.AddSingleton<ModeratorMessageScreen>();
         services.AddSingleton<StaffNoticeScreen>();
+        services.AddSingleton<AssetUpdateScreen>();
         services.AddSingleton<PassphraseUnlockScreen>();
         services.AddSingleton<EncryptionRecoveryScreen>();
         services.AddSingleton<OfflineScreen>();
@@ -234,6 +247,7 @@ public sealed class Plugin : IDalamudPlugin
             sp.GetRequiredService<ChatEventBus>(),
             sp.GetRequiredService<Services.Crypto.CryptoService>(),
             sp.GetRequiredService<Services.Crypto.KeyStorageService>(),
+            sp.GetRequiredService<Services.Crypto.AccountEncryptionService>(),
             sp.GetRequiredService<ChatCategoryStore>(),
             sp.GetRequiredService<Services.Chat.ChatSyncService>(),
             sp.GetRequiredService<Services.Chat.ChatCacheStore>(),
@@ -279,8 +293,6 @@ public sealed class Plugin : IDalamudPlugin
             sp.GetRequiredService<AetherOS.Sdk.IAppCapabilities>(),
             sp.GetRequiredService<Services.Hub.AetherHubContext>(),
             sp.GetRequiredService<Services.Echo.EchoStateService>(),
-            sp.GetRequiredService<Services.Echo.EchoHostInstaller>(),
-            sp.GetRequiredService<Services.Echo.EchoHostLocator>(),
             sp.GetRequiredService<AetherOS.Apps.EchoVidya.IEchoHost>(),
             () => sp.GetRequiredService<SessionBootstrapper>().LastConnection?.EchoEnabled != false));
         services.AddSingleton<AetherOS.Sdk.IAetherApp>(sp => new AetherOS.Apps.Sudoku.SudokuApp(
@@ -579,7 +591,12 @@ public sealed class Plugin : IDalamudPlugin
         }
         catch (Exception ex)
         {
-            Log.Warning(ex, "[AetherLove] Self-load of config failed; falling back to Dalamud.");
+            var file = PluginInterface.ConfigFile;
+            if (File.Exists(file.FullName))
+            {
+                File.Copy(file.FullName, file.FullName + ".unreadable-" + Guid.NewGuid().ToString("N"), overwrite: false);
+            }
+            Log.Warning(ex, "[AetherLove] Self-load failed; the original file is preserved before trying the Dalamud backup.");
         }
 
         // Dalamud's loader can serve a ReliableFileStorage BACKUP even when the json itself was deleted, and it

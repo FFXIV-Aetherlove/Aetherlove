@@ -81,7 +81,7 @@ public sealed class TokenService
     public void Clear()
     {
         SessionExpired = false;
-        _config.Auth = new AuthState();
+        _config.Auth = new AuthState { ActiveProfileId = _config.Auth.ActiveProfileId };
         _config.Save();
     }
 

@@ -40,6 +40,7 @@ public partial class LevemetesScreen
     private readonly EmojiPickerPopup _reviewEmojiPicker = new();
     private int _composeRating;
     private string _composeText = "";
+    private readonly SoftWrapInputField _composeTextField = new();
     private volatile bool _reviewSubmitting;
     private volatile string? _reviewError;
     private bool _confirmDeleteReview;
@@ -52,6 +53,7 @@ public partial class LevemetesScreen
     private bool _reportOpen;
     private float _reportPanelH;
     private string _reportText = "";
+    private readonly SoftWrapInputField _reportTextField = new();
     private volatile bool _reportBusy;
     private float _reportThanksTimer;
 
@@ -729,7 +731,7 @@ public partial class LevemetesScreen
         ImGui.SetCursorPosX(pad);
         var textBefore = _composeText;
         ImGui.SetNextItemWidth(cardW);
-        InputTextMultilineWithPaste("##leveReviewText", ref _composeText, EmojiText.MaxBioRawLength,
+        _composeTextField.Draw("##leveReviewText", ref _composeText, EmojiText.MaxBioRawLength,
             new Vector2(cardW, Px(56f)));
         if (EmojiText.EffectiveLength(_composeText) > LevemetesLimits.ReviewMaxLength)
         {
@@ -804,7 +806,7 @@ public partial class LevemetesScreen
         _reviewError = null;
         var adId = detail.Id;
         var rating = (short)_composeRating;
-        var text = _composeText;
+        var text = _composeTextField.Value(_composeText);
         var ct = _cts.Token;
         _ = Task.Run(async () =>
         {
@@ -1026,7 +1028,7 @@ public partial class LevemetesScreen
             ImGui.PopTextWrapPos();
             ImGui.Spacing();
             ImGui.SetNextItemWidth(w);
-            InputTextMultilineWithPaste("##leveReportText", ref _reportText, 500, new Vector2(w, Px(64f)));
+            _reportTextField.Draw("##leveReportText", ref _reportText, 500, new Vector2(w, Px(64f)));
             ImGui.Spacing();
             var canSend = _reportText.Trim().Length > 0 && !_reportBusy;
             if (!canSend)
@@ -1052,7 +1054,7 @@ public partial class LevemetesScreen
     {
         _reportBusy = true;
         var adId = _detailAdId;
-        var reason = _reportText.Trim();
+        var reason = _reportTextField.Value(_reportText).Trim();
         var ct = _cts.Token;
         _ = Task.Run(async () =>
         {

@@ -16,11 +16,18 @@ public readonly record struct ImagePickRequest(string Title, string Filters);
 /// <param name="Aspect">cropHeight / cropWidth for the crop (1.0 square, 1.6 for 10:16 portrait).</param>
 /// <param name="MinWidth">Smallest acceptable source width in pixels.</param>
 /// <param name="MinHeight">Smallest acceptable source height in pixels.</param>
+/// <param name="FreeForm">When set the crop box starts as the whole image and takes any shape, and
+/// <paramref name="Aspect"/> is ignored: for attachments and imports, where nothing about the shape is required.</param>
 public readonly record struct ImageCropRequest(
-    string Title, string Filters, string CropTitle, float Aspect, int MinWidth, int MinHeight);
+    string Title, string Filters, string CropTitle, float Aspect, int MinWidth, int MinHeight, bool FreeForm = false);
 
-/// <summary>A cropped image: the source path, its preview texture, and the image-space crop rect (x, y, w, h).</summary>
-public readonly record struct CroppedImage(string Path, ISharedImmediateTexture Preview, Vector4 Crop);
+/// <summary>A cropped image: the file to use, its preview texture, and the image-space crop rect (x, y, w, h).
+/// The user may have rotated the picture in the crop popup, in which case <paramref name="Path"/> is an upright
+/// temporary copy and <paramref name="OriginalPath"/> still names the file they picked.</summary>
+public readonly record struct CroppedImage(string Path, ISharedImmediateTexture Preview, Vector4 Crop, string? OriginalPath = null)
+{
+    public string SourceName => System.IO.Path.GetFileNameWithoutExtension(OriginalPath ?? Path);
+}
 
 /// <summary>Disk image picking. The shell owns the shared file dialog + crop popup and draws them each frame,
 /// so apps do not host their own.</summary>
@@ -29,8 +36,8 @@ public interface IImagePicker
     /// <summary>Opens a file dialog; <paramref name="onPicked"/> fires with the chosen path.</summary>
     void PickFile(ImagePickRequest request, Action<string> onPicked);
 
-    /// <summary>Opens a file dialog, validates the minimum size, then a crop popup;
-    /// <paramref name="onPicked"/> fires once the user confirms the crop.</summary>
+    /// <summary>Opens a file dialog, validates the minimum size, then a crop popup where the user can also
+    /// rotate the picture; <paramref name="onPicked"/> fires once the user confirms the crop.</summary>
     void PickAndCrop(ImageCropRequest request, Action<CroppedImage> onPicked);
 
     /// <summary>Validates the minimum size of an already-chosen disk image (e.g. from the Photos app or the

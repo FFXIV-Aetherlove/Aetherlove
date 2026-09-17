@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AetherLove.Services;
 using AetherLove.Services.Auth;
 using AetherLove.Services.Hub;
+using AetherLove.Services.Localization;
 using AetherLove.Shared.Aetherling;
+using AetherLove.Shared.Store;
 using AetherOS.Apps.Aetherling;
 using AetherOS.Apps.Groove;
 using AetherOS.Sdk;
@@ -21,7 +24,6 @@ public sealed class AetherlingHostService : IAetherlingHost, IDisposable
 {
     private const string BgmFile = "crystallic.ogg";
     private const string CrackFile = "crack.ogg";
-    private const string GameBgmFolder = "bgm";
     private const string VoiceFolder = "sfx";
     private const string ChirpPrefix = "aetherling_chirp_";
     private const string ResponsePrefix = "aetherling_response_";
@@ -35,18 +37,14 @@ public sealed class AetherlingHostService : IAetherlingHost, IDisposable
     /// announcement, so its noises sit well under the game.</summary>
     private const float VoiceLevel = 0.2f;
 
-    /// <summary>One step per growth form, so the voice audibly settles as the creature grows up. The
-    /// adult sits at 1.0 because the clips were recorded for it.</summary>
-    private const float HatchlingPitch = 1.32f;
-    private const float Hatchling2Pitch = 1.20f;
-    private const float Hatchling3Pitch = 1.09f;
-
     private readonly AetherHubContext _hub;
     private readonly SessionBootstrapper _bootstrap;
+    private readonly IServiceProvider _services;
     private readonly IAppCapabilities _capabilities;
     private readonly Services.Together.TogetherStateService _party;
     private readonly Config.Configuration _config;
     private readonly Services.Sparks.SparkActivityReporter _sparkReporter;
+    private readonly Services.Audio.BgmLibrary _bgmLibrary;
     private readonly BgmPlayer _bgm = new();
     private readonly OneShotSound _sfx = new();
     private readonly OneShotSound _voice = new();
@@ -63,6 +61,9 @@ public sealed class AetherlingHostService : IAetherlingHost, IDisposable
     private bool _muted;
     private bool _silenced;
     private double _audioAccum;
+    private double _hungerReminderAccum;
+    private int _hungerReminderChecking;
+    private DateTimeOffset _nextHungerInventoryCheckAt;
     private string? _track;
     private double _lastVoiceAt = double.NegativeInfinity;
     private string _job = "";
@@ -72,10 +73,12 @@ public sealed class AetherlingHostService : IAetherlingHost, IDisposable
 
     public AetherlingHostService(AetherHubContext hub, SessionBootstrapper bootstrap, IAppCapabilities capabilities,
         Services.Sparks.SparkActivityReporter sparkReporter, Services.Together.TogetherStateService party,
-        Config.Configuration config)
+        Config.Configuration config, IServiceProvider services, Services.Audio.BgmLibrary bgmLibrary)
     {
         _hub = hub;
+        _bgmLibrary = bgmLibrary;
         _bootstrap = bootstrap;
+        _services = services;
         _capabilities = capabilities;
         _sparkReporter = sparkReporter;
         _party = party;
@@ -112,7 +115,7 @@ public sealed class AetherlingHostService : IAetherlingHost, IDisposable
                     continue;
                 }
                 pets.Add(new AetherOS.Apps.Aetherling.AetherlingPartyPet(
-                    member.AccountId, pet.Stage, pet.Palette, pet.Accessories, pet.Name, pet.Shell));
+                    member.AccountId, pet.Palette, pet.Accessories, pet.Name, pet.Shell));
             }
             return pets;
         }
@@ -136,6 +139,8 @@ public sealed class AetherlingHostService : IAetherlingHost, IDisposable
             {
                 _snapshotSeeded = true;
                 _snapshot = connection.Aetherling;
+                PostBornNoticeIfDue(_snapshot);
+                QueueHungerReminderIfDue(_snapshot);
             }
             return _snapshot;
         }
@@ -143,14 +148,117 @@ public sealed class AetherlingHostService : IAetherlingHost, IDisposable
 
     /// <summary>The name to show wherever the app is listed, or null while nothing has hatched. Reads the
     /// login snapshot, so the home tile is right at boot without anyone opening the app.</summary>
-    public string? PetName => Snapshot is { HatchedAtUtc: not null, PetName: { Length: > 0 } name } ? name : null;
+    public string? PetName => Snapshot is { Adult: not null, PetName: { Length: > 0 } name } ? name : null;
 
-    private static string MediaRoot =>
-        Path.Combine(Plugin.PluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Media");
+    public string AssetRoot => Services.Media.MediaPaths.Downloaded(Services.Media.MediaPaths.Aetherling);
 
-    public string AssetRoot => Path.Combine(MediaRoot, "unknown");
+    public string BgmRoot => _bgmLibrary.Root;
 
-    public string SoundRoot => Path.Combine(MediaRoot, VoiceFolder);
+    public string SoundRoot => Services.Media.MediaPaths.Downloaded(VoiceFolder);
+
+    /// <summary>The OS notification for an owner the 2.7 change put back in front of a crystal, posted
+    /// once per crystal from the login snapshot, before the app has been opened. The app clears it and
+    /// marks the notice read the moment the notice has been seen.</summary>
+    private void PostBornNoticeIfDue(AetherlingDto? core)
+    {
+        if (core is not { Adult: null })
+        {
+            return;
+        }
+        var stamp = core.CreatedAtUtc.UtcTicks.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var storage = _capabilities.Storage(AetherlingApp.AppId);
+        if (storage.Get<string>(AetherlingApp.BornNoticeSeenKey) == stamp
+            || storage.Get<string>(AetherlingApp.BornNoticePostedKey) == stamp)
+        {
+            return;
+        }
+        if (_services.GetService(typeof(IOsShell)) is not IOsShell shell)
+        {
+            return;
+        }
+        storage.Set(AetherlingApp.BornNoticePostedKey, stamp);
+        shell.PostNotification(AetherlingApp.AppId, Loc.T("os.aetherling_born_notif_title"),
+            Loc.T("os.aetherling_born_notif_body"), () => shell.OpenApp(AetherlingApp.AppId),
+            AetherlingApp.BornNoticeTag);
+    }
+
+    private void QueueHungerReminderIfDue(AetherlingDto? core)
+    {
+        var storage = _capabilities.Storage(AetherlingApp.AppId);
+        if (storage.Get<bool?>(AetherlingApp.HungerReminderEnabledKey) is false)
+        {
+            if (_services.GetService(typeof(IOsShell)) is IOsShell disabledShell)
+            {
+                disabledShell.DismissByTag(AetherlingApp.HungerReminderTag);
+            }
+            return;
+        }
+        if (core is not { Adult: { } adult, OnboardingDoneAtUtc: not null }
+            || _services.GetService(typeof(IOsShell)) is not IOsShell shell)
+        {
+            return;
+        }
+
+        var lastMeal = core.LastFedAtUtc ?? core.OnboardingDoneAtUtc.Value;
+        if (DateTimeOffset.UtcNow - lastMeal < TimeSpan.FromHours(72)
+            || adult.FeedsToday >= adult.FeedsPerDay)
+        {
+            shell.DismissByTag(AetherlingApp.HungerReminderTag);
+            return;
+        }
+
+        var stamp = lastMeal.UtcTicks.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        if (storage.Get<string>(AetherlingApp.HungerReminderPostedKey) == stamp)
+        {
+            return;
+        }
+        if (DateTimeOffset.UtcNow < _nextHungerInventoryCheckAt
+            || Interlocked.CompareExchange(ref _hungerReminderChecking, 1, 0) != 0)
+        {
+            return;
+        }
+        _nextHungerInventoryCheckAt = DateTimeOffset.UtcNow.AddHours(1);
+        _ = CheckHungerInventoryAsync(lastMeal, stamp);
+    }
+
+    private async Task CheckHungerInventoryAsync(DateTimeOffset lastMeal, string stamp)
+    {
+        try
+        {
+            var items = await GetOwnedItemsAsync().ConfigureAwait(false);
+            if (items is null || !items.Any(i => i.ItemKind == StoreItemKind.AetherlingConsumable
+                    && i.Quantity > 0 && i.ItemRef.StartsWith("crystal-", StringComparison.Ordinal)))
+            {
+                return;
+            }
+            await Plugin.Framework.RunOnFrameworkThread(() =>
+            {
+                if (_snapshot is not { Adult: { } adult, OnboardingDoneAtUtc: not null }
+                    || (_snapshot.LastFedAtUtc ?? _snapshot.OnboardingDoneAtUtc.Value) != lastMeal
+                    || DateTimeOffset.UtcNow - lastMeal < TimeSpan.FromHours(72)
+                    || adult.FeedsToday >= adult.FeedsPerDay)
+                {
+                    return;
+                }
+                var storage = _capabilities.Storage(AetherlingApp.AppId);
+                if (storage.Get<bool?>(AetherlingApp.HungerReminderEnabledKey) is false
+                    || storage.Get<string>(AetherlingApp.HungerReminderPostedKey) == stamp
+                    || _services.GetService(typeof(IOsShell)) is not IOsShell shell)
+                {
+                    return;
+                }
+                storage.Set(AetherlingApp.HungerReminderPostedKey, stamp);
+                var name = _snapshot.PetName ?? AetherlingLimits.DefaultName;
+                shell.PostNotification(AetherlingApp.AppId, Loc.T("os.aetherling_hunger_notif_title", name),
+                    Loc.T("os.aetherling_hunger_notif_body"), () => shell.OpenApp(AetherlingApp.AppId),
+                    AetherlingApp.HungerReminderTag);
+            }).ConfigureAwait(false);
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _hungerReminderChecking, 0);
+        }
+    }
 
     /// <summary>Forgets the core entirely, for the staff reset. Seeded stays true, or the next read falls
     /// back to the login snapshot and resurrects the thing that was just deleted.</summary>
@@ -208,17 +316,9 @@ public sealed class AetherlingHostService : IAetherlingHost, IDisposable
         return dto;
     }
 
-    public async Task<AetherlingDto> ChargeAsync(CancellationToken ct = default)
+    public async Task<AetherlingDto> HatchAsync(string? job, CancellationToken ct = default)
     {
-        var dto = await _hub.ChargeAethercoreAsync(ct).ConfigureAwait(false);
-        _snapshotSeeded = true;
-        _snapshot = dto;
-        return dto;
-    }
-
-    public async Task<AetherlingDto> HatchAsync(CancellationToken ct = default)
-    {
-        var dto = await _hub.HatchAethercoreAsync(ct).ConfigureAwait(false);
+        var dto = await _hub.HatchAethercoreAsync(job ?? CurrentJobAbbreviation, ct).ConfigureAwait(false);
         _snapshotSeeded = true;
         _snapshot = dto;
         return dto;
@@ -255,10 +355,13 @@ public sealed class AetherlingHostService : IAetherlingHost, IDisposable
 
     public async Task<AetherlingDto> FeedAsync(short element, CancellationToken ct = default)
     {
-        // The job rides every feed; the server only reads it on the one that grows the pet up.
-        var dto = await _hub.FeedAetherlingAsync(element, CurrentJobAbbreviation, ct).ConfigureAwait(false);
+        var dto = await _hub.FeedAetherlingAsync(element, ct).ConfigureAwait(false);
         _snapshotSeeded = true;
         _snapshot = dto;
+        if (_services.GetService(typeof(IOsShell)) is IOsShell shell)
+        {
+            shell.DismissByTag(AetherlingApp.HungerReminderTag);
+        }
         return dto;
     }
 
@@ -471,9 +574,22 @@ public sealed class AetherlingHostService : IAetherlingHost, IDisposable
     /// borrowing the same player (the racer). The pet re-asserts its level when it next plays.</summary>
     public void SetBgmLevel(float level) => _bgm.SetLevelScale(level);
 
-    public void StartBgm(float speed) => PlayTrack(Path.Combine(AssetRoot, BgmFile), speed);
+    public void StartBgm(float speed) => PlayLibraryTrack(BgmFile, speed);
 
-    public void StartGameBgm(string fileName, float speed = 1f, float levelScale = 1f) => PlayTrack(Path.Combine(MediaRoot, GameBgmFolder, fileName), speed, levelScale);
+    public void StartGameBgm(string fileName, float speed = 1f, float levelScale = 1f) => PlayLibraryTrack(fileName, speed, levelScale);
+
+    /// <summary>A track the library has not delivered is silence: whatever was playing stops, and the
+    /// game keeps its own music rather than being ducked under nothing.</summary>
+    private void PlayLibraryTrack(string fileName, float speed, float levelScale = 1f)
+    {
+        if (_bgmLibrary.Resolve(fileName) is not { } path)
+        {
+            Plugin.Log.Debug("[Bgm] {File} is not in the music library yet; playing nothing.", fileName);
+            StopBgm();
+            return;
+        }
+        PlayTrack(path, speed, levelScale);
+    }
 
     /// <summary>Re-rates the track that is already up, and restarts from the top for any other one: the
     /// ceremony and each minigame are different pieces of music, so "already playing" is only an answer
@@ -516,6 +632,12 @@ public sealed class AetherlingHostService : IAetherlingHost, IDisposable
         _audioAccum = 0;
         _job = ReadJob();
         SampleEmote();
+        _hungerReminderAccum += AudioPollSeconds;
+        if (_hungerReminderAccum >= 60d)
+        {
+            _hungerReminderAccum = 0d;
+            QueueHungerReminderIfDue(_snapshot);
+        }
 
         if (_restoreGameBgmAt is { } due && DateTime.UtcNow >= due)
         {
@@ -661,32 +783,12 @@ public sealed class AetherlingHostService : IAetherlingHost, IDisposable
         {
             return;
         }
-        if (bag.Next(Path.Combine(MediaRoot, VoiceFolder)) is not { } path)
+        if (bag.Next(SoundRoot) is not { } path)
         {
             return;
         }
         _lastVoiceAt = now;
-        _voice.Play(path, _voiceLevel, VoicePitch());
-    }
-
-    /// <summary>The creature's voice drops as it grows: highest as a newborn, and the clips as recorded
-    /// once it is an adult. The clips ARE the adult voice, so every young form is a shift up from them and
-    /// nothing is ever pitched down, which would sound like a different animal rather than a younger one.
-    /// Read off the same growth counters the worn form comes from, so the voice and the body cannot
-    /// disagree about how old it is.</summary>
-    private float VoicePitch()
-    {
-        if (Snapshot is not { } core || core.Adult is not null)
-        {
-            return 1f;
-        }
-        var perStage = Math.Max((short)1, core.Growth?.FeedsPerStage ?? 3);
-        var fed = core.Growth?.GrowthFed ?? 0;
-        if (fed >= perStage * 2)
-        {
-            return Hatchling3Pitch;
-        }
-        return fed >= perStage ? Hatchling2Pitch : HatchlingPitch;
+        _voice.Play(path, _voiceLevel);
     }
 
     /// <summary>Deals every clip once before any repeat, reshuffling when the bag runs dry and never

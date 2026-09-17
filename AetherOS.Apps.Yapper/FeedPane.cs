@@ -18,7 +18,16 @@ internal sealed class FeedPane(
     Func<DateTimeOffset?, Task<YapPageDto>> loader,
     Action<Guid> markSeen)
 {
+    /// <summary>Past this many cards the oldest are dropped from the top as the feed pages, so a long
+    /// scroll cannot grow the id list or the store without bound.</summary>
+    private const int MaxIds = 300;
+
+    /// <summary>Cards this far outside the scroll window are still drawn, so a wheel flick lands on
+    /// painted rows rather than a blank band that fills in a frame late.</summary>
+    private const float OverscanDesignPx = 400f;
+
     private readonly List<Guid> _ids = [];
+    private float _trimSlack;
     private DateTimeOffset? _cursor;
     private bool _endReached;
     private volatile bool _loading;
@@ -137,6 +146,17 @@ internal sealed class FeedPane(
             return;
         }
 
+        TrimAbove();
+        var spacingY = ImGui.GetStyle().ItemSpacing.Y;
+        if (_trimSlack > 0f)
+        {
+            ImGui.Dummy(new Vector2(0f, MathF.Max(1f, _trimSlack - spacingY)));
+            _trimSlack = 0f;
+        }
+        var overscan = Px(OverscanDesignPx);
+        var viewTop = ImGui.GetScrollY() - overscan;
+        var viewBottom = ImGui.GetScrollY() + ImGui.GetWindowSize().Y + overscan;
+
         var now = ImGui.GetTime();
         foreach (var id in _ids.ToArray())
         {
@@ -156,6 +176,17 @@ internal sealed class FeedPane(
                 }
                 continue;
             }
+            // An off-screen card is stood in by its last height so nothing on it requests a texture,
+            // which is what lets Dalamud release the image. A never-drawn card has no height and draws once.
+            if (store.HeightOf(id) is { } height)
+            {
+                var top = ImGui.GetCursorPosY();
+                if (top + height < viewTop || top > viewBottom)
+                {
+                    ImGui.Dummy(new Vector2(0f, MathF.Max(1f, height - spacingY)));
+                    continue;
+                }
+            }
             card.Draw(ctx, dto);
             markSeen(id);
         }
@@ -172,6 +203,30 @@ internal sealed class FeedPane(
             ImGui.TextColored(new Vector4(1f, 1f, 1f, 0.4f), label);
         }
         ImGui.Dummy(new Vector2(0f, Px(10f)));
+    }
+
+    /// <summary>Drops the oldest cards once the list is past its cap, but only while every dropped card
+    /// sits above the scroll window. The removed height is handed back as scroll and, for the frame the
+    /// new scroll has not applied yet, as a spacer, so the rows on screen do not move.</summary>
+    private void TrimAbove()
+    {
+        var excess = _ids.Count - MaxIds;
+        if (excess <= 0 || _loading)
+        {
+            return;
+        }
+        var removed = 0f;
+        for (var i = 0; i < excess; i++)
+        {
+            removed += store.HeightOf(_ids[i]) ?? 0f;
+        }
+        if (removed <= 0f || removed > ImGui.GetScrollY())
+        {
+            return;
+        }
+        _ids.RemoveRange(0, excess);
+        _trimSlack = removed;
+        ImGui.SetScrollY(ImGui.GetScrollY() - removed);
     }
 
     /// <summary>Draws the pane as a three-column mosaic of square image tiles (Twitter media-tab style),
@@ -202,11 +257,21 @@ internal sealed class FeedPane(
         var col = 0;
         var rowY = ImGui.GetCursorScreenPos().Y;
         var dl = ImGui.GetWindowDrawList();
+        var overscan = Px(OverscanDesignPx);
+        var viewTop = ImGui.GetWindowPos().Y - overscan;
+        var viewBottom = ImGui.GetWindowPos().Y + ImGui.GetWindowSize().Y + overscan;
 
         foreach (var id in _ids.ToArray())
         {
             if (store.Get(id) is not { } dto || dto.Media.Length == 0)
             {
+                continue;
+            }
+            if (rowY + tile < viewTop || rowY > viewBottom)
+            {
+                col += dto.Media.Length;
+                rowY += (col / cols) * (tile + gap);
+                col %= cols;
                 continue;
             }
             markSeen(id);

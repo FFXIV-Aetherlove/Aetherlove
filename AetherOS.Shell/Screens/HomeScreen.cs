@@ -541,14 +541,20 @@ public sealed partial class HomeScreen
 
     private void SeedOrConvert(OsConfig os, int rows, int cols)
     {
-        if (os.IconOrder.Count == 0 && os.DockIds.Count == 0)
+        var untouched = os.IconOrder.Count == 0
+            && os.DockIds.Count == 0
+            && os.Folders.Count == 0
+            && os.RemovedApps.Count == 0
+            && os.ExternalApps.Count == 0;
+        if (untouched)
         {
+            Os.OsFolders.SeedArcade(os);
             os.DockIds = ["clock", "camera", "settings"];
             os.IconOrder =
             [
                 "news", "weather", "photos", "calendar",
                 "aetherlove", "hangouts", "places", "messenger",
-                "feedback",
+                "feedback", Os.OsFolders.ArcadeId,
             ];
         }
         var docked = new HashSet<string>(os.DockIds.Take(MaxDock), StringComparer.Ordinal);

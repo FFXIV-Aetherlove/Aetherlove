@@ -46,6 +46,14 @@ public static class VolumeBar
     /// closes underneath it.</summary>
     private const float Gap = 0f;
 
+    /// <summary>The drawn space between a bar laid beside its chip and the chip itself. The grab area
+    /// spans it, so it costs the pointer nothing.</summary>
+    private const float BesideGap = 8f;
+
+    private const float OutlineWidth = 1f;
+
+    private const int KnobSegments = 16;
+
     /// <summary>Which bar the pointer is dragging, if any. A drag survives the pointer leaving the
     /// bar, so a hand that slides off the end while pulling keeps the grip it had.</summary>
     private static string dragging = string.Empty;
@@ -73,6 +81,11 @@ public static class VolumeBar
     /// <param name="alignRight">Hang the bar from the chip's right edge rather than its left. True
     /// for a chip in the top-right corner, which is where all of them are, so a bar never runs off
     /// the side of the phone.</param>
+    /// <param name="beside">Lay the bar to the chip's left, centred on it, instead of under it. The
+    /// grab area still runs up to the chip's edge so the pointer never crosses a dead strip; only the
+    /// drawn track stops short of it.</param>
+    /// <param name="outline">A thin edge drawn around the track and the knob, for a bar that sits over
+    /// bright art. Zero draws none.</param>
     public static bool Draw(
         string id,
         ImDrawListPtr dl,
@@ -84,18 +97,22 @@ public static class VolumeBar
         uint track,
         uint knob,
         float scale = 1f,
-        bool alignRight = true)
+        bool alignRight = true,
+        bool beside = false,
+        uint outline = 0)
     {
         var width = chipSize.X * WidthInChips;
         var grabH = GrabHeight * scale;
-        var barTl = new Vector2(
-            alignRight ? chipTl.X + chipSize.X - width : chipTl.X,
-            chipTl.Y + chipSize.Y + (Gap * scale));
+        var besideGap = BesideGap * scale;
+        var barTl = beside
+            ? new Vector2(chipTl.X - besideGap - width, chipTl.Y + ((chipSize.Y - grabH) * 0.5f))
+            : new Vector2(alignRight ? chipTl.X + chipSize.X - width : chipTl.X, chipTl.Y + chipSize.Y + (Gap * scale));
         var barBr = barTl + new Vector2(width, grabH);
+        var grabBr = beside ? new Vector2(chipTl.X, barBr.Y) : barBr;
 
         var mouse = ImGui.GetIO().MousePos;
         var onChip = In(mouse, chipTl, chipTl + chipSize);
-        var onBar = In(mouse, barTl, barBr);
+        var onBar = In(mouse, barTl, grabBr);
         var held = dragging == id;
 
         // A held drag ends with the button, wherever the pointer has got to by then.
@@ -172,7 +189,25 @@ public static class VolumeBar
                 trackH * 0.5f);
         }
 
-        dl.AddCircleFilled(new Vector2(knobX, mid), knobR, knob, 16);
+        var edge = OutlineWidth * scale;
+        if (outline != 0)
+        {
+            var half = new Vector2(edge * 0.5f);
+            dl.AddRect(
+                new Vector2(barTl.X, mid - (trackH * 0.5f)) - half,
+                new Vector2(barBr.X, mid + (trackH * 0.5f)) + half,
+                outline,
+                (trackH + edge) * 0.5f,
+                ImDrawFlags.None,
+                edge);
+        }
+
+        dl.AddCircleFilled(new Vector2(knobX, mid), knobR, knob, KnobSegments);
+        if (outline != 0)
+        {
+            dl.AddCircle(new Vector2(knobX, mid), knobR + (edge * 0.5f), outline, KnobSegments, edge);
+        }
+
         return changed;
     }
 

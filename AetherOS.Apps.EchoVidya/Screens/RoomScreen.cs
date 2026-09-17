@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Numerics;
 using System.Text;
@@ -65,6 +65,7 @@ internal sealed class RoomScreen
     private volatile bool _publishOpen;
     private float _publishPanelH;
     private string _publishDescription = string.Empty;
+    private readonly SoftWrapInputField _publishDescriptionField = new();
     private int _publishDurationIdx = 1;
     private bool _publishPublic = true;
     private volatile string? _publishError;
@@ -228,7 +229,7 @@ internal sealed class RoomScreen
             ImGui.Spacing();
 
             DrawFieldLabel(Loc.T("os.echo_room_publish_desc"), t);
-            InputTextMultilineWithPaste("##echoPublishDesc", ref _publishDescription,
+            _publishDescriptionField.Draw("##echoPublishDesc", ref _publishDescription,
                 HangoutLimits.DescriptionRawMaxLength, new Vector2(innerW, Px(64f)));
             var descLen = EmojiText.EffectiveLength(_publishDescription.Trim());
             ImGui.TextColored(descLen > HangoutLimits.DescriptionMaxLength ? UiColors.Danger : UiColors.Hint,
@@ -283,7 +284,7 @@ internal sealed class RoomScreen
     {
         var req = new CreateHangoutRequest(
             Category: HangoutCategory.WatchParty,
-            Description: _publishDescription.Trim(),
+            Description: _publishDescriptionField.Value(_publishDescription).Trim(),
             DataCenter: location.DataCenter,
             World: location.World,
             Location: room.Name,

@@ -59,8 +59,6 @@ public sealed class EchoVidyaApp : IAetherApp
         IAppCapabilities capabilities,
         AetherHubContext hub,
         EchoStateService state,
-        EchoHostInstaller installer,
-        EchoHostLocator locator,
         IEchoHost host,
         Func<bool>? available = null)
     {
@@ -69,8 +67,8 @@ public sealed class EchoVidyaApp : IAetherApp
         _hub = hub;
         _state = state;
         _host = host;
-        _setup = new SetupScreen(capabilities.Storage(AppId), hub, installer, locator, host, FinishSetup);
-        _home = new HomeScreen(hub, state, host, OpenRoomScreen, OpenDownloadStep);
+        _setup = new SetupScreen(capabilities.Storage(AppId), host, FinishSetup);
+        _home = new HomeScreen(hub, state, host, OpenRoomScreen);
         _room = new RoomScreen(capabilities, hub, state, host, () => _account?.AccountId, BackToHome);
     }
 
@@ -100,7 +98,6 @@ public sealed class EchoVidyaApp : IAetherApp
     {
         EnsureAccount();
         ResyncRoom();
-        _host.CheckForUpdate();
         _home.OnShow();
         _room.OnShow();
     }
@@ -126,15 +123,6 @@ public sealed class EchoVidyaApp : IAetherApp
         if (_view == View.Setup)
         {
             _setup.Draw(ctx);
-            return;
-        }
-
-        // A published playback host that is not the installed one blocks the whole app, the way the
-        // onboarding download does: the install has already started itself, this only shows it. Nobody
-        // reaches a video and discovers mid-queue that their player is outdated.
-        if (_host.UpdatePending)
-        {
-            _setup.DrawUpdateGate(ctx);
             return;
         }
 
@@ -228,12 +216,6 @@ public sealed class EchoVidyaApp : IAetherApp
     {
         _view = View.Home;
         _home.OnShow();
-    }
-
-    private void OpenDownloadStep()
-    {
-        _view = View.Setup;
-        _setup.OnShow(SetupScreen.DownloadStep);
     }
 
     /// <summary>The room snapshot is only pushed while the phone is live, so a surface that was in the

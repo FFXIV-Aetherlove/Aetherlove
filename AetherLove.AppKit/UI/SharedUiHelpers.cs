@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Numerics;
 using System.Text;
@@ -381,6 +382,53 @@ internal static class SharedUiHelpers
         if (ImGui.IsItemHovered())
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+    }
+
+    private const double BytesPerMegabyte = 1024d * 1024d;
+
+    /// <summary>A byte count as megabytes with at most one decimal, for "{0} of {1} MB" lines.</summary>
+    internal static string FormatMegabytes(long bytes, CultureInfo culture) =>
+        (bytes / BytesPerMegabyte).ToString("0.#", culture);
+
+    /// <summary>The waiting card an app draws in place of its surface while the pack it draws from is still
+    /// downloading: what is coming, and how far along it is when the sync has started on it.</summary>
+    internal static void DrawAssetsPendingCard(string pack, (long Done, long Total) progress, bool reduceMotion)
+    {
+        var winW = ImGui.GetWindowSize().X;
+        ImGui.Dummy(new Vector2(0f, Px(40f)));
+        OnboardingUi.DrawHero("assets_pending", FontAwesomeIcon.CloudDownloadAlt, Loc.T("os.assets_update_title"),
+            Loc.T("os.assets_pending", Services.Media.AssetPackNames.Display(pack)), 32f);
+        if (progress.Total <= 0)
+        {
+            return;
+        }
+        ImGui.Dummy(new Vector2(0f, Px(12f)));
+        var margin = Px(32f);
+        var tl = new Vector2(ImGui.GetWindowPos().X + margin, ImGui.GetCursorScreenPos().Y);
+        var br = tl + new Vector2(winW - margin * 2f, Px(10f));
+        DrawProgressBar(ImGui.GetWindowDrawList(), tl, br, (float)((double)progress.Done / progress.Total), reduceMotion);
+        ImGui.Dummy(new Vector2(0f, Px(18f)));
+        OnboardingUi.DrawCenteredParagraph(
+            Loc.T("os.assets_mb", FormatMegabytes(progress.Done, CultureInfo.CurrentCulture), FormatMegabytes(progress.Total, CultureInfo.CurrentCulture)),
+            winW - Px(48f), UiColors.Subtle);
+    }
+
+    /// <summary>The house progress bar: a dim rounded track with an accent gradient fill and, unless motion is
+    /// reduced, a sheen that rides the fill. Drawn through <paramref name="dl"/> at screen coordinates, so the
+    /// caller owns layout and any smoothing of <paramref name="progress"/>.</summary>
+    internal static void DrawProgressBar(ImDrawListPtr dl, Vector2 tl, Vector2 br, float progress, bool reduceMotion)
+    {
+        var t = ThemeService.Current;
+        var h = MathF.Max(1f, br.Y - tl.Y);
+        var w = MathF.Max(h, br.X - tl.X);
+        dl.AddRectFilled(tl, br, OsDrawShared.White(0.10f), h * 0.5f);
+        var filled = MathF.Max(h, w * Math.Clamp(progress, 0f, 1f));
+        OsDrawShared.RoundedGradient(dl, tl, tl + new Vector2(filled, h), h * 0.5f, t.AccentLight, t.Accent);
+        if (!reduceMotion)
+        {
+            var sheenX = tl.X + filled * (0.5f + 0.5f * MathF.Sin((float)ImGui.GetTime() * 2.2f));
+            dl.AddCircleFilled(new Vector2(sheenX, tl.Y + h * 0.5f), h * 0.45f, OsDrawShared.White(0.28f));
         }
     }
 
@@ -866,9 +914,12 @@ internal static class SharedUiHelpers
 
     /// <summary>In-page overlay panel; returns true on a scrim tap. Draw it after the screen's content so it
     /// layers on top; <paramref name="panelH"/> persists across frames so the panel settles to its content
-    /// height.</summary>
+    /// height. An app with a look of its own (Racer's printed paper) passes its panel colour, edge colour
+    /// and width; everyone else gets the house dark panel at 300 px.</summary>
     internal static bool DrawPageOverlayPanel(string id, Vector2 winPos, Vector2 winSize, ref float panelH,
-                                              float fallbackH, Action<float> drawContent)
+                                              float fallbackH, Action<float> drawContent,
+                                              Vector4? panelColor = null, Vector4? borderColor = null,
+                                              float? panelWidth = null)
     {
         var dismissed = false;
         var frame = ImGui.GetFrameCount();
@@ -900,15 +951,15 @@ internal static class SharedUiHelpers
                 dismissed = true;
             }
 
-            var w = Px(300f);
+            var w = panelWidth ?? Px(300f);
             var pad = Px(16f, 16f);
             var h = panelH > 0f ? panelH : fallbackH;
             var panelPos = winPos + (winSize - new Vector2(w, h)) * 0.5f;
             panelPos.Y += (1f - ease) * Px(10f);
 
             ImGui.SetCursorScreenPos(panelPos);
-            ImGui.PushStyleColor(ImGuiCol.ChildBg, new Vector4(0.11f, 0.10f, 0.13f, 1f));
-            ImGui.PushStyleColor(ImGuiCol.Border, new Vector4(0.32f, 0.30f, 0.38f, 0.65f));
+            ImGui.PushStyleColor(ImGuiCol.ChildBg, panelColor ?? new Vector4(0.11f, 0.10f, 0.13f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.Border, borderColor ?? new Vector4(0.32f, 0.30f, 0.38f, 0.65f));
             ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, Px(12f));
             ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, pad);
             ImGui.PushStyleVar(ImGuiStyleVar.Alpha, ease * ImGui.GetStyle().Alpha);

@@ -37,9 +37,9 @@ public sealed class StoreHostService(
         }
     }
 
-    public void ShowSkinPreview(string title, Guid productId)
+    public void ShowSkinPreview(string title, Guid productId, StoreSkinScreenDto? screen)
     {
-        skinPreview.BeginLoading(title);
+        skinPreview.BeginLoading(title, screen);
         _ = Task.Run(async () =>
         {
             try
@@ -180,19 +180,6 @@ public sealed class StoreHostService(
             }
             var parts = ex.Message[(idx + HubErrors.Sentinel.Length)..].Split('|');
             return new StoreCheckoutResult(false, null, parts[0], parts[1..]);
-        }
-    }
-
-    public async Task<byte[]?> GetStoreThemeBackgroundPreviewAsync(Guid productId, CancellationToken ct = default)
-    {
-        try
-        {
-            return await hubClient.GetStoreThemeBackgroundPreviewAsync(productId, ct).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            Plugin.Log.Debug(ex, "[Store] Theme background preview fetch failed.");
-            return null;
         }
     }
 

@@ -110,4 +110,8 @@ public interface IAetherApp
 
     /// <summary>Optional app-owned localization packs (ISO language code to key-to-text table); the host merges them so keys resolve via <see cref="OsAppContext.Localize"/> with language-then-English fallback.</summary>
     IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>>? Strings => null;
+
+    /// <summary>Debug facts read only by the desktop runner's <c>probe</c> control op; the shell never calls
+    /// this. Null means the app has nothing to report.</summary>
+    IReadOnlyDictionary<string, string>? DebugState => null;
 }

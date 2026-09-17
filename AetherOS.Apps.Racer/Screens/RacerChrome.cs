@@ -45,9 +45,11 @@ internal static class RacerChrome
 
     /// <summary>The speaker chip, top-right of the screen's own child. Drawn-not-submitted (draw list
     /// plus a hand hit-test) so it never fights a screen's own items for the click; <paramref name="slot"/>
-    /// counts chips from the right edge for screens that already keep one there.</summary>
+    /// counts chips from the right edge for screens that already keep one there. <paramref name="beside"/> lays
+    /// the volume bar to the chip's left, outlined so it reads over the grandstand's bright sky. A chip that is not
+    /// <paramref name="interactive"/> is drawn and answers nothing, for a popup covering it.</summary>
     public static void DrawMuteChip(OsAppContext ctx, bool muted, System.Action toggle, float volume = 1f,
-        System.Action<float>? setVolume = null, int slot = 0)
+        System.Action<float>? setVolume = null, int slot = 0, bool beside = false, bool interactive = true)
     {
         var dl = ImGui.GetWindowDrawList();
         var origin = ImGui.GetWindowPos();
@@ -56,7 +58,8 @@ internal static class RacerChrome
         var pad = Px(10);
         var a = new Vector2(origin.X + size.X - ((chip + pad) * (slot + 1)), origin.Y + pad);
         var b = a + new Vector2(chip, chip);
-        var hovered = ImGui.IsMouseHoveringRect(a, b);
+        var barId = $"racerMute{slot}";
+        var hovered = interactive && ImGui.IsMouseHoveringRect(a, b);
         dl.AddRectFilled(a, b, hovered ? 0xC84A3E68u : 0x96382E52u, chip * 0.5f);
 
         AetherLove.UI.IconDraw.AddCentered(dl, muted ? FontAwesomeIcon.VolumeMute : FontAwesomeIcon.VolumeUp,
@@ -76,10 +79,17 @@ internal static class RacerChrome
             return;
         }
 
+        if (!interactive)
+        {
+            AetherLove.Widgets.VolumeBar.Close(barId);
+            return;
+        }
+
         var barMuted = muted;
         var level = volume;
-        if (AetherLove.Widgets.VolumeBar.Draw($"racerMute{slot}", dl, a, new Vector2(chip, chip),
-            ref barMuted, ref level, 0xFFE6E0F5, 0x64382E52, 0xFFE6E0F5, AetherLove.UI.UiScale.S))
+        if (AetherLove.Widgets.VolumeBar.Draw(barId, dl, a, new Vector2(chip, chip),
+            ref barMuted, ref level, 0xFFE6E0F5, 0x64382E52, 0xFFE6E0F5, AetherLove.UI.UiScale.S,
+            beside: beside, outline: beside ? VolumeOutline : 0u))
         {
             setVolume(level);
             if (barMuted != muted)
@@ -88,6 +98,12 @@ internal static class RacerChrome
             }
         }
     }
+
+    private const uint VolumeOutline = 0xFF000000;
+
+    public const float CourseArtAspect = 8f / 3f;
+
+    public static float FlagButtonHeight => Px(44);
 
     /// <summary>A page button in one of the flag's colours: the shape every racer screen uses to get
     /// anywhere. <paramref name="blocked"/> dims it and rides underneath as the reason.</summary>
@@ -98,7 +114,7 @@ internal static class RacerChrome
         // A button on a page indents itself off the phone's edge; one inside a panel is already inset by
         // the panel, so it takes the width it is given.
         var width = fullWidth ? ImGui.GetContentRegionAvail().X : ImGui.GetContentRegionAvail().X - Px(56);
-        var height = Px(44);
+        var height = FlagButtonHeight;
         if (!fullWidth)
         {
             ImGui.SetCursorPosX(Px(28));
@@ -185,6 +201,16 @@ internal static class RacerChrome
     /// <summary>The near-white the race card is printed on; every page that writes in <see cref="CardBlue"/>
     /// lays this under the words first.</summary>
     public static readonly Vector4 Paper = new(0.953f, 0.969f, 0.996f, 0.88f);
+
+    /// <summary>The cup's gold: the divider under its title, the player's own standings row and the
+    /// winner's podium step.</summary>
+    public static readonly Vector4 CupGold = new(0.984f, 0.867f, 0.549f, 1f);
+
+    /// <summary>The faint rule between standings rows and behind the progress dots.</summary>
+    public static readonly Vector4 Rule = new(0.859f, 0.820f, 0.800f, 1f);
+
+    /// <summary>The shade laid over a course picture so white text reads on it.</summary>
+    public static readonly Vector4 PictureShade = new(0f, 0f, 0f, 0.44f);
 
     /// <summary>A racing green, for the grade that reads as "go". Easy used to print in the page's own
     /// blue, which sat a shade away from Normal's and made the two look like one grade.</summary>
@@ -300,11 +326,11 @@ internal static class RacerChrome
     /// disc floating behind the feet.</summary>
     public static void GroundGlow(ImDrawListPtr dl, Vector2 feet, float rx, float ry, Vector4 colour, float alpha)
     {
+        Span<Vector2> pts = stackalloc Vector2[20];
         for (var i = 3; i >= 1; i--)
         {
             var t = i / 3f;
             var ink = ImGui.ColorConvertFloat4ToU32(colour with { W = alpha * (1f - t) * 0.8f });
-            Span<Vector2> pts = stackalloc Vector2[20];
             for (var j = 0; j < pts.Length; j++)
             {
                 var a = MathF.Tau * j / pts.Length;

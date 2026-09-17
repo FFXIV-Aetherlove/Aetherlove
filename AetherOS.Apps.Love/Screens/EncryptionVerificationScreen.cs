@@ -18,6 +18,7 @@ public class EncryptionVerificationScreen
     private readonly KeyStorageService _keys;
 
     private string _peerName = string.Empty;
+    private Guid _peerId;
     private byte[]? _peerPublicKey;
 
     private const float HeaderH = 44f;
@@ -28,8 +29,9 @@ public class EncryptionVerificationScreen
         _keys = keys;
     }
 
-    public void SetContext(string peerName, byte[]? peerPublicKey)
+    public void SetContext(Guid peerId, string peerName, byte[]? peerPublicKey)
     {
+        _peerId = peerId;
         _peerName = peerName;
         _peerPublicKey = peerPublicKey;
     }
@@ -94,45 +96,10 @@ public class EncryptionVerificationScreen
         }
 
         var fp = CryptoService.VerificationFingerprint(myKey, peerKey);
-
-        ImGui.TextColored(grey, Loc.T("verify.intro", _peerName));
-        ImGui.Spacing();
-        ImGui.Spacing();
-
-        var imgSize = MathF.Floor(availW * 0.62f);
-        ImGui.SetCursorPosX((availW - imgSize) * 0.5f);
-        var imgTL = ImGui.GetCursorScreenPos();
-        ImGui.Dummy(new Vector2(imgSize, imgSize));
-        var dl = ImGui.GetWindowDrawList();
-        SafetyImage.DrawTruchet(dl, imgTL, imgSize, fp);
-        dl.AddRect(imgTL, imgTL + new Vector2(imgSize, imgSize), t.AccentWithAlpha(0.5f),
-            imgSize * 0.06f, ImDrawFlags.RoundCornersAll, 1.5f);
-        ImGui.Spacing();
-        ImGui.Spacing();
-
-        foreach (var line in SafetyImage.SafetyCode(fp).Split('\n'))
-        {
-            var sz = ImGui.CalcTextSize(line);
-            ImGui.SetCursorPosX((availW - sz.X) * 0.5f);
-            ImGui.TextColored(t.AccentLight, line);
-        }
-        ImGui.Spacing();
-        ImGui.Spacing();
-
-        ImGui.TextColored(grey, Loc.T("verify.how", _peerName));
-        ImGui.Spacing();
-        ImGui.Spacing();
-
-        DrawKeyRow(Loc.T("verify.your_key"), SafetyImage.KeyExcerpt(myKey), t);
-        ImGui.Spacing();
-        DrawKeyRow(Loc.T("verify.their_key", _peerName), SafetyImage.KeyExcerpt(peerKey), t);
-        ImGui.Spacing();
-        ImGui.Spacing();
-
-        ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), Loc.T("verify.keys_explain"));
-        ImGui.Dummy(new Vector2(0f, Px(8f)));
-
+        EncryptionVerificationPanel.Draw("love/" + UiHost.Configuration.Auth.ActiveProfileId + "/" + _peerId, _peerName, fp);
         ImGui.PopTextWrapPos();
+        return;
+
     }
 
     private static void DrawKeyRow(string label, string value, ThemeDefinition t)

@@ -11,13 +11,7 @@ using Dalamud.Plugin.Services;
 
 namespace AetherLove.Services.Yapper;
 
-/// <summary>Yapper DM E2EE: a dedicated X25519 keypair per yapper profile (so DM identity can't be
-/// correlated with dating profiles or the messenger), provisioned silently, exactly like the messenger's
-/// account keypair. Wrapped under the account passphrase KEK when the device holds one, otherwise under a
-/// key derived from the messenger ACCOUNT keypair (every account migrated from 1.x has no stored KEK, and
-/// requiring one left those accounts on "keys are still being set up" forever, without a line of log). The
-/// unwrapped pair lives in memory for the session; a bundle neither secret can open (passphrase reset
-/// elsewhere) is replaced with a fresh pair, making pre-reset DMs undecryptable placeholders by design.</summary>
+/// <summary>Yapper encryption using profile identities owned by the shared account service.</summary>
 public sealed class YapperDmCryptoService
 {
     private readonly CryptoService _crypto;
@@ -25,11 +19,33 @@ public sealed class YapperDmCryptoService
     private readonly AetherHubContext _hub;
     private readonly IPluginLog _log;
 
-    private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly AccountEncryptionService _encryption;
     private (byte[] PublicKey, byte[] PrivateKey)? _pair;
+    private int _generation;
+    private int _provisioning;
 
-    public YapperDmCryptoService(CryptoService crypto, KeyStorageService keys, AetherHubContext hub, IPluginLog log)
+    private static readonly TimeSpan[] RetryDelays =
+    [
+        TimeSpan.Zero,
+        TimeSpan.FromSeconds(5),
+        TimeSpan.FromSeconds(30),
+        TimeSpan.FromSeconds(120),
+    ];
+
+    /// <summary>Ready: the pair is loaded. Unavailable: nothing to do right now, retrying changes nothing.
+    /// Failed: the attempt threw, so a retry can succeed.</summary>
+    private enum Outcome
     {
+        Ready,
+        Unavailable,
+        Failed,
+    }
+
+    public YapperDmCryptoService(CryptoService crypto, KeyStorageService keys, AetherHubContext hub, IPluginLog log, AccountEncryptionService encryption)
+    {
+        _encryption = encryption;
+        keys.Cleared += Clear;
+        encryption.Opened += ProvisionInBackground;
         _crypto = crypto;
         _keys = keys;
         _hub = hub;
@@ -41,94 +57,82 @@ public sealed class YapperDmCryptoService
     public byte[]? PublicKey => _pair?.PublicKey;
 
     /// <summary>Drops the in-memory pair (profile switch / logout); the next ensure re-unwraps.</summary>
-    public void Clear() => _pair = null;
+    public void Clear()
+    {
+        Interlocked.Increment(ref _generation);
+        _pair = null;
+    }
 
-    /// <summary>Ensures the yapper keypair exists locally: unwraps the server bundle under the stored
-    /// account KEK, generates and publishes one when the server has none, or re-publishes a fresh pair
-    /// when the stored KEK can't open the existing bundle. Never prompts. Safe to fire blindly on every
-    /// connect: an account without a yapper profile is a quiet no-op, and concurrent callers serialize
-    /// so a double generate-and-publish race cannot retire its own fresh bundle.</summary>
+    /// <summary>One attempt. A failed attempt hands over to <see cref="ProvisionInBackground"/>, so a caller
+    /// that only asks once still ends up with keys.</summary>
     public async Task<bool> EnsureProvisionedAsync(CancellationToken ct = default)
     {
-        if (_pair is not null)
+        var outcome = await TryProvisionAsync(ct).ConfigureAwait(false);
+        if (outcome == Outcome.Failed)
         {
-            return true;
+            ProvisionInBackground(afterFailure: true);
         }
-        var kek = _keys.Kek;
-        var account = _keys.AccountKeys;
-        if (kek is null && account is null)
+        return outcome == Outcome.Ready;
+    }
+
+    public void ProvisionInBackground() => ProvisionInBackground(afterFailure: false);
+
+    /// <summary>Provisions off the caller's path and retries a failed attempt after 5, 30 and 120 seconds.
+    /// Only one loop runs at a time. It stops on success, when there is nothing to provision (no Yapper
+    /// profile, or a locked keyring, which starts a fresh loop itself once it opens), and when the keys
+    /// are cleared. <paramref name="afterFailure"/> skips the immediate first attempt, which just failed.</summary>
+    private void ProvisionInBackground(bool afterFailure)
+    {
+        if (Interlocked.CompareExchange(ref _provisioning, 1, 0) != 0)
         {
-            // Retried on every Yapper/DM open; the account keypair lands with the messenger sync.
-            _log.Debug("[YapperDmCrypto] No KEK and no account keypair yet; provisioning waits.");
-            return false;
+            return;
         }
-        await _gate.WaitAsync(ct).ConfigureAwait(false);
+        var ownGeneration = _generation;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                foreach (var delay in RetryDelays)
+                {
+                    if (delay == TimeSpan.Zero && afterFailure)
+                    {
+                        continue;
+                    }
+                    if (delay > TimeSpan.Zero)
+                    {
+                        await Task.Delay(delay).ConfigureAwait(false);
+                    }
+                    if (ownGeneration != _generation
+                        || await TryProvisionAsync(CancellationToken.None).ConfigureAwait(false) != Outcome.Failed)
+                    {
+                        return;
+                    }
+                }
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _provisioning, 0);
+            }
+        });
+    }
+
+    private async Task<Outcome> TryProvisionAsync(CancellationToken ct)
+    {
+        var generation = _keys.Generation;
+        var ownGeneration = _generation;
         try
         {
-            if (_pair is not null)
-            {
-                return true;
-            }
-            var bundle = await _hub.GetYapperDmKeysAsync(ct).ConfigureAwait(false);
-            if (bundle is not null && Unwrap(bundle, kek, account) is { } unwrapped)
-            {
-                _pair = (bundle.PublicKey, unwrapped);
-                return true;
-            }
-            // Only the KEK may retire an existing bundle: a KEK-less device that cannot open it is merely
-            // missing the passphrase, and replacing the pair from there would clobber the devices that
-            // hold it. It waits instead, exactly as it always did.
-            if (bundle is not null && kek is null)
-            {
-                _log.Debug("[YapperDmCrypto] Bundle exists but this device holds no KEK to open it; waiting.");
-                return false;
-            }
-
-            var (pubKey, privKey) = _crypto.GenerateIdentityKeyPair();
-            var wrapSecret = kek ?? _crypto.DeriveYapperWrapKey(account!.Value.PrivateKey, pubKey);
-            var (wrapped, nonce) = _crypto.WrapPrivateKey(privKey, wrapSecret);
-            await _hub.PublishYapperDmKeysAsync(new YapperKeyBundleDto(pubKey, wrapped, nonce), ct)
-                .ConfigureAwait(false);
-            _pair = (pubKey, privKey);
-            _log.Information("[YapperDmCrypto] Key bundle {Mode} ({Wrap} wrap).",
-                bundle is null ? "provisioned" : "replaced after failed unwrap",
-                kek is not null ? "KEK" : "account-key");
-            return true;
+            var pair = await _encryption.EnsureIdentityAsync("yapper", Guid.Empty, ct).ConfigureAwait(false);
+            if (generation != _keys.Generation || ownGeneration != _generation) { return Outcome.Unavailable; }
+            _pair = pair is null ? null : (pair.PublicKey, pair.PrivateKey);
+            return _pair is null ? Outcome.Unavailable : Outcome.Ready;
         }
         catch (Exception ex)
         {
-            if (ex.Message.Contains(HubErrors.YapperNoProfile) || ex.Message.Contains(HubErrors.YapperDisabled))
-            {
-                _log.Debug("[YapperDmCrypto] No yapper profile (or yapper disabled); skipping provisioning.");
-            }
-            else
-            {
-                _log.Warning(ex, "[YapperDmCrypto] Key provisioning failed.");
-            }
-            return false;
+            // The loaded pair stays: a dropped call says nothing about whether it is still the right one.
+            _log.Warning("[YapperDmCrypto] Identity unavailable ({Reason}).", ex.GetType().Name);
+            return Outcome.Failed;
         }
-        finally
-        {
-            _gate.Release();
-        }
-    }
-
-    /// <summary>Opens the bundle with whichever secret this device holds: the KEK first (the canonical
-    /// wrap), then the account-key derivation (the KEK-less wrap). Trying both also heals a device that
-    /// gained a passphrase after the bundle was published under the account key.</summary>
-    private byte[]? Unwrap(YapperKeyBundleDto bundle, byte[]? kek, (byte[] PublicKey, byte[] PrivateKey)? account)
-    {
-        if (kek is not null
-            && _crypto.UnwrapPrivateKey(bundle.EncryptedPrivateKey, bundle.WrapNonce, kek) is { } viaKek)
-        {
-            return viaKek;
-        }
-        if (account is { } acc)
-        {
-            var derived = _crypto.DeriveYapperWrapKey(acc.PrivateKey, bundle.PublicKey);
-            return _crypto.UnwrapPrivateKey(bundle.EncryptedPrivateKey, bundle.WrapNonce, derived);
-        }
-        return null;
     }
 
     private byte[]? PairwiseKey(byte[] peerPublicKey)

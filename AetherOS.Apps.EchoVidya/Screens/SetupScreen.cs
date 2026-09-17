@@ -1,13 +1,8 @@
 using System;
-using System.Globalization;
 using System.Numerics;
-using System.Threading.Tasks;
 using AetherLove;
 using AetherLove.Services;
-using AetherLove.Services.Echo;
-using AetherLove.Services.Hub;
 using AetherLove.Services.Localization;
-using AetherLove.Shared.EchoVidya;
 using AetherLove.UI;
 using AetherLove.Widgets;
 using AetherOS.Sdk;
@@ -20,53 +15,36 @@ using static AetherLove.UI.UiScale;
 
 namespace AetherOS.Apps.EchoVidya.Screens;
 
-/// <summary>Echo's first-run flow: what it is, how watching together works, the one-time runtime download, and
-/// a finale. The install itself runs in the plugin, so leaving and coming back shows live progress rather than
-/// starting over, and the step index survives the trip.</summary>
+/// <summary>Echo's first-run flow: what it is, how watching together works, and a finale. The playback host
+/// is not part of it any more: the phone's asset sync brings it in behind the scenes, and the finale only says
+/// so when it has not landed yet. The step index survives leaving and coming back.</summary>
 internal sealed class SetupScreen
 {
-    /// <summary>The runtime download step; the home screen sends people straight back here.</summary>
-    public const int DownloadStep = 2;
-
-    private const int TotalSteps = 4;
+    private const int TotalSteps = 3;
     private const string StepKey = "setupStep";
     private const float TopBarHeight = 34f;
     private const float NavHeight = 62f;
-    private const float NavHeightWithSecondary = 96f;
-    private const float ProgressSmoothing = 8f;
-    private const double BytesPerMegabyte = 1024d * 1024d;
 
     private readonly IAppStorage _storage;
-    private readonly AetherHubContext _hub;
-    private readonly EchoHostInstaller _installer;
-    private readonly EchoHostLocator _locator;
     private readonly IEchoHost _host;
     private readonly Action _done;
     private readonly ConfettiBurst _confetti = new();
 
-    private volatile EchoHostManifestDto? _manifest;
-    private volatile bool _manifestRequested;
     private int _step;
-    private float _shownProgress;
 
-    public SetupScreen(IAppStorage storage, AetherHubContext hub, EchoHostInstaller installer,
-        EchoHostLocator locator, IEchoHost host, Action done)
+    public SetupScreen(IAppStorage storage, IEchoHost host, Action done)
     {
         _storage = storage;
-        _hub = hub;
-        _installer = installer;
-        _locator = locator;
         _host = host;
         _done = done;
     }
 
-    /// <summary>Resumes at the step the user last reached.</summary>
+    /// <summary>Resumes at the step the user last reached; a step index from the four-step flow lands on the finale.</summary>
     public void OnShow() => OnShow(_storage.Get<int?>(StepKey) ?? 0);
 
     public void OnShow(int step)
     {
         _step = Math.Clamp(step, 0, TotalSteps - 1);
-        _shownProgress = 0f;
         if (_step == TotalSteps - 1)
         {
             _confetti.Reset();
@@ -81,15 +59,8 @@ internal sealed class SetupScreen
             GoTo(_step - 1);
         }
 
-        var install = _installer.State;
-        if (_step == DownloadStep)
-        {
-            EnsureManifest();
-        }
-
-        var secondary = SecondaryLabel(install);
         var winH = ImGui.GetWindowSize().Y;
-        var contentH = winH - Px(TopBarHeight) - Px(secondary is null ? NavHeight : NavHeightWithSecondary);
+        var contentH = winH - Px(TopBarHeight) - Px(NavHeight);
 
         ImGui.SetCursorPos(new Vector2(0f, Px(TopBarHeight)));
         PushScrollbarStyle();
@@ -105,9 +76,6 @@ internal sealed class SetupScreen
                     case 1:
                         DrawTogether();
                         break;
-                    case DownloadStep:
-                        DrawDownload(ctx, install);
-                        break;
                     default:
                         DrawFinale(ctx);
                         break;
@@ -116,26 +84,11 @@ internal sealed class SetupScreen
         }
         PopScrollbarStyle();
 
-        if (secondary is not null)
-        {
-            ImGui.SetCursorPos(new Vector2(0f, winH - Px(88f)));
-            if (DrawSecondaryButton(secondary))
-            {
-                if (install.Busy)
-                {
-                    _host.CancelInstall();
-                }
-                else
-                {
-                    GoTo(_step + 1);
-                }
-            }
-        }
-
         ImGui.SetCursorPos(new Vector2(0f, winH - Px(54f)));
-        if (DrawPrimaryButton(PrimaryLabel(install), !install.Busy))
+        var label = _step == TotalSteps - 1 ? Loc.T("os.echo_setup_start_btn") : Loc.T("onboarding.next");
+        if (DrawPrimaryButton(label, enabled: true))
         {
-            Advance(install);
+            Advance();
         }
     }
 
@@ -159,65 +112,6 @@ internal sealed class SetupScreen
         DrawFeatureRow(FontAwesomeIcon.ListUl, Loc.T("os.echo_setup_s1_f2"));
         DrawFeatureRow(FontAwesomeIcon.Comments, Loc.T("os.echo_setup_s1_f3"));
         DrawFeatureRow(FontAwesomeIcon.Crown, Loc.T("os.echo_setup_s1_f4"));
-    }
-
-    private void DrawDownload(OsAppContext ctx, EchoInstallState install)
-    {
-        DrawHero("echo_setup_runtime", FontAwesomeIcon.CloudDownloadAlt, Loc.T("os.echo_setup_s2_title"),
-            Loc.T("os.echo_setup_s2_body"), 30f);
-
-        var winW = ImGui.GetWindowSize().X;
-        var sizeLine = _manifest is { } manifest
-            ? Loc.T("os.echo_setup_size_known", FormatMegabytes(manifest.SizeBytes, ctx.Culture))
-            : Loc.T("os.echo_setup_size_unknown");
-        DrawCenteredParagraph(sizeLine, winW - Px(48f), UiColors.Subtle);
-        ImGui.Dummy(new Vector2(0f, Px(14f)));
-
-        switch (install.Phase)
-        {
-            case EchoInstallPhase.Downloading:
-                DrawProgressBar(ctx, install.Progress);
-                DrawCenteredParagraph(
-                    Loc.T("os.echo_setup_progress_mb",
-                        FormatMegabytes(install.BytesDone, ctx.Culture),
-                        FormatMegabytes(install.BytesTotal, ctx.Culture)),
-                    winW - Px(48f), UiColors.Body);
-                ImGui.Dummy(new Vector2(0f, Px(10f)));
-                DrawCenteredParagraph(Loc.T("os.echo_setup_resume_note"), winW - Px(48f), UiColors.Hint);
-                break;
-            case EchoInstallPhase.Verifying:
-            case EchoInstallPhase.Extracting:
-                DrawProgressBar(ctx, 1f);
-                DrawCenteredParagraph(
-                    Loc.T(install.Phase == EchoInstallPhase.Verifying
-                        ? "os.echo_setup_phase_verifying"
-                        : "os.echo_setup_phase_extracting"),
-                    winW - Px(48f), UiColors.Body);
-                break;
-            case EchoInstallPhase.Installed:
-                DrawInfoCallout(Loc.T("os.echo_setup_phase_installed"), UiColors.Success, FontAwesomeIcon.CheckCircle);
-                if (_locator.InstalledVersion is { Length: > 0 } version)
-                {
-                    ImGui.Dummy(new Vector2(0f, Px(10f)));
-                    DrawCenteredParagraph(Loc.T("os.echo_setup_version", version), winW - Px(48f), UiColors.Hint);
-                }
-                break;
-            case EchoInstallPhase.Failed:
-                DrawInfoCallout(install.FailureReason is { Length: > 0 } reason
-                    ? Loc.T("os.echo_setup_failed_reason", reason)
-                    : Loc.T("os.echo_setup_phase_failed"), UiColors.Danger, FontAwesomeIcon.ExclamationTriangle);
-                break;
-            default:
-                DrawFeatureRow(FontAwesomeIcon.ShieldAlt, Loc.T("os.echo_setup_s2_f1"));
-                DrawFeatureRow(FontAwesomeIcon.Redo, Loc.T("os.echo_setup_s2_f2"));
-                if (_manifest is null && !_hub.IsConnected)
-                {
-                    ImGui.Dummy(new Vector2(0f, Px(10f)));
-                    DrawInfoCallout(Loc.T("os.echo_setup_offline"), UiColors.Amber, FontAwesomeIcon.ExclamationTriangle);
-                }
-                break;
-        }
-        ImGui.Dummy(new Vector2(0f, Px(16f)));
     }
 
     private void DrawFinale(OsAppContext ctx)
@@ -245,7 +139,7 @@ internal sealed class SetupScreen
 
         ImGui.Dummy(new Vector2(0f, Px(12f)));
         var ready = _host.RuntimeReady;
-        DrawCenteredParagraph(Loc.T(ready ? "os.echo_setup_s3_hint" : "os.echo_setup_s3_hint_pending"),
+        DrawCenteredParagraph(Loc.T(ready ? "os.echo_setup_s3_hint" : "os.echo_setup_player_pending"),
             wSize.X - Px(48f), ready ? UiColors.Success : UiColors.Amber);
 
         if (!ctx.ReduceMotion)
@@ -254,104 +148,11 @@ internal sealed class SetupScreen
         }
     }
 
-    private void DrawProgressBar(OsAppContext ctx, float target)
-    {
-        var t = ThemeService.Current;
-        var winW = ImGui.GetWindowSize().X;
-        var margin = Px(24f);
-        var barW = winW - margin * 2f;
-        var barH = Px(10f);
-
-        _shownProgress = ctx.ReduceMotion
-            ? target
-            : AnimationHelper.Lerp(_shownProgress, target,
-                1f - MathF.Exp(-ImGui.GetIO().DeltaTime * ProgressSmoothing));
-
-        var tl = new Vector2(ImGui.GetWindowPos().X + margin, ImGui.GetCursorScreenPos().Y);
-        var dl = ImGui.GetWindowDrawList();
-        dl.AddRectFilled(tl, tl + new Vector2(barW, barH), OsDrawShared.White(0.10f), barH * 0.5f);
-
-        var filled = MathF.Max(barH, barW * Math.Clamp(_shownProgress, 0f, 1f));
-        OsDrawShared.RoundedGradient(dl, tl, tl + new Vector2(filled, barH), barH * 0.5f, t.AccentLight, t.Accent);
-        if (!ctx.ReduceMotion)
-        {
-            var sheenX = tl.X + filled * (0.5f + 0.5f * MathF.Sin((float)ImGui.GetTime() * 2.2f));
-            dl.AddCircleFilled(new Vector2(sheenX, tl.Y + barH * 0.5f), barH * 0.45f, OsDrawShared.White(0.28f));
-        }
-
-        ImGui.Dummy(new Vector2(barW, barH));
-        ImGui.Dummy(new Vector2(0f, Px(8f)));
-
-        // Drawn through the draw list: ImGui's text helpers treat the string as a printf format, so a literal
-        // percent sign cannot go through them.
-        var percent = $"{(int)MathF.Round(target * 100f)}%";
-        var percentPos = new Vector2(tl.X + (barW - ImGui.CalcTextSize(percent).X) * 0.5f,
-            ImGui.GetCursorScreenPos().Y);
-        dl.AddText(percentPos, ImGui.GetColorU32(t.AccentLight), percent);
-        ImGui.Dummy(new Vector2(barW, ImGui.GetTextLineHeight()));
-    }
-
-    private static bool DrawSecondaryButton(string label)
-    {
-        var winW = ImGui.GetWindowSize().X;
-        var margin = Px(20f);
-        ImGui.SetCursorPosX(margin);
-        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1f, 1f, 1f, 0.06f));
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(1f, 1f, 1f, 0.11f));
-        ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(1f, 1f, 1f, 0.16f));
-        ImGui.PushStyleColor(ImGuiCol.Text, UiColors.Subtle);
-        ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(11f));
-        var clicked = Button(label, new Vector2(winW - margin * 2f, Px(30f)));
-        ImGui.PopStyleVar();
-        ImGui.PopStyleColor(4);
-        return clicked;
-    }
-
-    private string PrimaryLabel(EchoInstallState install)
-    {
-        if (_step == TotalSteps - 1)
-        {
-            return Loc.T("os.echo_setup_start_btn");
-        }
-        if (_step != DownloadStep)
-        {
-            return Loc.T("onboarding.next");
-        }
-        return install.Phase switch
-        {
-            EchoInstallPhase.Downloading => Loc.T("os.echo_setup_phase_downloading"),
-            EchoInstallPhase.Verifying => Loc.T("os.echo_setup_phase_verifying"),
-            EchoInstallPhase.Extracting => Loc.T("os.echo_setup_phase_extracting"),
-            EchoInstallPhase.Installed => Loc.T("onboarding.next"),
-            EchoInstallPhase.Failed => Loc.T("os.echo_setup_retry"),
-            _ => Loc.T("os.echo_setup_dl_now"),
-        };
-    }
-
-    private string? SecondaryLabel(EchoInstallState install)
-    {
-        if (_step != DownloadStep)
-        {
-            return null;
-        }
-        if (install.Busy)
-        {
-            return Loc.T("os.echo_setup_cancel");
-        }
-        return install.Phase == EchoInstallPhase.Installed ? null : Loc.T("os.echo_setup_dl_later");
-    }
-
-    private void Advance(EchoInstallState install)
+    private void Advance()
     {
         if (_step == TotalSteps - 1)
         {
             _done();
-            return;
-        }
-        if (_step == DownloadStep && install.Phase is EchoInstallPhase.NotInstalled or EchoInstallPhase.Failed)
-        {
-            _shownProgress = 0f;
-            _host.BeginInstall();
             return;
         }
         GoTo(_step + 1);
@@ -368,76 +169,4 @@ internal sealed class SetupScreen
     }
 
     private void Persist() => _storage.Set(StepKey, _step);
-
-    /// <summary>The manifest is fetched only to name the download size honestly; the plugin fetches its own copy
-    /// when the install actually starts.</summary>
-    private void EnsureManifest()
-    {
-        if (_manifest is not null || _manifestRequested || !_hub.IsConnected)
-        {
-            return;
-        }
-        _manifestRequested = true;
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                _manifest = await _hub.GetEchoHostManifestAsync().ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                UiHost.Log.Warning(ex, "[EchoSetup] Could not read the playback host manifest.");
-            }
-        });
-    }
-
-    private static string FormatMegabytes(long bytes, CultureInfo culture) =>
-        (bytes / BytesPerMegabyte).ToString("0.#", culture);
-
-    /// <summary>The mandatory update gate, shown by the app in place of everything else while a newer
-    /// playback host is published: the same hero and progress the onboarding download shows, with a retry
-    /// pill on failure and no way past. The install starts itself, so this only ever renders progress.</summary>
-    public void DrawUpdateGate(OsAppContext ctx)
-    {
-        var install = _host.InstallState;
-        var winW = ImGui.GetWindowSize().X;
-        ImGui.Dummy(new Vector2(0f, Px(26f)));
-        DrawHero("echo_setup_runtime", FontAwesomeIcon.CloudDownloadAlt, Loc.T("os.echo_update_title"),
-            Loc.T("os.echo_update_body"), 30f);
-        ImGui.Dummy(new Vector2(0f, Px(14f)));
-        switch (install.Phase)
-        {
-            case EchoInstallPhase.Downloading:
-                DrawProgressBar(ctx, install.Progress);
-                DrawCenteredParagraph(
-                    Loc.T("os.echo_setup_progress_mb",
-                        FormatMegabytes(install.BytesDone, ctx.Culture),
-                        FormatMegabytes(install.BytesTotal, ctx.Culture)),
-                    winW - Px(48f), UiColors.Body);
-                break;
-            case EchoInstallPhase.Verifying:
-            case EchoInstallPhase.Extracting:
-                DrawProgressBar(ctx, 1f);
-                DrawCenteredParagraph(
-                    Loc.T(install.Phase == EchoInstallPhase.Verifying
-                        ? "os.echo_setup_phase_verifying"
-                        : "os.echo_setup_phase_extracting"),
-                    winW - Px(48f), UiColors.Body);
-                break;
-            case EchoInstallPhase.Failed:
-                DrawInfoCallout(install.FailureReason is { Length: > 0 } reason
-                    ? Loc.T("os.echo_setup_failed_reason", reason)
-                    : Loc.T("os.echo_setup_phase_failed"), UiColors.Danger, FontAwesomeIcon.ExclamationTriangle);
-                ImGui.Dummy(new Vector2(0f, Px(14f)));
-                if (DrawPrimaryButton(Loc.T("echo.retry"), enabled: true))
-                {
-                    _host.BeginInstall();
-                }
-                break;
-            default:
-                DrawProgressBar(ctx, 0f);
-                DrawCenteredParagraph(Loc.T("os.echo_setup_phase_starting"), winW - Px(48f), UiColors.Body);
-                break;
-        }
-    }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,10 +15,21 @@ using Dalamud.Interface;
 namespace AetherOS.Apps.Aetherling.Screens;
 
 /// <summary>Where it lives once it is out. One fitted page, never a scroller: a header, the stage it sits on,
-/// a line telling you how it seems, and the mode pill that decides what a touch means. Feeding and petting
-/// live in the Modes partial; growing is the feed ladder the server runs.</summary>
+/// a line telling you how it seems, and the basket at the foot. Feeding and petting live in the Modes
+/// partial.</summary>
 internal sealed partial class PetScreen(IAetherlingHost host, PetRuntime pet)
 {
+    public string TrackedUnlockRef { get; set; } = string.Empty;
+
+    /// <summary>True while the tour's scrim is up. Petting reads the raw mouse rather than an item, so
+    /// without this a press on the tour's own buttons strokes the creature underneath.</summary>
+    public bool InputHeld { get; set; }
+
+    public event Action? UnlocksRequested;
+
+    private bool _postGameHint;
+
+    public void ShowPostGameHint() => _postGameHint = true;
 
     /// <summary>How long after the birth the furniture arrives, so the card does not land on the pop.</summary>
     private const float SettleSeconds = 0.7f;
@@ -34,12 +45,9 @@ internal sealed partial class PetScreen(IAetherlingHost host, PetRuntime pet)
     private const float HopArc = 0.34f;
     private const float HopSway = 0.13f;
 
-    /// <summary>The top of the stage card the mood bar and its sentence occupy, in design pixels: the
-    /// creature is centred in what is left below it.</summary>
-    private const float StageHeadroom = 62f;
-
     private AetherlingDto? _core;
     private double _lastFrameTime;
+    private int _lastHomeFrame = -1;
     private float _settle = 1f;
 
     /// <summary>Where the mood marker is, eased toward the mood itself. Negative until the first frame,
@@ -49,7 +57,6 @@ internal sealed partial class PetScreen(IAetherlingHost host, PetRuntime pet)
     private int _arriveHop = -1;
 
     private bool _namingOpen;
-    private bool _namingConfirmLeave;
     private string _nameBuffer = string.Empty;
     private bool _nameFocusPending;
     private bool _busy;
@@ -58,13 +65,40 @@ internal sealed partial class PetScreen(IAetherlingHost host, PetRuntime pet)
     private AetherlingDto? _pendingNamed;
     private string? _pendingError;
 
-    /// <summary>Whether the player has been told what any of this is. Until they have, the page carries one
-    /// button and nothing else asks for attention.</summary>
-    public bool IntroSeen { get; set; }
+    /// <summary>The naming card is up. Nothing else on the page is submitted while it is.</summary>
+    public bool NamingOpen => _namingOpen;
 
-    /// <summary>Raised by the "what is this" button. The nav bar's help entry goes to the same
-    /// place, straight from the app.</summary>
-    public event Action? IntroRequested;
+    /// <summary>The arrival and the settle after a birth have both played out.</summary>
+    public bool Settled => _arrive >= 1f && _settle >= 1f;
+
+    /// <summary>Raised once the newborn has a name: either the server accepted one, or it already had one
+    /// when the page settled. The app takes the hand-off into the gifts.</summary>
+    public event Action? NamingSettled;
+
+    /// <summary>The stage card, the basket row and the wheel button as last drawn, for the tour's rings.
+    /// Null while the page has not drawn them.</summary>
+    public (Vector2 TL, Vector2 BR)? PetRect { get; private set; }
+
+    public (Vector2 TL, Vector2 BR)? BasketRect { get; private set; }
+
+    public (Vector2 TL, Vector2 BR)? WheelRect { get; private set; }
+
+    /// <summary>Today's meal slots on the stage's right edge, for the tour's ring.</summary>
+    public (Vector2 TL, Vector2 BR)? FoodSlotsRect { get; private set; }
+
+    /// <summary>The "unlocking soon" line under the basket, for the tour's ring. Null when every form is
+    /// owned.</summary>
+    public (Vector2 TL, Vector2 BR)? UnlockRect { get; private set; }
+
+    /// <summary>Opens the naming card for a creature that has none. Naming is not optional: the card stays
+    /// until the server accepts a name.</summary>
+    public void OpenNamingCard()
+    {
+        if (_core is { Adult: not null, NameChosen: false } core && !_namingOpen)
+        {
+            OpenNaming(core);
+        }
+    }
 
     /// <summary>A line over the creature from outside the screen (the emote eureka): rides the feed
     /// toast's own plate, because two toast systems on one page is one too many.</summary>
@@ -76,17 +110,22 @@ internal sealed partial class PetScreen(IAetherlingHost host, PetRuntime pet)
 
     public void OnShow(AetherlingDto? core, bool justBorn)
     {
+        _emptyCrystal = null;
+        AnimateWheelOnEntry();
         _lastFrameTime = ImGui.GetTime();
         AdoptCore(core);
         _settle = justBorn ? 0f : 1f;
         _arrive = justBorn ? 0f : 1f;
         _arriveHop = -1;
         _error = null;
-        _namingConfirmLeave = false;
         RefreshInventory();
         if (justBorn)
         {
             pet.Celebrate();
+        }
+        else
+        {
+            OpenNamingCard();
         }
     }
 
@@ -123,6 +162,10 @@ internal sealed partial class PetScreen(IAetherlingHost host, PetRuntime pet)
         var origin = ImGui.GetWindowPos();
         var size = ImGui.GetWindowSize();
         var now = ImGui.GetTime();
+        var frame = ImGui.GetFrameCount();
+        if (frame != _lastHomeFrame + 1 || now - _lastFrameTime > 0.5)
+            AnimateWheelOnEntry();
+        _lastHomeFrame = frame;
         var dt = Math.Clamp((float)(now - _lastFrameTime), 0f, 0.25f);
         _lastFrameTime = now;
 
@@ -139,6 +182,11 @@ internal sealed partial class PetScreen(IAetherlingHost host, PetRuntime pet)
         }
 
         pet.Tick(ctx.ReduceMotion);
+        PetRect = null;
+        BasketRect = null;
+        WheelRect = null;
+        FoodSlotsRect = null;
+        UnlockRect = null;
 
         if (_arrive < 1f)
         {
@@ -153,72 +201,50 @@ internal sealed partial class PetScreen(IAetherlingHost host, PetRuntime pet)
         else if (_settle < 1f)
         {
             _settle = MathF.Min(1f, _settle + (dt / SettleSeconds));
-            if (_settle >= 1f && !core.NameChosen)
+            if (_settle >= 1f)
             {
-                OpenNaming(core);
+                if (core.NameChosen)
+                {
+                    NamingSettled?.Invoke();
+                }
+                else
+                {
+                    OpenNaming(core);
+                }
             }
         }
 
+        ImGui.BeginDisabled(_emptyCrystal is not null);
         var pad = Px(18f);
-        var headerY = origin.Y + Px(16f);
-        var name = core.PetName ?? AetherlingLimits.DefaultName;
-        float nameWidth;
-        float nameLineH;
-        using (ctx.TitleFont?.Push())
-        {
-            dl.AddText(new Vector2(origin.X + pad, headerY), Look.U32(Look.CrystalPale), name);
-            nameWidth = ImGui.CalcTextSize(name).X;
-            nameLineH = ImGui.GetTextLineHeight();
-        }
-        if (core is { NameChosen: true, HatchedAtUtc: not null }
-            && !_namingOpen && !RenameOverlayOpen && _settle >= 1f && !Evolution.Playing)
-        {
-            DrawRenamePill(ctx, dl, new Vector2(origin.X + pad + nameWidth + Px(10f), headerY), nameLineH);
-        }
-        var born = (core.HatchedAtUtc ?? core.CreatedAtUtc).ToLocalTime().ToString("d MMM yyyy");
-        dl.AddText(new Vector2(origin.X + pad, headerY + Px(40f)), Look.U32(Look.Whisper, 0.85f),
-            string.Format(ctx.Localize("os.aetherling_kindled_on"), born));
-
-        var stageTop = headerY + Px(70f);
-        var wheelButton = WheelButtonVisible(core);
-        var introButton = !IntroSeen && !_namingOpen && _arrive >= 1f;
-        var stageBottom = origin.Y + size.Y - Px(58f) - (wheelButton || introButton ? Px(WheelRowExtra) : 0f) - FootReserved(core);
-        var stage = new Vector2(size.X - (pad * 2f), MathF.Max(Px(150f), stageBottom - stageTop));
+        var panelTl = origin + new Vector2(pad, Px(16f));
+        var panelBr = origin + new Vector2(size.X - pad, size.Y - PetNavBar.Reserved - Px(8f));
+        dl.AddRectFilled(panelTl, panelBr, 0x14FFFFFFu, Px(18f));
+        dl.AddRect(panelTl, panelBr, 0x1AFFFFFFu, Px(18f), ImDrawFlags.RoundCornersAll, Px(1f));
+        var headerHeight = DrawHomeHeader(ctx, dl, panelTl, panelBr.X - panelTl.X, core);
+        var stageTop = panelTl.Y + headerHeight;
+        var stageBottom = origin.Y + size.Y - FootReserved(core) - Px(14f);
+        var stage = new Vector2(size.X - pad * 2f, MathF.Max(Px(100f), stageBottom - stageTop));
         var stageTl = new Vector2(origin.X + pad, stageTop);
-
-        // Submitted before the card underneath it, or the card's own whole-area target takes the click.
-        if (introButton)
-        {
-            DrawIntroButton(ctx, dl, stageTl, stage, now);
-        }
         DrawStage(ctx, dl, stageTl, stage, origin, size, core);
-
-        var hint = _feedToastLeft > 0f && _feedToast is { Length: > 0 }
-            ? _feedToast
-            : ctx.Localize("os.aetherling_tap_hint");
-        Look.Centred(dl, hint, origin.X + (size.X * 0.5f), stageTl.Y + stage.Y + Px(12f),
-            Look.U32(Look.Whisper, 0.7f * _settle), 0.9f);
-        if (wheelButton)
-        {
-            DrawWheelButton(ctx, dl,
-                new Vector2(origin.X + ((size.X - Px(WheelButtonSize)) * 0.5f), stageTl.Y + stage.Y + Px(36f)),
-                core, now);
-        }
+        PetRect = (stageTl, stageTl + stage);
 
         if (ModesAvailable(core))
         {
             DrawFoot(ctx, dl, origin, size, core);
-            TickPetting(ctx, dt, stageTl, stage);
-            TickCarriedAndFlying(ctx, dt, stageTl, stage);
+            if (_emptyCrystal is null)
+            {
+                TickPetting(ctx, dt, stageTl, stage);
+                TickCarriedAndFlying(ctx, dt, stageTl, stage);
+                TickAppetite(ctx, core);
+            }
         }
 
+        ImGui.EndDisabled();
         DrawCheer(ctx, dl, origin, size, dt);
+        if (_emptyCrystal is not null)
+            DrawCrystalStoreOffer(ctx, dl, origin, size);
 
-        if (NameChipVisible)
-        {
-            DrawNameChip(ctx, dl, origin, size, core);
-        }
-        else if (!_namingOpen && !Ticket.Visible && UnclaimedTicketSlot() is { } waiting && _settle >= 1f)
+        if (!_namingOpen && !Ticket.Visible && UnclaimedTicketSlot() is { } waiting && _settle >= 1f)
         {
             DrawTicketChip(ctx, dl, origin, size, core, waiting);
         }
@@ -235,63 +261,13 @@ internal sealed partial class PetScreen(IAetherlingHost host, PetRuntime pet)
             DrawRenameOffer(ctx, dl, origin, size);
         }
 
-        // Last, so it covers the page it took over. When it finishes and the pet has just grown up,
-        // the app takes the hand-off into the adult welcome.
-        if (Evolution.Playing
-            && !Evolution.Draw(ctx, dl, origin, size, dt, core.PetName ?? AetherlingLimits.DefaultName)
-            && _adultingHandOff)
-        {
-            _adultingHandOff = false;
-            AdultingFinished?.Invoke();
-        }
-
-        // After the ceremony, in its own layer: a gift handed over while a growing-up is on screen would
-        // be handed to nobody.
-        if (Ticket.Visible && !Evolution.Playing)
+        if (Ticket.Visible)
         {
             Ticket.Draw(ctx, origin, size, dt);
         }
-        if (WheelOpen && !Evolution.Playing)
+        if (WheelOpen)
         {
             Wheel.Draw(ctx, origin, size, dt);
-        }
-    }
-
-    /// <summary>The one way in to the explanation, sitting over its head until it has been read. It breathes
-    /// rather than shouts: the page is quiet by design and this is the only thing on it asking to be pressed.</summary>
-    private void DrawIntroButton(OsAppContext ctx, ImDrawListPtr dl, Vector2 stageTl, Vector2 stage, double now)
-    {
-        const float LabelScale = 1.2f;
-        var label = ctx.Localize("os.aetherling_what_is_this");
-        // Under the stage, in the band the wheel button uses, rather than over the creature: a button
-        // behind a hopping pet was a target nobody could hit.
-        var height = Px(44f);
-        var width = (ImGui.CalcTextSize(label).X * LabelScale) + Px(58f);
-        var tl = new Vector2(
-            stageTl.X + ((stage.X - width) * 0.5f),
-            stageTl.Y + stage.Y + Px(36f));
-
-        ImGui.SetCursorScreenPos(tl);
-        var pressed = ImGui.InvisibleButton("##aetherlingWhatIsThis", new Vector2(width, height));
-        var hovered = ImGui.IsItemHovered();
-        if (hovered)
-        {
-            HandOnHover();
-        }
-
-        var pulse = ctx.ReduceMotion ? 0.5f : Look.Breathe(now, 2.6f);
-        var radius = height * 0.5f;
-        dl.AddRectFilled(tl, tl + new Vector2(width, height),
-            Look.U32(Look.Crystal with { W = (hovered ? 0.30f : 0.16f) + (0.08f * pulse) }), radius);
-        dl.AddRect(tl, tl + new Vector2(width, height),
-            Look.U32(Look.CrystalPale, 0.45f + (0.35f * pulse)), radius, ImDrawFlags.RoundCornersAll, Px(1.6f));
-        Look.Centred(dl, label, tl.X + (width * 0.5f),
-            tl.Y + ((height - (ImGui.GetTextLineHeight() * LabelScale)) * 0.5f), Look.U32(Look.CrystalPale),
-            LabelScale);
-
-        if (pressed)
-        {
-            IntroRequested?.Invoke();
         }
     }
 
@@ -309,10 +285,8 @@ internal sealed partial class PetScreen(IAetherlingHost host, PetRuntime pet)
         var br = tl + size;
         var now = ImGui.GetTime();
         var centreX = tl.X + (size.X * 0.5f);
-        dl.AddRectFilled(tl, br, 0x14FFFFFFu, Px(18f));
-        dl.AddRect(tl, br, 0x1AFFFFFFu, Px(18f), ImDrawFlags.RoundCornersAll, Px(1f));
 
-        if (!_namingOpen && !RenameOverlayOpen && !Ticket.Visible && !WheelOpen && _arrive >= 1f)
+        if (_emptyCrystal is null && !_namingOpen && !RenameOverlayOpen && !Ticket.Visible && !WheelOpen && _arrive >= 1f)
         {
             ImGui.SetCursorScreenPos(tl);
             if (ImGui.InvisibleButton("##aetherlingStage", size))
@@ -327,25 +301,22 @@ internal sealed partial class PetScreen(IAetherlingHost host, PetRuntime pet)
 
         // Everything ambient is clipped to the card, or the motes climb out over the header.
         dl.PushClipRect(tl, br, true);
-        Look.Motes(dl, tl, size, 22, Look.Crystal, 0.30f, now, ctx.ReduceMotion);
+        Look.Motes(dl, tl, size, 8, Look.Crystal, 0.15f, now, ctx.ReduceMotion);
         if (_arrive >= 1f)
         {
-            DrawMoodBanner(ctx, dl, centreX, tl.Y + Px(18f), size.X - Px(36f), core, now);
+            DrawMoodBanner(ctx, dl, centreX, br.Y - Px(20f), size.X - Px(36f), core, now);
+            DrawFoodSlots(ctx, dl, tl, size, core);
         }
 
-        // What it is wearing decides where it stands. A hat needs headroom and a nook needs floor, so the
-        // creature is sized and lifted against its own worn extent rather than a constant that was measured
-        // on a bare pet and clips the tall hats off the top of the card.
-        // Centred in the room under the mood header rather than stood on the card's floor: the card's height
-        // moves with the wheel button and the feeding timer, and a creature anchored to its floor drifted
-        // with them. The worn extent is the block that gets centred, so a hat or a nook does not push it off.
         var footprint = pet.AccessoryFootprint();
-        var headroom = Px(StageHeadroom);
-        var room = size.Y - headroom - Px(12f);
-        var petSize = MathF.Min(size.X * 0.74f, room / (1f + footprint.Y + footprint.W));
-        var blockH = petSize * (1f + footprint.Y + footprint.W);
-        var blockTop = tl.Y + headroom + ((room - blockH) * 0.5f);
-        var bottom = new Vector2(centreX, blockTop + (petSize * (1f + footprint.Y)));
+        var framing = HomeFormFraming(PetState.FormFolder(core));
+        var petSize = MathF.Min((size.X - Px(52f)) / (framing.Width + footprint.X + footprint.Z),
+            (size.Y - Px(40f)) / (0.85f + footprint.Y + footprint.W)) * 0.92f;
+        var bottom = new Vector2(centreX - Px(16f) + (footprint.X - footprint.Z) * petSize * 0.5f,
+            tl.Y + size.Y * 0.5f - Px(18f) + petSize * framing.CentreAboveBase
+            - petSize * footprint.W * 0.5f);
+        _homePetBottom = bottom;
+        _homePetSize = petSize;
         if (pet.Ready)
         {
             var pose = pet.Pose;
@@ -399,13 +370,6 @@ internal sealed partial class PetScreen(IAetherlingHost host, PetRuntime pet)
         return Vector4.Lerp(MoodRamp[i], MoodRamp[i + 1], at - i);
     }
 
-    /// <summary>How it seems, as the page's own header: the whole mood scale as one rainbow capsule, asleep
-    /// at the left and beaming at the right, with a marker gliding to where it is now. The sentence stays,
-    /// under it and quieter, because the bar says where and only the words say what.
-    ///
-    /// <para>The marker moves and nothing else does. There is no fill, because a bar that fills is a bar
-    /// that can be seen to empty, and the mood has a floor precisely so nobody is ever losing at owning a
-    /// pet (<see cref="Engine.MoodTracker"/>).</para></summary>
     private void DrawMoodBanner(
         OsAppContext ctx, ImDrawListPtr dl, float centreX, float y, float maxWidth, AetherlingDto core, double now)
     {
@@ -493,19 +457,7 @@ internal sealed partial class PetScreen(IAetherlingHost host, PetRuntime pet)
         dl.AddCircleFilled(new Vector2(knobX, midY), knobR, Look.U32(new Vector4(1f, 1f, 1f, 0.94f)), 30);
         dl.AddCircleFilled(new Vector2(knobX, midY), knobR - Px(2.6f), Look.U32(here), 30);
 
-        var line = string.Format(
-            ctx.Localize("os.aetherling_feeling"),
-            core.PetName ?? AetherlingLimits.DefaultName,
-            ctx.Localize($"os.aetherling_feel_{(int)pet.Mood}"));
 
-        // Down a size at a time until it fits on one line: a subtitle that wraps is not a subtitle.
-        var scale = 0.92f;
-        while (scale > 0.7f && ImGui.CalcTextSize(line).X * scale > maxWidth)
-        {
-            scale -= 0.04f;
-        }
-        Look.Centred(dl, line, centreX, y + height + Px(9f),
-            Look.U32(Look.Whisper, 1.15f + (0.15f * breath)), scale);
     }
 
     /// <summary>Where it is on its way down, and how big. The ceremony leaves it standing where the crystal
@@ -555,32 +507,6 @@ internal sealed partial class PetScreen(IAetherlingHost host, PetRuntime pet)
         host.PlayChirp();
     }
 
-    /// <summary>The quiet way back to the card for anyone who put it off, and the reason skipping is safe.</summary>
-    private void DrawNameChip(
-        OsAppContext ctx, ImDrawListPtr dl, Vector2 origin, Vector2 size, AetherlingDto core)
-    {
-        var label = ctx.Localize("os.aetherling_name_chip");
-        var height = Px(30f);
-        var width = ImGui.CalcTextSize(label).X + Px(34f);
-        var tl = new Vector2(origin.X + ((size.X - width) * 0.5f), origin.Y + size.Y - height - Px(16f));
-
-        ImGui.SetCursorScreenPos(tl);
-        var pressed = ImGui.InvisibleButton("##aetherlingNameChip", new Vector2(width, height));
-        var hovered = ImGui.IsItemHovered();
-        if (hovered)
-        {
-            HandOnHover();
-        }
-        dl.AddRectFilled(tl, tl + new Vector2(width, height),
-            Look.U32(Look.Crystal with { W = hovered ? 0.22f : 0.12f }), height * 0.5f);
-        Look.Centred(dl, label, tl.X + (width * 0.5f),
-            tl.Y + ((height - ImGui.GetTextLineHeight()) * 0.5f), Look.U32(Look.CrystalPale, 0.9f));
-        if (pressed)
-        {
-            OpenNaming(core);
-        }
-    }
-
     /// <summary>A ticket that was dealt but never scratched, brought back within reach. It has to
     /// resurface: the prize lands at the reveal, so a ticket left alone is a flourish the owner earned
     /// and does not have.</summary>
@@ -615,31 +541,34 @@ internal sealed partial class PetScreen(IAetherlingHost host, PetRuntime pet)
     private void OpenNaming(AetherlingDto core)
     {
         _namingOpen = true;
-        _namingConfirmLeave = false;
         _nameFocusPending = true;
-        _nameBuffer = core.PetName ?? AetherlingLimits.DefaultName;
+        _nameBuffer = string.Empty;
         _error = null;
+        _ = core;
+    }
+
+    /// <summary>A name the server would accept, before it is asked: the card's own button stays dark
+    /// until this says yes, so the one way off the card is a real name.</summary>
+    private static bool NameLooksValid(string raw)
+    {
+        var trimmed = raw.Trim();
+        return trimmed.Length is > 0 and <= AetherlingLimits.NameMaxLength;
     }
 
     /// <summary>The naming card. While it is up nothing else on the page is submitted, which is what makes it
-    /// modal here: an ImGui item under it would otherwise still take the click.</summary>
+    /// modal here: an ImGui item under it would otherwise still take the click. There is no way to leave it
+    /// without a name: every Lumi is named by its owner.</summary>
     private void DrawNamingCard(OsAppContext ctx, ImDrawListPtr dl, Vector2 origin, Vector2 size)
     {
         dl.AddRectFilled(origin, origin + size, Look.U32(Look.Void with { W = 1f }, 0.72f));
 
         var pad = Px(18f);
         var cardW = size.X - (pad * 2f);
-        var cardH = Px(_namingConfirmLeave ? 170f : 190f);
+        var cardH = Px(200f);
         var tl = new Vector2(origin.X + pad, origin.Y + ((size.Y - cardH) * 0.42f));
         var br = tl + new Vector2(cardW, cardH);
         dl.AddRectFilled(tl, br, Look.U32(new Vector4(0.10f, 0.09f, 0.16f, 0.97f)), Px(16f));
         dl.AddRect(tl, br, Look.U32(Look.Crystal, 0.35f), Px(16f), ImDrawFlags.RoundCornersAll, Px(1.2f));
-
-        if (_namingConfirmLeave)
-        {
-            DrawLeaveConfirm(ctx, dl, tl, cardW, cardH);
-            return;
-        }
 
         var y = tl.Y + Px(16f);
         Look.Centred(dl, ctx.Localize("os.aetherling_naming_title"), tl.X + (cardW * 0.5f), y,
@@ -660,70 +589,41 @@ internal sealed partial class PetScreen(IAetherlingHost host, PetRuntime pet)
             AetherlingLimits.NameMaxLength, ImGuiInputTextFlags.EnterReturnsTrue);
         y += Px(34f);
 
+        var valid = NameLooksValid(_nameBuffer);
         if (_error is { Length: > 0 })
         {
             Look.CentredWrapped(dl, _error, tl.X + (cardW * 0.5f), y, cardW - Px(28f),
                 Look.U32(new Vector4(0.95f, 0.5f, 0.5f, 1f)), 0.85f);
         }
+        else if (!valid)
+        {
+            Look.CentredWrapped(dl, ctx.Localize("os.aetherling_name_required"), tl.X + (cardW * 0.5f), y,
+                cardW - Px(28f), Look.U32(Look.Whisper, 0.8f), 0.85f);
+        }
 
         var buttonY = br.Y - Px(46f);
-        var half = (cardW - Px(38f)) * 0.5f;
-        var confirm = DrawCardButton(ctx, dl, new Vector2(tl.X + Px(14f), buttonY), half,
-            ctx.Localize("os.aetherling_naming_confirm"), primary: true);
-        var later = DrawCardButton(ctx, dl, new Vector2(tl.X + Px(24f) + half, buttonY), half,
-            ctx.Localize("os.aetherling_naming_later"), primary: false);
+        var confirm = DrawCardButton(ctx, dl, new Vector2(tl.X + Px(14f), buttonY), cardW - Px(28f),
+            ctx.Localize("os.aetherling_naming_confirm"), primary: true, enabled: valid);
 
-        if ((confirm || submitted) && !_busy)
+        if ((confirm || submitted) && valid && !_busy)
         {
             Submit();
         }
-        if (later && !_busy)
-        {
-            _namingConfirmLeave = true;
-        }
     }
 
-    private void DrawLeaveConfirm(OsAppContext ctx, ImDrawListPtr dl, Vector2 tl, float cardW, float cardH)
-    {
-        var y = tl.Y + Px(16f);
-        Look.Centred(dl, ctx.Localize("os.aetherling_naming_later_title"), tl.X + (cardW * 0.5f), y,
-            Look.U32(Look.CrystalPale), 1.1f);
-        y += Px(30f);
-        Look.CentredWrapped(dl, ctx.Localize("os.aetherling_naming_later_warning"), tl.X + (cardW * 0.5f), y,
-            cardW - Px(28f), Look.U32(Look.Whisper, 0.9f), 0.9f);
-
-        var buttonY = tl.Y + cardH - Px(46f);
-        var half = (cardW - Px(38f)) * 0.5f;
-        var back = DrawCardButton(ctx, dl, new Vector2(tl.X + Px(14f), buttonY), half,
-            ctx.Localize("os.aetherling_naming_back"), primary: true);
-        var leave = DrawCardButton(ctx, dl, new Vector2(tl.X + Px(24f) + half, buttonY), half,
-            ctx.Localize("os.aetherling_naming_leave"), primary: false);
-
-        if (back)
-        {
-            _namingConfirmLeave = false;
-            _nameFocusPending = true;
-        }
-        if (leave)
-        {
-            // Nothing is sent: the name stays what the server called it, and the chip stays offering.
-            _namingOpen = false;
-            _namingConfirmLeave = false;
-        }
-    }
-
-    private bool DrawCardButton(OsAppContext ctx, ImDrawListPtr dl, Vector2 tl, float width, string label, bool primary)
+    private bool DrawCardButton(
+        OsAppContext ctx, ImDrawListPtr dl, Vector2 tl, float width, string label, bool primary, bool enabled = true)
     {
         var height = Px(34f);
         ImGui.SetCursorScreenPos(tl);
         var pressed = ImGui.InvisibleButton($"##aetherlingCard{label}", new Vector2(width, height));
-        var hovered = ImGui.IsItemHovered();
+        var hovered = ImGui.IsItemHovered() && enabled;
         if (hovered && !_busy)
         {
             HandOnHover();
         }
         var fill = primary
-            ? Look.Crystal with { W = hovered ? 0.30f : 0.20f }
+            ? Look.Crystal with { W = hovered ? 0.30f : enabled ? 0.20f : 0.08f }
             : new Vector4(1f, 1f, 1f, hovered ? 0.14f : 0.07f);
         dl.AddRectFilled(tl, tl + new Vector2(width, height), Look.U32(fill), height * 0.5f);
         if (_busy && primary)
@@ -734,14 +634,14 @@ internal sealed partial class PetScreen(IAetherlingHost host, PetRuntime pet)
         }
         Look.Centred(dl, label, tl.X + (width * 0.5f),
             tl.Y + ((height - ImGui.GetTextLineHeight()) * 0.5f),
-            Look.U32(primary ? Look.CrystalPale : Look.Whisper));
+            Look.U32(primary ? Look.CrystalPale : Look.Whisper, enabled ? 1f : 0.45f));
         _ = ctx;
-        return pressed && !_busy;
+        return pressed && enabled && !_busy;
     }
 
     private void Submit()
     {
-        var name = _nameBuffer;
+        var name = _nameBuffer.Trim();
         _busy = true;
         _error = null;
         _ = Task.Run(async () =>
@@ -767,8 +667,8 @@ internal sealed partial class PetScreen(IAetherlingHost host, PetRuntime pet)
             _busy = false;
             AdoptCore(named);
             _namingOpen = false;
-            _namingConfirmLeave = false;
             pet.Celebrate();
+            NamingSettled?.Invoke();
         }
         if (Interlocked.Exchange(ref _pendingError, null) is { } message)
         {

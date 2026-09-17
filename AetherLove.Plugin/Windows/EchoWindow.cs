@@ -225,14 +225,11 @@ public sealed partial class EchoWindow : Window, IDisposable
         _state.Kicked += OnKicked;
     }
 
-    /// <summary>Reads the runtime install the plugin owns; the window only renders it.</summary>
+    /// <summary>Reads the playback host install the plugin owns; the window only renders it.</summary>
     public Func<EchoInstallState>? InstallStateProvider { get; set; }
 
-    /// <summary>Raised when the user asks for the runtime to be downloaded.</summary>
-    public Action? InstallRequested { get; set; }
-
-    /// <summary>Raised when the user cancels a running runtime download.</summary>
-    public Action? InstallCancelRequested { get; set; }
+    /// <summary>Bytes of the playback host bundle fetched so far and its total, while the asset sync brings it in.</summary>
+    public Func<(long Done, long Total)>? PlayerProgress { get; set; }
 
     /// <summary>Opens the window on a single video, outside any room.</summary>
     public void OpenSolo(string videoRef)
@@ -550,8 +547,7 @@ public sealed partial class EchoWindow : Window, IDisposable
         _bubbleLogoLoaded = true;
         try
         {
-            var dir = Path.GetDirectoryName(Plugin.PluginInterface.AssemblyLocation.FullName) ?? "";
-            var path = Path.Combine(dir, "Media", "appicons", BubbleLogoFile);
+            var path = Services.Media.MediaPaths.Shipped(Services.Media.MediaPaths.AppIcons, BubbleLogoFile);
             if (File.Exists(path))
             {
                 _bubbleLogo = Plugin.TextureProvider.GetFromFile(path);
@@ -700,26 +696,22 @@ public sealed partial class EchoWindow : Window, IDisposable
                 Loc.T("echo.close"), CloseAfterRoom);
         }
 
-        var install = InstallStateProvider?.Invoke() ?? EchoInstallState.NotInstalled;
-        if (install.Busy)
-        {
-            return new StageNotice(FontAwesomeIcon.CloudDownloadAlt, ThemeService.Current.AccentLight,
-                Loc.T("echo.installing_title"), InstallPhaseText(install),
-                Loc.T("common.cancel"), () => InstallCancelRequested?.Invoke(),
-                Progress: install.Progress);
-        }
-        if (install.Phase == EchoInstallPhase.Failed && _locator.HostExePath is null)
-        {
-            return new StageNotice(FontAwesomeIcon.ExclamationTriangle, UiColors.Danger,
-                Loc.T("echo.install_failed_title"),
-                install.FailureReason ?? Loc.T("echo.runtime_body"),
-                Loc.T("echo.retry"), () => InstallRequested?.Invoke());
-        }
+        // The player arrives through the phone's asset sync, which retries on its own; the window only
+        // reports where it stands.
         if (_locator.HostExePath is null)
         {
-            return new StageNotice(FontAwesomeIcon.Download, ThemeService.Current.AccentLight,
-                Loc.T("echo.runtime_title"), Loc.T("echo.runtime_body"),
-                Loc.T("echo.runtime_install"), () => InstallRequested?.Invoke());
+            var install = InstallStateProvider?.Invoke() ?? EchoInstallState.NotInstalled;
+            if (install.Phase == EchoInstallPhase.Failed)
+            {
+                return new StageNotice(FontAwesomeIcon.ExclamationTriangle, UiColors.Danger,
+                    Loc.T("echo.install_failed_title"), Loc.T("echo.install_failed_body"),
+                    Loc.T("echo.close"), () => IsOpen = false);
+            }
+            var (done, total) = PlayerProgress?.Invoke() ?? (0, 0);
+            return new StageNotice(FontAwesomeIcon.CloudDownloadAlt, ThemeService.Current.AccentLight,
+                Loc.T("echo.runtime_title"), InstallPhaseText(install, done, total),
+                Loc.T("echo.close"), () => IsOpen = false,
+                Progress: total > 0 ? Math.Clamp((float)((double)done / total), 0f, 1f) : 0f);
         }
 
         if (_host.FailureReason is not null)
@@ -734,13 +726,9 @@ public sealed partial class EchoWindow : Window, IDisposable
         // offer the update when one is waiting.
         if (LiveNeedsANewerPlayer())
         {
-            return UpdateAvailable?.Invoke() == true
-                ? new StageNotice(FontAwesomeIcon.CloudDownloadAlt, ThemeService.Current.AccentLight,
-                    Loc.T("echo.live_needs_player_title"), Loc.T("echo.live_needs_player_update"),
-                    Loc.T("echo.runtime_install"), () => InstallRequested?.Invoke())
-                : new StageNotice(FontAwesomeIcon.Tv, UiColors.Amber,
-                    Loc.T("echo.live_needs_player_title"), Loc.T("echo.live_needs_player_body"),
-                    SkipLabel(), SkipCurrent);
+            return new StageNotice(FontAwesomeIcon.Tv, UiColors.Amber,
+                Loc.T("echo.live_needs_player_title"), Loc.T("echo.live_needs_player_body"),
+                SkipLabel(), SkipCurrent);
         }
 
         if (_host.LastState?.Error is not { } code)
@@ -754,7 +742,7 @@ public sealed partial class EchoWindow : Window, IDisposable
                 Loc.T("echo.retry"), RestartHost),
             EchoHostErrors.Protocol => new StageNotice(FontAwesomeIcon.CodeBranch, UiColors.Amber,
                 Loc.T("echo.protocol_title"), Loc.T("echo.protocol_body"),
-                Loc.T("echo.reinstall"), () => InstallRequested?.Invoke()),
+                Loc.T("echo.close"), () => IsOpen = false),
             PlayerErrorEmbedBlocked or PlayerErrorEmbedDisallowed => new StageNotice(
                 FontAwesomeIcon.Ban, UiColors.Amber,
                 Loc.T("echo.embed_blocked_title"), Loc.T("echo.embed_blocked_body"),
@@ -790,9 +778,6 @@ public sealed partial class EchoWindow : Window, IDisposable
         return _sync.UndecodableEntryId != Guid.Empty;
     }
 
-    /// <summary>Whether a newer playback host is published and waiting to be installed.</summary>
-    public Func<bool>? UpdateAvailable { get; set; }
-
     private string SkipLabel() => Loc.T(_state.CurrentRoomId is null ? "echo.close" : "echo.skip");
 
     private static string EndReasonText(EchoEndReason reason) => reason switch
@@ -803,12 +788,16 @@ public sealed partial class EchoWindow : Window, IDisposable
         _ => Loc.T("echo.room_ended_moderation"),
     };
 
-    private static string InstallPhaseText(EchoInstallState install) => install.Phase switch
+    private static string InstallPhaseText(EchoInstallState install, long done, long total)
     {
-        EchoInstallPhase.Verifying => Loc.T("echo.install_verifying"),
-        EchoInstallPhase.Extracting => Loc.T("echo.install_extracting"),
-        _ => Loc.T("echo.install_downloading"),
-    };
+        if (install.Phase == EchoInstallPhase.Extracting)
+        {
+            return Loc.T("echo.install_extracting");
+        }
+        return total > 0
+            ? Loc.T("os.assets_mb", FormatMegabytes(done, CultureInfo.CurrentCulture), FormatMegabytes(total, CultureInfo.CurrentCulture))
+            : Loc.T("echo.runtime_body");
+    }
 
     private void DrawStageNotice(ThemeDefinition t, Vector2 stageTL, Vector2 stageSize, in StageNotice notice)
     {

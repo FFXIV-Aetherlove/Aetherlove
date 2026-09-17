@@ -1,4 +1,4 @@
-﻿namespace AetherLove.Services.Localization;
+namespace AetherLove.Services.Localization;
 
 internal static class SettingsPt
 {
@@ -264,7 +264,7 @@ internal static class SettingsPt
         ["settings.staff_messages_section"] = "Mensagens",
 
         // added after update 2.2.3
-        ["settings.premium_themes"] = "Temas premium",
+        ["settings.premium_themes"] = "Visuais do telefone",
         ["settings.premium_refresh"] = "Atualizar este tema",
         ["settings.premium_backgrounds"] = "Fundos premium",
         ["settings.premium_enable_failed"] = "Não foi possível mudar",
@@ -280,5 +280,33 @@ internal static class SettingsPt
         ["settings.translation_enable"] = "Ativar traduções",
         ["settings.translation_language"] = "Traduzir para",
         ["settings.translation_search"] = "Pesquisar idiomas...",
+        // phone skins (added after update 2.7.0)
+        ["settings.premium_get_skins"] = "Pegar visuais do telefone na loja",
+        // added after update 2.7.0
+        ["account.title"] = "Minha conta",
+        ["account.change_help"] = "Suas chaves e conversas são mantidas. Use pelo menos 12 caracteres.",
+        ["account.new_passphrase"] = "Nova frase secreta",
+        ["account.repeat"] = "Repetir frase secreta",
+        ["account.change"] = "Alterar frase secreta",
+        ["account.backup_help"] = "Guarde este arquivo em um local seguro. Quem tiver o arquivo poderá recuperar suas chaves.",
+        ["account.save"] = "Salvar arquivo de recuperação",
+        ["account.restore"] = "Escolher arquivo de recuperação",
+        ["account.retry"] = "Tentar conectar novamente",
+        ["account.working"] = "Processando...",
+        ["account.success"] = "Concluído.",
+        ["account.failed"] = "Não foi possível concluir esta etapa. Verifique a conexão e escolha outro nome ao salvar.",
+        ["account.backup_title"] = "Salve seu arquivo de recuperação",
+        ["account.backup_required"] = "Salve seu backup antes de continuar. Você poderá usá-lo se esquecer sua frase secreta.",
+        ["account.unlock_choice"] = "Digite sua frase secreta ou escolha seu arquivo de recuperação.",
+        ["account.state_offline"] = "Sem conexão. Suas chaves locais são mantidas.",
+        ["account.state_unlockrequired"] = "Digite sua frase secreta ou escolha um arquivo de recuperação.",
+        ["account.state_ready"] = "Suas chaves estão prontas.",
+        ["account.state_migrationincomplete"] = "Algumas chaves antigas ainda precisam ser recuperadas. As conversas disponíveis continuam acessíveis.",
+        ["account.state_recoveryrequired"] = "Recupere o acesso com sua frase secreta ou arquivo de recuperação.",
+        ["account.state_corruptbundle"] = "Não foi possível abrir este backup. Suas chaves atuais são mantidas.",
+        ["account.unverified"] = "Não verificado",
+        ["account.verified"] = "Verificado",
+        ["account.key_changed"] = "As chaves mudaram. Compare o código novamente.",
+        ["account.compared"] = "Comparei o código",
     };
 }

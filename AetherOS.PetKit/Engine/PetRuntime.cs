@@ -36,6 +36,9 @@ public sealed class PetRuntime
     private double _lastTickTime;
 
     private Palette? _palette;
+
+    /// <summary>The worn palette's body colour, white before a look is applied.</summary>
+    public Vector4 BodyColor => _palette?.BodyColor ?? Vector4.One;
     /// <summary>Seconds left of an emote that asked for the held items to be put down.</summary>
     private float _armsStowLeft;
 
@@ -56,20 +59,14 @@ public sealed class PetRuntime
     /// legs), one per runtime like every rig here. Idle when the worn manifest declares none.</summary>
     private readonly Rendering.TentacleFx _shellStrands = new();
 
-    /// <summary>The Reaching: the code-drawn limbs, one rig per runtime. Gated on adulthood
-    /// through <see cref="HandsEnabled"/> each tick; off, the render is byte-identical to the
+    /// <summary>The Reaching: the code-drawn limbs, one rig per runtime. Gated through
+    /// <see cref="HandsEnabled"/> each tick; off, the render is byte-identical to the
     /// limbless path.</summary>
     private readonly Rendering.HandFx _hands = new();
 
     /// <summary>The one switch that kills the limbs everywhere, kept beside the rig so turning
-    /// the feature off is one line. The per-pet gate (adulthood) composes with it in Tick.</summary>
+    /// the feature off is one line.</summary>
     public bool HandsEnabled { get; set; } = true;
-
-    /// <summary>An adult body: any form that is not a hatchling rung or the ceremony crystal.
-    /// The limbs arrive with adulthood, continuing the growth line rather than pre-empting it.</summary>
-    private bool AdultForm => _loadedFolder is not (null
-        or CoreAssets.HatchlingFolder or CoreAssets.Hatchling2Folder or CoreAssets.Hatchling3Folder
-        or CoreAssets.CeremonyFolder);
 
     /// <summary>Drives the limbs from a caller's OWN clock rather than an emote's: a race gait is
     /// synced to distance, and winding a seconds-based track over it puts the arms out of step with
@@ -135,34 +132,13 @@ public sealed class PetRuntime
     /// <summary>The manifest on screen, for callers measuring against the worn form.</summary>
     public AtlasManifest? Manifest => _assets?.Manifest;
 
-    /// <summary>A form the creature has grown into but is not wearing yet, because a ceremony is
-    /// mid-flight and the swap belongs to its flash. While this is set every surface's request to
-    /// load something is ignored, which is what stops the phone page and the floating window
-    /// pulling the body in two directions.</summary>
-    public string? HeldForm { get; private set; }
-
-    /// <summary>Arms the swap without performing it.</summary>
-    public void HoldForm(string formFolder) => HeldForm = formFolder;
-
-    /// <summary>Performs the held swap, at the moment the ceremony says so.</summary>
-    public void CommitHeldForm(string assetRoot)
-    {
-        if (HeldForm is not { } folder)
-        {
-            return;
-        }
-        HeldForm = null;
-        EnsureLoaded(assetRoot, folder);
-    }
-
     /// <summary>Loads (or reloads) the sheet set for a form. The catalogue loads once and stays;
-    /// an evolution swaps the body under the same look, mood and particles, which is exactly the
-    /// continuity the moment wants.
+    /// a shell swap changes the body under the same look, mood and particles.
     /// <para>Every surface calls this with the form the snapshot says, so there is one answer and
     /// no caller decides for itself which body is on screen.</para></summary>
     public void EnsureLoaded(string assetRoot, string formFolder)
     {
-        if (_loadedFolder == formFolder || HeldForm is not null)
+        if (_loadedFolder == formFolder)
         {
             return;
         }
@@ -290,7 +266,7 @@ public sealed class PetRuntime
             // take effect on the frame it happens, and the row carries the follow spring's
             // looseness and the water's amplitude, both about to be integrated. The hands go
             // before the flown item's rig, so a kite yanked by a wave feels the wave.
-            _hands.Enabled = HandsEnabled && AdultForm;
+            _hands.Enabled = HandsEnabled;
             if (_assets?.Manifest is { } handManifest)
             {
                 _hands.Style = handManifest.HandStyle;
@@ -372,10 +348,9 @@ public sealed class PetRuntime
         }
 
         var look = core?.Look;
-        var adult = core?.Adult is not null;
         var key = look is null
             ? string.Empty
-            : $"{look.Palette}|{(adult ? string.Join(',', look.Accessories) : string.Empty)}|{look.Reaction}"
+            : $"{look.Palette}|{string.Join(',', look.Accessories)}|{look.Reaction}"
                 + $"|{string.Join(',', look.DisabledReactions ?? [])}";
         if (key == _appliedLook)
         {
@@ -384,7 +359,7 @@ public sealed class PetRuntime
         _appliedLook = key;
         Wear(
             look?.Palette ?? "dawn",
-            adult ? look?.Accessories ?? [] : [],
+            look?.Accessories ?? [],
             look?.Reaction ?? string.Empty,
             look?.DisabledReactions ?? []);
     }
@@ -423,9 +398,7 @@ public sealed class PetRuntime
     }
 
     /// <summary>What the pet wears. Sent whole, exactly like the server stores it; unknown refs
-    /// drop silently so a stale look never breaks the draw. A growing form wears no accessories
-    /// (the young silhouettes are not what the art was authored against), so callers pass an
-    /// empty list until adulthood.</summary>
+    /// drop silently so a stale look never breaks the draw.</summary>
     private void Wear(
         string paletteRef,
         IReadOnlyList<string> accessoryRefs,
@@ -567,9 +540,62 @@ public sealed class PetRuntime
         }
 
         var mouthAt = AnchorLocal256("face") + new Vector2(0f, 16f);
-        _fx.Burst(ParticleKind.Shard, mouthAt, 5, accent with { W = 0.95f }, 12f);
-        _fx.Burst(ParticleKind.Mote, mouthAt, 3, accent with { W = 0.7f }, 16f);
+        var (kind, count, reach) = elementKey switch
+        {
+            "fire" => (ParticleKind.Sparkle, 8, 25f),
+            "ice" => (ParticleKind.Shard, 7, 18f),
+            "wind" => (ParticleKind.Mote, 10, 32f),
+            "earth" => (ParticleKind.Shard, 8, 11f),
+            "lightning" => (ParticleKind.Sparkle, 11, 29f),
+            "water" => (ParticleKind.Glow, 7, 22f),
+            _ => (ParticleKind.Shard, 5, 12f),
+        };
+        _fx.Burst(kind, mouthAt, count, accent with { W = 0.95f }, reach);
+        _fx.Burst(ParticleKind.Mote, mouthAt, elementKey == "wind" ? 6 : 3, accent with { W = 0.7f }, 16f);
         _mouth.Play(MouthShapes.Sequence(0.26f, 0.1f, "chew-open", "mm", "chew-open", "mm", "chew-open"), 1.6f);
+    }
+
+    /// <summary>Attention toward a crystal the player has picked up, without consuming it or counting a meal.</summary>
+    public void AnticipateCrystal(bool reduceMotion, string elementKey)
+    {
+        ShowGlyph("crystal", element: elementKey);
+        _mouth.Play([new MouthKey(0f, "o", 0.08f), new MouthKey(0.65f, "smile", 0.18f)], 1.4f);
+        if (!reduceMotion)
+        {
+            _animator?.PlayHopClip();
+        }
+    }
+
+    /// <summary>A friendly request that leaves mood and affection unchanged.</summary>
+    public void PlayHungerCue(bool reduceMotion)
+    {
+        ShowGlyph("crystal");
+        _mouth.Play([new MouthKey(0f, "hmm", 0.12f), new MouthKey(0.75f, "pout", 0.18f),
+            new MouthKey(1.45f, "smile", 0.2f)], 2.2f);
+        if (!reduceMotion)
+        {
+            _animator?.PlayHopClip();
+        }
+    }
+
+    /// <summary>The fifth meal's short satisfied finish. Variants carry equal weight and grant nothing.</summary>
+    public void PlayFullMeal(int variation, bool reduceMotion)
+    {
+        _mood.Lift();
+        ShowGlyph(variation % 2 == 0 ? "burst" : "heart");
+        _mouth.Play((variation % 3) switch
+        {
+            0 => [new MouthKey(0f, "beam", 0.1f), new MouthKey(1.2f, "smile", 0.2f)],
+            1 => [new MouthKey(0f, "laugh", 0.1f), new MouthKey(1.1f, "mm", 0.2f)],
+            _ => [new MouthKey(0f, "mm", 0.1f), new MouthKey(0.8f, "beam", 0.2f)],
+        }, 2.2f);
+        if (reduceMotion)
+        {
+            return;
+        }
+        _animator?.PlayHopClip();
+        _fx.Burst(ParticleKind.Sparkle, AnchorLocal256("body"), 5,
+            new Vector4(1f, 0.94f, 0.68f, 0.9f), 42f);
     }
 
     /// <summary>The gentle refusal (full, gated): nothing consumed, a heart, a soft line the
@@ -1238,9 +1264,11 @@ public sealed class PetRuntime
     }
 
     /// <summary>Draws the creature as dressed. <paramref name="props"/> false leaves the nook and the
-    /// banner at home for a surface too small for furniture, without touching what is worn.</summary>
+    /// banner at home for a surface too small for furniture, without touching what is worn.
+    /// <paramref name="alpha"/> fades the body, face and worn items together; drawn parts, limbs,
+    /// strands and effects keep their palette.</summary>
     public void Draw(ImDrawListPtr dl, ITextureCache textures, Vector2 bottomCentre, float size, PetPose pose,
-        bool props = true)
+        bool props = true, float alpha = 1f)
     {
         if (_draw is null)
         {
@@ -1269,7 +1297,7 @@ public sealed class PetRuntime
             if (_catalogue is not null)
             {
                 _draw.DrawAccessory(dl, textures, _catalogue.AccessoryImagePath(def), def,
-                    bottomCentre, size, pose);
+                    bottomCentre, size, pose, alpha);
             }
         }
 
@@ -1283,14 +1311,20 @@ public sealed class PetRuntime
                 if (def.HasWrapBack)
                 {
                     _draw.DrawAccessory(dl, textures, _catalogue.AccessoryBackPath(def), def,
-                        bottomCentre, size, pose);
+                        bottomCentre, size, pose, alpha);
                 }
             }
         }
 
-        var tints = _palette is { } palette
+        var fullTints = _palette is { } palette
             ? new CoreTints(palette.BodyColor, palette.AccentColor, palette.EyeColor)
             : PetTints.Dawn;
+        var tints = alpha >= 1f
+            ? fullTints
+            : new CoreTints(
+                fullTints.Body with { W = fullTints.Body.W * alpha },
+                fullTints.Accent with { W = fullTints.Accent.W * alpha },
+                fullTints.Eye with { W = fullTints.Eye.W * alpha });
 
         // The shell's own strand anatomy, behind the body: a jellyfish is not a bare bell.
         if (_palette is { } strandPalette)
@@ -1314,11 +1348,13 @@ public sealed class PetRuntime
         {
             var local = pose.FlipX ? pose.Offset with { X = -pose.Offset.X } : pose.Offset;
             var at = bottomCentre + (local * (size / 256f));
-            var ink = _assets!.Manifest.InkFor(tints.Body);
+            var ink = _assets!.Manifest.InkFor(fullTints.Body);
             if (ink.W <= 0f)
             {
                 ink = MouthDraw.DefaultLine;
             }
+
+            ink = ink with { W = ink.W * alpha };
             LineArtDispatch.Draw(shell, _lineCanvas, dl, at, size, _lineBody, _lineTrim,
                 _lineEye, _lineBlush, tints.Body, tints.Accent, tints.Eye, ink,
                 pose.Scale, pose.FlipX);
@@ -1328,7 +1364,7 @@ public sealed class PetRuntime
             _draw.Draw(dl, textures, bottomCentre, size, pose.CellIndex, tints, pose.Scale, pose.Offset,
                 null, pose.FlipX);
         }
-        _draw.DrawMouth(dl, bottomCentre, size, pose, _mouth.Current, tints.Body);
+        _draw.DrawMouth(dl, bottomCentre, size, pose, _mouth.Current, fullTints.Body, alpha);
 
         // The front-of-body limbs, after the face, with the blend that answers the overlap.
         if (frontHands && _palette is { } frontLimbPalette)
@@ -1357,7 +1393,7 @@ public sealed class PetRuntime
                 continue;
             }
             _draw.DrawAccessory(dl, textures, _catalogue.AccessoryImagePath(def), def,
-                bottomCentre, size, pose, hands: _hands);
+                bottomCentre, size, pose, alpha, _hands);
         }
 
         _fx.Draw(dl, bottomCentre, size, behind: false);

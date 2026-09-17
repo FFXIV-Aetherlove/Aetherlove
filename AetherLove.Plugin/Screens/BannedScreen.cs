@@ -35,8 +35,7 @@ public sealed class BannedScreen
         _imageResolved = true;
         try
         {
-            var dir = Path.GetDirectoryName(UiHost.PluginInterface.AssemblyLocation.FullName) ?? "";
-            var path = Path.Combine(dir, "Media", "icons", "blocked.png");
+            var path = Services.Media.MediaPaths.Shipped(Services.Media.MediaPaths.Icons, "blocked.png");
             if (File.Exists(path))
             {
                 _image = UiHost.TextureProvider.GetFromFile(path);

@@ -12,7 +12,7 @@ public partial class OnboardingScreen
     {
         return new BasicProfileDto(
             DisplayName: _displayName,
-            Bio: _bio,
+            Bio: _bioField.Value(_bio),
             Race: ValueAt(RaceValues, _raceIdx, Race.Hyur),
             Gender: ValueAt(GenderValues, _genderIdx, Gender.Male),
             Region: MaskOr(RegionValues, _ownRegions, (a, b) => (Region)((short)a | (short)b)),

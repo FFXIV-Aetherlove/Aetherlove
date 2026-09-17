@@ -21,6 +21,7 @@ public sealed class FeedbackScreen
 
     private readonly IFeedbackHost _host;
     private readonly EntranceAnimation _entrance = new();
+    private readonly SoftWrapInputField _textField = new();
 
     private FeedbackKind _kind = FeedbackKind.Bug;
     private string _text = string.Empty;
@@ -207,7 +208,7 @@ public sealed class FeedbackScreen
         DrawFieldLabel(Loc.T("settings.feedback_your_message"), ThemeService.Current);
         ImGui.Spacing();
         ImGui.SetCursorPosX(Px(Pad));
-        InputTextMultilineWithPaste("##feedbackText", ref _text, 4000, new Vector2(winW - Px(Pad) * 2f, Px(140f)));
+        _textField.Draw("##feedbackText", ref _text, 4000, new Vector2(winW - Px(Pad) * 2f, Px(140f)));
         ImGui.Spacing();
 
         if (_error is { } err)
@@ -267,6 +268,7 @@ public sealed class FeedbackScreen
     {
         _kind = FeedbackKind.Bug;
         _text = string.Empty;
+        _textField.Reset(_text);
         _selectedAppId = GeneralAppId;
         _submitting = false;
         _error = null;
@@ -282,7 +284,7 @@ public sealed class FeedbackScreen
         }
         _submitting = true;
         _error = null;
-        var req = new SubmitFeedbackRequest(_kind, _text, _selectedAppId);
+        var req = new SubmitFeedbackRequest(_kind, _textField.Value(_text), _selectedAppId);
 
         _ = Task.Run(async () =>
         {

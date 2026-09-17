@@ -9,7 +9,6 @@ public static class LumiRaceLimits
     /// <summary>Runners in every race. Party members fill real slots first; the rest are ghosts.</summary>
     public const int FieldSize = 6;
 
-    /// <summary>Shards on a crystal card. A full card deals the prize pack.</summary>
     public const int StampsPerCard = 5;
 }
 
@@ -30,7 +29,13 @@ public sealed record LumiRaceFieldEntryDto(
     short Stamina,
     short Focus,
     short Heart,
-    string Shell = "");
+    string Shell = "",
+    /// <summary>The runner's hand as it was snapshotted at entry: card ids and levels, slot order. Empty id and
+    /// null arrays mean no card. The client builds the resolver from these and nothing else.</summary>
+    string GoldCardId = "",
+    short GoldLevel = 0,
+    string[]? SilverCardIds = null,
+    short[]? SilverLevels = null);
 
 /// <summary>A resolved race, whole. The client re-derives the running of it from the inputs (the sim is
 /// deterministic), while <see cref="Placements"/> is the server's authoritative record; on any
@@ -49,7 +54,10 @@ public sealed record LumiRaceDto(
     DateTimeOffset ServerNowUtc,
     short[] Placements,
     short WinnerSlot,
-    Guid? PartyRunId = null);
+    Guid? PartyRunId = null,
+    /// <summary>The card resolver identity the race was resolved under (<c>RaceCardVersions.SupportVersion</c>).
+    /// Empty means card-free: the client steps the engine directly, exactly as before cards.</summary>
+    string SupportVersion = "");
 
 /// <summary>What resolving a race earned the caller. Amounts stay server-owned; this only reports what
 /// was credited so the prize scene can say it.</summary>
@@ -62,8 +70,10 @@ public sealed record LumiRaceRewardDto(
     bool CardCompleted,
     LumiRacePackDto? Pack = null);
 
-/// <summary>A dealt prize pack: two items, already granted, waiting to be ripped open. The rip is
-/// bookkeeping, never the grant, so an unopened pack can never strand a prize.</summary>
+/// <summary>A dealt prize pack, already granted, waiting to be ripped open. The rip is bookkeeping, never the
+/// grant, so an unopened pack can never strand a prize. Item 1 is always the accessory; item 2 is the colour, or
+/// kind 0 and "" when the pack has none; every remaining slot is a racing card in <see cref="Cards"/>.
+/// <see cref="Size"/> is the number of items dealt (2, 3 or 4), 0 on a pack dealt before cards.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record LumiRacePackDto(
     Guid PackId,
@@ -71,7 +81,9 @@ public sealed record LumiRacePackDto(
     string PrizeRef1,
     short PrizeKind2,
     string PrizeRef2,
-    DateTimeOffset? RevealedAtUtc);
+    DateTimeOffset? RevealedAtUtc,
+    LumiRacePackCardDto[]? Cards = null,
+    short Size = 0);
 
 /// <summary>How one dealt prize presents itself. Resolved from the catalog WITHOUT the sellable gate,
 /// because the racing shelves are shut on purpose and a prize already granted is not a purchase. Copy
@@ -130,9 +142,9 @@ public sealed record LumiRaceStateDto(
     short StampsPerDay = 0,
     short StampsThisWeek = 0,
     short StampsPerWeek = 0,
-    /// <summary>Minutes between races. Carried so the pages that state the rule read the server's own
+    /// <summary>Seconds between races. Carried so the pages that state the rule read the server's own
     /// number rather than a copy of it that can drift.</summary>
-    short GateMinutes = 0,
+    int GateSeconds = 0,
     /// <summary>When the current sparks week rolls, for the practice popup's countdown.</summary>
     DateTimeOffset? WeekResetAtUtc = null,
     int PracticeRaces = 0,
@@ -146,7 +158,11 @@ public sealed record LumiRaceStateDto(
     string PetPalette = "",
     string PetAccessories = "",
     short PetStage = 3,
-    string PetShell = "");
+    string PetShell = "",
+    /// <summary>Whether racing cards are switched on, and the saved hand resolved for drawing, so the home and
+    /// selection pages draw the hand strip without a second call.</summary>
+    bool CardsEnabled = false,
+    LumiRaceHandViewDto? Hand = null);
 
 /// <summary>One course on offer, already graded for the caller's racer. <see cref="WeatherKey"/> is the
 /// sky dealt with the offer and the one the race will run, so a card can name it up front.</summary>

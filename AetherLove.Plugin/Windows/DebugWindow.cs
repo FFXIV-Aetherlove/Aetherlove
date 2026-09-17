@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
@@ -24,6 +25,8 @@ public sealed class DebugWindow : Window
 {
     private readonly AetherSignalService _signal;
     private readonly AetherHubContext _hub;
+    private readonly Services.Assets.AssetSyncService _assets;
+    private bool _fakePendingAssets;
 
     private volatile bool _loading;
     private volatile string? _serverError;
@@ -45,11 +48,12 @@ public sealed class DebugWindow : Window
     private static readonly Vector4 WarnCol = new(0.95f, 0.65f, 0.25f, 1f);
     private static readonly Vector4 ErrCol = new(0.95f, 0.45f, 0.45f, 1f);
 
-    public DebugWindow(AetherSignalService signal, AetherHubContext hub)
+    public DebugWindow(AetherSignalService signal, AetherHubContext hub, Services.Assets.AssetSyncService assets)
         : base("AetherLove Debug##aetherloveDebug")
     {
         _signal = signal;
         _hub = hub;
+        _assets = assets;
         Size = new Vector2(580, 660);
         SizeCondition = ImGuiCond.FirstUseEver;
         SizeConstraints = new WindowSizeConstraints
@@ -190,6 +194,7 @@ public sealed class DebugWindow : Window
         Row("Clock skew", Skew());
 
         DrawSoundSection();
+        DrawAssetsSection();
 
         Section("Image rendering test");
         Row("WebP decode (auto-detected)", WebpProbeText());
@@ -204,6 +209,30 @@ public sealed class DebugWindow : Window
         ImGui.TextDisabled("Takes effect on the next reconnect (reopen AetherLove). Both formats are sent below regardless of OS; compare which one renders.");
         ImGui.PopTextWrapPos();
         DrawSamples(scale);
+    }
+
+    /// <summary>Where the downloaded media stands, a manual re-sync, and a switch that fakes a pending update
+    /// so the gate screen can be looked at against a server without the endpoints.</summary>
+    private void DrawAssetsSection()
+    {
+        Section("Phone downloads");
+        var snapshot = _assets.Snapshot;
+        var local = _assets.LocalCollectionHash;
+        Row("Local collection", local.Length > 0 ? local[..12] : "none yet");
+        Row("Sync", $"{snapshot.Phase} ({snapshot.Reason})" + (snapshot.RequiredPending ? ", Home is waiting" : ""));
+        Row("Packs in flight", snapshot.Packs.Count == 0
+            ? "none"
+            : string.Join(", ", snapshot.Packs.Select(p => $"{p.Name}: {p.State}")));
+        if (ImGui.Button("Sync now"))
+        {
+            _assets.RequestSync(Services.Assets.AssetSyncReason.Manual);
+        }
+        var fake = _fakePendingAssets;
+        if (ImGui.Checkbox("Fake a pending phone update (shows the gate)", ref fake))
+        {
+            _fakePendingAssets = fake;
+            _assets.SetDebugPending(fake);
+        }
     }
 
     /// <summary>Every pickable family rendered live with its resolved file state, so a family that silently

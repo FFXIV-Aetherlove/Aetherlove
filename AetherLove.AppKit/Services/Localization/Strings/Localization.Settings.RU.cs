@@ -1,4 +1,4 @@
-﻿namespace AetherLove.Services.Localization;
+namespace AetherLove.Services.Localization;
 
 internal static class SettingsRu
 {
@@ -253,7 +253,7 @@ internal static class SettingsRu
         ["settings.staff_messages_section"] = "Сообщения",
 
         // added after update 2.2.3
-        ["settings.premium_themes"] = "Премиум-темы",
+        ["settings.premium_themes"] = "Оформление телефона",
         ["settings.premium_refresh"] = "Обновить тему",
         ["settings.premium_backgrounds"] = "Премиум-обои",
         ["settings.premium_enable_failed"] = "Не удалось сменить",
@@ -269,5 +269,33 @@ internal static class SettingsRu
         ["settings.translation_enable"] = "Включить перевод",
         ["settings.translation_language"] = "Переводить на",
         ["settings.translation_search"] = "Поиск языков...",
+        // phone skins (added after update 2.7.0)
+        ["settings.premium_get_skins"] = "Найти оформления в магазине",
+        // added after update 2.7.0
+        ["account.title"] = "Мой аккаунт",
+        ["account.change_help"] = "Ваши ключи и переписки сохранятся. Используйте не меньше 12 символов.",
+        ["account.new_passphrase"] = "Новая парольная фраза",
+        ["account.repeat"] = "Повторите парольную фразу",
+        ["account.change"] = "Изменить парольную фразу",
+        ["account.backup_help"] = "Храните файл в безопасном месте. Любой, у кого он есть, сможет восстановить ваши ключи.",
+        ["account.save"] = "Сохранить файл восстановления",
+        ["account.restore"] = "Выбрать файл восстановления",
+        ["account.retry"] = "Повторить подключение",
+        ["account.working"] = "Подождите...",
+        ["account.success"] = "Готово.",
+        ["account.failed"] = "Не удалось завершить шаг. Проверьте подключение и выберите другое имя файла при сохранении.",
+        ["account.backup_title"] = "Сохраните файл восстановления",
+        ["account.backup_required"] = "Сохраните резервную копию, чтобы продолжить. Она поможет, если вы забудете парольную фразу.",
+        ["account.unlock_choice"] = "Введите парольную фразу или выберите файл восстановления.",
+        ["account.state_offline"] = "Нет подключения. Ваши локальные ключи сохранены.",
+        ["account.state_unlockrequired"] = "Введите парольную фразу или выберите файл восстановления.",
+        ["account.state_ready"] = "Ваши ключи готовы.",
+        ["account.state_migrationincomplete"] = "Некоторые старые ключи ещё нужно восстановить. Доступные переписки продолжают работать.",
+        ["account.state_recoveryrequired"] = "Восстановите доступ с помощью парольной фразы или файла восстановления.",
+        ["account.state_corruptbundle"] = "Не удалось открыть эту копию. Ваши текущие ключи сохранены.",
+        ["account.unverified"] = "Не проверено",
+        ["account.verified"] = "Проверено",
+        ["account.key_changed"] = "Ключи изменились. Сравните код ещё раз.",
+        ["account.compared"] = "Код совпадает",
     };
 }

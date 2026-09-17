@@ -9,6 +9,7 @@ using AetherLove.UI;
 using AetherOS.Sdk;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
+using static AetherLove.UI.TourDraw;
 
 namespace AetherLove.Os;
 
@@ -16,9 +17,10 @@ namespace AetherLove.Os;
 /// each gesture rather than only describing it. Auto-started once on the first Home landing
 /// (<see cref="AetherOS.Sdk.OsConfig.TourSeen"/>) and replayable from OS settings via
 /// <see cref="AetherOS.Sdk.IOsShell.StartTour"/>. Drawn OUTSIDE the content clip so it can highlight bezel
-/// elements (the home button, the status strip).
+/// elements (the home button, the status strip). The overlay itself is the shared
+/// <see cref="SpotlightTour{TContext}"/>; this class owns the script, its targets and its demonstrations.
 ///
-/// <para><b>The tour never asks the user to do anything.</b> Its own scrim is submitted over the whole
+/// <para><b>The tour never asks the user to do anything.</b> The engine's scrim is submitted over the whole
 /// window every frame, so the phone underneath is inert for the duration: nothing can be dragged, removed
 /// or renamed by accident while a step is up. Every gesture is therefore SHOWN, as a scripted loop drawn
 /// over the real home screen by demo steps: a ghost cursor, a lifted copy of a real tile, and
@@ -44,40 +46,20 @@ public sealed class OsTour
     /// <summary>How long the tour waits for a home screen to draw before planning without one.</summary>
     private const double PlanWaitSeconds = 2.0;
 
-    private enum Anchor
-    {
-        Auto,
-        Bottom,
-        Top,
-        Center,
-    }
-
-    private sealed record Step(
-        FontAwesomeIcon Icon,
-        string TitleKey,
-        string BodyKey,
-        Func<OsTour, (Vector2 TL, Vector2 BR)?>? Spotlight = null,
-        Anchor Panel = Anchor.Auto,
-        float Dim = 0.62f,
-        Action<OsTour>? Enter = null,
-        Action<OsTour>? Exit = null,
-        Action<OsTour, ImDrawListPtr>? Demo = null,
-        Func<OsTour, bool>? Available = null);
-
     /// <summary>The full script. Order is the running order; `Available` decides whether a step survives
     /// into a given run. Adding one is a step here plus its two localization keys in all six tables.</summary>
-    private static readonly Step[] Script =
+    private static readonly TourStep<OsTour>[] Script =
     [
-        new(FontAwesomeIcon.MobileAlt, "os.tour_welcome_title", "os.tour_welcome_body", Panel: Anchor.Center),
+        new(FontAwesomeIcon.MobileAlt, "os.tour_welcome_title", "os.tour_welcome_body", Panel: TourAnchor.Center),
 
         new(FontAwesomeIcon.Home, "os.tour_homebtn_title", "os.tour_homebtn_body",
-            t => t.HomeButtonRect(), Panel: Anchor.Bottom),
+            t => t.HomeButtonRect(), Panel: TourAnchor.Bottom),
 
         new(FontAwesomeIcon.Clock, "os.tour_statusbar_title", "os.tour_statusbar_body",
             t => t.StatusStripRect()),
 
         new(FontAwesomeIcon.AngleDoubleDown, "os.tour_shade_title", "os.tour_shade_body",
-            t => t.ShadePanelRect(), Panel: Anchor.Bottom, Dim: 0f,
+            t => t.ShadePanelRect(), Panel: TourAnchor.Bottom, Dim: 0f,
             Enter: t =>
             {
                 t._shell.PostNotification("messenger", Loc.T("os.tour_fake_notif_title"),
@@ -91,73 +73,71 @@ public sealed class OsTour
             }),
 
         new(FontAwesomeIcon.Magic, "os.tour_widgets_title", "os.tour_widgets_body",
-            Panel: Anchor.Bottom, Dim: 0f,
+            Panel: TourAnchor.Bottom, Dim: 0f,
             Enter: t => t._home.ShowPage(-1),
             Exit: t => t._home.ShowPage(0)),
 
         new(FontAwesomeIcon.Th, "os.tour_pages_title", "os.tour_pages_body",
-            t => t.PageDotsRect(), Panel: Anchor.Top,
+            t => t.PageDotsRect(), Panel: TourAnchor.Top,
             Enter: t => t._home.ShowPage(0)),
 
         new(FontAwesomeIcon.Bell, "os.tour_badges_title", "os.tour_badges_body",
-            t => t.TileRect(t._badgeAppId), Panel: Anchor.Bottom,
+            t => t.TileRect(t._badgeAppId), Panel: TourAnchor.Bottom,
             Enter: t => t.ApplyDemoBadge(),
             Exit: t => t.ClearDemoBadge(),
             Available: t => t._badgeAppId != null),
 
         new(FontAwesomeIcon.ArrowsAlt, "os.tour_arrange_title", "os.tour_arrange_body",
-            Panel: Anchor.Bottom, Dim: 0.45f,
+            Panel: TourAnchor.Bottom, Dim: 0.45f,
             Enter: t => t._home.ShowPage(0),
             Demo: (t, dl) => t.DemoArrange(dl),
             Available: t => t._moveFrom != null && t._moveTo != null),
 
         new(FontAwesomeIcon.GripHorizontal, "os.tour_dock_title", "os.tour_dock_body",
-            t => t.DockRect(), Panel: Anchor.Top, Dim: 0.45f,
+            t => t.DockRect(), Panel: TourAnchor.Top, Dim: 0.45f,
             Demo: (t, dl) => t.DemoDock(dl),
             Available: t => t._moveFrom != null),
 
         new(FontAwesomeIcon.MousePointer, "os.tour_tilemenu_title", "os.tour_tilemenu_body",
-            Panel: Anchor.Bottom, Dim: 0.45f,
+            Panel: TourAnchor.Bottom, Dim: 0.45f,
             Enter: t => t._home.ShowPage(0),
             Demo: (t, dl) => t.DemoTileMenu(dl),
             Available: t => t._menuTile != null),
 
         new(FontAwesomeIcon.FolderPlus, "os.tour_homemenu_title", "os.tour_homemenu_body",
-            Panel: Anchor.Bottom, Dim: 0.45f,
+            Panel: TourAnchor.Bottom, Dim: 0.45f,
             Demo: (t, dl) => t.DemoHomeMenu(dl),
             Available: t => t.EmptySlot != null),
 
         new(FontAwesomeIcon.FolderOpen, "os.tour_folders_title", "os.tour_folders_body",
-            Panel: Anchor.Bottom, Dim: 0.45f,
+            Panel: TourAnchor.Bottom, Dim: 0.45f,
             Demo: (t, dl) => t.DemoFolder(dl),
             Available: t => t._moveFrom != null && t._moveTo != null),
 
         new(FontAwesomeIcon.Plus, "os.tour_addapps_title", "os.tour_addapps_body",
-            t => t.AddAppsPanelRect(), Panel: Anchor.Bottom, Dim: 0f,
+            t => t.AddAppsPanelRect(), Panel: TourAnchor.Bottom, Dim: 0f,
             Enter: t => t._home.SetAddAppsOpen(true),
             Exit: t => t._home.SetAddAppsOpen(false)),
 
-        new(FontAwesomeIcon.Gift, "os.tour_newapps_title", "os.tour_newapps_body", Panel: Anchor.Center),
+        new(FontAwesomeIcon.Gift, "os.tour_newapps_title", "os.tour_newapps_body", Panel: TourAnchor.Center),
 
-        new(FontAwesomeIcon.Share, "os.tour_share_title", "os.tour_share_body", Panel: Anchor.Center),
+        new(FontAwesomeIcon.Share, "os.tour_share_title", "os.tour_share_body", Panel: TourAnchor.Center),
 
         new(FontAwesomeIcon.Palette, "os.tour_look_title", "os.tour_look_body",
-            t => t.TileRect(t._settingsTile), Panel: Anchor.Bottom,
+            t => t.TileRect(t._settingsTile), Panel: TourAnchor.Bottom,
             Available: t => t._settingsTile != null),
 
-        new(FontAwesomeIcon.Plane, "os.tour_offline_title", "os.tour_offline_body", Panel: Anchor.Center),
+        new(FontAwesomeIcon.Plane, "os.tour_offline_title", "os.tour_offline_body", Panel: TourAnchor.Center),
 
-        new(FontAwesomeIcon.CheckCircle, "os.tour_done_title", "os.tour_done_body", Panel: Anchor.Center),
+        new(FontAwesomeIcon.CheckCircle, "os.tour_done_title", "os.tour_done_body", Panel: TourAnchor.Center),
     ];
 
     private readonly OsShell _shell;
     private readonly NotificationShade _shade;
     private readonly HomeScreen _home;
-    private readonly List<Step> _plan = [];
+    private readonly SpotlightTour<OsTour> _runner = new();
 
-    private int _step;
-    private int _enteredStep = -1;
-    private double _stepEnteredAt;
+    private bool _planning;
     private double _startedAt;
 
     // Resolved once per run from whatever is actually on the grid, so no step ever names an app.
@@ -179,20 +159,17 @@ public sealed class OsTour
         _shell = shell;
         _shade = shade;
         _home = home;
+        _runner.Finished += OnFinished;
     }
 
-    public bool Active { get; private set; }
-
-    /// <summary>The tour's emphasis color: per-theme override first, so gold-accent themes stay legible.</summary>
-    private static Vector4 Emphasis => ThemeService.Current.TourAccent ?? ThemeService.Current.Accent;
+    /// <summary>True from <see cref="Start"/> until the run ends, including the wait for a home screen to
+    /// plan against, so the new-app offer and the shade stay held back for the whole tour.</summary>
+    public bool Active => _planning || _runner.Active;
 
     private (Vector2 TL, Vector2 BR)? EmptySlot =>
         _emptySlotIndex >= 0 && _emptySlotIndex < _home.GridSlots.Count
             ? (_home.GridSlots[_emptySlotIndex].TL, _home.GridSlots[_emptySlotIndex].BR)
             : null;
-
-    /// <summary>Seconds the current step has been up, which is every demo's clock.</summary>
-    private float DemoTime => (float)(ImGui.GetTime() - _stepEnteredAt);
 
     public void Start()
     {
@@ -200,13 +177,9 @@ public sealed class OsTour
         {
             return;
         }
-        _step = 0;
-        _enteredStep = -1;
-        _stepEnteredAt = ImGui.GetTime();
         _startedAt = ImGui.GetTime();
-        _plan.Clear();
         _badgeApplied = false;
-        Active = true;
+        _planning = true;
     }
 
     /// <summary>Builds this run's plan, once the home screen has actually drawn a frame to read targets out
@@ -216,7 +189,7 @@ public sealed class OsTour
     /// arrives leaves a short tour rather than an invisible one that never ends.</summary>
     private bool TryPlan()
     {
-        if (_plan.Count > 0)
+        if (_runner.Active)
         {
             return true;
         }
@@ -225,14 +198,14 @@ public sealed class OsTour
             return false;
         }
         ResolveTargets();
-        _plan.AddRange(Script.Where(s => s.Available?.Invoke(this) ?? true));
-        _stepEnteredAt = ImGui.GetTime();
-        if (_plan.Count == 0)
+        _runner.Start(Script, this);
+        _planning = false;
+        if (!_runner.Active)
         {
             // Unreachable while any step lacks an `Available`, and deliberately handled anyway: an empty
             // plan would otherwise hold Active forever, blocking the new-app offer and re-arming the tour
             // every session because TourSeen is only stamped by finishing.
-            Finish();
+            OnFinished();
             return false;
         }
         return true;
@@ -277,83 +250,15 @@ public sealed class OsTour
         _contentTL = winPos + Px(t.BezelLeft, t.BezelTop);
         _contentBR = winPos + new Vector2(winSize.X - Px(t.BezelRight), winSize.Y - Px(t.BezelBottom));
 
-        _step = Math.Clamp(_step, 0, _plan.Count - 1);
-        if (_step != _enteredStep)
-        {
-            if (_enteredStep >= 0)
-            {
-                _plan[_enteredStep].Exit?.Invoke(this);
-            }
-            _plan[_step].Enter?.Invoke(this);
-            _enteredStep = _step;
-            _stepEnteredAt = ImGui.GetTime();
-        }
-
-        var step = _plan[_step];
-        var dl = ImGui.GetWindowDrawList();
-        var size = _contentBR - _contentTL;
-        var spot = step.Spotlight?.Invoke(this);
-
-        if (step.Dim > 0f)
-        {
-            DrawDim(dl, spot, step.Dim);
-        }
-        if (spot is { } s)
-        {
-            // Clamped inside the window so edge-hugging spotlights (StatusBarTop 0 themes) keep a full ring.
-            var ringTL = Vector2.Max(s.TL - Px(3f, 3f), _winPos + Px(2f, 2f));
-            var ringBR = Vector2.Min(s.BR + Px(3f, 3f), _winPos + _winSize - Px(2f, 2f));
-            var pulse = 0.55f + (0.45f * MathF.Sin((float)ImGui.GetTime() * 3.4f));
-            dl.AddRect(ringTL, ringBR,
-                ImGui.ColorConvertFloat4ToU32(Emphasis with { W = pulse }),
-                Px(10f), ImDrawFlags.RoundCornersAll, Px(2.4f));
-        }
-
-        // Demos draw inside the content only: a ghost tile sliding over the bezel reads as a glitch.
-        if (step.Demo is { } demo)
-        {
-            dl.PushClipRect(_contentTL, _contentBR, true);
-            demo(this, dl);
-            dl.PopClipRect();
-        }
-
-        var belowSpot = step.Panel switch
-        {
-            Anchor.Bottom => true,
-            Anchor.Top => false,
-            Anchor.Center => (bool?)null,
-            _ => spot is { } sp ? (sp.TL.Y + sp.BR.Y) * 0.5f < _contentTL.Y + (size.Y * 0.5f) : null,
-        };
-        DrawPanel(dl, step, belowSpot);
-
-        // Scrim last: with overlapping items the first-submitted one wins clicks, so the panel buttons stay
-        // clickable. Covers the whole window, which is what makes the phone underneath inert.
-        ImGui.SetCursorScreenPos(_winPos);
-        ImGui.InvisibleButton("##osTourScrim", _winSize);
+        _runner.Draw(this, ImGui.GetWindowDrawList(), winPos, winSize, _contentTL, _contentBR, "##osTourScrim");
     }
 
-    /// <summary>Dims the content around the spotlight cutout (clamped to the content rect; a spotlight fully
-    /// in the bezel, like the home button, leaves the content uniformly dimmed).</summary>
-    private void DrawDim(ImDrawListPtr dl, (Vector2 TL, Vector2 BR)? spot, float alpha)
+    private void OnFinished()
     {
-        var dim = ImGui.ColorConvertFloat4ToU32(new Vector4(0f, 0f, 0f, alpha));
-        var cut = spot is { } s
-            ? (TL: Vector2.Max(s.TL, _contentTL), BR: Vector2.Min(s.BR, _contentBR))
-            : default((Vector2 TL, Vector2 BR)?);
-        if (cut is { } c && c.BR.X > c.TL.X && c.BR.Y > c.TL.Y)
-        {
-            dl.AddRectFilled(_contentTL, new Vector2(_contentBR.X, c.TL.Y), dim);
-            dl.AddRectFilled(new Vector2(_contentTL.X, c.BR.Y), _contentBR, dim);
-            dl.AddRectFilled(new Vector2(_contentTL.X, c.TL.Y), new Vector2(c.TL.X, c.BR.Y), dim);
-            dl.AddRectFilled(new Vector2(c.BR.X, c.TL.Y), new Vector2(_contentBR.X, c.BR.Y), dim);
-        }
-        else
-        {
-            dl.AddRectFilled(_contentTL, _contentBR, dim);
-        }
+        CleanupAll();
+        UiHost.Configuration.Os.TourSeen = true;
+        UiHost.Configuration.Save();
     }
-
-    // ------------------------------------------------------------------ spotlight rects
 
     private (Vector2 TL, Vector2 BR)? HomeButtonRect()
     {
@@ -407,8 +312,6 @@ public sealed class OsTour
             ? (tl - Px(4f, 4f), br + Px(4f, 20f))
             : null;
 
-    // ------------------------------------------------------------------ demonstrations
-
     /// <summary>Lifting an icon out of its cell and putting it down in another one. Nothing on the phone
     /// moves: what travels is a copy, and the cell it left keeps a dashed outline so the gesture reads as a
     /// move rather than a duplication.</summary>
@@ -418,7 +321,7 @@ public sealed class OsTour
         {
             return;
         }
-        var phase = DemoTime % DemoLoopSeconds;
+        var phase = _runner.DemoTime % DemoLoopSeconds;
         var carry = CarryProgress(phase);
         var start = Centre(from);
         var end = Centre(to);
@@ -440,7 +343,7 @@ public sealed class OsTour
         {
             return;
         }
-        var phase = DemoTime % DemoLoopSeconds;
+        var phase = _runner.DemoTime % DemoLoopSeconds;
         var carry = CarryProgress(phase);
         var start = Centre(from);
         var end = new Vector2(dock.BR.X - ((dock.BR.X - dock.TL.X) * 0.12f), (dock.TL.Y + dock.BR.Y) * 0.5f);
@@ -463,7 +366,7 @@ public sealed class OsTour
         {
             return;
         }
-        var phase = DemoTime % DemoLoopSeconds;
+        var phase = _runner.DemoTime % DemoLoopSeconds;
         var carry = CarryProgress(phase);
         var start = Centre(from);
         var end = Centre(to);
@@ -533,7 +436,7 @@ public sealed class OsTour
         const float OpenEnd = 1.6f;
         const float PickEnd = 2.7f;
 
-        var phase = DemoTime % DemoLoopSeconds;
+        var phase = _runner.DemoTime % DemoLoopSeconds;
         var from = at - Px(70f, 60f);
         var cursor = phase < ArriveEnd
             ? Vector2.Lerp(from, at, Ease(phase / ArriveEnd))
@@ -583,51 +486,6 @@ public sealed class OsTour
         DrawCursor(dl, Vector2.Lerp(cursor, target, Ease(open)), false);
     }
 
-    /// <summary>Which row the cursor is over while it walks down the menu, so the highlight follows it
-    /// instead of jumping straight to the answer.</summary>
-    private static int RowUnderCursor(float phase, int count, int highlight)
-    {
-        var walk = Math.Clamp((phase - 1.6f) / 1.1f, 0f, 1f);
-        return Math.Clamp((int)MathF.Round(walk * highlight), 0, count - 1);
-    }
-
-    /// <summary>The one timeline every carry demonstration runs on: reach, press, travel, drop, rest.</summary>
-    private static (bool Held, float Lift, float Travel) CarryProgress(float phase)
-    {
-        const float Reach = 0.85f;
-        const float Press = 1.2f;
-        const float Travel = 3.1f;
-        const float Drop = 3.45f;
-
-        if (phase < Reach)
-        {
-            return (false, 0f, 0f);
-        }
-        if (phase < Press)
-        {
-            return (true, Ease((phase - Reach) / (Press - Reach)), 0f);
-        }
-        if (phase < Travel)
-        {
-            return (true, 1f, Ease((phase - Press) / (Travel - Press)));
-        }
-        if (phase < Drop)
-        {
-            return (true, 1f - Ease((phase - Travel) / (Drop - Travel)), 1f);
-        }
-        return (false, 0f, 1f);
-    }
-
-    private static float Ease(float t)
-    {
-        t = Math.Clamp(t, 0f, 1f);
-        return t * t * (3f - (2f * t));
-    }
-
-    private static Vector2 Centre((Vector2 TL, Vector2 BR) r) => (r.TL + r.BR) * 0.5f;
-
-    private static float Size((Vector2 TL, Vector2 BR) r) => MathF.Min(r.BR.X - r.TL.X, r.BR.Y - r.TL.Y);
-
     /// <summary>A copy of a real tile, riding the cursor. It borrows the app's own tile art, so the thing
     /// being carried is recognisably the thing that was picked up.</summary>
     private void DrawGhostTile(ImDrawListPtr dl, string appId, Vector2 centre, float side, float alpha)
@@ -647,7 +505,7 @@ public sealed class OsTour
 
     /// <summary>The cell an icon was lifted out of, as a dashed hole, so a carried copy never reads as the
     /// icon having been duplicated.</summary>
-    private void DrawEmptyCell(ImDrawListPtr dl, (Vector2 TL, Vector2 BR) rect, float alpha)
+    private static void DrawEmptyCell(ImDrawListPtr dl, (Vector2 TL, Vector2 BR) rect, float alpha)
     {
         if (alpha <= 0f)
         {
@@ -661,25 +519,8 @@ public sealed class OsTour
             side * 0.28f, ImDrawFlags.RoundCornersAll, Px(1.6f));
     }
 
-    /// <summary>The path a carried icon is taking, drawn as it is walked rather than all at once.</summary>
-    private static void DrawTrail(ImDrawListPtr dl, Vector2 from, Vector2 to, float travel)
-    {
-        if (travel <= 0f)
-        {
-            return;
-        }
-        const int Dots = 9;
-        var walked = Vector2.Lerp(from, to, travel);
-        for (var i = 1; i <= Dots; i++)
-        {
-            var f = i / (float)(Dots + 1);
-            var at = Vector2.Lerp(from, walked, f);
-            dl.AddCircleFilled(at, Px(2.2f), ImGui.ColorConvertFloat4ToU32(new Vector4(1f, 1f, 1f, 0.28f)), 10);
-        }
-    }
-
     /// <summary>A folder forming under a dropped icon: the four-square preview a real folder tile wears.</summary>
-    private void DrawGhostFolder(ImDrawListPtr dl, Vector2 centre, float side, float t)
+    private static void DrawGhostFolder(ImDrawListPtr dl, Vector2 centre, float side, float t)
     {
         var half = new Vector2(side * 0.5f, side * 0.5f);
         var tl = centre - half;
@@ -699,120 +540,6 @@ public sealed class OsTour
             dl.AddRectFilled(cell, cell + new Vector2(mini, mini),
                 ImGui.ColorConvertFloat4ToU32(new Vector4(1f, 1f, 1f, fill)), mini * 0.3f);
         }
-    }
-
-    /// <summary>The pointer the demonstrations move around. Drawn rather than borrowed from the OS cursor,
-    /// which sits wherever the player's hand actually is and would fight the script.</summary>
-    private static void DrawCursor(ImDrawListPtr dl, Vector2 at, bool pressed, bool right = false)
-    {
-        var r = Px(pressed ? 13f : 10f);
-        if (pressed)
-        {
-            dl.AddCircle(at, r + Px(6f), ImGui.ColorConvertFloat4ToU32(new Vector4(1f, 1f, 1f, 0.35f)), 24, Px(1.6f));
-        }
-        dl.AddCircleFilled(at, r, ImGui.ColorConvertFloat4ToU32(new Vector4(1f, 1f, 1f, pressed ? 0.85f : 0.6f)), 24);
-        dl.AddCircle(at, r, ImGui.ColorConvertFloat4ToU32(new Vector4(0f, 0f, 0f, 0.45f)), 24, Px(1.2f));
-        if (right)
-        {
-            // A right-click reads as a right-click only if the demonstration says which button it was.
-            dl.AddCircleFilled(at + new Vector2(r * 0.45f, -r * 0.45f), Px(4f),
-                ImGui.ColorConvertFloat4ToU32(Emphasis with { W = 0.95f }), 12);
-        }
-    }
-
-    // ------------------------------------------------------------------ chrome
-
-    private void DrawPanel(ImDrawListPtr dl, Step step, bool? belowSpot)
-    {
-        var accent = Emphasis;
-        var size = _contentBR - _contentTL;
-        var padIn = Px(16f);
-        var panelW = size.X - Px(40f);
-        var innerW = panelW - (padIn * 2f);
-        var lineH = ImGui.GetTextLineHeight();
-        var body = Loc.T(step.BodyKey);
-        var bodyH = ImGui.CalcTextSize(body, false, innerW).Y;
-        var btnH = Px(30f);
-        var headerH = Px(34f);
-        var panelH = padIn + headerH + Px(10f) + bodyH + Px(16f) + btnH + padIn;
-
-        var panelX = _contentTL.X + ((size.X - panelW) * 0.5f);
-        var panelY = belowSpot switch
-        {
-            true => _contentTL.Y + size.Y - panelH - Px(24f),
-            false => _contentTL.Y + Px(56f),
-            null => _contentTL.Y + ((size.Y - panelH) * 0.5f),
-        };
-        var panelTL = new Vector2(panelX, panelY);
-        var panelBR = panelTL + new Vector2(panelW, panelH);
-
-        dl.AddRectFilled(panelTL + Px(0f, 4f), panelBR + Px(0f, 4f), ImGui.ColorConvertFloat4ToU32(new Vector4(0f, 0f, 0f, 0.35f)), Px(16f));
-        dl.AddRectFilled(panelTL, panelBR, ImGui.ColorConvertFloat4ToU32(new Vector4(0.11f, 0.10f, 0.13f, 0.98f)), Px(16f));
-        dl.AddRect(panelTL, panelBR, ImGui.ColorConvertFloat4ToU32(accent with { W = 0.55f }), Px(16f), ImDrawFlags.RoundCornersAll, Px(1.2f));
-
-        var iconR = Px(14f);
-        var iconC = panelTL + new Vector2(padIn + iconR, padIn + iconR);
-        dl.AddCircleFilled(iconC, iconR, ImGui.ColorConvertFloat4ToU32(accent), 28);
-        IconDraw.AddCentered(dl, step.Icon, Px(13f), iconC, 0xFFFFFFFFu);
-        using (UiFonts.H3?.Push())
-        {
-            dl.PushClipRect(panelTL, panelBR, true);
-            dl.AddText(new Vector2(iconC.X + iconR + Px(10f), iconC.Y - (ImGui.GetFontSize() * 0.5f)),
-                0xFFFFFFFFu, Loc.T(step.TitleKey));
-            dl.PopClipRect();
-        }
-
-        dl.AddText(ImGui.GetFont(), ImGui.GetFontSize(), panelTL + new Vector2(padIn, padIn + headerH + Px(10f)),
-            ImGui.ColorConvertFloat4ToU32(new Vector4(1f, 1f, 1f, 0.85f)), body, innerW);
-
-        var footerY = panelBR.Y - padIn - btnH;
-        var progress = $"{_step + 1} / {_plan.Count}";
-        dl.AddText(ImGui.GetFont(), ImGui.GetFontSize() * 0.85f,
-            new Vector2(panelTL.X + padIn, footerY + ((btnH - (lineH * 0.85f)) * 0.5f)),
-            ImGui.ColorConvertFloat4ToU32(new Vector4(1f, 1f, 1f, 0.45f)), progress);
-
-        var last = _step == _plan.Count - 1;
-        var nextW = Px(84f);
-        var backW = Px(64f);
-        var skipW = Px(56f);
-        var nextTL = new Vector2(panelBR.X - padIn - nextW, footerY);
-        if (PanelButton("##osTourNext", Loc.T(last ? "os.tour_finish" : "os.tour_next"), nextTL, new Vector2(nextW, btnH), accent))
-        {
-            if (last)
-            {
-                Finish();
-            }
-            else
-            {
-                _step++;
-            }
-        }
-        if (_step > 0
-            && PanelButton("##osTourBack", Loc.T("os.tour_back"), nextTL - new Vector2(backW + Px(8f), 0f),
-                new Vector2(backW, btnH), new Vector4(1f, 1f, 1f, 0.10f)))
-        {
-            _step--;
-        }
-        if (!last
-            && PanelButton("##osTourSkip", Loc.T("os.tour_skip"),
-                new Vector2(panelTL.X + padIn + ImGui.CalcTextSize(progress).X + Px(14f), footerY),
-                new Vector2(skipW, btnH), new Vector4(1f, 1f, 1f, 0.06f)))
-        {
-            Finish();
-        }
-    }
-
-    private void Finish()
-    {
-        if (_enteredStep >= 0)
-        {
-            _plan[_enteredStep].Exit?.Invoke(this);
-            _enteredStep = -1;
-        }
-        CleanupAll();
-        Active = false;
-        UiHost.Configuration.Os.TourSeen = true;
-        UiHost.Configuration.Save();
     }
 
     /// <summary>Defensive teardown of everything the tour can leave behind, whichever step it was on. Every
@@ -848,27 +575,5 @@ public sealed class OsTour
         }
         _shell.AddBadge(id, -DemoBadgeCount);
         _badgeApplied = false;
-    }
-
-    private static bool PanelButton(string id, string label, Vector2 tl, Vector2 size, Vector4 fill)
-    {
-        ImGui.SetCursorScreenPos(tl);
-        var clicked = ImGui.InvisibleButton(id, size);
-        var hovered = ImGui.IsItemHovered();
-        if (hovered)
-        {
-            SharedUiHelpers.HandOnHover();
-        }
-        var dl = ImGui.GetWindowDrawList();
-        var col = hovered
-            ? new Vector4(fill.X + ((1f - fill.X) * 0.12f), fill.Y + ((1f - fill.Y) * 0.12f),
-                fill.Z + ((1f - fill.Z) * 0.12f), MathF.Min(1f, fill.W + 0.08f))
-            : fill;
-        dl.AddRectFilled(tl, tl + size, ImGui.ColorConvertFloat4ToU32(col), Px(9f));
-        var sz = ImGui.CalcTextSize(label);
-        dl.PushClipRect(tl, tl + size, true);
-        dl.AddText(tl + ((size - sz) * 0.5f), 0xF2FFFFFFu, label);
-        dl.PopClipRect();
-        return clicked;
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -34,6 +34,7 @@ public sealed class HangoutDetailOverlay
     private volatile string? _error;
     private bool _reportMode;
     private string _reportReason = "";
+    private readonly SoftWrapInputField _reportReasonField = new();
     private volatile bool _reportSent;
     private double _copiedUntil;
 
@@ -375,7 +376,7 @@ public sealed class HangoutDetailOverlay
         ImGui.TextColored(UiColors.Body, Loc.T("hangout.report_body"));
         ImGui.PopTextWrapPos();
         ImGui.Spacing();
-        InputTextMultilineWithPaste("##hgRepReason", ref _reportReason, 1000, new Vector2(w, Px(70f)));
+        _reportReasonField.Draw("##hgRepReason", ref _reportReason, 1000, new Vector2(w, Px(70f)));
         if (_error is { } err)
         {
             ImGui.PushTextWrapPos(w);
@@ -432,7 +433,7 @@ public sealed class HangoutDetailOverlay
     {
         _busy = true;
         _error = null;
-        var reason = _reportReason.Trim();
+        var reason = _reportReasonField.Value(_reportReason).Trim();
         _ = Task.Run(async () =>
         {
             try

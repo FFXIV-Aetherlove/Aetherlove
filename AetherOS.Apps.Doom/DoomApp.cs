@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
 using AetherLove;
+using AetherLove.Services.Media;
+using AetherLove.Shared.Assets;
 using AetherLove.UI;
 using AetherOS.Sdk;
 using Dalamud.Bindings.ImGui;
@@ -19,6 +21,9 @@ public sealed class DoomApp : IAetherApp
 {
     /// <summary>The bundled IWAD. Shareware Doom, renamed for the joke.</summary>
     public const string WadFileName = "willitplay.wad";
+
+    /// <summary>The failure code for a cabinet opened before its game data pack has downloaded.</summary>
+    private const string AssetsPendingFailure = "assets_pending";
 
     private const string IntroSeenKey = "intro_seen";
     private const string RunSecondsForReward = "run_seconds";
@@ -177,14 +182,18 @@ public sealed class DoomApp : IAetherApp
         this.volume = this.storage.Get<float?>(VolumeKey) ?? 1f;
     }
 
-    private static string MediaDirectory =>
-        Path.Combine(Path.GetDirectoryName(UiHost.PluginInterface.AssemblyLocation.FullName) ?? string.Empty,
-            "Media", "other");
+    private static string MediaDirectory => MediaPaths.Downloaded(MediaPaths.Other);
 
     private void StartRun(OsAppContext ctx)
     {
         this.storage.Set(IntroSeenKey, true);
         this.runtime?.Dispose();
+        if (!ctx.Capabilities.Assets.IsReady(AssetPacks.Other))
+        {
+            this.failure = AssetsPendingFailure;
+            this.view = View.Unavailable;
+            return;
+        }
         this.runtime = DoomRuntime.TryCreate(MediaDirectory, this.storage.Directory, this.keys, out this.failure);
         if (this.runtime == null)
         {
@@ -531,7 +540,12 @@ public sealed class DoomApp : IAetherApp
                 ImGui.GetColorU32(new Vector4(0.93f, 0.90f, 0.86f, 1f)), title);
         }
 
-        var body = ctx.Localize(this.failure == "engine_failed" ? "os.doom_missing_engine" : "os.doom_missing_wad");
+        var body = this.failure switch
+        {
+            "engine_failed" => ctx.Localize("os.doom_missing_engine"),
+            AssetsPendingFailure => string.Format(ctx.Localize("os.assets_pending"), AssetPackNames.Display(AssetPacks.Other)),
+            _ => ctx.Localize("os.doom_missing_wad"),
+        };
         DrawWrapped(dl, body, winPos + new Vector2(ctx.Px(24f), winSize.Y * 0.38f), winSize.X - ctx.Px(48f),
             ImGui.GetColorU32(new Vector4(0.72f, 0.68f, 0.64f, 1f)));
 

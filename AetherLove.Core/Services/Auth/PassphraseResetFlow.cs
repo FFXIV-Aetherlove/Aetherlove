@@ -26,9 +26,11 @@ public sealed class PassphraseResetFlow
     private readonly CryptoService _crypto;
     private readonly KeyStorageService _keys;
     private readonly Configuration _config;
+    private readonly AccountEncryptionService _encryption;
 
-    public PassphraseResetFlow(AetherHubContext hub, CryptoService crypto, KeyStorageService keys, Configuration config)
+    public PassphraseResetFlow(AetherHubContext hub, CryptoService crypto, KeyStorageService keys, Configuration config, AccountEncryptionService encryption)
     {
+        _encryption = encryption;
         _hub = hub;
         _crypto = crypto;
         _keys = keys;
@@ -65,6 +67,7 @@ public sealed class PassphraseResetFlow
         UiHost.Log.Information("[PassphraseReset] Passphrase reset: {Count} profile keypair(s) plus the messenger key rotated; pre-reset history is unreadable from now on.",
             uploads.Count);
 
+        await _encryption.RetireLocalAfterExplicitResetAsync(ct).ConfigureAwait(false);
         _keys.StoreKek(kek, salt, MemoryKb, Iterations, Parallelism);
         _keys.StoreAccountKeys(accountPub, accountPriv);
         var activeId = _config.Auth.ActiveProfileId
@@ -79,5 +82,6 @@ public sealed class PassphraseResetFlow
             state.Crypto = new CryptoKeys();
         }
         _config.Save();
+        await _encryption.SynchronizeAsync(ct).ConfigureAwait(false);
     }
 }

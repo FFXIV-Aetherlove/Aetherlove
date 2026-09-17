@@ -160,7 +160,7 @@ internal sealed class PartyHuddle(IAetherlingHost host)
             _companions[pet.AccountId] = companion;
         }
 
-        var folder = PetState.FormFolderForStage(pet.Stage, pet.Shell);
+        var folder = PetState.ShellFolderFor(pet.Shell);
         if (companion.Folder != folder)
         {
             companion.Folder = folder;

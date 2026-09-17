@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -318,10 +318,9 @@ internal sealed class ComposeScreen
                 _imageSheet.Open(
                     onSelfie: () => caps.Camera.Capture(new CameraRequest(FreeForm: true),
                         shot => AddImage(shot.Path, shot.Crop)),
-                    onPhotos: () => _pickFromPhotos(path => AddImage(path)),
-                    onFile: () => caps.Images.PickFile(
-                        new ImagePickRequest(Loc.T("os.yapper_pick_image"), "Images{.png,.jpg,.jpeg,.webp}"),
-                        path => AddImage(path)));
+                    onPhotos: () => _pickFromPhotos(path =>
+                        caps.Images.CropFile(path, PickCrop(), pick => AddImage(pick.Path, pick.Crop))),
+                    onFile: () => caps.Images.PickAndCrop(PickCrop(), pick => AddImage(pick.Path, pick.Crop)));
             }
             HandOnHover();
         }
@@ -443,6 +442,11 @@ internal sealed class ComposeScreen
 
     /// <summary>Oversized picks are downscaled host-side before upload (the server re-encodes to fit
     /// 1920x1080 anyway), so a stack of raw screenshots can never blow past the hub message limit.</summary>
+    /// <summary>A yap image keeps whatever shape the user gives it, so the crop is free-hand and starts as the
+    /// whole picture; the popup is where the user can also rotate it.</summary>
+    private static ImageCropRequest PickCrop() =>
+        new(Loc.T("os.yapper_pick_image"), "Images{.png,.jpg,.jpeg,.webp}", Loc.T("common.adjust_picture"), 1f, 1, 1, FreeForm: true);
+
     private void AddImage(string path, Vector4? crop = null)
     {
         var effects = _caps?.Effects;

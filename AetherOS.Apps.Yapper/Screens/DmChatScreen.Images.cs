@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -46,13 +46,13 @@ internal sealed partial class DmChatScreen
 
     private Guid _imageReportId = Guid.Empty;
     private string _imageReportReason = string.Empty;
+    private readonly SoftWrapInputField _imageReportReasonField = new();
     private float _imageReportPanelH;
     private volatile bool _imageReportSubmitting;
     private volatile string? _imageReportError;
 
     /// <summary>The sentinel crop rect meaning "keep all of it": a picked picture is sent whole, because a
     /// chat attachment is not a portrait and a forced square would cut half of a landscape shot away.</summary>
-    private static readonly Vector4 WholeImage = new(0f, 0f, 100000f, 100000f);
 
     internal void OnDmImageRemoved(Guid imageId) => PurgeImage(imageId);
 
@@ -61,12 +61,16 @@ internal sealed partial class DmChatScreen
             shot => BeginImageCompose(shot.Path, shot.Crop));
 
     private void BeginDiskPick() =>
-        _caps.Images.PickFile(
-            new ImagePickRequest(Loc.T("chat.attach_file"), "Images{.png,.jpg,.jpeg,.webp}"),
-            path => BeginImageCompose(path, WholeImage));
+        _caps.Images.PickAndCrop(AttachmentCrop(), pick => BeginImageCompose(pick.Path, pick.Crop));
 
     /// <summary>The Photos app returned a picked image path (PhotoPicked intent).</summary>
-    internal void OnPhotoPicked(string path) => BeginImageCompose(path, WholeImage);
+    internal void OnPhotoPicked(string path) =>
+        _caps.Images.CropFile(path, AttachmentCrop(), pick => BeginImageCompose(pick.Path, pick.Crop));
+
+    /// <summary>A chat attachment is not a portrait, so the crop is free-hand and starts as the whole picture;
+    /// the popup is where the user can also rotate it.</summary>
+    private static ImageCropRequest AttachmentCrop() =>
+        new(Loc.T("chat.attach_file"), "Images{.png,.jpg,.jpeg,.webp}", Loc.T("common.adjust_picture"), 1f, 1, 1, FreeForm: true);
 
     private void BeginImageCompose(string path, Vector4 crop)
     {
@@ -509,7 +513,7 @@ internal sealed partial class DmChatScreen
             ImGui.PopTextWrapPos();
             ImGui.Dummy(new Vector2(0f, Px(6f)));
             ImGui.SetNextItemWidth(innerW);
-            SharedUiHelpers.InputTextMultilineWithPaste("##yapDmImgReport", ref _imageReportReason, 500,
+            _imageReportReasonField.Draw("##yapDmImgReport", ref _imageReportReason, 500,
                 new Vector2(innerW, Px(80f)));
             if (_imageReportError is { } err)
             {
@@ -546,7 +550,7 @@ internal sealed partial class DmChatScreen
         _imageReportSubmitting = true;
         _imageReportError = null;
         var imageId = _imageReportId;
-        var reason = _imageReportReason.Trim();
+        var reason = _imageReportReasonField.Value(_imageReportReason).Trim();
         _ = Task.Run(async () =>
         {
             try

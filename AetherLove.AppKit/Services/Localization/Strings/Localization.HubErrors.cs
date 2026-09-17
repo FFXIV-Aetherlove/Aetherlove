@@ -185,7 +185,8 @@ internal static class HubErrorsEn
         ["huberror.lumirace_disabled"] = "Races are switched off right now.",
         ["huberror.lumirace_no_pet"] = "You need a hatched Aetherling to race.",
         ["huberror.lumirace_not_adult"] = "Your Aetherling races once it grows up. Keep feeding it.",
-        ["huberror.lumirace_gated"] = "The next race opens in {0} minutes.",
+        ["huberror.lumirace_gated"] = "The next race opens in {0}.",
+        ["huberror.lumirace_card_not_ready"] = "Finish a stamp card before exchanging it for a pack.",
         ["huberror.lumirace_pack_none"] = "There is no pack to open.",
         ["huberror.lumirace_run_exists"] = "A party race is already open.",
         ["huberror.lumirace_run_not_found"] = "There is no party race right now.",
@@ -193,11 +194,25 @@ internal static class HubErrorsEn
         ["huberror.lumirace_too_few"] = "At least two racers need to join first.",
         ["huberror.lumirace_no_offer"] = "Those races are no longer on offer. Open the page again for three new ones.",
 
+        // added after update 2.7.0 (starlight cup)
+        ["huberror.lumirace_cup_in_party"] = "The Starlight Cup is solo. Leave your party first.",
+
+        // added after update 2.7.0 (racing cards)
+        ["huberror.lumirace_card_unknown"] = "That card is no longer in the game.",
+        ["huberror.lumirace_card_not_owned"] = "You do not own that card.",
+        ["huberror.lumirace_card_wrong_band"] = "That card does not fit this slot. Gold goes in the first slot, Silver in the other two.",
+        ["huberror.lumirace_card_duplicate"] = "That copy is already in your hand. Pick another copy.",
+        ["huberror.lumirace_hand_shape"] = "That hand is not valid. Open the album and try again.",
+
         // listing boosts (added after update 2.5.2)
         ["huberror.boost_none_owned"] = "You have no boost for that. Get one in the Store.",
         ["huberror.boost_target_not_found"] = "That is not one of yours.",
         ["huberror.boost_cap_reached"] = "You cannot add more days. A boost runs for {0} days at most.",
         ["huberror.boost_style_invalid"] = "Pick one of the four effects.",
         ["huberror.boost_target_not_live"] = "That is not on the board yet. Boost it once it is live.",
+
+        // added after update 2.7.0 (move photos)
+        ["huberror.main_photo_must_be_sfw"] = "The main photo must be SFW.",
+        ["huberror.photo_still_checking"] = "We are still checking this photo. Try again in a minute.",
     };
 }

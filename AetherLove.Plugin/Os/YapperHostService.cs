@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using AetherLove.Services.Auth;
@@ -144,8 +144,12 @@ public sealed class YapperHostService : IYapperHost
     public Task<YapperMyProfileDto> RenameHandleAsync(string handle, CancellationToken ct = default)
         => _hubClient.RenameYapperHandleAsync(handle, ct);
 
-    public Task DeleteProfileAsync(CancellationToken ct = default)
-        => _hubClient.DeleteYapperProfileAsync(ct);
+    public async Task DeleteProfileAsync(CancellationToken ct = default)
+    {
+        _dmCrypto.Clear();
+        await _hubClient.DeleteYapperProfileAsync(ct).ConfigureAwait(false);
+        _dmCrypto.Clear();
+    }
 
     public Task SetAvatarAsync(AetherLove.Shared.Profile.PhotoUploadDto image, CancellationToken ct = default)
         => _hubClient.SetYapperAvatarAsync(image, ct);

@@ -7,29 +7,37 @@ using Dalamud.Interface.Textures.TextureWraps;
 
 namespace AetherLove.Widgets;
 
-/// <summary>Displays an image with a draggable, resizable crop rectangle of a configured aspect ratio.</summary>
+/// <summary>Displays an image with a draggable, resizable crop rectangle, either locked to a configured aspect
+/// ratio or free when the ratio is zero or less, in which case the box starts as the whole image.</summary>
 public class ImageCropWidget
 {
     private readonly float _aspectRatio;
+    private readonly bool _freeForm;
 
     private Vector2 _cropTopLeft = new(0, 0);
     private float _cropWidth = 0f;
+    private float _cropHeight = 0f;
 
-    private const float MinCropWidth = 60f;
+    private const float MinCropSide = 60f;
     private static float HandleSize => Px(20f);
 
     private bool _isDraggingMove;
     private Vector2 _moveDragOffset;
     private bool _isDraggingResize;
-    private float _resizeDragStartMouseX;
-    private float _resizeDragStartWidth;
+    private Vector2 _resizeDragStartMouse;
+    private Vector2 _resizeDragStartSize;
 
     private IDalamudTextureWrap? _lastTexture;
 
-    /// <param name="aspectRatio">cropHeight / cropWidth (1.6 for 10:16 portrait, 1.0 for square).</param>
-    public ImageCropWidget(float aspectRatio = 1.6f) => _aspectRatio = aspectRatio;
+    /// <param name="aspectRatio">cropHeight / cropWidth (1.6 for 10:16 portrait, 1.0 for square); zero or less
+    /// for a free crop.</param>
+    public ImageCropWidget(float aspectRatio = 1.6f)
+    {
+        _aspectRatio = aspectRatio;
+        _freeForm = aspectRatio <= 0f;
+    }
 
-    private float CropHeight => _cropWidth * _aspectRatio;
+    private float CropHeight => _freeForm ? _cropHeight : _cropWidth * _aspectRatio;
 
     /// <summary>The crop rectangle in image-space: (x, y, width, height).</summary>
     public Vector4 CropRect => new(_cropTopLeft.X, _cropTopLeft.Y, _cropWidth, CropHeight);
@@ -50,12 +58,21 @@ public class ImageCropWidget
         if (_cropWidth < 1f || !ReferenceEquals(_lastTexture, texture))
         {
             _lastTexture = texture;
-            var maxByWidth = (float)texture.Width * 0.75f;
-            var maxByHeight = texture.Height / _aspectRatio * 0.75f;
-            _cropWidth = Math.Min(maxByWidth, maxByHeight);
-            _cropTopLeft = new Vector2(
-                (texture.Width - _cropWidth) * 0.5f,
-                (texture.Height - _cropWidth * _aspectRatio) * 0.5f);
+            if (_freeForm)
+            {
+                _cropWidth = texture.Width;
+                _cropHeight = texture.Height;
+                _cropTopLeft = Vector2.Zero;
+            }
+            else
+            {
+                var maxByWidth = (float)texture.Width * 0.75f;
+                var maxByHeight = texture.Height / _aspectRatio * 0.75f;
+                _cropWidth = Math.Min(maxByWidth, maxByHeight);
+                _cropTopLeft = new Vector2(
+                    (texture.Width - _cropWidth) * 0.5f,
+                    (texture.Height - _cropWidth * _aspectRatio) * 0.5f);
+            }
         }
 
         var origin = ImGui.GetCursorScreenPos();
@@ -97,18 +114,28 @@ public class ImageCropWidget
             if (!_isDraggingResize)
             {
                 _isDraggingResize = true;
-                _resizeDragStartMouseX = ImGui.GetMousePos().X;
-                _resizeDragStartWidth = _cropWidth;
+                _resizeDragStartMouse = ImGui.GetMousePos();
+                _resizeDragStartSize = new Vector2(_cropWidth, CropHeight);
             }
-            var delta = (ImGui.GetMousePos().X - _resizeDragStartMouseX) / scale;
-            var newWidth = Math.Max(MinCropWidth, _resizeDragStartWidth + delta);
-            var newHeight = newWidth * _aspectRatio;
-            newWidth = Math.Min(newWidth, texture.Width - _cropTopLeft.X);
-            newHeight = Math.Min(newHeight, texture.Height - _cropTopLeft.Y);
-            newWidth = Math.Min(newWidth, newHeight / _aspectRatio);
-            if (Math.Abs(newWidth - _cropWidth) > 0.1f)
+            var delta = (ImGui.GetMousePos() - _resizeDragStartMouse) / scale;
+            if (_freeForm)
             {
-                _cropWidth = newWidth;
+                var maxW = texture.Width - _cropTopLeft.X;
+                var maxH = texture.Height - _cropTopLeft.Y;
+                _cropWidth = MathF.Min(MathF.Max(_resizeDragStartSize.X + delta.X, MinCropSide), maxW);
+                _cropHeight = MathF.Min(MathF.Max(_resizeDragStartSize.Y + delta.Y, MinCropSide), maxH);
+            }
+            else
+            {
+                var newWidth = Math.Max(MinCropSide, _resizeDragStartSize.X + delta.X);
+                var newHeight = newWidth * _aspectRatio;
+                newWidth = Math.Min(newWidth, texture.Width - _cropTopLeft.X);
+                newHeight = Math.Min(newHeight, texture.Height - _cropTopLeft.Y);
+                newWidth = Math.Min(newWidth, newHeight / _aspectRatio);
+                if (Math.Abs(newWidth - _cropWidth) > 0.1f)
+                {
+                    _cropWidth = newWidth;
+                }
             }
         }
         else
@@ -126,8 +153,8 @@ public class ImageCropWidget
                 _moveDragOffset = ImGui.GetMousePos() - cropTL;
             }
             var newTL = (ImGui.GetMousePos() - origin - _moveDragOffset) / scale;
-            newTL.X = Math.Clamp(newTL.X, 0, texture.Width - _cropWidth);
-            newTL.Y = Math.Clamp(newTL.Y, 0, texture.Height - CropHeight);
+            newTL.X = Math.Clamp(newTL.X, 0, Math.Max(0f, texture.Width - _cropWidth));
+            newTL.Y = Math.Clamp(newTL.Y, 0, Math.Max(0f, texture.Height - CropHeight));
             if (newTL != _cropTopLeft)
             {
                 _cropTopLeft = newTL;

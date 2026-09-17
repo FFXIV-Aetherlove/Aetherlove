@@ -32,6 +32,8 @@ internal sealed class EditorScreen
     private float _confirmHeight;
     private float _colorHeight;
 
+    internal Guid? CurrentNoteId => _note?.Id;
+
     internal EditorScreen(NotesStore store, Action back, Action<Note> openDuplicate)
     {
         _store = store;
@@ -334,22 +336,24 @@ internal sealed class EditorScreen
         ImGui.Dummy(new Vector2(0f, ctx.Px(12f)));
 
         var dl = ImGui.GetWindowDrawList();
-        var cell = ctx.Px(34f);
-        var perRow = Math.Max(1, (int)(width / cell));
+        var perRow = (NoteColors.Count + 1) / 2;
+        var cell = width / perRow;
+        var rowH = ctx.Px(34f);
+        var hit = new Vector2(cell, rowH) - ctx.Px(6f, 6f);
         var rowStart = ImGui.GetCursorScreenPos();
         for (var i = 0; i < NoteColors.Count; i++)
         {
             var col = i % perRow;
             var row = i / perRow;
-            var pos = rowStart + new Vector2(col * cell, row * cell);
+            var pos = rowStart + new Vector2(col * cell, row * rowH) + ctx.Px(3f, 3f);
             ImGui.SetCursorScreenPos(pos);
-            var picked = ImGui.InvisibleButton($"##notesColour{i}", new Vector2(cell - ctx.Px(6f), cell - ctx.Px(6f)));
+            var picked = ImGui.InvisibleButton($"##notesColour{i}", hit);
             var hovered = ImGui.IsItemHovered();
             if (hovered)
             {
                 HandOnHover();
             }
-            var center = pos + new Vector2(cell - ctx.Px(6f), cell - ctx.Px(6f)) * 0.5f;
+            var center = pos + hit * 0.5f;
             var accent = NoteColors.Accent(i);
             dl.AddCircleFilled(center, ctx.Px(12f), ImGui.ColorConvertFloat4ToU32(accent), 32);
             if (_note.ColorIndex == i)
@@ -368,7 +372,7 @@ internal sealed class EditorScreen
             }
         }
         var rows = (NoteColors.Count + perRow - 1) / perRow;
-        ImGui.SetCursorScreenPos(rowStart + new Vector2(0f, rows * cell + ctx.Px(6f)));
+        ImGui.SetCursorScreenPos(rowStart + new Vector2(0f, rows * rowH + ctx.Px(6f)));
 
         if (ModalUi.Button(NotesUi.T(ctx, "os.notes_done"), width))
         {

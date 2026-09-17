@@ -60,5 +60,8 @@ internal static class NotificationsFr
 
         // added after update 2.5.3
         ["notif.realtor_entry_results"] = "Les résultats de la loterie sont tombés. Allez voir si vous avez gagné la parcelle {0}, quartier {1}, {2}.",
+
+        // added after update 2.7.0 (free company houses)
+        ["notif.realtor_estate_fc"] = "{0} : votre dernière entrée dans la maison de votre compagnie libre date de {2} jours. Le jeu la démolit après 45 jours sans visite d’un membre. Il peut rester environ {1} jours.",
     };
 }

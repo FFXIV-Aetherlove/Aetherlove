@@ -1,6 +1,5 @@
-﻿using System;
+using System;
 using System.Numerics;
-using AetherLove.Shared.Aetherling;
 
 namespace AetherOS.PetKit.Engine;
 
@@ -10,13 +9,13 @@ public struct CorePose
 {
     public int CellIndex;
 
-    /// <summary>Persistent growth ladder times breathing pulse times tap squish.</summary>
+    /// <summary>The crystal's scale times breathing pulse times tap squish.</summary>
     public Vector2 Scale;
 
     /// <summary>Jitter offset in cell-local pixels; zero under reduce-motion.</summary>
     public Vector2 Offset;
 
-    /// <summary>Bloom behind the core, rising with the ladder. 0 = none.</summary>
+    /// <summary>Bloom behind the core. 0 = none.</summary>
     public float GlowAlpha;
 
     /// <summary>An expectant nudge wobble is playing.</summary>
@@ -41,20 +40,18 @@ public struct CorePose
     public float PetPopProgress;
 }
 
-/// <summary>The ceremony crystal's presentation state machine: the growth ladder, the breathing pulse,
-/// the tap squish, the per-stage jitter and the expectant nudge. It owns no gates, prices or
-/// entitlements; it is told which stage to wear and animates the way there.</summary>
+/// <summary>The ceremony crystal's presentation state machine: the breathing pulse, the tap squish, the
+/// jitter, the expectant nudge and the birth. It owns no gates, prices or entitlements; it animates the
+/// one crystal state there is and the breaking of it.</summary>
 public sealed class CeremonyController
 {
-    /// <summary>The ladder's terminal scale, what the committed core reaches. Surfaces divide
-    /// their target size by this so each infusion visibly grows the core toward it.</summary>
+    /// <summary>The crystal's scale. Surfaces divide their target size by this.</summary>
     public const float KindledScale = 1.75f;
 
-    private static readonly float[] StageScale = [1.00f, 1.12f, 1.24f, 1.48f, KindledScale];
-
-    private static readonly float[] StageJitter = [0f, 0f, 1.5f, 2.2f, 2.6f];
-
-    private static readonly float[] StageGlow = [0f, 0.10f, 0.22f, 0.38f, 0.55f];
+    private const float RestingJitter = 2.6f;
+    private const float RestingGlow = 0.55f;
+    private const float PulseHz = 1.07f;
+    private const string RestingClip = "quicken";
 
     /// <summary>Seconds of stillness before the core nudges for attention.</summary>
     private const float NudgeAfterSeconds = 8f;
@@ -96,17 +93,11 @@ public sealed class CeremonyController
     /// <summary>How dark the ceremony sits normally, before the swell deepens it.</summary>
     private const float RestingDim = 0.55f;
 
-    private readonly Func<DateTime> _utcNow;
     private readonly Random _rng;
     private readonly ClipPlayer _clip;
 
     private float _pulseT;
     private float _squishT = 1f;
-    private float _stepScale = 1f;
-    private float _stepScaleFrom = 1f;
-    private float _stepScaleT = 1f;
-    private float _glow;
-    private float _glowFrom;
     private float _jitterTimer;
     private Vector2 _jitterOffset;
     private float _sinceInteraction;
@@ -116,16 +107,11 @@ public sealed class CeremonyController
     private float _swellDuration = SwellDuration;
     private float _birthT;
 
-    public CeremonyController(AtlasManifest manifest, Func<DateTime>? utcNow = null, Random? rng = null)
+    public CeremonyController(AtlasManifest manifest, Random? rng = null)
     {
-        _utcNow = utcNow ?? (() => DateTime.UtcNow);
         _rng = rng ?? new Random();
-        _clip = new ClipPlayer(manifest, ClipNameFor(AetherlingStage.Dormant));
+        _clip = new ClipPlayer(manifest, RestingClip);
     }
-
-    public AetherlingStage Stage { get; private set; } = AetherlingStage.Dormant;
-
-    public DateTime StageEnteredAt { get; private set; }
 
     /// <summary>No jitter, no wobble, no breathing, and the sprite parks on its clip's first frame.</summary>
     public bool ReduceMotion { get; set; }
@@ -145,8 +131,8 @@ public sealed class CeremonyController
     /// <summary>Fires once when the birth has played out.</summary>
     public event Action? BirthFinished;
 
-    /// <summary>Starts the birth. Nothing else does: unlike the prototype this never fires itself, because
-    /// here the player presses something to open it.</summary>
+    /// <summary>Starts the birth. Nothing else does: the player breaks the crystal, and only the server's
+    /// yes reaches here.</summary>
     public void BeginBirth(bool gentle)
     {
         if (_birthPlaying)
@@ -161,41 +147,6 @@ public sealed class CeremonyController
         _wobbleT = 1f;
     }
 
-    /// <summary>Restores a parked core. Call once after construction; it lands on the stage
-    /// rather than animating up to it.</summary>
-    public void Restore(AetherlingStage stage, DateTime stageEnteredAt)
-    {
-        Stage = Clamp(stage);
-        StageEnteredAt = stageEnteredAt;
-        var index = (int)Stage;
-        _stepScale = StageScale[index];
-        _stepScaleFrom = _stepScale;
-        _stepScaleT = 1f;
-        _glow = StageGlow[index];
-        _glowFrom = _glow;
-        _clip.Play(ClipNameFor(Stage));
-    }
-
-    /// <summary>Plays the stage-advance flourish: the core grows and brightens into
-    /// <paramref name="stage"/> and takes up that stage's frames. A stage at or below the
-    /// current one is ignored, so a stale server echo cannot walk the crystal backwards.</summary>
-    public void AdvanceTo(AetherlingStage stage)
-    {
-        var target = Clamp(stage);
-        if (target <= Stage)
-        {
-            return;
-        }
-
-        Stage = target;
-        StageEnteredAt = _utcNow();
-        _stepScaleFrom = _stepScale;
-        _glowFrom = _glow;
-        _stepScaleT = 0f;
-        _sinceInteraction = 0f;
-        _clip.Play(ClipNameFor(Stage));
-    }
-
     /// <summary>A tap on the core. Never a failure state: every outcome squishes.</summary>
     public void Touch()
     {
@@ -208,16 +159,9 @@ public sealed class CeremonyController
         _pulseT += dt;
         _sinceInteraction += dt;
         _squishT = MathF.Min(1f, _squishT + (dt / 0.06f));
-        _stepScaleT = MathF.Min(1f, _stepScaleT + (dt / 0.25f));
         _wobbleT = MathF.Min(1f, _wobbleT + (dt / 0.55f));
 
-        var index = (int)Stage;
-        var eased = 1f - MathF.Pow(1f - _stepScaleT, 3f);
-        _stepScale = _stepScaleFrom + ((StageScale[index] - _stepScaleFrom) * eased);
-        _glow = _glowFrom + ((StageGlow[index] - _glowFrom) * eased);
-
-        if (!ReduceMotion && Stage < AetherlingStage.Kindling
-            && _sinceInteraction >= NudgeAfterSeconds && _wobbleT >= 1f)
+        if (!ReduceMotion && !_birthPlaying && _sinceInteraction >= NudgeAfterSeconds && _wobbleT >= 1f)
         {
             _wobbleT = 0f;
             _sinceInteraction = NudgeRearmSeconds;
@@ -249,7 +193,7 @@ public sealed class CeremonyController
         var amplitude = ReduceMotion ? 0f
             : Swelling ? swell.Jitter
             : _birthPlaying ? 0f
-            : StageJitter[index];
+            : RestingJitter;
         if (amplitude > 0f)
         {
             _jitterTimer -= dt;
@@ -269,10 +213,9 @@ public sealed class CeremonyController
 
     public CorePose GetPose()
     {
-        var pulseHz = 0.35f + ((int)Stage * 0.18f);
         var pulse = ReduceMotion
             ? 1f
-            : 1f + (0.03f * (0.5f + (0.5f * MathF.Sin(_pulseT * pulseHz * MathF.Tau))));
+            : 1f + (0.03f * (0.5f + (0.5f * MathF.Sin(_pulseT * PulseHz * MathF.Tau))));
 
         var squish = MathF.Sin(MathF.PI * MathF.Min(1f, _squishT));
         var squishX = 1f + (0.06f * squish);
@@ -284,10 +227,10 @@ public sealed class CeremonyController
         {
             CellIndex = _clip.CurrentCell,
             Scale = new Vector2(
-                _stepScale * pulse * squishX * (1f + wobble),
-                _stepScale * pulse * squishY * (1f - wobble)),
+                KindledScale * pulse * squishX * (1f + wobble),
+                KindledScale * pulse * squishY * (1f - wobble)),
             Offset = _jitterOffset,
-            GlowAlpha = _glow,
+            GlowAlpha = RestingGlow,
             Wobbling = _wobbleT < 1f,
             CoreAlpha = 1f,
             DimAlpha = RestingDim,
@@ -370,10 +313,10 @@ public sealed class CeremonyController
         {
             var accel = MathF.Pow(s / (1f - SwellHoldFraction), 2f);
             return (
-                Lerp(StageJitter[(int)AetherlingStage.Kindling], SwellJitterPeak, accel),
+                Lerp(RestingJitter, SwellJitterPeak, accel),
                 Lerp(1f, SwellClipRatePeak, accel),
                 Lerp(1f, SwellScalePeak, accel),
-                0.55f * accel,
+                RestingGlow * accel,
                 SwellDimDeepen * accel);
         }
 
@@ -383,27 +326,9 @@ public sealed class CeremonyController
             Lerp(SwellJitterPeak, 0.3f, ease),
             Lerp(SwellClipRatePeak, 0.5f, ease),
             Lerp(SwellScalePeak, SwellScaleInhale, ease),
-            Lerp(0.55f, 1f, ease),
+            Lerp(RestingGlow, 1f, ease),
             SwellDimDeepen);
     }
 
     private static float Lerp(float a, float b, float t) => a + ((b - a) * t);
-
-    private static AetherlingStage Clamp(AetherlingStage stage)
-    {
-        if (stage < AetherlingStage.Dormant)
-        {
-            return AetherlingStage.Dormant;
-        }
-
-        return stage > AetherlingStage.Kindling ? AetherlingStage.Kindling : stage;
-    }
-
-    private static string ClipNameFor(AetherlingStage stage) => stage switch
-    {
-        AetherlingStage.Stirring => "stirring",
-        AetherlingStage.Fissured => "fissured",
-        AetherlingStage.Quickening or AetherlingStage.Kindling => "quicken",
-        _ => "dormant",
-    };
 }

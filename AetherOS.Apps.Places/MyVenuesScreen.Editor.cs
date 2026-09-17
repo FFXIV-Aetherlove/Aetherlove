@@ -37,6 +37,7 @@ public partial class MyVenuesScreen
     private Guid _editId = Guid.Empty;
     private string _editName = "";
     private string _editDescription = "";
+    private readonly SoftWrapInputField _editDescriptionField = new();
     private string _editDiscord = "";
     private readonly bool[] _editTags = new bool[VenueFields.VenueTagValues.Length];
     private int _editRegionIdx;
@@ -282,7 +283,7 @@ public partial class MyVenuesScreen
             }
         }
         var descBefore = _editDescription;
-        InputTextMultilineWithPaste("##venDesc", ref _editDescription, PlacesLimits.VenueDescriptionRawMaxLength, new Vector2(w, Px(84f)));
+        _editDescriptionField.Draw("##venDesc", ref _editDescription, PlacesLimits.VenueDescriptionRawMaxLength, new Vector2(w, Px(84f)));
         if (EmojiText.EffectiveLength(_editDescription) > PlacesLimits.VenueDescriptionMaxLength)
         {
             _editDescription = descBefore;
@@ -293,7 +294,7 @@ public partial class MyVenuesScreen
         if (_editDescription.Length > 0)
         {
             ImGui.Spacing();
-            var parsed = ParsedMessage.Parse(_editDescription);
+            var parsed = ParsedMessage.Parse(_editDescriptionField.Value(_editDescription));
             parsed.DrawWrapped("##venDescPreview", w);
         }
 
@@ -898,7 +899,7 @@ public partial class MyVenuesScreen
         return new VenueEditDto(
             Id: _editId == Guid.Empty ? null : _editId,
             Name: name,
-            Description: _editDescription.Trim(),
+            Description: _editDescriptionField.Value(_editDescription).Trim(),
             Tags: MaskOr(VenueFields.VenueTagValues, _editTags, (a, b) => a | b),
             Region: ValueAt(RegionValues, _editRegionIdx, Region.NorthAmerica),
             DataCenter: _editDataCenter.Trim(),

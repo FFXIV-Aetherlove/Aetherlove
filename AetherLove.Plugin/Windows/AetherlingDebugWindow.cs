@@ -61,7 +61,7 @@ public sealed class AetherlingDebugWindow : Window
             RefreshInventory();
         }
         ImGui.SameLine();
-        ImGui.TextColored(DimCol, core is null ? "no core" : $"stage {core.CoreStage}/{core.MaxStage}");
+        ImGui.TextColored(DimCol, core is null ? "no core" : core.Adult is null ? "crystal" : "adult");
 
         DrawCore(core);
         DrawLook(core);
@@ -162,7 +162,7 @@ public sealed class AetherlingDebugWindow : Window
         _ => new Vector4(0f, 0f, 0f, 0f),
     };
 
-    /// <summary>The drawn-shell folders under Media/unknown, beside the numeric growth rungs.
+    /// <summary>The drawn-shell folders under Media/unknown, beside the trueform's own folder.
     /// One row per shell that ships a manifest; the trueform is the null override.</summary>
     private static readonly (string Folder, string Name)[] Shells =
     [
@@ -228,11 +228,6 @@ public sealed class AetherlingDebugWindow : Window
 
         ImGui.TextUnformatted($"Name: {core.PetName ?? "(unset)"}  chosen: {core.NameChosen}");
         ImGui.TextUnformatted($"Hatched: {core.HatchedAtUtc?.ToString("u") ?? "no"}");
-        if (core.Growth is { } growth)
-        {
-            ImGui.TextUnformatted(
-                $"GrowthFed: {growth.GrowthFed}  gate: {growth.FeedGateMinutes}m  last fed: {growth.LastFedAtUtc?.ToString("u") ?? "never"}");
-        }
         if (core.Adult is { } adult)
         {
             var element = adult.Element >= 0 && adult.Element < ElementNames.Length

@@ -270,8 +270,7 @@ public static class AppearancePicker
         _previewLogoLoaded = true;
         try
         {
-            var dir = Path.GetDirectoryName(UiHost.PluginInterface.AssemblyLocation.FullName) ?? string.Empty;
-            var path = Path.Combine(dir, "Media", "logo_mini.png");
+            var path = Services.Media.MediaPaths.Shipped("logo_mini.png");
             if (File.Exists(path))
             {
                 _previewLogo = UiHost.TextureProvider.GetFromFile(path);

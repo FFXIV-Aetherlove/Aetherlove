@@ -89,7 +89,7 @@ internal static class StoreCard
             ImGui.SetTooltip(fullName);
         }
         StoreChips.Price(dl, new Vector2(textX + Px(7f), nameY + ImGui.GetTextLineHeight() + Px(7f)),
-            product.DiscountedPriceSparks, product.PriceSparks, wide ? 1f : 0.9f, plate: true);
+            StorePrice.Shown(product), product.PriceSparks, wide ? 1f : 0.9f, plate: true);
         if (wide)
         {
             dl.AddText(ImGui.GetFont(), ImGui.GetFontSize() * 0.82f,

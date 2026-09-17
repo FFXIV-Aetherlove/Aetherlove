@@ -2,23 +2,29 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using AetherLove.Services.Media;
 using AetherOS.Sdk;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Textures.TextureWraps;
 
 namespace AetherLove.Os;
 
-/// <summary>Built-in and user-uploaded home screen wallpapers, plus the ones that come sealed with a
-/// purchased theme. Purely local.</summary>
-public sealed class WallpaperService(IPremiumWallpaperSource premium)
+/// <summary>Built-in and user-uploaded home screen wallpapers. Purely local: a purchased skin changes the
+/// frame and the palette, never the background, so nothing here comes from the store.</summary>
+public sealed class WallpaperService
 {
     private readonly Dictionary<string, ISharedImmediateTexture> _cache = new();
     private string[]? _builtIns;
 
     private static readonly string[] AllowedExtensions = [".png", ".jpg", ".jpeg"];
 
-    private static string MediaDir =>
-        Path.Combine(Path.GetDirectoryName(UiHost.PluginInterface.AssemblyLocation.FullName) ?? "", "Media", "wallpapers");
+    private static string MediaDir => MediaPaths.Downloaded(MediaPaths.Wallpapers);
+
+    /// <summary>Forgets the built-in list so the next read rescans; called when the wallpaper pack lands.</summary>
+    public void InvalidateBuiltIns()
+    {
+        _builtIns = null;
+    }
 
     public IReadOnlyList<string> BuiltIns
     {
@@ -60,29 +66,9 @@ public sealed class WallpaperService(IPremiumWallpaperSource premium)
         };
     }
 
-    /// <summary>The wallpaper to draw, whatever its source. A premium one lives in memory only, so it
-    /// cannot come back as a shared texture like the file-backed ones.</summary>
-    public IDalamudTextureWrap? CurrentWrap()
-    {
-        var os = UiHost.Configuration.Os;
-        if (os.WallpaperMode == WallpaperMode.Premium)
-        {
-            return premium.GetWallpaper(os.PremiumWallpaperProductId);
-        }
-        return Current()?.GetWrapOrDefault();
-    }
-
-    /// <summary>Switches to a purchased theme's wallpaper. The caller has already made sure its seal is
-    /// on this install.</summary>
-    public void SelectPremium(Guid productId)
-    {
-        var os = UiHost.Configuration.Os;
-        os.WallpaperMode = WallpaperMode.Premium;
-        os.PremiumWallpaperProductId = productId;
-        UiHost.Configuration.Save();
-    }
-
-    public IDalamudTextureWrap? PremiumWrap(Guid productId) => premium.GetWallpaper(productId);
+    /// <summary>The wallpaper to draw, whatever its source. A config still pointing at the retired premium
+    /// mode resolves to nothing here and so falls back to the theme gradient, like any other miss.</summary>
+    public IDalamudTextureWrap? CurrentWrap() => Current()?.GetWrapOrDefault();
 
     public ISharedImmediateTexture? GetBuiltInTexture(string fileName) => GetTexture(Path.Combine(MediaDir, fileName));
 
@@ -91,6 +77,11 @@ public sealed class WallpaperService(IPremiumWallpaperSource premium)
         if (_cache.TryGetValue(absPath, out var tex))
         {
             return tex;
+        }
+        if (!File.Exists(absPath))
+        {
+            // Not cached: a built-in still downloading appears once its pack lands.
+            return null;
         }
         try
         {

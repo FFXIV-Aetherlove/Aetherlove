@@ -70,10 +70,6 @@ public sealed partial class AetherHubContext
         await (await ConnAsync(ct)).InvokeAsync<StoreThemeAssetsDto?>("GetStoreThemeAssetsAsync", productId, ct)
             .ConfigureAwait(false);
 
-    public async Task<byte[]?> GetStoreThemeBackgroundPreviewAsync(Guid productId, CancellationToken ct = default) =>
-        await (await ConnAsync(ct)).InvokeAsync<byte[]?>("GetStoreThemeBackgroundPreviewAsync", productId, ct)
-            .ConfigureAwait(false);
-
     public async Task<StorePurchaseResultDto> PurchaseStoreProductAsync(Guid productId, int quantity, CancellationToken ct = default)
     {
         try

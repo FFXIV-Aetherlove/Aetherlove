@@ -1,4 +1,4 @@
-﻿namespace AetherLove.Services.Localization;
+namespace AetherLove.Services.Localization;
 
 internal static class CommonRu
 {
@@ -215,5 +215,11 @@ internal static class CommonRu
         ["picker.save"] = "Сохранить",
         ["picker.file_name_hint"] = "Имя файла...",
         ["picker.selected_count"] = "Выбрано: {0}",
+        // added after update 2.6.1 (picture adjust)
+        ["common.adjust_picture"] = "Настроить картинку",
+        ["common.use_picture"] = "Использовать эту картинку",
+        ["common.rotate_left"] = "Повернуть влево",
+        ["common.rotate_right"] = "Повернуть вправо",
+        ["common.crop_free_hint"] = "Потяните за угол, чтобы обрезать. Стрелками поверните картинку.",
     };
 }

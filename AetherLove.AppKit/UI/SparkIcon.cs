@@ -35,8 +35,7 @@ public static class SparkIcon
         _loaded = true;
         try
         {
-            var dir = Path.GetDirectoryName(UiHost.PluginInterface.AssemblyLocation.FullName) ?? string.Empty;
-            var path = Path.Combine(dir, "Media", "spark.png");
+            var path = Services.Media.MediaPaths.Shipped("spark.png");
             if (File.Exists(path))
             {
                 _texture = UiHost.TextureProvider.GetFromFile(path);

@@ -50,6 +50,31 @@ internal static class ShellPreview
         return true;
     }
 
+    /// <summary>A mystery form with every body plane and mark collapsed into one opaque colour. The form's
+    /// authored geometry supplies the contour, while the shared colour removes the face and internal detail.</summary>
+    public static unsafe bool PaintSilhouette(ImDrawListPtr dl, string itemRef, Vector2 centre, float side, uint colour)
+    {
+        var shell = LineArtDispatch.ShellFor(SkinFor(itemRef));
+        if (shell == 0 || side < 8f)
+        {
+            return false;
+        }
+
+        var rest = LineArtDispatch.PoseAt(shell, 0, 0, 0, 0, 0f);
+        var solid = ImGui.ColorConvertU32ToFloat4(colour);
+        var feet = centre + new Vector2(0f, side * 0.46f);
+        var firstVertex = dl.VtxBuffer.Size;
+        LineArtDispatch.Draw(
+            shell, IconCanvas, dl, feet, side * 0.92f, rest, rest, LineShell.Happy, 0f,
+            solid, solid, solid, solid, Vector2.One, flip: false);
+        for (var i = firstVertex; i < dl.VtxBuffer.Size; i++)
+        {
+            var alpha = (dl.VtxBuffer[i].Col >> 24) * (colour >> 24) / 255u;
+            ((ImDrawVert*)dl.VtxBuffer.Data)[i].Col = (colour & 0x00FFFFFFu) | (alpha << 24);
+        }
+        return true;
+    }
+
     /// <summary>Draws the form for <paramref name="itemRef"/> inside the square at
     /// <paramref name="tl"/>. Nothing is drawn for a form this build cannot render, which leaves the
     /// caller's own placeholder showing.</summary>

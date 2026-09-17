@@ -19,6 +19,12 @@ namespace AetherLove.Screens;
 /// <summary>Passphrase prompt for unwrapping the server-stored key bundle on a new device.</summary>
 public sealed class PassphraseUnlockScreen
 {
+    private static readonly Vector4 SecondaryButton = new(0.30f, 0.30f, 0.32f, 1f);
+    private static readonly Vector4 SecondaryButtonHovered = new(0.38f, 0.38f, 0.40f, 1f);
+    private static readonly Vector4 SecondaryButtonActive = new(0.26f, 0.26f, 0.28f, 1f);
+
+    private readonly AetherLove.Widgets.AetherFileDialogManager _recoveryPicker = new();
+    private readonly AccountEncryptionService _encryption;
     private readonly ScreenRouter _router;
     private readonly SessionBootstrapper _bootstrap;
     private readonly AetherHubContext _hub;
@@ -48,8 +54,10 @@ public sealed class PassphraseUnlockScreen
         AccountUnlockService unlock,
         KeyStorageService keys,
         TokenService tokens,
-        PassphraseResetFlow resetFlow)
+        PassphraseResetFlow resetFlow,
+        AccountEncryptionService encryption)
     {
+        _encryption = encryption;
         _router = router;
         _bootstrap = bootstrap;
         _hub = hub;
@@ -83,7 +91,7 @@ public sealed class PassphraseUnlockScreen
             try
             {
                 _bundle = await _hub.GetMyKeyBundleAsync(CancellationToken.None).ConfigureAwait(false);
-                if (_bundle is null)
+                if (_bundle is null && !_encryption.HasKeyring)
                 {
                     _error = Loc.T("common.passphrase_bundle_load_failed");
                 }
@@ -102,6 +110,7 @@ public sealed class PassphraseUnlockScreen
 
     public void Draw()
     {
+        _recoveryPicker.Draw();
         var t = ThemeService.Current;
         var winW = ImGui.GetWindowSize().X;
         var scrollH = ImGui.GetContentRegionAvail().Y;
@@ -146,23 +155,17 @@ public sealed class PassphraseUnlockScreen
                 return;
             }
 
-            if (_bundle is null && _error is not null)
-            {
-                ImGui.SetCursorPosX(PadX);
-                ImGui.TextColored(UiColors.Danger, _error);
-                ImGui.Spacing();
-                // The reset never needs the old bundle, so it stays reachable even when the fetch failed.
-                ImGui.SetCursorPosX(PadX);
-                if (ImGui.Button(Loc.T("common.passphrase_reset_button"), new Vector2(winW - PadX * 2f, Px(32f))))
-                {
-                    _resetMode = true;
-                    _resetError = null;
-                }
-                return;
-            }
+            // Read once per frame - the click handlers can flip _unlocking mid-frame.
+            var unlocking = _unlocking;
 
             ImGui.SetCursorPosX(PadX);
-            var eyeW = Px(28f);
+            ImGui.PushTextWrapPos(winW - PadX);
+            ImGui.TextColored(UiColors.Muted, Loc.T("account.unlock_choice"));
+            ImGui.PopTextWrapPos();
+            ImGui.Spacing();
+
+            ImGui.SetCursorPosX(PadX);
+            var eyeW = ImGui.GetFrameHeight();
             var inputW = winW - PadX * 2f - eyeW - Px(4f);
             ImGui.SetNextItemWidth(inputW);
             var flags = _showPassphrase ? ImGuiInputTextFlags.None : ImGuiInputTextFlags.Password;
@@ -170,17 +173,14 @@ public sealed class PassphraseUnlockScreen
             ImGui.SameLine(0, Px(4f));
             ImGui.PushFont(Plugin.PluginInterface.UiBuilder.FontIcon);
             var eyeIcon = _showPassphrase
-                ? Dalamud.Interface.FontAwesomeIcon.EyeSlash.ToIconString()
-                : Dalamud.Interface.FontAwesomeIcon.Eye.ToIconString();
-            if (ImGui.Button(eyeIcon + "##togglePass", new Vector2(eyeW, 0)))
+                ? FontAwesomeIcon.EyeSlash.ToIconString()
+                : FontAwesomeIcon.Eye.ToIconString();
+            if (SharedUiHelpers.Button(eyeIcon + "##togglePass", new Vector2(eyeW, eyeW)))
             {
                 _showPassphrase = !_showPassphrase;
             }
             ImGui.PopFont();
             ImGui.Spacing();
-
-            // Read once per frame - the click handler can flip _unlocking mid-frame.
-            var unlocking = _unlocking;
 
             if (_error is not null && !unlocking)
             {
@@ -201,12 +201,25 @@ public sealed class PassphraseUnlockScreen
             ImGui.PushStyleColor(ImGuiCol.ButtonHovered, t.ButtonHovered);
             ImGui.PushStyleColor(ImGuiCol.ButtonActive, t.ButtonActive);
             ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
-            if (ImGui.Button(btnLabel, new Vector2(winW - PadX * 2f, Px(36f))))
+            if (SharedUiHelpers.Button(btnLabel, new Vector2(winW - PadX * 2f, Px(36f))))
             {
                 StartUnlock();
             }
             ImGui.PopStyleVar();
             ImGui.PopStyleColor(3);
+
+            ImGui.Spacing();
+            ImGui.SetCursorPosX(PadX);
+            if (DrawSecondaryButton(Loc.T("account.restore") + "##restoreFile", winW - PadX * 2f, Px(36f)))
+            {
+                _recoveryPicker.OpenFileDialog(Loc.T("account.restore"), ".aetherkey", (ok, path) =>
+                {
+                    if (ok)
+                    {
+                        StartRestore(path);
+                    }
+                });
+            }
             if (unlocking)
             {
                 ImGui.EndDisabled();
@@ -222,38 +235,25 @@ public sealed class PassphraseUnlockScreen
             ImGui.Spacing();
 
             ImGui.SetCursorPosX(PadX);
-            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.30f, 0.30f, 0.32f, 1f));
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.38f, 0.38f, 0.40f, 1f));
-            ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.26f, 0.26f, 0.28f, 1f));
-            ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
-            if (ImGui.Button(Loc.T("common.passphrase_reset_button"), new Vector2(winW - PadX * 2f, Px(32f))))
+            if (DrawSecondaryButton(Loc.T("common.passphrase_reset_button"), winW - PadX * 2f, Px(32f)))
             {
                 _resetMode = true;
                 _resetError = null;
             }
-            ImGui.PopStyleVar();
-            ImGui.PopStyleColor(3);
             ImGui.Spacing();
 
             ImGui.SetCursorPosX(PadX);
-            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.30f, 0.30f, 0.32f, 1f));
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.38f, 0.38f, 0.40f, 1f));
-            ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.26f, 0.26f, 0.28f, 1f));
-            ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
-            if (ImGui.Button(Loc.T("common.sign_out"), new Vector2(winW - PadX * 2f, Px(32f))))
+            if (DrawSecondaryButton(Loc.T("common.sign_out"), winW - PadX * 2f, Px(32f)))
             {
                 _tokens.Clear();
-                _keys.Clear();
                 _router.Navigate(Screen.Splash);
             }
-            ImGui.PopStyleVar();
-            ImGui.PopStyleColor(3);
         }
     }
 
     private void StartUnlock()
     {
-        if (_bundle is null || _unlocking)
+        if ((_bundle is null && !_encryption.HasKeyring) || _unlocking)
         {
             return;
         }
@@ -271,7 +271,9 @@ public sealed class PassphraseUnlockScreen
         {
             try
             {
-                switch (await _unlock.UnlockAsync(passphrase, bundle).ConfigureAwait(false))
+                switch (bundle is null
+                    ? (await _encryption.UnlockAsync(passphrase).ConfigureAwait(false) ? AccountUnlockOutcome.Success : AccountUnlockOutcome.WrongPassphrase)
+                    : await _unlock.UnlockAsync(passphrase, bundle).ConfigureAwait(false))
                 {
                     case AccountUnlockOutcome.Success:
                         NavigateToTarget();
@@ -294,6 +296,46 @@ public sealed class PassphraseUnlockScreen
                 _unlocking = false;
             }
         });
+    }
+
+    private void StartRestore(string path)
+    {
+        if (_unlocking)
+        {
+            return;
+        }
+        _unlocking = true;
+        _error = null;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _encryption.RestoreRecoveryFileAsync(path).ConfigureAwait(false);
+                NavigateToTarget();
+            }
+            catch (Exception ex)
+            {
+                _error = Loc.T("account.failed");
+                Plugin.Log.Warning("[Recovery] File restore failed ({Reason}).", ex.GetType().Name);
+            }
+            finally
+            {
+                _unlocking = false;
+            }
+        });
+    }
+
+    /// <summary>The screen's grey rounded button for the actions beside the main unlock.</summary>
+    private static bool DrawSecondaryButton(string label, float width, float height)
+    {
+        ImGui.PushStyleColor(ImGuiCol.Button, SecondaryButton);
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, SecondaryButtonHovered);
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive, SecondaryButtonActive);
+        ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
+        var clicked = SharedUiHelpers.Button(label, new Vector2(width, height));
+        ImGui.PopStyleVar();
+        ImGui.PopStyleColor(3);
+        return clicked;
     }
 
     private void NavigateToTarget()
@@ -350,7 +392,7 @@ public sealed class PassphraseUnlockScreen
         ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.54f, 0.16f, 0.18f, 1f));
         ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
         var label = resetting ? Loc.T("common.passphrase_reset_running") : Loc.T("common.passphrase_reset_go");
-        if (ImGui.Button(label, new Vector2(winW - PadX * 2f, Px(36f))))
+        if (SharedUiHelpers.Button(label, new Vector2(winW - PadX * 2f, Px(36f))))
         {
             StartReset();
         }
@@ -363,16 +405,10 @@ public sealed class PassphraseUnlockScreen
 
         ImGui.Spacing();
         ImGui.SetCursorPosX(PadX);
-        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.30f, 0.30f, 0.32f, 1f));
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.38f, 0.38f, 0.40f, 1f));
-        ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.26f, 0.26f, 0.28f, 1f));
-        ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(8f));
-        if (ImGui.Button(Loc.T("common.cancel"), new Vector2(winW - PadX * 2f, Px(32f))) && !resetting)
+        if (DrawSecondaryButton(Loc.T("common.cancel"), winW - PadX * 2f, Px(32f)) && !resetting)
         {
             _resetMode = false;
         }
-        ImGui.PopStyleVar();
-        ImGui.PopStyleColor(3);
     }
 
     private void StartReset()

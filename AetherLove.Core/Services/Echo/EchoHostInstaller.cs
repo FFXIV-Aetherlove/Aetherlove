@@ -1,54 +1,38 @@
 using System;
 using System.IO;
 using System.IO.Compression;
-using System.Net.Http;
-using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
-using AetherLove.Shared.EchoVidya;
 
 namespace AetherLove.Services.Echo;
 
 public enum EchoInstallPhase
 {
     NotInstalled,
-    Downloading,
-    Verifying,
     Extracting,
     Installed,
     Failed,
 }
 
 /// <summary>An immutable snapshot of the installer's progress, swapped atomically so the draw thread can
-/// read it without locking.</summary>
+/// read it without locking. The download itself is the asset sync's; this only reports the unpack.</summary>
 public sealed record EchoInstallState(
     EchoInstallPhase Phase,
-    long BytesDone,
-    long BytesTotal,
     string? Version,
     string? FailureReason)
 {
-    public static readonly EchoInstallState NotInstalled = new(EchoInstallPhase.NotInstalled, 0, 0, null, null);
+    public static readonly EchoInstallState NotInstalled = new(EchoInstallPhase.NotInstalled, null, null);
 
-    public bool Busy => Phase is EchoInstallPhase.Downloading or EchoInstallPhase.Verifying or EchoInstallPhase.Extracting;
-
-    /// <summary>0..1 while downloading, 0 when the size is unknown.</summary>
-    public float Progress => BytesTotal > 0 ? Math.Clamp((float)((double)BytesDone / BytesTotal), 0f, 1f) : 0f;
+    public bool Busy => Phase is EchoInstallPhase.Extracting;
 }
 
-/// <summary>Downloads, verifies and unpacks the Echo playback host into the version layout owned by
-/// <see cref="EchoHostLocator"/>. Never throws: every failure lands in <see cref="State"/> and returns false.</summary>
+/// <summary>Unpacks a verified Echo playback host bundle into the version layout owned by
+/// <see cref="EchoHostLocator"/>. The bytes arrive from the asset sync, already checked against the
+/// server's hash, so nothing here downloads or hashes. Never throws: every failure lands in
+/// <see cref="State"/> and returns false.</summary>
 public sealed class EchoHostInstaller
 {
-    private const int CopyBufferBytes = 81920;
-
-    /// <summary>Bytes between progress notifications; per-chunk raises would flood the UI.</summary>
-    private const long ProgressReportBytes = 256 * 1024;
-
     private const string TempPrefix = ".tmp-";
-
-    // The handler timeout would abort a slow multi-megabyte body mid-stream, so cancellation is the caller's.
-    private static readonly HttpClient Http = new() { Timeout = Timeout.InfiniteTimeSpan };
 
     private readonly EchoHostLocator _locator;
     private int _running;
@@ -59,7 +43,7 @@ public sealed class EchoHostInstaller
         _locator = locator;
         if (locator.InstalledVersion is { } version)
         {
-            _state = new EchoInstallState(EchoInstallPhase.Installed, 0, 0, version, null);
+            _state = new EchoInstallState(EchoInstallPhase.Installed, version, null);
         }
     }
 
@@ -69,123 +53,72 @@ public sealed class EchoHostInstaller
     /// <see cref="State"/> from the draw thread instead).</summary>
     public event Action<EchoInstallState>? StateChanged;
 
-    public async Task<bool> InstallAsync(EchoHostManifestDto manifest, CancellationToken ct)
+    /// <summary>Extracts <paramref name="zip"/> (positioned at its start) into the folder for
+    /// <paramref name="version"/>, writes the completion marker last and prunes older builds. A version that
+    /// is already complete only prunes.</summary>
+    public async Task<bool> InstallFromZipAsync(string version, Stream zip, CancellationToken ct)
     {
         if (Interlocked.CompareExchange(ref _running, 1, 0) != 0)
         {
             return false;
         }
         var temp = Path.Combine(_locator.Root, TempPrefix + Guid.NewGuid().ToString("N"));
-        var zipPath = temp + ".zip";
         try
         {
-            if (_locator.IsComplete(manifest.Version))
+            if (_locator.IsComplete(version))
             {
                 // A prune blocked by a still-running old build gets its second chance here, or the
                 // leftover would survive forever: every later attempt takes this early return.
-                _locator.PruneOtherVersions(manifest.Version);
-                Publish(new EchoInstallState(EchoInstallPhase.Installed, 0, 0, manifest.Version, null));
+                _locator.PruneOtherVersions(version);
+                Publish(new EchoInstallState(EchoInstallPhase.Installed, version, null));
                 return true;
             }
 
             Directory.CreateDirectory(_locator.Root);
-            var hash = await DownloadAsync(manifest, zipPath, ct).ConfigureAwait(false);
-            if (hash is null)
+            Publish(new EchoInstallState(EchoInstallPhase.Extracting, version, null));
+            using (var archive = new ZipArchive(zip, ZipArchiveMode.Read, leaveOpen: true))
             {
-                return false;
+                archive.ExtractToDirectory(temp);
             }
-
-            Publish(new EchoInstallState(EchoInstallPhase.Verifying, manifest.SizeBytes, manifest.SizeBytes, manifest.Version, null));
-            if (!string.Equals(hash, manifest.Sha256.Replace("-", string.Empty), StringComparison.OrdinalIgnoreCase))
-            {
-                TryDelete(zipPath);
-                return Fail(manifest.Version, "The download did not match the published checksum.");
-            }
-
-            Publish(new EchoInstallState(EchoInstallPhase.Extracting, manifest.SizeBytes, manifest.SizeBytes, manifest.Version, null));
-            ZipFile.ExtractToDirectory(zipPath, temp);
             if (!File.Exists(Path.Combine(temp, EchoHostLocator.HostExeName)))
             {
-                return Fail(manifest.Version, "The downloaded bundle did not contain the playback host.");
+                return Fail(version, "The downloaded bundle did not contain the playback host.");
             }
 
-            var target = _locator.VersionDir(manifest.Version);
+            var target = _locator.VersionDir(version);
             if (Directory.Exists(target))
             {
                 Directory.Delete(target, true);
             }
             Directory.Move(temp, target);
-            await File.WriteAllTextAsync(_locator.MarkerPath(manifest.Version), manifest.Version, ct).ConfigureAwait(false);
+            await File.WriteAllTextAsync(_locator.MarkerPath(version), version, ct).ConfigureAwait(false);
 
-            TryDelete(zipPath);
-            _locator.PruneOtherVersions(manifest.Version);
-            Publish(new EchoInstallState(EchoInstallPhase.Installed, manifest.SizeBytes, manifest.SizeBytes, manifest.Version, null));
+            _locator.PruneOtherVersions(version);
+            Publish(new EchoInstallState(EchoInstallPhase.Installed, version, null));
             return true;
         }
         catch (OperationCanceledException)
         {
             Publish(_locator.InstalledVersion is { } v
-                ? new EchoInstallState(EchoInstallPhase.Installed, 0, 0, v, null)
+                ? new EchoInstallState(EchoInstallPhase.Installed, v, null)
                 : EchoInstallState.NotInstalled);
             return false;
         }
         catch (Exception ex)
         {
             UiHost.Log.Warning(ex, "[Echo] Playback host install failed.");
-            return Fail(manifest.Version, ex.Message);
+            return Fail(version, ex.Message);
         }
         finally
         {
             TryDeleteDirectory(temp);
-            TryDelete(zipPath);
             Interlocked.Exchange(ref _running, 0);
         }
     }
 
-    /// <summary>Streams the bundle to disk and hashes it as it goes; a second pass over a large file would
-    /// double the install's disk cost. Returns the hex digest, or null when the download itself failed.</summary>
-    private async Task<string?> DownloadAsync(EchoHostManifestDto manifest, string zipPath, CancellationToken ct)
-    {
-        using var response = await Http.GetAsync(manifest.Url, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
-        if (!response.IsSuccessStatusCode)
-        {
-            Fail(manifest.Version, $"The download failed with HTTP {(int)response.StatusCode}.");
-            return null;
-        }
-
-        var total = response.Content.Headers.ContentLength ?? manifest.SizeBytes;
-        Publish(new EchoInstallState(EchoInstallPhase.Downloading, 0, total, manifest.Version, null));
-
-        using var hasher = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        await using var source = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
-        await using (var target = new FileStream(zipPath, FileMode.Create, FileAccess.Write, FileShare.None, CopyBufferBytes, true))
-        {
-            var buffer = new byte[CopyBufferBytes];
-            long done = 0;
-            long reported = 0;
-            while (true)
-            {
-                var read = await source.ReadAsync(buffer, ct).ConfigureAwait(false);
-                if (read <= 0)
-                {
-                    break;
-                }
-                hasher.AppendData(buffer, 0, read);
-                await target.WriteAsync(buffer.AsMemory(0, read), ct).ConfigureAwait(false);
-                done += read;
-                if (done - reported >= ProgressReportBytes)
-                {
-                    reported = done;
-                    Publish(new EchoInstallState(EchoInstallPhase.Downloading, done, total, manifest.Version, null));
-                }
-            }
-        }
-        return Convert.ToHexString(hasher.GetHashAndReset());
-    }
-
     private bool Fail(string version, string reason)
     {
-        Publish(new EchoInstallState(EchoInstallPhase.Failed, 0, 0, version, reason));
+        Publish(new EchoInstallState(EchoInstallPhase.Failed, version, reason));
         return false;
     }
 
@@ -193,21 +126,6 @@ public sealed class EchoHostInstaller
     {
         _state = state;
         StateChanged?.Invoke(state);
-    }
-
-    private static void TryDelete(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
-        }
-        catch (Exception ex)
-        {
-            UiHost.Log.Warning(ex, $"[Echo] Could not remove {Path.GetFileName(path)}.");
-        }
     }
 
     private static void TryDeleteDirectory(string path)

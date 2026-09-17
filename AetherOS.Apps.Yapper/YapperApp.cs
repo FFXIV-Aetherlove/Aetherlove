@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.Threading;
 using System.Threading.Tasks;
 using AetherLove.Services;
 using AetherLove.Services.Localization;
@@ -69,6 +70,7 @@ public sealed class YapperApp : IAetherApp, IAppSettings
     private readonly MessagesScreen _messages;
     private readonly DmChatScreen _dmChat;
     private bool _dmKeysEnsured;
+    private int _dmKeysEnsuring;
 
     private readonly List<View> _backStack = [];
     private readonly AetherLove.UI.EntranceAnimation _entrance = new();
@@ -93,7 +95,8 @@ public sealed class YapperApp : IAetherApp, IAppSettings
         _reportOverlay = new ReportOverlay(host);
         _translate = new AetherLove.UI.TranslateUi("yapper", caps.Translation,
             () => _shell?.SendIntent("settings", OsIntents.CreateReturn(OsIntents.OpenTranslationSettings, "yapper")));
-        _notifications = new NotificationsScreen(host, _mediaCache, OpenYapById, OpenPeerProfile, OnInboxRead);
+        _notifications = new NotificationsScreen(host, _mediaCache, OpenYapById, OpenPeerProfile,
+            () => OpenFollowList(_me?.ProfileId, true), OnInboxRead);
         host.NotificationReceived += OnNotificationPush;
         _yapCard = new YapCard(host, _store, _mediaCache, _translate,
             () => _me?.ProfileId,
@@ -391,18 +394,31 @@ public sealed class YapperApp : IAetherApp, IAppSettings
         {
             _home.OnShow();
         }
-        if (!_dmKeysEnsured && _me is not null)
+    }
+
+    /// <summary>Publishes the DM keypair as soon as a profile is known, so peers can message this user
+    /// before they ever open the Messages tab. Marked ensured only on success: a failed attempt runs
+    /// again on the next profile refresh, and the host keeps retrying on its own in between.</summary>
+    private async Task EnsureDmKeysAsync()
+    {
+        if (_dmKeysEnsured || Interlocked.CompareExchange(ref _dmKeysEnsuring, 1, 0) != 0)
         {
-            // Marked ensured only on success, so a failed attempt (KEK not unlocked yet, brief
-            // disconnect) retries on the next foreground instead of staying keyless all session.
-            _ = Task.Run(async () =>
+            return;
+        }
+        try
+        {
+            if (await _host.EnsureDmKeysAsync().ConfigureAwait(false))
             {
-                if (await _host.EnsureDmKeysAsync().ConfigureAwait(false))
-                {
-                    _dmKeysEnsured = true;
-                    _messages.Refresh();
-                }
-            });
+                _dmKeysEnsured = true;
+                _messages.Refresh();
+            }
+        }
+        catch (Exception)
+        {
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _dmKeysEnsuring, 0);
         }
     }
 
@@ -679,15 +695,7 @@ public sealed class YapperApp : IAetherApp, IAppSettings
     private void OnOnboarded(YapperMyProfileDto me)
     {
         _me = me;
-        // The DM keypair publishes the moment the profile exists, so peers can message this user
-        // before they ever open the Messages tab.
-        _ = Task.Run(async () =>
-        {
-            if (await _host.EnsureDmKeysAsync().ConfigureAwait(false))
-            {
-                _dmKeysEnsured = true;
-            }
-        });
+        _ = Task.Run(EnsureDmKeysAsync);
         _view = View.Tour;
         _tour.OnShow();
     }
@@ -712,6 +720,10 @@ public sealed class YapperApp : IAetherApp, IAppSettings
                 }
                 _me = me;
                 _meLoaded = true;
+                if (me is not null)
+                {
+                    _ = EnsureDmKeysAsync();
+                }
             }
             catch (Exception)
             {

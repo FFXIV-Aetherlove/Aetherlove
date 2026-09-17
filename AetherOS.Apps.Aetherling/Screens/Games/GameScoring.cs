@@ -1,4 +1,4 @@
-﻿namespace AetherOS.Apps.Aetherling.Screens.Games;
+namespace AetherOS.Apps.Aetherling.Screens.Games;
 
 /// <summary>Every number the three minigames score with, in one place. Must track
 /// AetherLove.Server/Arcade/ArcadeScoreChecker.cs (the CloudHop, CrystalCatch and HillRoll consts): the
@@ -103,4 +103,34 @@ internal static class GameScoring
     public const int GyreMaxCascade = 12;
     public const double GyreMinSecondsPerStage = 12.0;
     public const int GyreMaxStage = 20;
+
+    // Aether Pop. Puzzle Bobble's own table: ten a popped bubble, a drop that doubles per bubble from 20
+    // and is capped, a round clear with a time bonus, and the AETHER letters. The server bounds a score
+    // by elapsed time and the biggest drop by what a board holds (mirror
+    // AetherLove.Server/Arcade/ArcadeScoreChecker.cs). Metric1 is the round reached, Metric2 the biggest
+    // single drop.
+    public const int PopPerBubble = 10;
+    public const int PopDropBase = 20;
+    public const int PopDropCap = 20_480;
+    public const int PopSpecialTaken = 50;
+    public const int PopRoundClearBonus = 500;
+    public const int PopTimeBonusPerSecond = 50;
+    public const int PopAetherBonus = 10_000;
+    public const int PopAetherLiftRows = 3;
+    public const int PopPowerMeterPoints = 2_500;
+    public const float PopShotSpeed = 1700f;
+    public const int PopFreezeShots = 3;
+    public const int PopWindLiftRows = 2;
+    public const float PopFinalFreeSeconds = 20f;
+    public const float PopFinalRowSeconds = 15f;
+    public const int PopFinalThinBubbles = 21;
+    public const float PopFinalRefillSeconds = 2f;
+    public const float PopFinalBarFirstSeconds = 60f;
+    public const float PopFinalBarGapStart = 90f;
+    public const float PopFinalBarGapCut = 8f;
+    public const float PopFinalBarGapFloor = 15f;
+    public const int PopMaxPointsPerSecond = 25_000;
+    public const int PopMaxDrop = 120;
+    public const double PopMinSecondsPerRound = 6.0;
+    public const int PopMaxRound = 20;
 }

@@ -15,8 +15,9 @@ using Dalamud.Interface;
 
 namespace AetherOS.Apps.Aetherling.Screens;
 
-/// <summary>What there is to know about it: the tip, the facts, and once it is grown the radar of
-/// everything it has ever eaten. This page reports; the switches live in settings.</summary>
+/// <summary>What there is to know about it: the facts, and once it is grown the radar of everything it
+/// has ever eaten and the next unlock on every element. This page reports; the switches live in
+/// settings.</summary>
 internal sealed class PetAboutScreen(IAetherlingHost host, PetRuntime pet)
 {
     private float _reveal;
@@ -24,6 +25,8 @@ internal sealed class PetAboutScreen(IAetherlingHost host, PetRuntime pet)
     private IReadOnlyList<StoreInventoryItemDto>? _inventory;
     private IReadOnlyList<StoreInventoryItemDto>? _pendingInventory;
     private bool _inventoryLoading;
+
+    public event Action<AetherlingElement>? UnlocksRequested;
 
     public void OnShow()
     {
@@ -57,7 +60,7 @@ internal sealed class PetAboutScreen(IAetherlingHost host, PetRuntime pet)
         {
             if (body)
             {
-                DrawBody(ctx, ImGui.GetWindowDrawList(), origin, size, core, name, now, dt);
+                DrawBody(ctx, ImGui.GetWindowDrawList(), origin, size, core, dt);
             }
         }
         finally
@@ -66,19 +69,22 @@ internal sealed class PetAboutScreen(IAetherlingHost host, PetRuntime pet)
         }
     }
 
+    /// <summary>Where the radar was last drawn, for the tour's ring.</summary>
+    public (Vector2 TL, Vector2 BR)? RadarRect { get; private set; }
+
+    /// <summary>Where the attuned-element row was last drawn, for the tour's ring.</summary>
+    public (Vector2 TL, Vector2 BR)? ElementRowRect { get; private set; }
+
     /// <summary>Everything under the header, laid out from the scrolled cursor so it moves as a block.</summary>
     private void DrawBody(OsAppContext ctx, ImDrawListPtr dl, Vector2 origin, Vector2 size,
-        AetherlingDto core, string name, double now, float dt)
+        AetherlingDto core, float dt)
     {
         var top = ImGui.GetCursorScreenPos().Y;
         var y = top;
+        ElementRowRect = null;
 
-        var tip = core.Adult is null
-            ? string.Format(ctx.Localize("os.aetherling_about_growing_tip"), name)
-            : string.Format(ctx.Localize("os.aetherling_about_adult_tip"), name);
-        y += PetPageUi.TipCard(ctx, dl, origin, size, y, tip, now);
-
-        var born = (core.HatchedAtUtc ?? core.CreatedAtUtc).ToLocalTime().ToString("d MMM yyyy");
+        var born = (core.Adult?.AdultAtUtc ?? core.HatchedAtUtc ?? core.CreatedAtUtc)
+            .ToLocalTime().ToString("d MMM yyyy");
         y += PetPageUi.Row(dl, origin, size, y, FontAwesomeIcon.Egg,
             ctx.Localize("os.aetherling_status_born"), born);
         y += PetPageUi.Row(dl, origin, size, y, FontAwesomeIcon.Heart,
@@ -89,9 +95,12 @@ internal sealed class PetAboutScreen(IAetherlingHost host, PetRuntime pet)
             // The attuned element leads, because it is the one in play; the born one is only named when a
             // form has moved it, where "it hatched as this" is the thing that would otherwise be lost.
             var attuned = Elements.Find(PetState.AttunedElement(core));
+            var elementRowTop = y;
             y += PetPageUi.Row(dl, origin, size, y, FontAwesomeIcon.Bolt,
                 ctx.Localize("os.aetherling_status_element"),
                 attuned is { } def ? ctx.Localize(Elements.NameKey(def)) : "");
+            ElementRowRect = (new Vector2(origin.X + Px(18f), elementRowTop),
+                new Vector2(origin.X + size.X - Px(18f), y - Px(8f)));
             if (Elements.Find(adult.Element) is { } hatchedAs && hatchedAs.Value != attuned?.Value)
             {
                 y += PetPageUi.Row(dl, origin, size, y, FontAwesomeIcon.Dna,
@@ -107,16 +116,12 @@ internal sealed class PetAboutScreen(IAetherlingHost host, PetRuntime pet)
             }
             var radius = MathF.Min(size.X * 0.28f, Px(96f));
             var centre = new Vector2(origin.X + (size.X * 0.5f), y + radius + Px(34f));
+            RadarRect = (centre - new Vector2(radius + Px(10f)), centre + new Vector2(radius + Px(10f)));
             RadarChart.Draw(ctx, dl, centre, radius, counts,
                 Math.Max(1, adult.ShellFeedThreshold2 > 0 ? adult.ShellFeedThreshold2 : adult.DietTurnThreshold),
                 _reveal * _reveal * (3f - (2f * _reveal)));
 
             y = DrawFoodHistory(ctx, dl, origin, size, core, adult, centre.Y + radius + Px(20f), counts);
-        }
-        else
-        {
-            y += PetPageUi.Row(dl, origin, size, y, FontAwesomeIcon.Seedling,
-                ctx.Localize("os.aetherling_status_stage"), ctx.Localize("os.aetherling_status_growing"));
         }
 
         // Nothing above submitted an item, so the child has no idea how far it reaches: hand it the height
@@ -125,9 +130,8 @@ internal sealed class PetAboutScreen(IAetherlingHost host, PetRuntime pet)
         ImGui.Dummy(new Vector2(1f, y - top + Px(12f)));
     }
 
-    /// <summary>Everything it has eaten, element by element, and what that earned. The radar says the
-    /// shape of a diet; this says the numbers, and for a flourish not yet earned how far off it is.
-    /// Returns the y it ended at.</summary>
+    /// <summary>The next reward on each element's ladder. A row leads to the complete set of mystery
+    /// unlocks without disclosing a form before its ticket is revealed.</summary>
     private float DrawFoodHistory(
         OsAppContext ctx,
         ImDrawListPtr dl,
@@ -142,56 +146,110 @@ internal sealed class PetAboutScreen(IAetherlingHost host, PetRuntime pet)
         var owned = PetState.OwnedRefs(_inventory, StoreItemKind.AetherlingReaction);
         var ownedShells = PetState.OwnedRefs(_inventory, StoreItemKind.AetherlingShell);
         var pad = Px(18f);
-        var rowH = Px(34f);
+        var rowH = Px(76f);
         var y = top;
 
-        dl.AddText(new Vector2(origin.X + pad, y), Look.U32(Look.Whisper, 0.8f),
-            ctx.Localize("os.aetherling_about_diet_title"));
-        y += Px(24f);
+        var headingH = Px(38f);
+        var headingTl = new Vector2(origin.X + pad, y);
+        var headingW = size.X - (pad * 2f);
+        ImGui.SetCursorScreenPos(headingTl);
+        if (ImGui.InvisibleButton("##aetherlingUnlocksHeading", new Vector2(headingW, headingH)))
+        {
+            UnlocksRequested?.Invoke(AetherlingElement.None);
+        }
+        var headingHovered = ImGui.IsItemHovered();
+        if (headingHovered)
+        {
+            HandOnHover();
+        }
+        dl.AddRectFilled(headingTl, headingTl + new Vector2(headingW, headingH),
+            Look.U32(Look.Crystal with { W = headingHovered ? 0.13f : 0.06f }), Px(11f));
+        dl.AddText(new Vector2(headingTl.X + Px(12f), y + Px(9f)), Look.U32(Look.CrystalPale, 0.94f),
+            ctx.Localize("os.aetherling_unlocks"));
+        IconDraw.AddCentered(dl, FontAwesomeIcon.ChevronRight, Px(11f),
+            new Vector2(headingTl.X + headingW - Px(18f), y + (headingH * 0.5f)), Look.U32(Look.Whisper, 0.8f));
+        y += headingH + Px(8f);
 
         for (var i = 0; i < Elements.All.Count; i++)
         {
             var element = Elements.All[i];
             var count = counts[i];
-            var centre = new Vector2(origin.X + pad + Px(12f), y + (rowH * 0.5f));
-            DrawCrystal(ctx, dl, element, centre, Px(22f));
-            dl.AddText(new Vector2(origin.X + pad + Px(32f), y + Px(9f)),
-                Look.U32(Look.Body, 0.92f), ctx.Localize(Elements.NameKey(element)));
+            var rowTl = new Vector2(origin.X + pad, y);
+            var rowW = size.X - (pad * 2f);
+            ImGui.SetCursorScreenPos(rowTl);
+            if (ImGui.InvisibleButton($"##aetherlingUnlockRow{element.Key}", new Vector2(rowW, rowH)))
+            {
+                UnlocksRequested?.Invoke(element.Value);
+            }
+            var hovered = ImGui.IsItemHovered();
+            if (hovered)
+            {
+                HandOnHover();
+            }
+            dl.AddRectFilled(rowTl, rowTl + new Vector2(rowW, rowH),
+                Look.U32(element.Accent with { W = hovered ? 0.14f : 0.07f }), Px(13f));
 
-            // The element's ladder: the flourish, then the two shells. The meter always shows the
-            // next rung still to earn, and the "learned" chip means the whole ladder is climbed.
             var threshold = Math.Max(1, adult.DietTurnThreshold);
             var earned = owned.Contains(ReactionDef.FindSignature(element.Key)?.ItemRef ?? "");
+            string? shellRef = null;
             if (earned && adult.ShellFeedThreshold > 0
                 && !ownedShells.Contains(ShellCatalog.FirstFor(element.Key)))
             {
                 threshold = Math.Max(1, adult.ShellFeedThreshold);
                 earned = false;
+                shellRef = ShellCatalog.FirstFor(element.Key);
             }
             else if (earned && adult.ShellFeedThreshold2 > 0
                 && !ownedShells.Contains(ShellCatalog.SecondFor(element.Key)))
             {
                 threshold = Math.Max(1, adult.ShellFeedThreshold2);
                 earned = false;
+                shellRef = ShellCatalog.SecondFor(element.Key);
             }
             var waiting = TicketWaiting(core, element.Value);
-            var right = origin.X + size.X - pad;
-            if (earned)
+
+            var artSide = Px(50f);
+            var artTl = rowTl + new Vector2(Px(10f), (rowH - artSide) * 0.5f);
+            if (shellRef is { Length: > 0 })
             {
-                DrawChip(dl, right, y + (rowH * 0.5f), ctx.Localize("os.aetherling_about_learned"), element.Accent);
-            }
-            else if (waiting)
-            {
-                DrawChip(dl, right, y + (rowH * 0.5f), ctx.Localize("os.aetherling_ticket_chip"), Look.Spark);
+                dl.AddRectFilled(artTl, artTl + new Vector2(artSide),
+                    Look.U32(new Vector4(0.91f, 0.93f, 0.95f, 1f)), Px(10f));
+                ShellPreview.PaintSilhouette(dl, shellRef, artTl + new Vector2(artSide * 0.5f),
+                    artSide * 0.82f, 0xFF050505u);
             }
             else
             {
+                DrawCrystal(ctx, dl, element, artTl + new Vector2(artSide * 0.5f), Px(30f));
+            }
+
+            var textX = artTl.X + artSide + Px(12f);
+            dl.AddText(new Vector2(textX, y + Px(12f)), Look.U32(Look.Body, 0.94f),
+                ctx.Localize(Elements.NameKey(element)));
+            var status = earned
+                ? ctx.Localize("os.aetherling_unlock_earned")
+                : waiting ? ctx.Localize("os.aetherling_unlock_ready")
+                : shellRef is { Length: > 0 }
+                    ? string.Format(ctx.Localize("os.aetherling_unlock_more_form"), Math.Max(0, threshold - count))
+                    : string.Format(ctx.Localize("os.aetherling_unlock_more_reaction"),
+                        Math.Max(0, threshold - count), ctx.Localize(Elements.NameKey(element)));
+            var statusScale = 0.78f;
+            var statusRoom = rowTl.X + rowW - Px(30f) - textX;
+            if (ImGui.CalcTextSize(status).X * statusScale > statusRoom)
+            {
+                statusScale = MathF.Max(0.62f, statusRoom / ImGui.CalcTextSize(status).X);
+            }
+            dl.AddText(ImGui.GetFont(), ImGui.GetFontSize() * statusScale, new Vector2(textX, y + Px(37f)),
+                Look.U32(Look.Whisper, 0.86f), status);
+
+            var right = rowTl.X + rowW - Px(30f);
+            if (!earned && !waiting)
+            {
                 var label = $"{Math.Min(count, threshold)}/{threshold}";
                 var labelW = ImGui.CalcTextSize(label).X;
-                dl.AddText(new Vector2(right - labelW, y + Px(9f)), Look.U32(Look.Whisper, 0.85f), label);
-                var trackW = Px(56f);
-                var trackX = right - labelW - Px(10f) - trackW;
-                var trackY = y + (rowH * 0.5f);
+                dl.AddText(new Vector2(right - labelW, y + Px(12f)), Look.U32(Look.Whisper, 0.85f), label);
+                var trackW = MathF.Min(Px(82f), right - textX);
+                var trackX = textX;
+                var trackY = y + rowH - Px(13f);
                 dl.AddRectFilled(new Vector2(trackX, trackY - Px(2f)), new Vector2(trackX + trackW, trackY + Px(2f)),
                     Look.U32(Look.Whisper, 0.25f), Px(2f));
                 var fill = trackW * Math.Clamp(count / (float)threshold, 0f, 1f);
@@ -201,7 +259,9 @@ internal sealed class PetAboutScreen(IAetherlingHost host, PetRuntime pet)
                         Look.U32(element.Accent, 0.9f), Px(2f));
                 }
             }
-            y += rowH;
+            IconDraw.AddCentered(dl, FontAwesomeIcon.ChevronRight, Px(10f),
+                new Vector2(rowTl.X + rowW - Px(15f), y + (rowH * 0.5f)), Look.U32(Look.Whisper, 0.72f));
+            y += rowH + Px(7f);
         }
         return y;
     }

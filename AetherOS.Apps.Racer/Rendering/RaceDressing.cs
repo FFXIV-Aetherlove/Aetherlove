@@ -32,8 +32,8 @@ using Dalamud.Bindings.ImGui;
 /// <para><b>What it deliberately does not do:</b> no spatial index (the walk is at most 300 structs
 /// behind a squared-distance reject), no thinning of the scatter by rank, no zoom-keyed detail
 /// switches (every one of them popped as the camera eased, and two of them never fired at all under
-/// the north-up camera), and no coupling to the weather beyond
-/// <see cref="PrevailingLean"/>.</para>
+/// the north-up camera), and no coupling to the sky beyond <see cref="PrevailingLean"/>, the gust
+/// handed to <see cref="Draw"/> and the transient light read through <see cref="LightAt"/>.</para>
 /// </summary>
 internal sealed class RaceDressing
 {
@@ -91,6 +91,14 @@ internal sealed class RaceDressing
     private const byte Moss = 10;
     private const byte Tick = 11;
     private const byte Ledge = 12;
+
+    /// <summary>The seven materials, one per theme index.</summary>
+    private const byte MatBasalt = 0;
+    private const byte MatWindstone = 1;
+    private const byte MatWet = 2;
+    private const byte MatStorm = 3;
+    private const byte MatEarth = 4;
+    private const byte MatIce = 5;
 
     /// <summary>The lateral corridor, in world bounds, measured from the rail outward: a bare verge
     /// the wash starts at, the strip no ink may enter, how far a solid may reach, and how far the
@@ -180,6 +188,52 @@ internal sealed class RaceDressing
     private const float DetailPx = 18f;
     private const float PadFrac = 1.6f;
 
+    /// <summary>The material pass's own sizes, in design pixels: under <see cref="FacesPx"/> a solid
+    /// keeps a single fill; from <see cref="MarksPx"/> a quarter of the instances carry a mark.</summary>
+    private const float FacesPx = 15f;
+    private const float MarksPx = 28f;
+
+    /// <summary>The value planes: how far the crown lifts toward the glow per material, the lit
+    /// flank's share of that lift, how far the dark flank sinks toward the night, the edge-normal
+    /// dot products that sort the three, and the hub's pull toward the apex.</summary>
+    private const float FlankShare = 0.43f;
+    private const float DarkFlankMix = 0.34f;
+    private const float CrownDot = 0.62f;
+    private const float FlankDot = 0.06f;
+    private const float HubTopPull = 0.16f;
+
+    /// <summary>The plants' breeze and the gust's bend on top of it, the wet stone's slow highlight,
+    /// and how far transient light pushes a solid's fill and glow.</summary>
+    private const float BreezeSwing = 0.10f;
+    private const float BreezeRate = 1.4f;
+    private const float GustBend = 0.34f;
+    private const float WetSwing = 0.10f;
+    private const float WetRate = 0.72f;
+    private const float LightFillMix = 0.26f;
+    private const float LightGlowMix = 0.42f;
+    private static readonly Vector4 LightWarm = new(1f, 0.93f, 0.76f, 1f);
+
+    /// <summary>The share of wind flecks that are laid down as low windstones, and the scale they
+    /// take so the stone's footprint sits inside the fleck's already-checked one.</summary>
+    private const uint WindstoneMask = 3u;
+    private const float WindstoneScale = 0.68f;
+
+    /// <summary>Paired section landmarks: the cap, the walk that finds a section's first view, how
+    /// far out they stand, the road disc they claim at placement, the verge reach the final
+    /// clearance may step them within, the two silhouettes' scales and the zoom under which they
+    /// are not drawn.</summary>
+    private const int LandmarkCap = 6;
+    private const float LandmarkFirstS = 12f;
+    private const float LandmarkStep = 10f;
+    private const float LandmarkOut = 3.5f;
+    private const float LandmarkClaim = 2.2f;
+    private const float LandmarkReach = 8f;
+    private const float LandmarkTallScale = 1.35f;
+    private const float LandmarkSideScale = 0.68f;
+    private const float LandmarkSideOffset = 0.60f;
+    private const float LandmarkMinZoom = 8f;
+    private const uint LandmarkSideSalt = 0x614fu;
+
     /// <summary>The widest a solid reaches from its own anchor, in bounds: the world cull's pad.</summary>
     private const float DoodadReach = 2.6f;
 
@@ -198,6 +252,39 @@ internal sealed class RaceDressing
     private static readonly Vector4 ClimbInk = new(0.95f, 0.65f, 0.4f, 0.34f);
     private static readonly Vector4 FallInk = new(0.5f, 0.75f, 0.95f, 0.34f);
 
+    /// <summary>The bank vocabulary: how far the face fill leans toward the ink, the cap's share of
+    /// the glow, the foot shadow's weight on a cut bank and an embankment, the snow cap, the wet
+    /// darkening, and the fracture stroke. Where each band sits is a fraction of the face from the
+    /// rail outward.</summary>
+    private const float BankFillMix = 0.14f;
+    private const float BankFillLitGain = 0.12f;
+    private const float BankFaceAlpha = 0.92f;
+    private const float BankCapAlpha = 0.94f;
+    private const float BankCapMix = 0.17f;
+    private const float BankCapLitGain = 0.10f;
+    private const float BankSnowCapMix = 0.35f;
+    private const float BankFootCut = 0.38f;
+    private const float BankFootFill = 0.26f;
+    private const float BankCapStart = 0.78f;
+    private const float BankCapEnd = 0.22f;
+    private const float BankFootStart = 0.86f;
+    private const float BankFootEnd = 0.14f;
+    private const float BankEdgeAlpha = 0.18f;
+    private const float BankEdgeLitGain = 0.14f;
+    private const float BankEdgeWetAlpha = 0.30f;
+    private const float BankSeamAlpha = 0.20f;
+    private const float BankSeamPx = 14f;
+    private const float BankFracturePx = 26f;
+    private static readonly Vector4 BankSnowCap = new(0.72f, 0.82f, 0.88f, 1f);
+    private static readonly Vector4 BankWetTint = new(0.80f, 0.86f, 0.92f, 1f);
+    private static readonly Vector4 BankFootInk = new(0.025f, 0.028f, 0.041f, 1f);
+    private static readonly Vector4 BankFractureInk = new(0.025f, 0.025f, 0.035f, 0.32f);
+
+    /// <summary>The clearance a terrace rung keeps from a bank face, in bounds: its own stroke.</summary>
+    private const float RungMargin = 0.12f;
+    private const byte LeftSide = 1;
+    private const byte RightSide = 2;
+
     /// <summary>The two fixed rings the shapes reuse every frame, unit-sized and taken once. The
     /// contact ellipse is drawn for six of the thirteen kinds, so its eight sines were the largest
     /// block of transcendentals in the pass.</summary>
@@ -205,9 +292,12 @@ internal sealed class RaceDressing
     private static readonly Vector2[] Ring7 = BuildRing(7);
 
     private DressTheme[] themes = [];
+    private bool looped;
     private Station[] stations = [];
     private Terrace[] terraces = [];
     private Doodad[] doodads = [];
+    private Landmark[] landmarks = [];
+    private byte[] rows = [];
     private AetherRaceLive.Track? built;
     private int baseTheme;
     private float maxHalf;
@@ -217,6 +307,10 @@ internal sealed class RaceDressing
     /// air follow the grass rather than fight it.</summary>
     public float PrevailingLean =>
         this.themes.Length > 0 && this.themes[this.baseTheme].Lean < 0f ? -1f : 1f;
+
+    /// <summary>The transient light on a world point, 0..1: a meteor's impact, a strike's sheet
+    /// light. Bound once by the stage; null is darkness. Asked per drawn solid, so it must be cheap.</summary>
+    public Func<Vector2, float>? LightAt { get; set; }
 
     /// <summary>Places and bakes the whole course's dressing. Called once, off the race seed and the
     /// course name, on a stream of its own so nothing decorative can perturb the sim.</summary>
@@ -239,19 +333,111 @@ internal sealed class RaceDressing
         }
 
         this.maxHalf = widest * 0.5f;
+        this.rows = rows;
         this.BakeGround(track, rows);
         this.BakeDoodads(seed, track, course, rows);
+        this.BakeLandmarks(seed, track, rows);
         this.built = track;
     }
 
-    /// <summary>Everything on the verge, in one pass: wash, terraces, solids. Draws after the ribbon
-    /// so nothing softens a rail, and before the field so nothing occludes a runner.</summary>
+    /// <summary>The last generation stage, run once after the tapered relief exists: every solid,
+    /// every landmark and every terrace rung is resolved against the final bank faces and every road
+    /// branch. A solid or landmark keeps its anchor, else moves outward by up to three fixed steps
+    /// within its reach, else is dropped; a rung is kept or dropped per side. No RNG is drawn, order is kept, and a retained
+    /// instance keeps its scale, phase, bits, kind and theme. Never called per frame.</summary>
+    public void ClearScenery(AetherRaceLive.Track track, RaceTerrainRelief.Profile relief, RaceRoadClearance road)
+    {
+        if (!ReferenceEquals(this.built, track))
+        {
+            return;
+        }
+
+        // Runs on a flat course too: the rendered envelope is wider than the placement one, and
+        // the road check with it is part of the pass.
+        var placement = new RaceSceneryPlacement(relief);
+        Func<Vector2, float, bool> roadClear = road.Clear;
+        var kept = 0;
+        for (var i = 0; i < this.doodads.Length; i++)
+        {
+            var d = this.doodads[i];
+            var radius = d.Scale * VisualFootprint(d.Kind);
+            if (placement.TryPlace(d.World, radius, track, Reach, roadClear, out var at))
+            {
+                this.doodads[kept++] = d with { World = at };
+            }
+        }
+
+        if (kept != this.doodads.Length)
+        {
+            Array.Resize(ref this.doodads, kept);
+        }
+
+        kept = 0;
+        for (var i = 0; i < this.landmarks.Length; i++)
+        {
+            var l = this.landmarks[i];
+            if (placement.TryPlace(l.World, LandmarkRadius(in this.themes[l.Theme]), track, LandmarkReach, roadClear, out var at))
+            {
+                this.landmarks[kept++] = l with { World = at };
+            }
+        }
+
+        if (kept != this.landmarks.Length)
+        {
+            Array.Resize(ref this.landmarks, kept);
+        }
+
+        kept = 0;
+        for (var i = 0; i < this.terraces.Length; i++)
+        {
+            var t = this.terraces[i];
+            var sides = (byte)((RungsClear(placement, in t, -1) ? LeftSide : 0) | (RungsClear(placement, in t, 1) ? RightSide : 0));
+            if (sides != 0)
+            {
+                this.terraces[kept++] = t with { Sides = sides };
+            }
+        }
+
+        if (kept != this.terraces.Length)
+        {
+            Array.Resize(ref this.terraces, kept);
+        }
+    }
+
+    private static bool RungsClear(RaceSceneryPlacement placement, in Terrace t, int side)
+    {
+        for (var r = 0; r < RungsPerSide; r++)
+        {
+            var from = RungStart(in t, side, r);
+            var to = from + (t.F * RungLength);
+            if (!placement.Clear(from, RungMargin) || !placement.Clear(Vector2.Lerp(from, to, 0.5f), RungMargin)
+                || !placement.Clear(to, RungMargin))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>Where a rung begins, in world bounds. The draw path steps the same offsets in screen
+    /// space from one projected anchor.</summary>
+    private static Vector2 RungStart(in Terrace t, int side, int r) =>
+        t.P + (t.N * (side * (t.Half + RungLatBase + (r * RungLatStep)))) + (t.F * (t.Pitch * r * RungPitch));
+
+    /// <summary>Everything on the verge, in one pass: wash, bank faces, terraces, solids. Draws after
+    /// the ribbon so nothing softens a rail, and before the field so nothing occludes a runner.</summary>
     /// <param name="camS">The arc length the camera is looking at, for the wash window.</param>
+    /// <param name="relief">The race's bank faces, drawn over the wash and under everything standing.</param>
+    /// <param name="weather">The sky's element, for the wet and snow bank palettes.</param>
     /// <param name="clock">The drawn sim clock, for the three animated shapes.</param>
-    /// <param name="reduceMotion">Freezes that clock. Every instance keeps its own phase, so the
-    /// verge keeps its variety while nothing on it moves.</param>
+    /// <param name="reduceMotion">Freezes that clock and the gust. Every instance keeps its own phase,
+    /// so the verge keeps its variety while nothing on it moves; the ice glints stand down too.</param>
+    /// <param name="gust">The sky's live gust, signed by the prevailing lean, so the plants bend with
+    /// the same air the marks ride.</param>
     public void Draw(ImDrawListPtr dl, AetherRaceLive.Track track, Vector2 origin, Vector2 size,
-        float camS, in StageCam cam, float clock, bool reduceMotion)
+        float camS, in StageCam cam, RaceTerrainRelief.Profile relief, string weather, float clock, bool reduceMotion,
+        float gust)
     {
         // Identity, not a count: every Route course has the same station count, so a length test
         // cannot tell a dressing baked for the wrong track from one baked for this one.
@@ -261,10 +447,19 @@ internal sealed class RaceDressing
         }
 
         var radius = cam.VisibleRadius(origin, size);
+        var live = new Live(reduceMotion ? 0f : clock, reduceMotion ? 0f : gust, !reduceMotion,
+            !reduceMotion && weather == "earth");
         this.DrawWash(dl, origin, size, camS, radius, in cam);
+        this.DrawBanks(dl, track, origin, size, in cam, relief, weather);
         this.DrawTerraces(dl, origin, size, radius, in cam);
-        this.DrawDoodads(dl, origin, size, radius, in cam, reduceMotion ? 0f : clock);
+        this.DrawLandmarks(dl, origin, size, in cam, in live);
+        this.DrawDoodads(dl, origin, size, radius, in cam, in live);
     }
+
+    /// <summary>What moves this frame: the drawn clock, the signed gust, whether glints may fire, and
+    /// whether dust curls at the foot of the earth props. All four are zero or false under reduced
+    /// motion, so one struct carries the whole freeze.</summary>
+    private readonly record struct Live(float Clock, float Gust, bool Shimmer, bool Dust);
 
     private readonly record struct DressTheme(
         Vector4 Wash,
@@ -276,7 +471,8 @@ internal sealed class RaceDressing
         byte KindC,
         byte Tall,
         float Density,
-        float Lean);
+        float Lean,
+        byte Material);
 
     /// <summary>One wash station: an anchor, the lateral unit, the four band offsets out from it and
     /// the three packed band colours. The eased zone colour and the grade tilt are already in
@@ -292,6 +488,8 @@ internal sealed class RaceDressing
         uint Mid,
         uint Far);
 
+    /// <summary><see cref="Sides"/> is the mask of sides still drawn after the bank clearance: both
+    /// at the bake, either or both dropped where a rung would cross a face.</summary>
     private readonly record struct Terrace(
         Vector2 P,
         Vector2 N,
@@ -299,7 +497,8 @@ internal sealed class RaceDressing
         float Half,
         float Pitch,
         uint Ink,
-        float Radius);
+        float Radius,
+        byte Sides);
 
     private readonly record struct Doodad(
         Vector2 World,
@@ -308,6 +507,15 @@ internal sealed class RaceDressing
         uint Bits,
         byte Kind,
         byte Theme);
+
+    /// <summary>One paired silhouette at a section's first view: the theme's tall kind with its
+    /// third kind beside it. <see cref="Phase"/> is stored, never derived, so a landmark dropped by
+    /// the clearance cannot shift the phase of the ones after it.</summary>
+    private readonly record struct Landmark(
+        Vector2 World,
+        byte Theme,
+        uint Bits,
+        float Phase);
 
     private static int ThemeIndex(string element) => element switch
     {
@@ -368,7 +576,8 @@ internal sealed class RaceDressing
             c,
             tall,
             density,
-            lean);
+            lean,
+            (byte)ThemeIndex(element));
     }
 
     /// <summary>The alpha a wash must carry to land at a given luminance over the night beneath it.
@@ -380,10 +589,11 @@ internal sealed class RaceDressing
         return lit <= night + 0.0001f ? 0f : Math.Clamp((target - night) / (lit - night), 0f, 1f);
     }
 
-    private static int StationCount(AetherRaceLive.Track track) => (int)(track.Length / StationStep) + 2;
+    /// <summary>The stretch of road the ground is baked over: one lap on a lap course, the whole race
+    /// otherwise.</summary>
+    private static float BakedSpan(AetherRaceLive.Track track) => track.LapRows > 0 ? track.LapLength : track.Length;
 
-    private static int Row(AetherRaceLive.Track track, float s) =>
-        Math.Clamp((int)MathF.Round(s / track.Step), 0, track.Count - 1);
+    private static int StationCount(AetherRaceLive.Track track) => (int)(BakedSpan(track) / StationStep) + 2;
 
     /// <summary>The widest half-width within a couple of bounds either way. A solid that clears the
     /// road here must still clear it where the road is committing to a narrowing.</summary>
@@ -392,7 +602,7 @@ internal sealed class RaceDressing
         var half = track.At(s).Width * 0.5f;
         for (var d = -2.5f; d <= 2.5f; d += 1.25f)
         {
-            var at = Math.Clamp(s + d, 0f, track.Length);
+            var at = track.LapRows > 0 ? s + d : Math.Clamp(s + d, 0f, track.Length);
             half = MathF.Max(half, track.At(at).Width * 0.5f);
         }
 
@@ -409,16 +619,17 @@ internal sealed class RaceDressing
 
         for (var i = 0; i < count; i++)
         {
-            var s = MathF.Min(i * StationStep, track.Length);
+            var s = MathF.Min(i * StationStep, BakedSpan(track));
             var here = track.At(s);
-            wash = Vector4.Lerp(wash, this.themes[rows[Row(track, s)]].Wash, ZoneEase);
+            wash = Vector4.Lerp(wash, this.themes[rows[track.RowAt(s)]].Wash, ZoneEase);
 
             var half = (here.Width * 0.5f) + Verge;
             var fit = Math.Clamp(here.Width / FitWidth, FitFloor, 1f);
             var tilt = here.Grade < 0f
                 ? MathF.Min(DescentCap, -here.Grade * DescentGain)
                 : -MathF.Min(ClimbCap, here.Grade * ClimbGain);
-            var alpha = wash.W * (1f + tilt);
+            // The verge fades into a deck's shadow rather than ending at a line across it.
+            var alpha = wash.W * (1f + tilt) * (1f - track.DeckAt(s).Under);
             var n = new Vector2(-MathF.Sin(here.Heading), MathF.Cos(here.Heading));
 
             built[i] = new Station(
@@ -454,10 +665,12 @@ internal sealed class RaceDressing
                 half,
                 climb ? 1f : -1f,
                 ElementFx.U32(pen with { W = pen.W * (SteepFloor + (SteepGain * steep)) }),
-                MathF.Sqrt((lat * lat) + (fwd * fwd))));
+                MathF.Sqrt((lat * lat) + (fwd * fwd)),
+                LeftSide | RightSide));
         }
 
         this.stations = built;
+        this.looped = track.LapRows > 0;
         this.terraces = [.. rungs];
     }
 
@@ -471,10 +684,10 @@ internal sealed class RaceDressing
         for (var side = -1; side <= 1; side += 2)
         {
             var s = TapeClear + ((float)rng.Next() * TapeClear);
-            while (s < track.Length - TapeClear && n < Cap)
+            while (s < BakedSpan(track) - TapeClear && n < Cap)
             {
                 var here = track.At(s);
-                var row = rows[Row(track, s)];
+                var row = rows[track.RowAt(s)];
                 var theme = this.themes[row];
                 var half = HalfWidth(track, s);
                 var open = Math.Clamp(half / OpenRef, OpenMin, OpenMax);
@@ -526,14 +739,28 @@ internal sealed class RaceDressing
                 var hi = half + Reach - radius;
                 var off = lo + (u * MathF.Max(0f, hi - lo) * MathF.Min(1f, OffBase + (OffGain * open)));
                 var left = new Vector2(-MathF.Sin(here.Heading), MathF.Cos(here.Heading));
+                var at = new Vector2(here.X, here.Y) + (left * (side * off));
 
-                placed[n++] = new Doodad(
-                    new Vector2(here.X, here.Y) + (left * (side * off)),
-                    scale,
-                    (float)rng.Next() * MathF.Tau,
-                    unchecked((uint)(rng.Next() * BitsScale)),
-                    kind,
-                    row);
+                // Nothing stands on any part of the road: where a course crosses itself, the verge of
+                // one piece of road is the middle of another.
+                if (track.RoadClaims(at.X, at.Y, radius))
+                {
+                    s += stride;
+                    continue;
+                }
+
+                var phase = (float)rng.Next() * MathF.Tau;
+                var bits = unchecked((uint)(rng.Next() * BitsScale));
+
+                // A quarter of the wind flecks lie down as low windstones. Decided after the
+                // placement check and off bits already drawn, so nothing else on the stream moves.
+                if (kind == Fleck && (bits & WindstoneMask) == 0u)
+                {
+                    kind = Stone;
+                    scale *= WindstoneScale;
+                }
+
+                placed[n++] = new Doodad(at, scale, phase, bits, kind, row);
                 s += stride;
             }
         }
@@ -542,25 +769,76 @@ internal sealed class RaceDressing
         Array.Copy(placed, this.doodads, n);
     }
 
-    /// <summary>The widest half-extent a kind can produce at full jitter, in multiples of its own
-    /// scale, shadow and drift included. The clearance solve rests on this table: a branch that
-    /// grows past its entry puts ink on the road.</summary>
+    /// <summary>At most six paired silhouettes, one at the first view of each named section, on
+    /// alternating flanks. Placed through the same road claim as the scatter and resolved against
+    /// the banks in <see cref="ClearScenery"/>. Off the seed and the arc length, never the RNG stream.</summary>
+    private void BakeLandmarks(int seed, AetherRaceLive.Track track, byte[] rows)
+    {
+        var placed = new Landmark[LandmarkCap];
+        var n = 0;
+        var section = string.Empty;
+        var span = BakedSpan(track);
+        for (var s = LandmarkFirstS; s < span - LandmarkFirstS && n < LandmarkCap; s += LandmarkStep)
+        {
+            var here = track.At(s);
+            if (here.Section == section)
+            {
+                continue;
+            }
+
+            section = here.Section;
+            var flank = (n & 1) == 0 ? 1f : -1f;
+            var left = new Vector2(-MathF.Sin(here.Heading), MathF.Cos(here.Heading));
+            var at = new Vector2(here.X, here.Y) + (left * (flank * ((here.Width * 0.5f) + LandmarkOut)));
+            if (track.RoadClaims(at.X, at.Y, LandmarkClaim))
+            {
+                continue;
+            }
+
+            placed[n] = new Landmark(at, rows[track.RowAt(s)], unchecked((uint)seed ^ ((uint)s * 2654435761u)), n);
+            n++;
+        }
+
+        this.landmarks = new Landmark[n];
+        Array.Copy(placed, this.landmarks, n);
+    }
+
+    /// <summary>A landmark's rendered envelope in bounds: the tall silhouette, or the side one
+    /// with its screen offset, whichever reaches further.</summary>
+    private static float LandmarkRadius(in DressTheme th) => MathF.Max(
+        LandmarkTallScale * VisualFootprint(th.Tall),
+        LandmarkSideOffset + (LandmarkSideScale * VisualFootprint(th.KindC)));
+
+    /// <summary>The widest extent a kind can produce at full jitter, in multiples of its own scale,
+    /// as a circle about its anchor: shadow, lean and standing height included, so the envelope holds
+    /// at every camera rotation while the shape stays upright. The placement solve rests on this
+    /// table, and it feeds the RNG stream through the scale clamp, so it is not retuned lightly.</summary>
     private static float Footprint(byte kind) => kind switch
     {
         Patch => 1.34f,
         Ledge => 1.04f,
-        Stone => 0.80f,
-        Spire => 0.80f,
-        Cone => 0.80f,
-        Tuft => 0.76f,
+        Stone => 1.00f,
+        Spire => 1.55f,
+        Cone => 1.45f,
+        Tuft => 1.55f,
         Tick => 0.72f,
         Fleck => 0.70f,
         Moss => 0.68f,
-        Shard => 0.62f,
-        Reed => 0.58f,
-        Flower => 0.55f,
-        _ => 0.85f,
+        Shard => 1.45f,
+        Reed => 1.55f,
+        Flower => 1.45f,
+        _ => 1.30f,
     };
+
+    /// <summary>The rendered envelope the final clearance checks: the placement footprint, the
+    /// drifting fleck's elevated halo, the moss bed's blades, and a stroke margin at the smallest
+    /// visible size. Kept apart from <see cref="Footprint"/> so it never feeds the placement RNG.</summary>
+    private static float VisualFootprint(byte kind) => (kind switch
+    {
+        Fleck => 1.30f,
+        Moss => 0.85f,
+        _ => Footprint(kind),
+    }) + 0.10f;
 
     /// <summary>How a kind spends its height, so a flat one does not run away with the footprint and
     /// a tall one can afford more.</summary>
@@ -593,8 +871,10 @@ internal sealed class RaceDressing
         // The window is arc length while the terraces and the solids cull on world distance. That
         // is only conservative while no course folds back on itself inside VisibleRadius; the
         // tightest radius the roster authors is 18 bounds, which does not.
-        var last = Math.Min(this.stations.Length - 1, (int)((camS + window) / StationStep) + 1);
-        var first = Math.Max(0, (int)((camS - window) / StationStep));
+        // A lap course draws every station: the camera's distance runs past one lap and the far side
+        // of the circuit can be on stage. Band rejects each quad that is off it.
+        var last = this.looped ? this.stations.Length - 1 : Math.Min(this.stations.Length - 1, (int)((camS + window) / StationStep) + 1);
+        var first = this.looped ? 0 : Math.Max(0, (int)((camS - window) / StationStep));
 
         var have = false;
         Vector2 pl0 = default, pl1 = default, pl2 = default, pl3 = default;
@@ -690,6 +970,11 @@ internal sealed class RaceDressing
             var f = cam.ToScreenDelta(t.F);
             for (var side = -1; side <= 1; side += 2)
             {
+                if ((t.Sides & (side < 0 ? LeftSide : RightSide)) == 0)
+                {
+                    continue;
+                }
+
                 for (var r = 0; r < RungsPerSide; r++)
                 {
                     var lat = t.Half + RungLatBase + (r * RungLatStep);
@@ -707,8 +992,82 @@ internal sealed class RaceDressing
         }
     }
 
+    /// <summary>The bank faces: a broad face, a cap, a narrow foot shadow and a lit edge, with a
+    /// sediment seam and a sparse fracture once the projected face is big enough to carry them. A
+    /// cut bank (a canyon course) wears its cap on the outer side; an embankment wears it against the
+    /// road. Every band is a fraction of the same footprint, so a tapered toe tapers all of them, and
+    /// a collapsed end is drawn as a triangle. Omitted below <see cref="RaceRelief.MinZoom"/>.</summary>
+    private void DrawBanks(ImDrawListPtr dl, AetherRaceLive.Track track, Vector2 origin, Vector2 size,
+        in StageCam cam, RaceTerrainRelief.Profile relief, string weather)
+    {
+        if (cam.Zoom < Px(RaceRelief.MinZoom) || relief.Panels.Length == 0)
+        {
+            return;
+        }
+
+        var wet = weather == "water";
+        var snow = weather == "ice";
+        var seamPx = Px(BankSeamPx);
+        var fracturePx = Px(BankFracturePx);
+        var hair = Px(HairWeight);
+        var fracture = ElementFx.U32(BankFractureInk);
+        foreach (ref readonly var panel in relief.Panels.AsSpan())
+        {
+            var a = cam.ToScreen(panel.A);
+            var b = cam.ToScreen(panel.B);
+            var c = cam.ToScreen(panel.C);
+            var d = cam.ToScreen(panel.D);
+            if (!RaceRelief.OnStage(a, b, c, d, origin, size))
+            {
+                continue;
+            }
+
+            ref readonly var th = ref this.themes[this.rows[track.RowAt(panel.S)]];
+            var across = (c + d) - (a + b);
+            var normal = across.LengthSquared() > 0.001f ? Vector2.Normalize(across) : Vector2.UnitY;
+            var lit = Math.Clamp(0.5f - (Vector2.Dot(normal, ElementFx.KeyTravel) * 0.5f), 0f, 1f);
+            var fill = Vector4.Lerp(th.Fill, th.Ink, BankFillMix + (lit * BankFillLitGain));
+            if (wet)
+            {
+                fill *= BankWetTint;
+            }
+
+            var cap = Vector4.Lerp(fill, snow ? BankSnowCap : th.Glow, snow ? BankSnowCapMix : BankCapMix + (lit * BankCapLitGain));
+            RaceRelief.Face(dl, a, b, c, d, Ink(fill, BankFaceAlpha));
+
+            var top0 = panel.Cut ? BankCapStart : 0f;
+            var top1 = panel.Cut ? 1f : BankCapEnd;
+            var ta = Vector2.Lerp(a, d, top0);
+            var tb = Vector2.Lerp(b, c, top0);
+            var tc = Vector2.Lerp(b, c, top1);
+            var td = Vector2.Lerp(a, d, top1);
+            RaceRelief.Face(dl, ta, tb, tc, td, Ink(cap, BankCapAlpha));
+
+            var foot0 = panel.Cut ? 0f : BankFootStart;
+            var foot1 = panel.Cut ? BankFootEnd : 1f;
+            RaceRelief.Face(dl, Vector2.Lerp(a, d, foot0), Vector2.Lerp(b, c, foot0),
+                Vector2.Lerp(b, c, foot1), Vector2.Lerp(a, d, foot1),
+                Ink(BankFootInk, panel.Cut ? BankFootCut : BankFootFill));
+            dl.AddLine(panel.Cut ? ta : td, panel.Cut ? tb : tc,
+                Ink(th.Glow, wet ? BankEdgeWetAlpha : BankEdgeAlpha + (lit * BankEdgeLitGain)), hair);
+
+            if (panel.Height * cam.Zoom <= seamPx)
+            {
+                continue;
+            }
+
+            dl.AddLine(Vector2.Lerp(a, d, RaceTerrainRelief.SeamFrac), Vector2.Lerp(b, c, RaceTerrainRelief.SeamFrac),
+                Ink(th.Ink, BankSeamAlpha), hair);
+            if ((panel.Detail & 7u) == 0u && panel.Height * cam.Zoom > fracturePx)
+            {
+                dl.AddLine(Vector2.Lerp(a, b, 0.47f),
+                    Vector2.Lerp(Vector2.Lerp(a, b, 0.56f), Vector2.Lerp(d, c, 0.56f), 0.65f), fracture, hair);
+            }
+        }
+    }
+
     private void DrawDoodads(ImDrawListPtr dl, Vector2 origin, Vector2 size, float radius,
-        in StageCam cam, float clock)
+        in StageCam cam, in Live live)
     {
         var lod = Px(LodPx);
         var fadeSpan = Px(LodFade);
@@ -716,6 +1075,7 @@ internal sealed class RaceDressing
         var far = radius + DoodadReach;
         var farSq = far * far;
         var eye = cam.Eye;
+        var lightAt = this.LightAt;
         Span<Vector2> poly = stackalloc Vector2[12];
 
         for (var i = 0; i < this.doodads.Length; i++)
@@ -741,9 +1101,71 @@ internal sealed class RaceDressing
                 continue;
             }
 
-            DrawShape(dl, at, px, this.themes[d.Theme], d.Kind, d.Phase, d.Bits, clock,
-                px >= detail, fade, poly);
+            var light = lightAt?.Invoke(d.World) ?? 0f;
+            var theme = Lit(in this.themes[d.Theme], light, live.Clock, d.Phase);
+            var detailed = px >= detail;
+            DrawShape(dl, at, px, in theme, d.Kind, d.Phase, d.Bits, live.Clock, detailed, fade, live, poly);
+            if (detailed)
+            {
+                DustCurl(dl, at, px, in theme, live.Clock, d.Phase, d.Bits, fade, in live);
+            }
         }
+    }
+
+    /// <summary>The paired landmarks, each its theme's tall kind with the third kind set beside it in
+    /// screen space. Both take the same light and gust as the scatter. Nothing under
+    /// <see cref="LandmarkMinZoom"/>: pulled back that far they are two more smudges.</summary>
+    private void DrawLandmarks(ImDrawListPtr dl, Vector2 origin, Vector2 size, in StageCam cam, in Live live)
+    {
+        if (cam.Zoom < Px(LandmarkMinZoom) || this.landmarks.Length == 0)
+        {
+            return;
+        }
+
+        var detail = Px(DetailPx);
+        var lightAt = this.LightAt;
+        Span<Vector2> poly = stackalloc Vector2[12];
+        for (var i = 0; i < this.landmarks.Length; i++)
+        {
+            ref readonly var l = ref this.landmarks[i];
+            ref readonly var th = ref this.themes[l.Theme];
+            var at = cam.ToScreen(l.World);
+            if (!StageCam.OnStage(at, origin, size, cam.Zoom * LandmarkRadius(in th)))
+            {
+                continue;
+            }
+
+            var light = lightAt?.Invoke(l.World) ?? 0f;
+            var theme = Lit(in th, light, live.Clock, l.Phase);
+            var side = cam.Zoom * LandmarkSideScale;
+            DrawShape(dl, at + new Vector2(cam.Zoom * LandmarkSideOffset, 0f), side, in theme, th.KindC, l.Phase,
+                l.Bits ^ LandmarkSideSalt, live.Clock, side >= detail, 1f, live, poly);
+            var tall = cam.Zoom * LandmarkTallScale;
+            DrawShape(dl, at, tall, in theme, th.Tall, l.Phase, l.Bits, live.Clock, tall >= detail, 1f, live, poly);
+        }
+    }
+
+    /// <summary>The theme as this instance sees it this frame: transient light warms the fill toward
+    /// the glow and the glow toward a warm white, and wet stone carries a slow moving highlight.</summary>
+    private static DressTheme Lit(in DressTheme th, float light, float clock, float phase)
+    {
+        var theme = th;
+        if (light > 0.001f)
+        {
+            theme = theme with
+            {
+                Fill = Vector4.Lerp(th.Fill, th.Glow with { W = th.Fill.W }, light * LightFillMix),
+                Glow = Vector4.Lerp(th.Glow, LightWarm with { W = th.Glow.W }, light * LightGlowMix),
+            };
+        }
+
+        if (th.Material == MatWet)
+        {
+            var wet = WetSwing * (0.5f + (0.5f * MathF.Sin((clock * WetRate) + phase)));
+            theme = theme with { Glow = Vector4.Lerp(theme.Glow, Vector4.One with { W = theme.Glow.W }, wet) };
+        }
+
+        return theme;
     }
 
     /// <summary>Six independent five-bit slices off one baked word, so a shape's variety costs one
@@ -802,15 +1224,180 @@ internal sealed class RaceDressing
         dl.AddConvexPolyFilled(ref poly[0], Ring8.Length, col);
     }
 
+    /// <summary>Broad value planes inside a convex silhouette: the top catches the upper-left key, the
+    /// lit flank takes a share of it, the far flank and the foot sink toward the night. Every face
+    /// vertex is the silhouette's own or the hub inside it, so no face reaches past the placement
+    /// bounds. Under <see cref="FacesPx"/> a single fill; the ink stroke closes the silhouette either
+    /// way and the buried base is never ruled bright. A material mark lands on a quarter of the
+    /// instances above <see cref="MarksPx"/>. At most seven faces, from a seven-vertex boulder.</summary>
+    /// <param name="poly">The silhouette, base-left round the top to base-right. Scratch after the stroke.</param>
+    private static void DrawSolid(ImDrawListPtr dl, Span<Vector2> poly, int n, in DressTheme th, float px,
+        uint bits, float phase, float t, float fade, bool shimmer, bool marks)
+    {
+        var wt = Math.Clamp(px * SilhouetteFrac, Px(SilhouetteMin), Px(SilhouetteMax));
+        var hub = Vector2.Zero;
+        var top = 0;
+        for (var i = 0; i < n; i++)
+        {
+            hub += poly[i];
+            if (poly[i].Y < poly[top].Y)
+            {
+                top = i;
+            }
+        }
+
+        hub /= n;
+        hub = Vector2.Lerp(hub, poly[top], HubTopPull);
+        if (px >= Px(FacesPx))
+        {
+            var lift = CrownLift(th.Material);
+            var crown = Ink(Vector4.Lerp(th.Fill, th.Glow, lift), th.Fill.W * fade);
+            var flank = Ink(Vector4.Lerp(th.Fill, th.Glow, lift * FlankShare), th.Fill.W * fade);
+            var dark = Ink(Vector4.Lerp(th.Fill, ElementFx.Night, DarkFlankMix), th.Fill.W * fade);
+
+            // Shared face edges must not fringe, or the facets read as a wire mesh; the stroke below
+            // smooths the outer silhouette.
+            var flags = dl.Flags;
+            dl.Flags &= ~ImDrawListFlags.AntiAliasedFill;
+            for (var i = 0; i < n; i++)
+            {
+                var a = poly[i];
+                var b = poly[(i + 1) % n];
+                var edge = b - a;
+                var length = edge.Length();
+                var light = length > 0.001f ? Vector2.Dot(new Vector2(edge.Y, -edge.X) / length, ElementFx.KeyLight) : 0f;
+                dl.AddTriangleFilled(a, b, hub, light > CrownDot ? crown : light > FlankDot ? flank : dark);
+            }
+
+            dl.Flags = flags;
+        }
+        else
+        {
+            dl.AddConvexPolyFilled(ref poly[0], n, Ink(th.Fill, th.Fill.W * fade));
+        }
+
+        dl.AddPolyline(ref poly[0], n, Ink(th.Ink, th.Ink.W * fade), ImDrawFlags.Closed, wt);
+        if (!marks || px < Px(MarksPx) || (bits & WindstoneMask) != 0u)
+        {
+            return;
+        }
+
+        var hair = Px(HairWeight);
+        var left = Vector2.Lerp(poly[0], hub, 0.54f);
+        var right = Vector2.Lerp(poly[n - 1], hub, 0.62f);
+        var high = Vector2.Lerp(poly[top], hub, 0.56f);
+        var low = Vector2.Lerp((poly[0] + poly[n - 1]) * 0.5f, hub, 0.48f);
+        var shoulder = Vector2.Lerp(poly[Math.Max(1, top - 1)], hub, 0.42f);
+        var cut = Ink(ElementFx.Night, 0.44f * fade);
+        switch (th.Material)
+        {
+            case MatBasalt:
+            {
+                // One recessed seam with a dim hot interior.
+                poly[0] = high;
+                poly[1] = hub;
+                poly[2] = low;
+                dl.AddPolyline(ref poly[0], 3, cut, ImDrawFlags.None, MathF.Max(hair * 1.5f, px * 0.04f));
+                var ember = 0.19f + (0.07f * MathF.Sin((t * 1.1f) + phase));
+                dl.AddLine(high, hub, Ink(th.Glow, ember * fade), MathF.Max(hair, px * 0.016f));
+                break;
+            }
+
+            case MatWindstone:
+            case MatEarth:
+            {
+                // Shallow abrasion along the long axis; earth's is a broken sediment seam.
+                poly[0] = left;
+                poly[1] = Vector2.Lerp(hub, low, 0.3f);
+                poly[2] = right;
+                dl.AddPolyline(ref poly[0], 3, cut, ImDrawFlags.None, MathF.Max(hair, px * 0.018f));
+                dl.AddLine(Vector2.Lerp(left, high, 0.10f), Vector2.Lerp(hub, high, 0.12f),
+                    Ink(th.Glow, (th.Material == MatWindstone ? 0.16f : 0.20f) * fade), hair);
+                break;
+            }
+
+            case MatWet:
+            {
+                // A short broad reflection, its end lost in the surface.
+                dl.AddBezierQuadratic(left, shoulder, high, Ink(th.Glow, 0.38f * fade), MathF.Max(hair, px * 0.034f), 4);
+                break;
+            }
+
+            case MatStorm:
+            case MatIce:
+            {
+                // A restrained inner facet; ice is cooler and glints now and then.
+                dl.AddLine(high, low, Ink(th.Glow, (th.Material == MatIce ? 0.33f : 0.22f) * fade), hair);
+                if (th.Material == MatIce && shimmer)
+                {
+                    var glint = MathF.Max(0f, MathF.Sin((t * 0.7f) + phase) - 0.94f) / 0.06f;
+                    if (glint > 0f)
+                    {
+                        var reach = px * 0.022f;
+                        var colour = Ink(th.Glow, glint * 0.30f * fade);
+                        dl.AddLine(hub - new Vector2(reach, 0f), hub + new Vector2(reach, 0f), colour, hair);
+                        dl.AddLine(hub - new Vector2(0f, reach * 1.6f), hub + new Vector2(0f, reach * 1.6f), colour, hair);
+                    }
+                }
+
+                break;
+            }
+
+            default:
+            {
+                // Quiet ground keeps a small matte lichen patch.
+                dl.AddTriangleFilled(left, Vector2.Lerp(left, high, 0.42f), Vector2.Lerp(left, hub, 0.55f),
+                    Ink(Ground, 0.30f * fade));
+                break;
+            }
+        }
+    }
+
+    /// <summary>How far a material's crown lifts toward the glow: ice and storm rock read as
+    /// translucent, basalt and quiet stone stay matte.</summary>
+    private static float CrownLift(byte material) => material switch
+    {
+        MatBasalt => 0.19f,
+        MatWet => 0.24f,
+        MatStorm => 0.29f,
+        MatIce => 0.34f,
+        MatWindstone => 0.23f,
+        MatEarth => 0.23f,
+        _ => 0.17f,
+    };
+
+    /// <summary>A curl of dust lifting off the foot of an earth prop under the dust sky, on a quarter
+    /// of the instances. Frozen with the clock.</summary>
+    private static void DustCurl(ImDrawListPtr dl, Vector2 p, float px, in DressTheme th, float t, float phase,
+        uint bits, float fade, in Live live)
+    {
+        if (!live.Dust || th.Material != MatEarth || (bits & WindstoneMask) != 0u)
+        {
+            return;
+        }
+
+        var drift = ((t * 0.35f) + phase) % 1f;
+        var lift = MathF.Sin(drift * MathF.PI);
+        var at = p + new Vector2((drift - 0.5f) * px * 0.55f, -px * 0.04f);
+        dl.AddBezierQuadratic(at, at + new Vector2(px * 0.10f, -px * 0.17f), at + new Vector2(px * 0.24f, -px * 0.03f),
+            Ink(th.Ink, lift * 0.22f * fade), Px(HairWeight), 5);
+    }
+
     /// <summary>One solid, upright in screen space from a ground anchor. Two stroke weights and
     /// never one: the silhouette tracks the camera and the interior detail stays a hairline.</summary>
     /// <param name="detail">Whether the instance is big enough to earn its trimmings.</param>
     /// <param name="fade">The dissolve at the bottom of the size range, multiplied into every alpha
     /// so a shrinking solid leaves rather than blinks.</param>
     private static void DrawShape(ImDrawListPtr dl, Vector2 p, float px, in DressTheme th, byte kind,
-        float phase, uint bits, float t, bool detail, float fade, Span<Vector2> poly)
+        float phase, uint bits, float t, bool detail, float fade, in Live live, Span<Vector2> poly)
     {
         var lean = th.Lean != 0f ? th.Lean : (phase < MathF.PI ? 1f : -1f);
+        if (kind is Tuft or Reed or Flower)
+        {
+            // One gust for the ground and the air: the plants bend with the marks the sky carries.
+            lean = (lean * (1f + (BreezeSwing * MathF.Sin((t * BreezeRate) + phase)))) + (live.Gust * GustBend);
+        }
+
         var wt = Math.Clamp(px * SilhouetteFrac, Px(SilhouetteMin), Px(SilhouetteMax));
         var hair = Px(HairWeight);
         var ink = Ink(th.Ink, th.Ink.W * fade);
@@ -829,15 +1416,7 @@ internal sealed class RaceDressing
 
                 var n = CapPoly(poly, p, w, h, caps, apex, (int)(Jitter(bits, 4) * 2.99f),
                     (int)(Jitter(bits, 5) * 2.99f), (Jitter(bits, 0) - 0.5f) * 0.22f, phase);
-                dl.AddConvexPolyFilled(ref poly[0], n, fill);
-                dl.AddPolyline(ref poly[0], n, ink, ImDrawFlags.Closed, wt);
-                if (detail)
-                {
-                    var a = Math.Clamp(1 + (int)(caps * apex), 1, caps);
-                    var inner = Vector2.Lerp(poly[a - 1], p, 0.52f) - (ElementFx.KeyTravel * (h * 0.10f));
-                    dl.AddTriangleFilled(poly[a - 1], poly[a], inner, Ink(th.Glow, 0.20f * fade));
-                }
-
+                DrawSolid(dl, poly, n, in th, px, bits, phase, t, fade, live.Shimmer, marks: true);
                 break;
             }
 
@@ -849,14 +1428,7 @@ internal sealed class RaceDressing
 
                 var n = CapPoly(poly, p, w, h, 3 + (int)(Jitter(bits, 2) * 1.99f),
                     0.36f + (0.28f * Jitter(bits, 3)), 1, 1, (Jitter(bits, 4) - 0.5f) * 0.16f, phase);
-                dl.AddConvexPolyFilled(ref poly[0], n, fill);
-                dl.AddPolyline(ref poly[0], n, ink, ImDrawFlags.Closed, wt);
-                if (detail)
-                {
-                    dl.AddLine(p + new Vector2(-w * 0.30f, -h * 0.70f), p + new Vector2(w * 0.02f, -h * 0.95f),
-                        Ink(th.Glow, 0.34f * fade), hair);
-                }
-
+                DrawSolid(dl, poly, n, in th, px, bits, phase, t, fade, live.Shimmer, marks: true);
                 break;
             }
 
@@ -874,16 +1446,16 @@ internal sealed class RaceDressing
                 var br = p + new Vector2(w, 0f);
                 var tl = p + new Vector2(-rim + tilt, -h);
                 var tr = p + new Vector2(rim + tilt, -h * (0.92f + (0.12f * Jitter(bits, 4))));
-                dl.AddQuadFilled(bl, tl, tr, br, fill);
                 poly[0] = bl;
                 poly[1] = tl;
                 poly[2] = tr;
                 poly[3] = br;
-                dl.AddPolyline(ref poly[0], 4, ink, ImDrawFlags.Closed, wt);
+                DrawSolid(dl, poly, 4, in th, px, bits, phase, t, fade, live.Shimmer, marks: false);
 
                 var throat = Vector2.Lerp(tl, tr, 0.5f) + new Vector2(0f, rim * 0.55f);
-                dl.AddTriangleFilled(tl, tr, throat,
-                    Ink(th.Glow, (0.42f + (0.30f * MathF.Sin((t * 1.7f) + phase))) * fade));
+                dl.AddTriangleFilled(tl, tr, throat, Ink(ElementFx.Night, 0.90f * fade));
+                dl.AddTriangleFilled(Vector2.Lerp(tl, throat, 0.35f), Vector2.Lerp(tr, throat, 0.35f), throat,
+                    Ink(th.Glow, (0.28f + (0.14f * MathF.Sin((t * 1.7f) + phase))) * fade));
                 if (detail)
                 {
                     dl.AddLine(Vector2.Lerp(tl, tr, 0.3f), p + new Vector2(-w * 0.5f, 0f),
@@ -901,8 +1473,7 @@ internal sealed class RaceDressing
 
                 var n = CapPoly(poly, p, w * 2f, h, 2 + (int)(Jitter(bits, 3) * 1.99f),
                     0.24f + (0.52f * Jitter(bits, 2)), 0, 0, (Jitter(bits, 4) - 0.5f) * 0.45f, phase);
-                dl.AddConvexPolyFilled(ref poly[0], n, fill);
-                dl.AddPolyline(ref poly[0], n, ink, ImDrawFlags.Closed, wt);
+                DrawSolid(dl, poly, n, in th, px, bits, phase, t, fade, live.Shimmer, marks: true);
                 if (detail)
                 {
                     // A convex polygon cannot be jagged, so the jaggedness is a cluster at its foot.
@@ -917,6 +1488,7 @@ internal sealed class RaceDressing
                         var b1 = p + new Vector2(bx + (w * 0.42f), 0f);
                         var tip = p + new Vector2(bx + (dir * w * 0.18f), -hgt);
                         dl.AddTriangleFilled(b0, b1, tip, fill);
+                        dl.AddTriangleFilled(Vector2.Lerp(b0, b1, 0.48f), b1, tip, Ink(ElementFx.Night, 0.30f * fade));
                         dl.AddLine(dir < 0f ? b0 : b1, tip, ink, hair);
                     }
                 }
@@ -939,14 +1511,16 @@ internal sealed class RaceDressing
                     var b0 = p + new Vector2(bx - bw, 0f);
                     var b1 = p + new Vector2(bx + bw, 0f);
                     var tip = p + new Vector2(bx + (((sj - 0.5f) + (bx / px)) * hgt * 0.22f), -hgt);
-                    dl.AddTriangleFilled(b0, b1, tip, fill);
-                    if (detail && i == mast)
+                    if (i != mast)
                     {
-                        dl.AddLine(b0, tip, ink, wt);
-                        dl.AddLine(b1, tip, ink, wt);
-                        dl.AddLine(Vector2.Lerp(b0, p + new Vector2(bx, 0f), 0.36f),
-                            Vector2.Lerp(b0, tip, 0.9f), Ink(th.Glow, 0.5f * fade), hair);
+                        dl.AddTriangleFilled(b0, b1, tip, fill);
+                        continue;
                     }
+
+                    poly[0] = b0;
+                    poly[1] = tip;
+                    poly[2] = b1;
+                    DrawSolid(dl, poly, 3, in th, px, bits, phase, t, fade, live.Shimmer, marks: true);
                 }
 
                 break;
@@ -1160,11 +1734,17 @@ internal sealed class RaceDressing
                 var w = px * (0.60f + (0.26f * Jitter(bits, 0)));
                 var h = px * (0.26f + (0.16f * Jitter(bits, 1)));
                 var skew = (Jitter(bits, 2) - 0.5f) * w * 0.30f;
+                Shadow(dl, poly, p, w * 0.82f, shade);
+
                 var b0 = p + new Vector2(-w, 0f);
                 var b1 = p + new Vector2(w, 0f);
                 var b2 = p + new Vector2((w * 0.90f) + (skew * 0.3f), -h);
                 var b3 = p + new Vector2((-w * 0.86f) + (skew * 0.3f), -h * 0.92f);
-                dl.AddQuadFilled(b0, b1, b2, b3, fill);
+                poly[0] = b0;
+                poly[1] = b3;
+                poly[2] = b2;
+                poly[3] = b1;
+                DrawSolid(dl, poly, 4, in th, px, bits, phase, t, fade, live.Shimmer, marks: false);
 
                 var uw = w * (0.52f + (0.22f * Jitter(bits, 3)));
                 var uy = -h * 0.94f;
@@ -1172,22 +1752,16 @@ internal sealed class RaceDressing
                 var u1 = p + new Vector2(uw + skew, uy);
                 var u2 = p + new Vector2(uw + skew, uy - (h * 0.85f));
                 var u3 = p + new Vector2(-uw + skew, uy - (h * 0.76f));
-                dl.AddQuadFilled(u0, u1, u2, u3, fill);
-
-                var edge = Ink(th.Ink, 0.52f * fade);
-                poly[0] = b0;
-                poly[1] = b1;
-                poly[2] = b2;
-                poly[3] = b3;
-                dl.AddPolyline(ref poly[0], 4, edge, ImDrawFlags.Closed, wt);
                 poly[0] = u0;
-                poly[1] = u1;
+                poly[1] = u3;
                 poly[2] = u2;
-                poly[3] = u3;
-                dl.AddPolyline(ref poly[0], 4, edge, ImDrawFlags.Closed, wt);
-                if (detail)
+                poly[3] = u1;
+                DrawSolid(dl, poly, 4, in th, px, bits, phase, t, fade, live.Shimmer, marks: false);
+                if (detail && (bits & WindstoneMask) == 0u)
                 {
-                    dl.AddLine(b3, b2, Ink(th.Glow, 0.26f * fade), hair);
+                    // The recess where the upper block beds into the slab.
+                    dl.AddLine(Vector2.Lerp(u0, u1, 0.16f), Vector2.Lerp(u0, u1, 0.68f),
+                        Ink(ElementFx.Night, 0.50f * fade), MathF.Max(hair, wt * 0.85f));
                 }
 
                 break;

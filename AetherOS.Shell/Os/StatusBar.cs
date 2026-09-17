@@ -25,22 +25,58 @@ public sealed class StatusBar
         _together = together;
     }
 
-    public void Draw(Vector2 winPos, Vector2 winSize, bool connected)
+    public void Draw(Vector2 winPos, Vector2 winSize, bool connected, bool homeHeader = false, bool inputOnly = false)
     {
         var theme = ThemeService.Current;
         var stripTL = winPos + new Vector2(Px(theme.BezelLeft), Px(theme.StatusBarTop));
         var stripBR = winPos + new Vector2(winSize.X - Px(theme.BezelRight), Px(theme.BezelTop));
+        var explicitCenter = theme.StatusBarCenterY;
+        if (homeHeader)
+        {
+            // The child cursor origin is the same origin HomeScreen uses for its wordmark.
+            stripTL = winPos;
+            stripBR = winPos + new Vector2(winSize.X, Px(24f));
+        }
+        else if (explicitCenter is { } cy)
+        {
+            stripTL.Y = winPos.Y + Px(cy - 8f);
+            stripBR.Y = winPos.Y + Px(cy + 8f);
+        }
+        if (inputOnly)
+        {
+            var savedCursor = ImGui.GetCursorScreenPos();
+            HandleGesture(stripTL, stripBR, winSize);
+            ImGui.SetCursorScreenPos(savedCursor);
+            return;
+        }
         // Themes with top-bezel window buttons keep the icon cluster clear of them.
         var rightLimit = stripBR.X - Px(10f) - Px(theme.StatusBarRightInset);
-        if (theme.MinimizeButtonTL.Y < theme.BezelTop)
+        if (!homeHeader && theme.MinimizeButtonTL.Y < theme.BezelTop)
         {
             rightLimit = Math.Min(rightLimit, winPos.X + Px(theme.MinimizeButtonTL.X) - Px(10f));
         }
 
         var dl = ImGui.GetWindowDrawList();
-        var centerY = (stripTL.Y + stripBR.Y) * 0.5f;
+        var centerY = homeHeader ? winPos.Y + Px(6f) + ImGui.GetFontSize() * 0.36f : (stripTL.Y + stripBR.Y) * 0.5f;
         var fsz = ImGui.GetFontSize() * 0.76f;
-        var tint = theme.StatusBarTint;
+        var tint = homeHeader ? Vector4.One : theme.StatusBarTint;
+
+        var time = OsClock.Format(DateTime.Now);
+        var timeSz = ImGui.CalcTextSize(time) * 0.76f;
+        var clusterW = Px(49f) + ImGui.CalcTextSize($"{BatteryService.Percent}").X * 0.68f;
+        if (!connected) clusterW += Px(16f);
+        if (_shell.Notifications.Count > 0) clusterW += Px(21f);
+        if (_together.InParty) clusterW += Px(22f) + ImGui.CalcTextSize($"{_together.Members.Count}").X * 0.68f;
+        var centered = !homeHeader && theme.StatusBarCentered;
+        if (homeHeader) rightLimit = stripBR.X - Px(12f);
+        else if (centered) rightLimit = (stripTL.X + stripBR.X + clusterW + timeSz.X + Px(8f)) * 0.5f;
+        var anticipatedTimeLeft = homeHeader ? stripTL.X + Px(12f)
+            : centered ? rightLimit - clusterW - Px(8f) - timeSz.X
+            : Math.Clamp(stripTL.X + (stripBR.X - stripTL.X - timeSz.X) * theme.StatusBarTimeAlign,
+                stripTL.X, Math.Max(stripTL.X, rightLimit - clusterW - Px(8f) - timeSz.X));
+        if (theme.StatusBarBackgroundOpacity > 0f)
+            dl.AddRectFilled(new Vector2(anticipatedTimeLeft - Px(6f), centerY - Px(10f)),
+                new Vector2(rightLimit + Px(7f), centerY + Px(10f)), OsDraw.Black(theme.StatusBarBackgroundOpacity));
 
         // Right-hand cluster first, so the clock can be right-clamped against it.
         var x = rightLimit;
@@ -90,15 +126,16 @@ public sealed class StatusBar
         }
 
         // Clock: placed by the theme's align factor, clamped to clear the icon cluster and the left edge.
-        var time = OsClock.Format(DateTime.Now);
-        var timeSz = ImGui.CalcTextSize(time) * 0.76f;
         var usableW = stripBR.X - stripTL.X;
         var timeLeft = stripTL.X + (usableW - timeSz.X) * Math.Clamp(theme.StatusBarTimeAlign, 0f, 1f);
         timeLeft = Math.Min(timeLeft, x - Px(8f) - timeSz.X);
         timeLeft = Math.Max(timeLeft, stripTL.X);
+        if (homeHeader || centered) timeLeft = anticipatedTimeLeft;
         dl.AddText(ImGui.GetFont(), fsz, new Vector2(timeLeft, centerY - fsz * 0.5f), Tint(tint, 0.92f), time);
 
-        HandleGesture(stripTL, stripBR, winSize);
+        var cursor = ImGui.GetCursorScreenPos();
+        if (!homeHeader) HandleGesture(stripTL, stripBR, winSize);
+        ImGui.SetCursorScreenPos(cursor);
     }
 
     private static uint Tint(Vector4 c, float a) => ImGui.ColorConvertFloat4ToU32(new Vector4(c.X, c.Y, c.Z, a));

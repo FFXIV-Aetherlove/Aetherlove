@@ -1,4 +1,4 @@
-﻿namespace AetherLove.Services.Localization;
+namespace AetherLove.Services.Localization;
 
 internal static class SettingsEn
 {
@@ -263,7 +263,7 @@ internal static class SettingsEn
         ["settings.staff_messages_section"] = "Messages",
 
         // added after update 2.2.3
-        ["settings.premium_themes"] = "Premium themes",
+        ["settings.premium_themes"] = "Phone Skins",
         ["settings.premium_refresh"] = "Refresh this theme",
         ["settings.premium_backgrounds"] = "Premium backgrounds",
         ["settings.premium_enable_failed"] = "Could not switch",
@@ -279,5 +279,33 @@ internal static class SettingsEn
         ["settings.translation_enable"] = "Enable translations",
         ["settings.translation_language"] = "Translate into",
         ["settings.translation_search"] = "Search languages...",
+        // phone skins (added after update 2.7.0)
+        ["settings.premium_get_skins"] = "Get phone skins in the Store",
+        // added after update 2.7.0
+        ["account.title"] = "My account",
+        ["account.change_help"] = "Your working keys and conversations stay unchanged. Use at least 12 characters.",
+        ["account.new_passphrase"] = "New passphrase",
+        ["account.repeat"] = "Repeat passphrase",
+        ["account.change"] = "Change passphrase",
+        ["account.backup_help"] = "Keep this file somewhere safe. Anyone with it can recover your encryption keys.",
+        ["account.save"] = "Save recovery file",
+        ["account.restore"] = "Choose recovery file",
+        ["account.retry"] = "Retry connection",
+        ["account.working"] = "Working...",
+        ["account.success"] = "Done.",
+        ["account.failed"] = "Could not complete this step. Check your connection and choose a new filename when saving.",
+        ["account.backup_title"] = "Save your recovery file",
+        ["account.backup_required"] = "Save your backup before continuing. You can use it if you forget your passphrase.",
+        ["account.unlock_choice"] = "Enter your passphrase or choose your recovery file.",
+        ["account.state_offline"] = "Offline. Your local keys are kept.",
+        ["account.state_unlockrequired"] = "Enter your passphrase or choose a recovery file.",
+        ["account.state_ready"] = "Your encryption keys are ready.",
+        ["account.state_migrationincomplete"] = "Some older keys still need recovery. Available conversations remain usable.",
+        ["account.state_recoveryrequired"] = "Restore access with your passphrase or recovery file.",
+        ["account.state_corruptbundle"] = "This backup could not be opened. Your existing keys are kept.",
+        ["account.unverified"] = "Not verified",
+        ["account.verified"] = "Verified",
+        ["account.key_changed"] = "The encryption keys changed. Compare the code again.",
+        ["account.compared"] = "I compared the code",
     };
 }

@@ -129,6 +129,9 @@ public sealed class PetCatalogue
     /// must agree ref for ref or an owned weapon renders as nothing.</summary>
     private static readonly Dictionary<string, string> ArmsRefs = new(StringComparer.OrdinalIgnoreCase)
     {
+        ["Pactmaker Shield"] = "arm-pactmaker-shield",
+        ["Calling Horn"] = "arm-calling-horn",
+        ["Kornago Gourd"] = "arm-kornago-gourd",
         ["Paladin's Sword"] = "arm-pld-sword",
         ["Paladin's Shield"] = "arm-pld-shield",
         ["Warrior's Axe"] = "arm-war",

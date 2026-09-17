@@ -14,7 +14,23 @@ public static class OsBootIntro
     private const float Duration = 1.7f;
     private static float _startTime = float.MinValue;
 
+    private static bool _queued;
+
     public static bool Active { get; private set; }
+
+    /// <summary>Holds the reveal for a later handoff, when the update gate stands between onboarding and home.</summary>
+    public static void PlayOnNextHome() => _queued = true;
+
+    /// <summary>Plays a held reveal, if any.</summary>
+    public static void PlayIfQueued()
+    {
+        if (!_queued)
+        {
+            return;
+        }
+        _queued = false;
+        Play();
+    }
 
     /// <summary>Starts the reveal. Call at the onboarding-to-home handoff.</summary>
     public static void Play()

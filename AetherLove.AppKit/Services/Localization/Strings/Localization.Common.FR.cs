@@ -1,4 +1,4 @@
-﻿namespace AetherLove.Services.Localization;
+namespace AetherLove.Services.Localization;
 
 internal static class CommonFr
 {
@@ -215,5 +215,11 @@ internal static class CommonFr
         ["picker.save"] = "Enregistrer",
         ["picker.file_name_hint"] = "Nom du fichier...",
         ["picker.selected_count"] = "{0} sélectionnés",
+        // added after update 2.6.1 (picture adjust)
+        ["common.adjust_picture"] = "Ajuster l'image",
+        ["common.use_picture"] = "Utiliser cette image",
+        ["common.rotate_left"] = "Pivoter à gauche",
+        ["common.rotate_right"] = "Pivoter à droite",
+        ["common.crop_free_hint"] = "Faites glisser le coin pour recadrer. Utilisez les flèches pour pivoter.",
     };
 }

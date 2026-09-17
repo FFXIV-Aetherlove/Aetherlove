@@ -46,6 +46,10 @@ public static class HubErrors
     public const string LalafellNsfw = "lalafell_nsfw";
     public const string LalafellNsfwPhoto = "lalafell_nsfw_photo";
     public const string NsfwDisableBlocked = "nsfw_disable_blocked";
+    /// <summary>A photo move would put an NSFW photo, or no photo, on the main slot.</summary>
+    public const string MainPhotoMustBeSfw = "main_photo_must_be_sfw";
+    /// <summary>A photo move would put a photo on the main slot before auto-moderation has finished with it.</summary>
+    public const string PhotoStillChecking = "photo_still_checking";
 
     /// <summary>Args: actual MB, max MB.</summary>
     public const string ImgTooLarge = "img_too_large";
@@ -254,16 +258,12 @@ public static class HubErrors
     public const string AetherlingDisabled = "aetherling_disabled";
     /// <summary>The account already has an Aethercore; there is only ever one.</summary>
     public const string AetherlingExists = "aetherling_exists";
-    /// <summary>The account has no Aethercore to charge.</summary>
+    /// <summary>The account has no Aethercore to break open or feed.</summary>
     public const string AetherlingNone = "aetherling_none";
     /// <summary>Arg 0: the price. Arg 1: the caller's balance.</summary>
     public const string AetherlingInsufficient = "aetherling_insufficient";
-    /// <summary>Arg 0: whole minutes still to wait.</summary>
-    public const string AetherlingGated = "aetherling_gated";
-    /// <summary>The core is already at the last stage a charge can reach.</summary>
-    public const string AetherlingComplete = "aetherling_complete";
-    /// <summary>Asked for something the core has not reached yet: a hatch below the last rung, or a name
-    /// before the hatch.</summary>
+    /// <summary>Asked for something the crystal has to be broken for first: a name, a feed, a card or
+    /// the wheel.</summary>
     public const string AetherlingUnready = "aetherling_unready";
     /// <summary>The name was already chosen; changing it is not free.</summary>
     public const string AetherlingNamed = "aetherling_named";
@@ -293,6 +293,7 @@ public static class HubErrors
     public const string LumiRaceGated = "lumirace_gated";
     /// <summary>No pack with that id belongs to the caller.</summary>
     public const string LumiRacePackNone = "lumirace_pack_none";
+    public const string LumiRaceCardNotReady = "lumirace_card_not_ready";
     /// <summary>The party already has a race gathering or running.</summary>
     public const string LumiRaceRunExists = "lumirace_run_exists";
     public const string LumiRaceRunNotFound = "lumirace_run_not_found";
@@ -301,6 +302,19 @@ public static class HubErrors
     public const string LumiRaceRunTooFew = "lumirace_too_few";
     /// <summary>The course the caller asked for is not one of the offers on the board.</summary>
     public const string LumiRaceNoOffer = "lumirace_no_offer";
+    /// <summary>The Starlight Cup is solo: the caller is in an Aetherparty.</summary>
+    public const string LumiRaceCupInParty = "lumirace_cup_in_party";
+
+    /// <summary>A hand slot names an owned card that is no longer in the catalogue.</summary>
+    public const string LumiRaceCardUnknown = "lumirace_card_unknown";
+    /// <summary>A hand slot names a card the account does not own.</summary>
+    public const string LumiRaceCardNotOwned = "lumirace_card_not_owned";
+    /// <summary>The Gold slot holds a Silver, or a Silver slot holds a Gold.</summary>
+    public const string LumiRaceCardWrongBand = "lumirace_card_wrong_band";
+    /// <summary>The same card sits in two slots.</summary>
+    public const string LumiRaceCardDuplicate = "lumirace_card_duplicate";
+    /// <summary>The Silver list is not exactly two entries.</summary>
+    public const string LumiRaceHandShape = "lumirace_hand_shape";
 
     /// <summary>Builds the wire payload. Args are serialized invariant-culture; they must not contain '|'.</summary>
     public static string Format(string code, params object?[] args)

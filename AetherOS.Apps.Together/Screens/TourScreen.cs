@@ -192,8 +192,8 @@ internal sealed class TourScreen(ITogetherHost host, Action done)
             var side = Px(84f);
             var own = Px(108f);
             var gap = Px(96f);
-            pets.Draw(dl, LeftSample, new Vector2(centreX - gap, floorY - Px(2f)), side, 3, "ember", NoAccessories, ctx.ReduceMotion);
-            pets.Draw(dl, RightSample, new Vector2(centreX + gap, floorY - Px(2f)), side, 3, "frost", NoAccessories, ctx.ReduceMotion);
+            pets.Draw(dl, LeftSample, new Vector2(centreX - gap, floorY - Px(2f)), side, "ember", NoAccessories, ctx.ReduceMotion);
+            pets.Draw(dl, RightSample, new Vector2(centreX + gap, floorY - Px(2f)), side, "frost", NoAccessories, ctx.ReduceMotion);
             pets.DrawOwn(dl, new Vector2(centreX, floorY), own, ctx.ReduceMotion);
         }
         ImGui.Dummy(new Vector2(0f, stageH));

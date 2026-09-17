@@ -38,6 +38,9 @@ public interface IAppCapabilities
     /// <summary>Per-message text translation (opt-in; see <see cref="ITranslationBridge"/>).</summary>
     ITranslationBridge Translation { get; }
 
+    /// <summary>Whether the downloaded media packs an app draws from have arrived (see <see cref="IAssetState"/>).</summary>
+    IAssetState Assets { get; }
+
     /// <summary>Persistent storage scoped to <paramref name="appId"/>: a private folder plus a JSON key-value
     /// store. Pass your own app id.</summary>
     IAppStorage Storage(string appId);

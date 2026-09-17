@@ -77,12 +77,14 @@ public static class SystemInfo
         {
             var total = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes;
             var procMb = Environment.WorkingSet / 1024.0 / 1024.0;
+            var heapMb = GC.GetTotalMemory(false) / 1024.0 / 1024.0;
+            var usage = $"game process working set {procMb:F0} MB (all plugins), managed heap {heapMb:F0} MB";
             if (total > 0)
             {
                 var totalGb = total / 1024.0 / 1024.0 / 1024.0;
-                return $"~{totalGb:F1} GB available to the runtime, plugin using {procMb:F0} MB";
+                return $"~{totalGb:F1} GB available to the runtime, {usage}";
             }
-            return $"plugin using {procMb:F0} MB (total unavailable)";
+            return $"{usage} (total unavailable)";
         }
         catch
         {

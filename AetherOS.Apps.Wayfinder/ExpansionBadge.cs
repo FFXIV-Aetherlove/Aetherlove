@@ -51,9 +51,8 @@ internal static class ExpansionBadge
     {
         if (!Cache.TryGetValue(expansion, out var tex))
         {
-            var dir = Path.GetDirectoryName(UiHost.PluginInterface.AssemblyLocation.FullName) ?? "";
             var name = ((Expansion)expansion).ToString().ToLowerInvariant();
-            var path = Path.Combine(dir, "Media", "icons", "expansions", name + ".png");
+            var path = AetherLove.Services.Media.MediaPaths.Shipped(AetherLove.Services.Media.MediaPaths.Icons, "expansions", name + ".png");
             tex = File.Exists(path) ? UiHost.TextureProvider.GetFromFile(path) : null;
             Cache[expansion] = tex;
         }

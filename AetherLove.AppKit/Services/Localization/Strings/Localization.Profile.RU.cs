@@ -229,5 +229,11 @@ internal static class ProfileRu
 
         // added after update 2.4.0
         ["profile.region_min_hint"] = "Выберите хотя бы один регион.",
+
+        // added after update 2.7.0 (move photos)
+        ["profile.move_left"] = "Влево",
+        ["profile.move_right"] = "Вправо",
+        ["profile.move_blocked_nsfw"] = "Главное фото должно быть SFW. Сюда нельзя переместить NSFW-фото.",
+        ["profile.move_blocked_unsaved"] = "Сначала сохраните изменения. После этого фото можно перемещать.",
     };
 }

@@ -1,4 +1,4 @@
-﻿namespace AetherLove.Services.Localization;
+namespace AetherLove.Services.Localization;
 
 internal static class SettingsFr
 {
@@ -255,7 +255,7 @@ internal static class SettingsFr
         ["settings.staff_messages_section"] = "Messages",
 
         // added after update 2.2.3
-        ["settings.premium_themes"] = "Thèmes premium",
+        ["settings.premium_themes"] = "Habillages du téléphone",
         ["settings.premium_refresh"] = "Recharger ce thème",
         ["settings.premium_backgrounds"] = "Fonds premium",
         ["settings.premium_enable_failed"] = "Changement impossible",
@@ -271,5 +271,33 @@ internal static class SettingsFr
         ["settings.translation_enable"] = "Activer les traductions",
         ["settings.translation_language"] = "Traduire vers",
         ["settings.translation_search"] = "Rechercher une langue à utiliser...",
+        // phone skins (added after update 2.7.0)
+        ["settings.premium_get_skins"] = "Trouver des habillages dans la boutique",
+        // added after update 2.7.0
+        ["account.title"] = "Mon compte",
+        ["account.change_help"] = "Vos clés et conversations sont conservées. Utilisez au moins 12 caractères.",
+        ["account.new_passphrase"] = "Nouvelle phrase secrète",
+        ["account.repeat"] = "Répéter la phrase secrète",
+        ["account.change"] = "Modifier la phrase secrète",
+        ["account.backup_help"] = "Gardez ce fichier en lieu sûr. Toute personne qui le possède peut récupérer vos clés.",
+        ["account.save"] = "Enregistrer le fichier de récupération",
+        ["account.restore"] = "Choisir un fichier de récupération",
+        ["account.retry"] = "Réessayer la connexion",
+        ["account.working"] = "Traitement...",
+        ["account.success"] = "Terminé.",
+        ["account.failed"] = "Impossible de terminer cette étape. Vérifiez votre connexion et choisissez un autre nom de fichier.",
+        ["account.backup_title"] = "Enregistrez votre fichier de récupération",
+        ["account.backup_required"] = "Enregistrez votre sauvegarde avant de continuer. Elle sera utile si vous oubliez votre phrase secrète.",
+        ["account.unlock_choice"] = "Saisissez votre phrase secrète ou choisissez votre fichier de récupération.",
+        ["account.state_offline"] = "Hors ligne. Vos clés locales sont conservées.",
+        ["account.state_unlockrequired"] = "Saisissez votre phrase secrète ou choisissez un fichier de récupération.",
+        ["account.state_ready"] = "Vos clés sont prêtes.",
+        ["account.state_migrationincomplete"] = "Certaines anciennes clés restent à récupérer. Les conversations disponibles restent accessibles.",
+        ["account.state_recoveryrequired"] = "Récupérez votre accès avec votre phrase secrète ou votre fichier de récupération.",
+        ["account.state_corruptbundle"] = "Impossible d’ouvrir cette sauvegarde. Vos clés actuelles sont conservées.",
+        ["account.unverified"] = "Non vérifié",
+        ["account.verified"] = "Vérifié",
+        ["account.key_changed"] = "Les clés ont changé. Comparez à nouveau le code.",
+        ["account.compared"] = "J’ai comparé le code",
     };
 }

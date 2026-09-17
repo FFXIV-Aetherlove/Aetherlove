@@ -92,6 +92,13 @@ internal sealed class SettingsScreen
         {
             _settings.NotifyEstate = estate;
         }
+
+        var trackFc = _settings.TrackFcEstate;
+        if (Toggle(ctx, "realtorFcEstate", Loc.T("os.realtor_set_fc"), Loc.T("os.realtor_set_fc_hint"),
+            x, width, ref trackFc))
+        {
+            _settings.TrackFcEstate = trackFc;
+        }
         ImGui.Dummy(new Vector2(width, ctx.Px(14f)));
     }
 

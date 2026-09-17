@@ -7,6 +7,8 @@ namespace AetherLove.Services.Crypto;
 public sealed class KeyStorageService
 {
     private readonly Configuration _config;
+    public int Generation { get; private set; }
+    public event Action? Cleared;
 
     public KeyStorageService(Configuration config)
     {
@@ -158,6 +160,8 @@ public sealed class KeyStorageService
     /// sibling keypair.</summary>
     public void Clear()
     {
+        Generation++;
+        Cleared?.Invoke();
         _config.Crypto = new CryptoKeys();
         _config.AccountKek = [];
         _config.AccountKekSalt = [];

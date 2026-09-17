@@ -13,7 +13,7 @@ namespace AetherOS.Apps.Racer.Screens;
 
 /// <summary>What the three grades mean, printed on the race card. The element wheel decides them: your
 /// own ground grades Easy, either neighbour Normal, the far half Hard with no penalty attached.</summary>
-internal sealed class DifficultyHelpScreen(IRacerHost host, Action back, Func<bool> muted, Action toggleMute, Func<float> volume, Action<float> setVolume)
+internal sealed class DifficultyHelpScreen(IRacerHost host, Action back)
 {
     private const float TextInset = 30f;
     private const float BarInset = 18f;
@@ -25,8 +25,6 @@ internal sealed class DifficultyHelpScreen(IRacerHost host, Action back, Func<bo
     private static readonly Vector4 PageInk = RacerChrome.CardBlue with { W = 1f };
 
     private const float WheelRadiusShare = 0.30f;
-
-    /// <summary>Radians shaved off each arc end, so neighbouring grades never touch.</summary>
 
     private static readonly (short Grade, string Key)[] Tiers =
     [
@@ -63,38 +61,28 @@ internal sealed class DifficultyHelpScreen(IRacerHost host, Action back, Func<bo
         }
 
         var avail = ImGui.GetContentRegionAvail();
-        using var body = ImRaii.Child("##racerDiffHelp", avail, false);
-        if (!body)
+        using (var body = ImRaii.Child("##racerDiffHelp", avail - new Vector2(0, Px(50)), false, ImGuiWindowFlags.NoBackground))
         {
-            return;
+            if (!body)
+            {
+                return;
+            }
+
+            using var ink = ImRaii.PushColor(ImGuiCol.Text, PageInk);
+            DrawOwnElement(ctx);
+            Paragraph(ctx.Localize("os.racer_diff_help_intro"));
+            ImGui.Dummy(new Vector2(1f, Px(10)));
+            DrawWheel(ctx);
+            ImGui.Dummy(new Vector2(1f, Px(10)));
+
+            foreach (var tier in Tiers)
+            {
+                DrawTier(ctx, tier.Grade, tier.Key);
+            }
+
         }
-
-        RacerBackdrop.Draw(ctx, host, ImGui.GetWindowPos(), ImGui.GetWindowSize(), dim: 0.20f, anchorY: 1f);
-        RacerChrome.PaperSheet(ImGui.GetWindowDrawList(), ImGui.GetWindowPos(), ImGui.GetWindowSize());
-        RacerChrome.DrawMuteChip(ctx, muted(), toggleMute, volume(), setVolume);
-        using var ink = ImRaii.PushColor(ImGuiCol.Text, PageInk);
-
-        ImGui.Dummy(new Vector2(1f, Px(20)));
-        using (ctx.TitleFont?.Push())
-        {
-            RacerChrome.CenteredText(ctx.Localize("os.racer_diff_help_title"));
-        }
-        ImGui.Dummy(new Vector2(1f, Px(12)));
-
-        DrawOwnElement(ctx);
-        Paragraph(ctx.Localize("os.racer_diff_help_intro"));
-        ImGui.Dummy(new Vector2(1f, Px(10)));
-        DrawWheel(ctx);
-        ImGui.Dummy(new Vector2(1f, Px(10)));
-
-        foreach (var tier in Tiers)
-        {
-            DrawTier(ctx, tier.Grade, tier.Key);
-        }
-
-        ImGui.Dummy(new Vector2(1f, Px(14)));
-        if (RacerChrome.FlagButton(ctx, "##racerDiffBack", ctx.Localize("os.racer_back"),
-            RacerChrome.DutchBlue, RacerChrome.WhiteInk))
+        ImGui.Dummy(new Vector2(1f, Px(4)));
+        if (GrandstandFrame.ActionButton(ctx, host, "##racerDiffBack", ctx.Localize("os.racer_back"), secondary: true))
         {
             back();
         }

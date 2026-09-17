@@ -58,9 +58,7 @@ public static class UiFonts
         }
     }
 
-    private static string FontDir =>
-        Path.Combine(Path.GetDirectoryName(UiHost.PluginInterface.AssemblyLocation.FullName) ?? string.Empty,
-            "Media", "fonts");
+    private static string FontDir => Services.Media.MediaPaths.Shipped(Services.Media.MediaPaths.Fonts);
 
     // Bounding the Noto range is what keeps the atlas rebuild fast: with no GlyphRanges set, Dalamud bakes the
     // whole BMP (~20-40k CJK glyphs) at every size, which is the multi-second/multi-minute size-change stall.
@@ -72,6 +70,7 @@ public static class UiFonts
         0x0100, 0x017F, // Latin Extended-A (European diacritics: DE/ES/FR/PT)
         0x2000, 0x206F, // General Punctuation (dashes, curly quotes, ellipsis)
         0x0400, 0x04FF, // Cyrillic (Russian)
+        0x2116, 0x2116, // numero sign, the Russian "No."
         0,
     };
 
@@ -104,6 +103,7 @@ public static class UiFonts
     {
         0x0400, 0x04FF,
         0x2000, 0x206F,
+        0x2116, 0x2116,
         0,
     };
 
@@ -161,7 +161,12 @@ public static class UiFonts
         H1   = Build(atlas, H1Px);
         Clock = BuildClock(atlas, ClockPx);
         Icon = BuildIcon(atlas, IconPx);
+        Rebuilt?.Invoke();
     }
+
+    /// <summary>Raised at the end of every <see cref="Rebuild"/>, at startup and whenever the phone size or font
+    /// family changes, so an app that bakes its own sizes rebuilds them alongside the shared set.</summary>
+    public static event Action? Rebuilt;
 
     /// <summary>A Body-sized handle in the given family, for the settings picker's live previews. Built
     /// lazily and kept until the next <see cref="Rebuild"/>.</summary>

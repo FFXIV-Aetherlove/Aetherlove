@@ -19,6 +19,7 @@ public partial class OnboardingScreen
 {
     private string _displayName = "";
     private string _bio = "";
+    private readonly SoftWrapInputField _bioField = new();
 
     private readonly ISharedImmediateTexture?[] _langFlags =
         new ISharedImmediateTexture?[LanguageEntries.Length];
@@ -26,14 +27,18 @@ public partial class OnboardingScreen
 
     private void EnsureLangFlags()
     {
-        if (_langFlagsLoaded) return;
-        _langFlagsLoaded = true;
-        var dir = Path.GetDirectoryName(UiHost.PluginInterface.AssemblyLocation.FullName) ?? "";
-        for (int i = 0; i < LanguageEntries.Length; i++)
+        if (_langFlagsLoaded)
         {
-            var path = Path.Combine(dir, "Media", LanguageEntries[i].FlagFile);
+            return;
+        }
+        _langFlagsLoaded = true;
+        for (var i = 0; i < LanguageEntries.Length; i++)
+        {
+            var path = AetherLove.Services.Media.MediaPaths.Shipped(LanguageEntries[i].FlagFile);
             if (File.Exists(path))
+            {
                 _langFlags[i] = UiHost.TextureProvider.GetFromFile(path);
+            }
         }
     }
 
@@ -240,13 +245,13 @@ public partial class OnboardingScreen
 
         ImGui.SetCursorPosX(Px(20f));
         var bioBefore = _bio;
-        InputTextMultilineWithPaste("##bio", ref _bio, EmojiText.MaxBioRawLength, new Vector2(fieldW, Px(96f)));
+        _bioField.Draw("##bio", ref _bio, EmojiText.MaxBioRawLength, new Vector2(fieldW, Px(96f)));
         if (EmojiText.EffectiveLength(_bio) > EmojiText.MaxBioLength)
         {
             _bio = bioBefore;
         }
 
-        var parsedBio = ParsedMessage.Parse(_bio);
+        var parsedBio = ParsedMessage.Parse(_bioField.Value(_bio));
         var effectiveLen = EmojiText.EffectiveLength(_bio);
         ImGui.SetCursorPosX(Px(20f));
         ImGui.TextColored(

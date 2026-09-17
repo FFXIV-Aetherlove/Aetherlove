@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AetherLove.Services;
@@ -18,6 +18,16 @@ namespace AetherLove.Os;
 /// file-picking comes from the shared app capabilities.</summary>
 public sealed class SettingsHostService : ISettingsHost
 {
+    private readonly Services.Crypto.AccountEncryptionService _encryption;
+    public bool EncryptionReady => _hub.IsConnected && _encryption.CanRecover;
+    public string EncryptionStateKey => "account.state_" + _encryption.State.ToString().ToLowerInvariant();
+    public Task ChangePassphraseAsync(string passphrase) => _encryption.ChangePassphraseAsync(passphrase);
+    public Task SaveRecoveryFileAsync(string path) => _encryption.SaveRecoveryFileAsync(path);
+    public Task RestoreRecoveryFileAsync(string path) => _encryption.RestoreRecoveryFileAsync(path);
+    public async Task RefreshEncryptionAsync()
+    {
+        if (!await _encryption.SynchronizeAsync()) { throw new System.IO.IOException("Encryption unavailable."); }
+    }
     private readonly WallpaperService _wallpapers;
     private readonly OsAvatarCache _osAvatar;
     private readonly SessionBootstrapper _bootstrap;
@@ -31,8 +41,9 @@ public sealed class SettingsHostService : ISettingsHost
 
     public SettingsHostService(WallpaperService wallpapers, OsAvatarCache osAvatar, SessionBootstrapper bootstrap,
         PatreonLinkFlow patreon, ChangelogWindow changelogWindow, AetherHubContext hub, AetherOS.Sdk.IOsShell shell,
-        Services.Store.PremiumThemeService premiumThemes, IOsTogether together, ServerBarService serverBar)
+        Services.Store.PremiumThemeService premiumThemes, IOsTogether together, ServerBarService serverBar, Services.Crypto.AccountEncryptionService encryption)
     {
+        _encryption = encryption;
         _premiumThemes = premiumThemes;
         _together = together;
         _serverBar = serverBar;
@@ -89,20 +100,6 @@ public sealed class SettingsHostService : ISettingsHost
     public Task<bool> EnablePremiumThemeAsync(System.Guid productId) => _premiumThemes.EnableAsync(productId);
 
     public Task<bool> RefreshPremiumThemeAsync(System.Guid productId) => _premiumThemes.RefreshAsync(productId);
-
-    public async Task<bool> SelectPremiumWallpaperAsync(System.Guid productId)
-    {
-        if (_premiumThemes.BackgroundWrap(productId) is null
-            && !await _premiumThemes.DownloadAndSealAsync(productId).ConfigureAwait(false))
-        {
-            return false;
-        }
-        _wallpapers.SelectPremium(productId);
-        return true;
-    }
-
-    public Dalamud.Interface.Textures.TextureWraps.IDalamudTextureWrap? PremiumWallpaper(System.Guid productId) =>
-        _premiumThemes.BackgroundWrap(productId);
 
     public async Task SaveOsProfileAsync(string name, PhotoUploadDto? avatar)
     {

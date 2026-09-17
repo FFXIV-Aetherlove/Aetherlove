@@ -121,8 +121,12 @@ public sealed class AetherLoveBootstrap : IHostedService
         Os.RealtorPhaseWatchService realtorPhase,
         Services.AvatarRingService avatarRings,
         Services.Store.PremiumThemeService premiumThemes,
-        Os.AetherlingHostService aetherlingHost)
+        Os.AetherlingHostService aetherlingHost,
+        Os.AssetUpdateCoordinator assetUpdates,
+        Services.Assets.AssetSyncService assets)
     {
+        _assetUpdates = assetUpdates;
+        _assets = assets;
         AetherLove.UI.AvatarRings.Install(avatarRings.Texture);
         // ThemeService.Initialise runs in the plugin ctor, before any of this exists, so a purchased theme
         // can only be restored here; until then the phone draws the built-in fallback.
@@ -178,6 +182,8 @@ public sealed class AetherLoveBootstrap : IHostedService
     private readonly Services.Chat.ChatCacheStore _chatCache;
     private readonly Services.Messenger.MessengerStore _messenger;
     private readonly Os.RealtorPhaseWatchService _realtorPhase;
+    private readonly Os.AssetUpdateCoordinator _assetUpdates;
+    private readonly Services.Assets.AssetSyncService _assets;
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
@@ -209,7 +215,7 @@ public sealed class AetherLoveBootstrap : IHostedService
         {
             // The staff subcommands are deliberately absent: this string is public, in the installer and in
             // /xlhelp, and the server refuses them anyway.
-            HelpMessage = "Open AetherOS. Subcommands: \"resetscreen\" (recenter the window), \"debug\" (diagnostics), \"clearcache\" (wipe local caches and restart the phone)."
+            HelpMessage = "Open AetherOS. Subcommands: \"resetscreen\" (recenter the window), \"debug\" (diagnostics), \"clearcache\" (wipe local caches and restart the phone), \"resetassets\" (delete the downloaded phone files and download them again)."
         });
         foreach (var alias in AliasCommandNames)
         {
@@ -218,6 +224,13 @@ public sealed class AetherLoveBootstrap : IHostedService
                 HelpMessage = $"Alias for {CommandName}."
             });
         }
+
+        // Every app is built here, on Dalamud's load thread, before the draw hook exists: building them on the
+        // first frame stalled the game for the whole registry. The string tables it publishes and the external
+        // app arrays are read by the draw thread, so this must stay ahead of the Draw subscription.
+        _ = _osShell.Apps;
+        _appsResolved = true;
+        _assetUpdates.Start();
 
         _pluginInterface.UiBuilder.Draw += DrawWindowSystemGuarded;
         _pluginInterface.UiBuilder.OpenMainUi += OpenIfClosed;
@@ -331,6 +344,13 @@ public sealed class AetherLoveBootstrap : IHostedService
     /// one atypical frame, few enough to paste into a report.</summary>
     private const int FontDiagCaptureFrames = 30;
 
+    /// <summary>How long <c>resetassets</c> keeps the update gate on its checking line before the files are
+    /// deleted. The gate's own three-second hold at a full bar covers the other end.</summary>
+    private static readonly TimeSpan ResetAssetsHold = TimeSpan.FromSeconds(2);
+
+    /// <summary>The pause <c>resetassets</c> takes between one pack and the next, so each pack can be watched.</summary>
+    private static readonly TimeSpan ResetAssetsPackPause = TimeSpan.FromSeconds(1);
+
     private bool _fontScaleLeakLogged;
     private bool _appsResolved;
 
@@ -354,8 +374,8 @@ public sealed class AetherLoveBootstrap : IHostedService
             _windowSystem.Draw();
             UI.FontDiagnostics.Sample("Handler/after-window-system");
 
-            // Apps are resolved lazily, and the Aetherling app hands over its floating creature from its
-            // constructor, so without this it would only appear once the phone had been opened at least once.
+            // StartAsync resolves the registry before this hook exists; this is only the safety net for a
+            // start that threw partway, so the Aetherling app can still hand over its floating creature.
             if (!_appsResolved)
             {
                 _appsResolved = true;
@@ -612,7 +632,34 @@ public sealed class AetherLoveBootstrap : IHostedService
             _aetherlingDebugWindow.IsOpen = true;
             return;
         }
+        if (sub.Equals("resetassets", StringComparison.OrdinalIgnoreCase))
+        {
+            StartResetAssets();
+            return;
+        }
         OpenIfClosed();
+    }
+
+    /// <summary>Deletes every downloaded phone file and downloads the collection again on the update gate.
+    /// The full-screen phone is opened so the gate shows: the window moves a phone on Home or in an app onto
+    /// it, waits <see cref="ResetAssetsHold"/> before the delete, pauses <see cref="ResetAssetsPackPause"/>
+    /// between packs, then returns to where the user was after the gate's hold at a full bar. Runs off the
+    /// game command thread.</summary>
+    private void StartResetAssets()
+    {
+        _miniWindow.IsOpen = false;
+        _mainWindow.IsOpen = true;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _assets.ForceRedownloadAsync(ResetAssetsHold, ResetAssetsPackPause, CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _log.Warning(ex, "[AetherLove] resetassets failed.");
+            }
+        });
     }
 
     /// <summary>Wipes local caches (chats, messenger, cached photos/avatars/icons) then restarts the phone:

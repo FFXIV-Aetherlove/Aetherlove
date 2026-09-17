@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
@@ -49,6 +49,8 @@ internal sealed class GamesScreen
     private readonly Games.LumiLink.LumiLinkGuide _lumiLinkGuide = new();
     private readonly Games.Gyre.GyreGame _gyre = new();
     private readonly Games.Gyre.GyreGuide _gyreGuide = new();
+    private readonly Games.AetherPop.PopGame _aetherPop = new();
+    private readonly Games.AetherPop.PopGuide _aetherPopGuide = new();
     private readonly Dictionary<ArcadeGame, int> _bests = [];
 
     /// <summary>Games this shelf has never been opened for. A card wears "New" until its first open, not
@@ -56,6 +58,7 @@ internal sealed class GamesScreen
     private readonly HashSet<ArcadeGame> _unopened = [];
 
     private Phase _phase = Phase.Select;
+    private bool _playedSinceShow;
     private Phase _boardReturn = Phase.Select;
     private IPetGame? _active;
     private ArcadeGame _boardGame = ArcadeGame.CloudHop;
@@ -77,12 +80,28 @@ internal sealed class GamesScreen
     private const float GyreMusicPerEndlessStep = 0.02f;
 
     private const float GyreEndlessMusicCap = 0.30f;
+
+    /// <summary>Aether Pop climbs the same way: a step per round inside its five-round chapter, and the
+    /// Final round's own tightenings carry the loop up once there is no next round.</summary>
+    private const float PopSpeedPerRound = 0.035f;
+
+    private const float PopMusicPerFinalStep = 0.02f;
+
+    private const float PopFinalMusicCap = 0.30f;
     private string? _bgmTrack;
     private float _bgmSpeed = 1f;
 
     /// <summary>On the game list rather than inside one, which is the only phase the app's nav bar may
     /// draw over: a run holds ImGui's active id, and the leaderboard sits over a run paused behind it.</summary>
     public bool AtHub => _phase == Phase.Select;
+
+    /// <summary>Where the first game's card and its trophy corner were last drawn on the hub, for the
+    /// tour's rings. Null off the hub.</summary>
+    public (Vector2 TL, Vector2 BR)? FirstCardRect { get; private set; }
+
+    public (Vector2 TL, Vector2 BR)? FirstTrophyRect { get; private set; }
+
+    private (Vector2 TL, Vector2 BR) _lastTrophyRect;
 
     /// <summary>The music switch was flipped. The app owns the stored answer, since the ceremony's own mute
     /// button writes the same one.</summary>
@@ -95,6 +114,13 @@ internal sealed class GamesScreen
     /// host so the phone battery can never die mid-run.</summary>
     public bool RunActive => _phase is Phase.Countdown or Phase.Playing or Phase.Paused;
 
+    public bool ConsumePlayedSinceShow()
+    {
+        var played = _playedSinceShow;
+        _playedSinceShow = false;
+        return played;
+    }
+
     public GamesScreen(IAetherlingHost host, PetRuntime runtime, IArcadeScores scores, IAppStorage storage)
     {
         _host = host;
@@ -104,12 +130,13 @@ internal sealed class GamesScreen
         _leaderboard = new SoftLeaderboardPanel(scores);
     }
 
-    private IPetGame[] AllGames => [_cloudHop, _crystalCatch, _hillRoll, _lumiLink, _gyre];
+    private IPetGame[] AllGames => [_cloudHop, _crystalCatch, _hillRoll, _lumiLink, _gyre, _aetherPop];
 
     public void OnShow(AetherlingDto? core)
     {
         _core = core;
         _phase = Phase.Select;
+        _playedSinceShow = false;
         _active = null;
         _lastFrame = ImGui.GetTime();
         if (core is not null)
@@ -152,7 +179,7 @@ internal sealed class GamesScreen
 
     /// <summary>Which games are new enough to say so. A game leaves this list when it stops being news;
     /// nothing else on the shelf has ever worn the badge, and an empty list is the resting state.</summary>
-    private static readonly ArcadeGame[] NewGames = [ArcadeGame.Gyre];
+    private static readonly ArcadeGame[] NewGames = [ArcadeGame.Gyre, ArcadeGame.AetherPop];
 
     private static string NameKey(ArcadeGame game) => $"os.aetherling_game_{game.ToString().ToLowerInvariant()}";
 
@@ -178,6 +205,7 @@ internal sealed class GamesScreen
         ArcadeGame.CrystalCatch => FontAwesomeIcon.Gem,
         ArcadeGame.LumiLink => FontAwesomeIcon.Th,
         ArcadeGame.Gyre => FontAwesomeIcon.CircleNotch,
+        ArcadeGame.AetherPop => FontAwesomeIcon.Bullseye,
         _ => FontAwesomeIcon.Mountain,
     };
 
@@ -190,7 +218,7 @@ internal sealed class GamesScreen
     private string GyreBgm(int chapter)
     {
         string[] tracks = ["bgm_gyre_1.ogg", "bgm_gyre_2.ogg", "bgm_gyre_1.ogg", "bgm_gyre_2.ogg"];
-        var bgmDir = Path.Combine(_host.AssetRoot, "..", "bgm");
+        var bgmDir = _host.BgmRoot;
         var wanted = tracks[Math.Clamp(chapter, 0, 3)];
         if (File.Exists(Path.Combine(bgmDir, wanted)))
         {
@@ -204,6 +232,27 @@ internal sealed class GamesScreen
             }
         }
         return "bgm_lumi_link.ogg";
+    }
+
+    /// <summary>Aether Pop's four loops, one per five rounds; a chapter whose track has not shipped yet
+    /// falls back to the nearest one that exists, so the plumbing precedes the files.</summary>
+    private string PopBgm(int chapter)
+    {
+        string[] tracks = ["bgm_aetherpop_1.ogg", "bgm_aetherpop_2.ogg", "bgm_aetherpop_3.ogg", "bgm_aetherpop_4.ogg"];
+        var bgmDir = _host.BgmRoot;
+        var wanted = tracks[Math.Clamp(chapter, 0, 3)];
+        if (File.Exists(Path.Combine(bgmDir, wanted)))
+        {
+            return wanted;
+        }
+        foreach (var track in tracks)
+        {
+            if (File.Exists(Path.Combine(bgmDir, track)))
+            {
+                return track;
+            }
+        }
+        return GyreBgm(chapter);
     }
 
     public void Draw(OsAppContext ctx)
@@ -239,6 +288,7 @@ internal sealed class GamesScreen
                 ClaimStage(origin, size);
                 break;
             case Phase.Playing:
+                _playedSinceShow = true;
                 // A press on either corner chip is chrome, not play: the games read the mouse over the
                 // whole stage, so without this a tap on pause also throttles the cart it is stopping.
                 DrawRun(ctx, dl, origin, size, dt, inputActive: !ChromeHovered(origin, size));
@@ -303,6 +353,10 @@ internal sealed class GamesScreen
         {
             wanted = GyreBgm(gyre.Chapter);
         }
+        else if (wanted is not null && _active is Games.AetherPop.PopGame pop)
+        {
+            wanted = PopBgm(pop.Chapter);
+        }
         // Lumi-Link's loop climbs two percent per level, pitch and tempo together; Gyre's climbs across
         // the five stages of a chapter and starts over when the next chapter brings the other loop in.
         var speed = 1f;
@@ -315,6 +369,11 @@ internal sealed class GamesScreen
             speed = 1f + (GyreSpeedPerStage * StageInChapter(gyreSpeed.Metric1));
             // The Core has no next stage to hand the climb to, so its own steps carry the loop up.
             speed += Math.Min(GyreEndlessMusicCap, GyreMusicPerEndlessStep * gyreSpeed.EndlessSteps);
+        }
+        else if (wanted is not null && _active is Games.AetherPop.PopGame popSpeed)
+        {
+            speed = 1f + (PopSpeedPerRound * StageInChapter(popSpeed.Metric1));
+            speed += Math.Min(PopFinalMusicCap, PopMusicPerFinalStep * popSpeed.FinalSteps);
         }
         if (wanted == _bgmTrack && Math.Abs(speed - _bgmSpeed) < 0.001f)
         {
@@ -334,6 +393,7 @@ internal sealed class GamesScreen
 
     private const string LumiLinkGuideKey = "games.lumilink.guideSeen";
     private const string GyreGuideKey = "games.gyre.guideSeen";
+    private const string PopGuideKey = "games.aetherpop.guideSeen";
 
     private void Start(IPetGame game)
     {
@@ -356,8 +416,18 @@ internal sealed class GamesScreen
             });
             return;
         }
+        if (game is Games.AetherPop.PopGame && _storage.Get<bool?>(PopGuideKey) != true && !_aetherPopGuide.Active)
+        {
+            _aetherPopGuide.Show(() =>
+            {
+                _storage.Set(PopGuideKey, true);
+                Start(game);
+            });
+            return;
+        }
         _lumiLink.SetCreature(_core);
         _gyre.SetCreature(_core);
+        _aetherPop.SetCreature(_core);
         _active = game;
         game.Reset(new Random());
         _countdown = CountdownSeconds;
@@ -407,21 +477,18 @@ internal sealed class GamesScreen
 
         var cardW = size.X - (pad * 2f);
         var gap = Px(8f);
+        FirstCardRect = null;
+        FirstTrophyRect = null;
         foreach (var game in AllGames)
         {
-            y += DrawGameCard(ctx, dl, game, new Vector2(origin.X + pad, y), cardW) + gap;
-        }
-
-        // The mascot itself, idling under its games; drawn with the runtime's own pose because the hub
-        // is not a game and here it is genuinely the creature.
-        var footY = origin.Y + size.Y - PetNavBar.Reserved;
-        var room = footY - y - Px(16f);
-        if (room > Px(56f) && _runtime.Ready)
-        {
-            var petPx = MathF.Min(room, Px(84f));
-            var bottom = new Vector2(origin.X + (size.X * 0.5f), footY - Px(2f));
-            Look.GroundGlow(dl, bottom + new Vector2(0f, Px(4f)), petPx * 0.7f, petPx * 0.15f, Look.Crystal, 0.3f);
-            _runtime.Draw(dl, ctx.Capabilities.Textures, bottom, petPx, _runtime.Pose);
+            var tl = new Vector2(origin.X + pad, y);
+            var height = DrawGameCard(ctx, dl, game, tl, cardW);
+            if (FirstCardRect is null)
+            {
+                FirstCardRect = (tl, tl + new Vector2(cardW, height));
+                FirstTrophyRect = _lastTrophyRect;
+            }
+            y += height + gap;
         }
     }
 
@@ -430,9 +497,10 @@ internal sealed class GamesScreen
     /// height it drew, so the list can stack whatever each card needed.</summary>
     private float DrawGameCard(OsAppContext ctx, ImDrawListPtr dl, IPetGame game, Vector2 tl, float width)
     {
-        // Five games fit the shelf without scrolling only because the card is measured rather than
+        // Six games fit the shelf without scrolling only because the card is measured rather than
         // guessed: the padding, the icon and the gaps between the three lines are all as small as they
-        // can be while the blurb still reads as a paragraph.
+        // can be while the blurb still reads as a paragraph. The mascot used to idle under the cards
+        // and gave its room to the sixth.
         const float HintScale = 0.82f;
         var padIn = Px(9f);
         var iconSide = Px(64f);
@@ -454,6 +522,7 @@ internal sealed class GamesScreen
 
         // The trophy is submitted before the card's own button, so its little corner wins the click.
         var trophyTL = tl + new Vector2(width - trophySide - Px(10f), height - trophySide - Px(8f));
+        _lastTrophyRect = (trophyTL, trophyTL + new Vector2(trophySide, trophySide));
         ImGui.SetCursorScreenPos(trophyTL);
         var trophyClicked = ImGui.InvisibleButton($"##gameTrophy{game.Id}", new Vector2(trophySide, trophySide));
         HandOnHover();
@@ -588,6 +657,15 @@ internal sealed class GamesScreen
             }
             backTop += Px(52f);
         }
+        if (game is Games.AetherPop.PopGame)
+        {
+            if (DrawSoftButton(ctx, dl, "##titleHelp", ctx.Localize("os.aetherling_pop_help"), centreX,
+                backTop, false))
+            {
+                _aetherPopGuide.Show(null);
+            }
+            backTop += Px(52f);
+        }
         if (DrawSoftButton(ctx, dl, "##titleBack", ctx.Localize("os.aetherling_game_tohub"), centreX,
             backTop, false))
         {
@@ -596,6 +674,7 @@ internal sealed class GamesScreen
         }
         _lumiLinkGuide.Draw(ctx, origin, size, _host.AssetRoot, _core);
         _gyreGuide.Draw(ctx, origin, size, _host.AssetRoot, _core, _runtime);
+        _aetherPopGuide.Draw(ctx, origin, size, _host.AssetRoot, _core, _runtime);
     }
 
     private void DrawGameIcon(OsAppContext ctx, ImDrawListPtr dl, ArcadeGame game, Vector2 tl, float side)

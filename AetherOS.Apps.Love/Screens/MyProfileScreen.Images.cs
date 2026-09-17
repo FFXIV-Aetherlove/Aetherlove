@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
@@ -757,6 +757,11 @@ public partial class MyProfileScreen
                 DrawSelfieButton(_imgActiveSlot, t);
             }
 
+            if (!lockedSlot)
+            {
+                DrawMovePhotoButtons(t);
+            }
+
             var pv = storedTex?.GetWrapOrDefault();
             if (pv != null)
             {
@@ -782,6 +787,137 @@ public partial class MyProfileScreen
         }
     }
 
+
+    private enum MoveBlock
+    {
+        None,
+        Unavailable,
+        Nsfw,
+        Unsaved,
+    }
+
+    private volatile bool _movingPhoto;
+
+    /// <summary>Why the saved photo in slot <paramref name="from"/> cannot swap with slot <paramref name="to"/>.
+    /// Mirrors the server rule: the main slot may never end up empty or NSFW.</summary>
+    private MoveBlock MoveBlockFor(int from, int to)
+    {
+        if (to < 0 || to > MaxExtraSlots)
+        {
+            return MoveBlock.Unavailable;
+        }
+        if (from == 0 || to == 0)
+        {
+            var extra = _serverExtras[Math.Max(from, to) - 1];
+            if (extra is null)
+            {
+                return MoveBlock.Unavailable;
+            }
+            if (extra.IsNsfw)
+            {
+                return MoveBlock.Nsfw;
+            }
+        }
+        return HasUnsavedChanges ? MoveBlock.Unsaved : MoveBlock.None;
+    }
+
+    private void DrawMovePhotoButtons(ThemeDefinition t)
+    {
+        var from = _imgActiveSlot;
+        var leftBlock = MoveBlockFor(from, from - 1);
+        var rightBlock = MoveBlockFor(from, from + 1);
+        var busy = _movingPhoto || _committingImages;
+        var gap = Px(8f);
+        var btnSize = new Vector2((ImGui.GetContentRegionAvail().X - Px(8f) - gap) * 0.5f, Px(26f));
+
+        ImGui.Spacing();
+        PushThemeButton(t);
+        if (DrawMoveButton($"{Loc.T("profile.move_left")}##mvPhotoL", btnSize, leftBlock == MoveBlock.None && !busy))
+        {
+            MovePhoto(from, from - 1);
+        }
+        ImGui.SameLine(0f, gap);
+        if (DrawMoveButton($"{Loc.T("profile.move_right")}##mvPhotoR", btnSize, rightBlock == MoveBlock.None && !busy))
+        {
+            MovePhoto(from, from + 1);
+        }
+        PopThemeButton();
+
+        string? hint = null;
+        if (leftBlock == MoveBlock.Nsfw || rightBlock == MoveBlock.Nsfw)
+        {
+            hint = Loc.T("profile.move_blocked_nsfw");
+        }
+        else if (leftBlock == MoveBlock.Unsaved || rightBlock == MoveBlock.Unsaved)
+        {
+            hint = Loc.T("profile.move_blocked_unsaved");
+        }
+        if (hint is not null)
+        {
+            ImGui.PushTextWrapPos(0f);
+            ImGui.TextColored(UiColors.Hint, hint);
+            ImGui.PopTextWrapPos();
+        }
+    }
+
+    private static bool DrawMoveButton(string label, Vector2 size, bool enabled)
+    {
+        using var disabled = ImRaii.Disabled(!enabled);
+        return SharedUiHelpers.Button(label, size) && enabled;
+    }
+
+    /// <summary>Swaps two saved photo slots on the server, then re-hydrates from server truth.</summary>
+    private void MovePhoto(int from, int to)
+    {
+        if (_movingPhoto || _committingImages)
+        {
+            return;
+        }
+        _movingPhoto = true;
+        var ct = _cts.Token;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                // Server orders: avatar=0, main=1, extras=2..6.
+                await _hubClient.MovePhotoAsync(from + 1, to + 1, ct).ConfigureAwait(false);
+                if (ct.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                var state = await _hubClient.GetOnboardingStateAsync(ct).ConfigureAwait(false);
+                if (ct.IsCancellationRequested)
+                {
+                    return;
+                }
+                HydrateServerPhotos(state.Photos);
+                _imgActiveSlot = to;
+
+                _cachedState = null;
+                _profileScreen.InvalidateMyProfileCache();
+            }
+            catch (OperationCanceledException) { }
+            catch (RateLimitException rl)
+            {
+                _rateLimitModal.Show(rl);
+            }
+            catch (Exception ex)
+            {
+                if (ct.IsCancellationRequested)
+                {
+                    return;
+                }
+                _saveErrorModal.Show(HubErrorText.Localize(ex));
+                UiHost.Log.Warning(ex, "[MyProfileScreen] MovePhoto failed.");
+            }
+            finally
+            {
+                _movingPhoto = false;
+            }
+        }, ct);
+    }
 
     private bool SlotHasServerPhoto(int slotIdx) => slotIdx switch
     {
@@ -876,11 +1012,14 @@ public partial class MyProfileScreen
             _imgPendingPick.Begin(handle, PhotoSpec.AvatarSize, PhotoSpec.AvatarSize,
                 onValid: () => _imgCropPopup.Open(
                     Loc.T("profile.crop_avatar"),
+                    path,
                     handle,
                     1.0f,
-                    cropRect =>
+                    pick =>
                     {
-                        _imgAvatarCropRect = cropRect;
+                        _imgAvatarPath = pick.Path;
+                        _imgAvatarHandle = pick.Preview;
+                        _imgAvatarCropRect = pick.Crop;
                         _imgAvatarConfirmed = true;
                     },
                     onCancel: Unload),
@@ -924,11 +1063,14 @@ public partial class MyProfileScreen
             _imgPendingPick.Begin(handle, PhotoSpec.PortraitWidth, PhotoSpec.PortraitHeight,
                 onValid: () => _imgCropPopup.Open(
                     label,
+                    path,
                     handle,
                     1.6f,
-                    cropRect =>
+                    pick =>
                     {
-                        _imgPhotoSlots[target].CropRect = cropRect;
+                        _imgPhotoSlots[target].Path = pick.Path;
+                        _imgPhotoSlots[target].Handle = pick.Preview;
+                        _imgPhotoSlots[target].CropRect = pick.Crop;
                         _imgPhotoSlots[target].Confirmed = true;
                         _imgPhotoSlots[target].PendingRemove = false;
                     },

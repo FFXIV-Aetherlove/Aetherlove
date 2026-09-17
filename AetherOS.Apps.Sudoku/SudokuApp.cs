@@ -12,7 +12,8 @@ namespace AetherOS.Apps.Sudoku;
 
 /// <summary>Sudoku on the handheld LCD, as a climbing ladder rather than a difficulty menu: every grid you
 /// clear hands you a harder one, until Insane, which it stays on. Three strikes and a clock per grid end
-/// the run.
+/// the run. Practice is the one place a difficulty is chosen: no clock, no score, no strike limit, and it
+/// never reaches the high scores, the leaderboard or sparks.
 ///
 /// Unlike the other cabinets this one never polls the keyboard. Doing so takes the keys away from the game
 /// for as long as the app reads them, which is a fair trade for a ninety-second Snake run and a bad one for
@@ -36,7 +37,16 @@ public sealed class SudokuApp : IAetherApp
         Scores,
         Leaderboard,
         Help,
+        PracticeMenu,
     }
+
+    private static readonly SudokuDifficulty[] PracticeDifficulties =
+    [
+        SudokuDifficulty.Easy,
+        SudokuDifficulty.Medium,
+        SudokuDifficulty.Difficult,
+        SudokuDifficulty.Insane,
+    ];
 
     private readonly Func<string> name;
     private readonly IAppStorage storage;
@@ -99,7 +109,7 @@ public sealed class SudokuApp : IAetherApp
     /// the grid down while nobody is looking.</summary>
     public void OnBackground()
     {
-        if (this.view == View.Playing)
+        if (this.view == View.Playing && !this.game.IsPractice)
         {
             this.paused = true;
         }
@@ -126,8 +136,14 @@ public sealed class SudokuApp : IAetherApp
             case View.Playing:
                 DrawPlaying(ctx, delta, winPos, winSize);
                 break;
+            case View.Cleared when this.game.IsPractice:
+                DrawPracticeCleared(ctx, winPos, winSize);
+                break;
             case View.Cleared:
                 DrawCleared(ctx, winPos, winSize);
+                break;
+            case View.PracticeMenu:
+                DrawPracticeMenu(ctx, winPos, winSize);
                 break;
             case View.GameOver:
                 DrawGameOver(ctx, winPos, winSize);
@@ -136,11 +152,7 @@ public sealed class SudokuApp : IAetherApp
                 DrawScores(ctx, winPos, winSize);
                 break;
             case View.Leaderboard:
-                this.leaderboard.Draw(ctx, winPos, winSize, () =>
-                {
-                    this.splashStartedAt = ImGui.GetTime();
-                    this.view = View.Splash;
-                });
+                this.leaderboard.Draw(ctx, winPos, winSize, GoToSplash);
                 break;
             case View.Help:
                 DrawHelp(ctx, winPos, winSize);
@@ -172,6 +184,23 @@ public sealed class SudokuApp : IAetherApp
     private void StartRun()
     {
         this.game.Start();
+        EnterBoard();
+    }
+
+    private void StartPractice(SudokuDifficulty difficulty)
+    {
+        this.game.StartPractice(difficulty);
+        EnterBoard();
+    }
+
+    private void GoToSplash()
+    {
+        this.splashStartedAt = ImGui.GetTime();
+        this.view = View.Splash;
+    }
+
+    private void EnterBoard()
+    {
         this.selected = -1;
         this.pencil = false;
         this.paused = false;
@@ -220,21 +249,28 @@ public sealed class SudokuApp : IAetherApp
 
         var buttonW = winSize.X * 0.62f;
         var buttonH = ctx.Px(38f);
-        var firstY = winSize.Y * 0.58f;
+        var step = buttonH + ctx.Px(10f);
+        var firstY = winSize.Y * 0.52f;
         if (RetroLcd.Button("##sudokuPlay", ctx.Localize("os.sudoku_play"),
             winPos + new Vector2((winSize.X - buttonW) * 0.5f, firstY), new Vector2(buttonW, buttonH),
             ctx.Px(4f), filled: true))
         {
             StartRun();
         }
+        if (RetroLcd.Button("##sudokuPractice", ctx.Localize("os.sudoku_practice"),
+            winPos + new Vector2((winSize.X - buttonW) * 0.5f, firstY + step),
+            new Vector2(buttonW, buttonH), ctx.Px(4f), filled: false))
+        {
+            this.view = View.PracticeMenu;
+        }
         if (RetroLcd.Button("##sudokuScores", ctx.Localize("os.sudoku_high_scores"),
-            winPos + new Vector2((winSize.X - buttonW) * 0.5f, firstY + buttonH + ctx.Px(10f)),
+            winPos + new Vector2((winSize.X - buttonW) * 0.5f, firstY + (step * 2f)),
             new Vector2(buttonW, buttonH), ctx.Px(4f), filled: false))
         {
             this.view = View.Scores;
         }
         if (RetroLcd.Button("##sudokuBoard", ctx.Localize("os.arcade_leaderboard"),
-            winPos + new Vector2((winSize.X - buttonW) * 0.5f, firstY + ((buttonH + ctx.Px(10f)) * 2f)),
+            winPos + new Vector2((winSize.X - buttonW) * 0.5f, firstY + (step * 3f)),
             new Vector2(buttonW, buttonH), ctx.Px(4f), filled: false))
         {
             this.view = View.Leaderboard;
@@ -270,7 +306,8 @@ public sealed class SudokuApp : IAetherApp
 
     private void DrawPlaying(OsAppContext ctx, double delta, Vector2 winPos, Vector2 winSize)
     {
-        if (RetroLcd.WindowBlurred())
+        var practice = this.game.IsPractice;
+        if (!practice && RetroLcd.WindowBlurred())
         {
             this.paused = true;
         }
@@ -286,7 +323,14 @@ public sealed class SudokuApp : IAetherApp
         this.strikeFlashElapsed += delta;
 
         var hudH = ctx.Px(28f);
-        DrawHud(ctx, winPos, winSize, hudH);
+        if (practice)
+        {
+            DrawPracticeHud(ctx, winPos, winSize, hudH);
+        }
+        else
+        {
+            DrawHud(ctx, winPos, winSize, hudH);
+        }
 
         if (!this.game.Ready)
         {
@@ -305,13 +349,16 @@ public sealed class SudokuApp : IAetherApp
 
         if (this.paused)
         {
-            DrawPausedOverlay(ctx, boardTL, boardSize);
+            DrawPausedOverlay(ctx, boardTL, boardSize, practice);
         }
 
         switch (this.game.Outcome)
         {
             case SudokuOutcome.Solved:
                 this.view = View.Cleared;
+                break;
+            case SudokuOutcome.Abandoned when practice:
+                GoToSplash();
                 break;
             case SudokuOutcome.OutOfStrikes:
             case SudokuOutcome.Abandoned:
@@ -360,6 +407,23 @@ public sealed class SudokuApp : IAetherApp
             ImGui.GetColorU32(RetroLcd.Pixel with { W = midAlpha }), mid);
 
         DrawMistakes(ctx, dl, winPos, hudH, padX, ImGui.CalcTextSize(scoreText).X);
+    }
+
+    /// <summary>The practice HUD: the chosen difficulty and a stop key, with no score, clock or mistake count.</summary>
+    private void DrawPracticeHud(OsAppContext ctx, Vector2 winPos, Vector2 winSize, float hudH)
+    {
+        var dl = ImGui.GetWindowDrawList();
+        var padX = ctx.Px(10f);
+        var textY = winPos.Y + ((hudH - ImGui.GetTextLineHeight()) * 0.5f);
+        var label = string.Format(ctx.Localize("os.sudoku_practice_hud"), ctx.Localize(DifficultyKey(this.game.Difficulty)));
+        dl.AddText(new Vector2(winPos.X + padX, textY), ImGui.GetColorU32(RetroLcd.Pixel), label);
+
+        var size = RetroLcd.PauseKeyWidth(hudH);
+        var keyTL = new Vector2(winPos.X + winSize.X - padX - size, winPos.Y + ((hudH - size) * 0.5f));
+        if (!this.paused && RetroLcd.Key("##sudokuPracticeStop", FontAwesomeIcon.Times, keyTL, size))
+        {
+            this.paused = true;
+        }
     }
 
     /// <summary>"Mistakes 1/3" plus pips, shaken for a beat when a strike lands so a wrong digit is felt
@@ -603,7 +667,8 @@ public sealed class SudokuApp : IAetherApp
         this.game.Place(this.selected, digit);
     }
 
-    private void DrawPausedOverlay(OsAppContext ctx, Vector2 boardTL, float boardSize)
+    /// <summary>The pause overlay, or in practice the stop confirmation, which wears the same shape.</summary>
+    private void DrawPausedOverlay(OsAppContext ctx, Vector2 boardTL, float boardSize, bool practice)
     {
         var dl = ImGui.GetWindowDrawList();
         // The grid is covered rather than dimmed: a paused board left legible is a free window in which to
@@ -613,14 +678,14 @@ public sealed class SudokuApp : IAetherApp
         dl.AddRect(boardTL, boardTL + new Vector2(boardSize, boardSize),
             ImGui.GetColorU32(RetroLcd.Pixel with { W = 0.5f }), 0f, ImDrawFlags.None, 2f);
 
-        var label = ctx.Localize("os.sudoku_paused");
+        var label = ctx.Localize(practice ? "os.sudoku_practice_stop_title" : "os.sudoku_paused");
         var labelSize = ImGui.CalcTextSize(label);
         dl.AddText(boardTL + new Vector2((boardSize - labelSize.X) * 0.5f, (boardSize * 0.5f) - ctx.Px(34f)),
             ImGui.GetColorU32(RetroLcd.Pixel), label);
 
         var buttonW = boardSize * 0.7f;
         var buttonH = ctx.Px(36f);
-        if (RetroLcd.Button("##sudokuResume", ctx.Localize("os.sudoku_resume"),
+        if (RetroLcd.Button("##sudokuResume", ctx.Localize(practice ? "os.sudoku_practice_keep" : "os.sudoku_resume"),
             boardTL + new Vector2((boardSize - buttonW) * 0.5f, boardSize * 0.5f),
             new Vector2(buttonW, buttonH), ctx.Px(4f), filled: true))
         {
@@ -629,7 +694,7 @@ public sealed class SudokuApp : IAetherApp
         }
         // With the clock no longer a fail state, a run has no natural end but strikes; quitting from the
         // pause still submits everything earned so far.
-        if (RetroLcd.Button("##sudokuQuit", ctx.Localize("os.sudoku_quit"),
+        if (RetroLcd.Button("##sudokuQuit", ctx.Localize(practice ? "os.sudoku_practice_stop" : "os.sudoku_quit"),
             boardTL + new Vector2((boardSize - buttonW) * 0.5f, (boardSize * 0.5f) + buttonH + ctx.Px(10f)),
             new Vector2(buttonW, buttonH), ctx.Px(4f), filled: false))
         {
@@ -696,6 +761,90 @@ public sealed class SudokuApp : IAetherApp
         }
     }
 
+    /// <summary>A solved practice grid: no receipt, just another grid at the same difficulty or the menu.</summary>
+    private void DrawPracticeCleared(OsAppContext ctx, Vector2 winPos, Vector2 winSize)
+    {
+        var dl = ImGui.GetWindowDrawList();
+        this.game.Poll();
+
+        var title = ctx.Localize("os.sudoku_cleared");
+        using (ctx.TitleFont?.Push())
+        {
+            var titleSize = ImGui.CalcTextSize(title);
+            dl.AddText(ImGui.GetFont(), ImGui.GetFontSize(),
+                winPos + new Vector2((winSize.X - titleSize.X) * 0.5f, winSize.Y * 0.20f),
+                ImGui.GetColorU32(RetroLcd.Pixel), title);
+        }
+
+        var line = string.Format(ctx.Localize("os.sudoku_practice_hud"), ctx.Localize(DifficultyKey(this.game.Difficulty)));
+        var lineSize = ImGui.CalcTextSize(line);
+        dl.AddText(winPos + new Vector2((winSize.X - lineSize.X) * 0.5f, winSize.Y * 0.32f),
+            ImGui.GetColorU32(RetroLcd.Pixel), line);
+
+        var buttonW = winSize.X * 0.62f;
+        var buttonH = ctx.Px(38f);
+        var firstY = winSize.Y * 0.62f;
+        var ready = this.game.Ready;
+        var label = ctx.Localize(ready ? "os.sudoku_practice_new" : "os.sudoku_generating");
+        if (RetroLcd.Button("##sudokuPracticeNext", label,
+            winPos + new Vector2((winSize.X - buttonW) * 0.5f, firstY),
+            new Vector2(buttonW, buttonH), ctx.Px(4f), filled: true) && ready)
+        {
+            this.selected = -1;
+            this.game.Continue();
+            this.lastFrameTime = ImGui.GetTime();
+            this.view = View.Playing;
+        }
+        if (RetroLcd.Button("##sudokuPracticeMenu", ctx.Localize("os.sudoku_menu"),
+            winPos + new Vector2((winSize.X - buttonW) * 0.5f, firstY + buttonH + ctx.Px(10f)),
+            new Vector2(buttonW, buttonH), ctx.Px(4f), filled: false))
+        {
+            GoToSplash();
+        }
+    }
+
+    /// <summary>Practice starts here: pick a difficulty, and the grid opens with no clock, score or strikes.</summary>
+    private void DrawPracticeMenu(OsAppContext ctx, Vector2 winPos, Vector2 winSize)
+    {
+        var dl = ImGui.GetWindowDrawList();
+        var title = ctx.Localize("os.sudoku_practice");
+        using (ctx.TitleFont?.Push())
+        {
+            var titleSize = ImGui.CalcTextSize(title);
+            dl.AddText(ImGui.GetFont(), ImGui.GetFontSize(),
+                winPos + new Vector2((winSize.X - titleSize.X) * 0.5f, winSize.Y * 0.12f),
+                ImGui.GetColorU32(RetroLcd.Pixel), title);
+        }
+
+        var margin = ctx.Px(16f);
+        ImGui.SetCursorScreenPos(new Vector2(winPos.X + margin, winPos.Y + (winSize.Y * 0.22f)));
+        ImGui.PushTextWrapPos(winSize.X - margin);
+        ImGui.TextColored(RetroLcd.Pixel with { W = 0.85f }, ctx.Localize("os.sudoku_practice_about"));
+        ImGui.PopTextWrapPos();
+
+        var buttonW = winSize.X * 0.62f;
+        var buttonH = ctx.Px(38f);
+        var step = buttonH + ctx.Px(10f);
+        var firstY = winSize.Y * 0.36f;
+        for (var i = 0; i < PracticeDifficulties.Length; i++)
+        {
+            var difficulty = PracticeDifficulties[i];
+            if (RetroLcd.Button($"##sudokuPractice{difficulty}", ctx.Localize(DifficultyKey(difficulty)),
+                winPos + new Vector2((winSize.X - buttonW) * 0.5f, firstY + (step * i)),
+                new Vector2(buttonW, buttonH), ctx.Px(4f), filled: true))
+            {
+                StartPractice(difficulty);
+            }
+        }
+
+        if (RetroLcd.Button("##sudokuPracticeBack", ctx.Localize("os.sudoku_menu"),
+            winPos + new Vector2((winSize.X - buttonW) * 0.5f, winSize.Y - buttonH - ctx.Px(24f)),
+            new Vector2(buttonW, buttonH), ctx.Px(4f), filled: false))
+        {
+            GoToSplash();
+        }
+    }
+
     private void DrawGameOver(OsAppContext ctx, Vector2 winPos, Vector2 winSize)
     {
         var dl = ImGui.GetWindowDrawList();
@@ -739,8 +888,7 @@ public sealed class SudokuApp : IAetherApp
             winPos + new Vector2((winSize.X - buttonW) * 0.5f, firstY + buttonH + ctx.Px(10f)),
             new Vector2(buttonW, buttonH), ctx.Px(4f), filled: false))
         {
-            this.splashStartedAt = ImGui.GetTime();
-            this.view = View.Splash;
+            GoToSplash();
         }
     }
 
@@ -789,8 +937,7 @@ public sealed class SudokuApp : IAetherApp
             new Vector2(buttonW, buttonH), ctx.Px(4f), filled: true))
         {
             this.storage.Set(HelpSeenKey, true);
-            this.splashStartedAt = ImGui.GetTime();
-            this.view = View.Splash;
+            GoToSplash();
         }
     }
 
@@ -831,8 +978,7 @@ public sealed class SudokuApp : IAetherApp
             winPos + new Vector2((winSize.X - buttonW) * 0.5f, winSize.Y - buttonH - ctx.Px(24f)),
             new Vector2(buttonW, buttonH), ctx.Px(4f), filled: false))
         {
-            this.splashStartedAt = ImGui.GetTime();
-            this.view = View.Splash;
+            GoToSplash();
         }
     }
 }

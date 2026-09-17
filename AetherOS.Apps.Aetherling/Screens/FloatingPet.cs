@@ -1,9 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Threading;
+using System.Threading.Tasks;
 using AetherLove.Services.Localization;
+using AetherLove.Shared.Aetherling;
+using AetherLove.Shared.Store;
+using AetherLove.UI;
 using AetherLove.Widgets;
 using AetherOS.PetKit.Engine;
+using AetherOS.PetKit.Rendering;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
@@ -33,6 +39,9 @@ internal sealed class FloatingPet(IAetherlingHost host, PetRuntime pet) : IAethe
     private const float MarginFraction = 0.20f;
 
     private const string MenuId = "##aetherlingFloatMenu";
+    private const float SnackFirstDelaySeconds = 18f;
+    private const float SnackVisibleSeconds = 9f;
+    private const float SnackGapSeconds = 300f;
 
     private readonly PartyHuddle _huddle = new(host);
 
@@ -47,6 +56,19 @@ internal sealed class FloatingPet(IAetherlingHost host, PetRuntime pet) : IAethe
     private bool _dragging;
     private bool _holding;
     private bool _recentre;
+    private IReadOnlyList<StoreInventoryItemDto>? _inventory;
+    private IReadOnlyList<StoreInventoryItemDto>? _pendingInventory;
+    private bool _inventoryLoading;
+    private Elements.ElementDef? _snack;
+    private double _snackUntil;
+    private double _nextSnackAt;
+    private bool _snackClockStarted;
+    private bool _feedBusy;
+    private AetherlingDto? _feedBefore;
+    private AetherlingDto? _pendingFed;
+    private string? _pendingFeedError;
+    private string? _feedError;
+    private double _feedErrorUntil;
 
     /// <summary>Whether the player wants it out here at all, set by the app from its stored settings.</summary>
     public bool Enabled { get; set; }
@@ -83,17 +105,22 @@ internal sealed class FloatingPet(IAetherlingHost host, PetRuntime pet) : IAethe
     /// the same creature is not standing on the game screen while it is busy being celebrated inside.</summary>
     public bool Hidden { get; set; }
 
-    public bool Visible => Enabled && !Hidden && host.Snapshot is { HatchedAtUtc: not null };
+    public bool Visible => Enabled && !Hidden && host.Snapshot is { Adult: not null };
 
     /// <summary>Whether the creature speaks out over the game. The one off switch (the glyph channel is
     /// never silenced in the app, where it is the pet's voice rather than a feature); the app persists it.</summary>
     public bool WorldGlyphs { get; set; } = true;
+
+    public string PreferredElementKey { get; set; } = string.Empty;
 
     /// <summary>Puts it back in the middle of the screen, for anyone who has lost it off an edge.</summary>
     public void Recentre() => _recentre = true;
 
     public void Draw()
     {
+        DrainSnackState();
+        EnsureSnackInventory();
+
         // The same form AND the same look the phone page asks for. Both are the runtime's, not a page's:
         // dressing it from the pet page alone meant the creature out here wore the default blue until the
         // app had been opened at least once.
@@ -113,6 +140,7 @@ internal sealed class FloatingPet(IAetherlingHost host, PetRuntime pet) : IAethe
         var scale = SizeScales[Math.Clamp(SizeIndex, 0, SizeScales.Length - 1)];
         var size = PetSize * scale * ImGuiHelpers.GlobalScale;
         var margin = MathF.Max(10f, size * MarginFraction);
+        TickSnackCue();
 
         // The worn look can reach past the creature's own square (a lance, a nook), so the
         // canvas folds the footprint in. Input stays silhouette-gated, so a bigger canvas
@@ -140,7 +168,12 @@ internal sealed class FloatingPet(IAetherlingHost host, PetRuntime pet) : IAethe
         var mouse = ImGui.GetIO().MousePos;
         var overPet = mouse.X >= feet.X - (hitbox.X * 0.5f) && mouse.X <= feet.X + (hitbox.X * 0.5f)
             && mouse.Y >= feet.Y - hitbox.Y && mouse.Y <= feet.Y;
-        var interactive = overPet || _dragging || _holding || ImGui.IsPopupOpen(MenuId);
+        var snackSide = size * 0.34f;
+        var snackCentre = feet + new Vector2(size * 0.43f, -size * 0.90f);
+        var snackTl = snackCentre - new Vector2(snackSide * 0.5f);
+        var overSnack = _snack is not null && mouse.X >= snackTl.X && mouse.X <= snackTl.X + snackSide
+            && mouse.Y >= snackTl.Y && mouse.Y <= snackTl.Y + snackSide;
+        var interactive = overPet || overSnack || _dragging || _holding || ImGui.IsPopupOpen(MenuId);
 
         var windowTl = feet - new Vector2(canvas.X * 0.5f, headroom + size);
         ImGui.SetNextWindowPos(windowTl, ImGuiCond.Always);
@@ -205,6 +238,11 @@ internal sealed class FloatingPet(IAetherlingHost host, PetRuntime pet) : IAethe
 
         pet.Draw(ImGui.GetWindowDrawList(), host.Textures, bottomCentre, size, pet.Pose);
 
+        if (_snack is { } snack)
+        {
+            DrawSnackBubble(snack, snackTl, snackSide);
+        }
+
         // On the FOREGROUND list, not the window's: the canvas is deliberately tight (every spare pixel
         // of margin is a stolen click on someone's hotbar), and out here a symbol needs no window
         // headroom and takes no clicks, the Kindling-flash precedent.
@@ -218,6 +256,181 @@ internal sealed class FloatingPet(IAetherlingHost host, PetRuntime pet) : IAethe
         // another window's scope. They stand beside the owner rather than inside its canvas, which is
         // deliberately tight (every spare pixel of margin is a stolen click on somebody's hotbar).
         _huddle.Draw(bottomCentre, size, pet);
+    }
+
+    private void TickSnackCue()
+    {
+        var now = ImGui.GetTime();
+        if (!_snackClockStarted)
+        {
+            _snackClockStarted = true;
+            _nextSnackAt = now + SnackFirstDelaySeconds;
+        }
+        if (_snack is not null && now >= _snackUntil)
+        {
+            _snack = null;
+            _nextSnackAt = now + SnackGapSeconds;
+        }
+        if (_snack is not null || now < _nextSnackAt || !SnackEligible())
+        {
+            return;
+        }
+        _snack = PickSnack();
+        if (_snack is null)
+        {
+            return;
+        }
+        _snackUntil = now + SnackVisibleSeconds;
+        pet.AnticipateCrystal(host.ReduceMotion, _snack.Value.Key);
+    }
+
+    private bool SnackEligible() =>
+        !_feedBusy && !pet.Napping && host.Snapshot is { Adult: not null } core
+        && PetState.AdultFeedsLeft(core) > 0 && _inventory is not null && PickSnack() is not null;
+
+    private Elements.ElementDef? PickSnack()
+    {
+        if (PreferredElementKey.Length > 0)
+        {
+            foreach (var element in Elements.All)
+            {
+                if (string.Equals(element.Key, PreferredElementKey, StringComparison.OrdinalIgnoreCase)
+                    && PetState.CrystalCount(_inventory, element) > 0)
+                {
+                    return element;
+                }
+            }
+        }
+        foreach (var element in Elements.All)
+        {
+            if (PetState.CrystalCount(_inventory, element) > 0)
+            {
+                return element;
+            }
+        }
+        return null;
+    }
+
+    private void DrawSnackBubble(Elements.ElementDef element, Vector2 tl, float side)
+    {
+        ImGui.SetCursorScreenPos(tl);
+        var pressed = ImGui.InvisibleButton("##aetherlingFloatingSnack", new Vector2(side));
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            var name = Loc.T(Elements.NameKey(element));
+            ImGui.SetTooltip(_feedError is { Length: > 0 } && ImGui.GetTime() < _feedErrorUntil
+                ? _feedError
+                : Loc.T("os.aetherling_float_feed_tip", name));
+        }
+
+        var dl = ImGui.GetWindowDrawList();
+        var centre = tl + new Vector2(side * 0.5f);
+        dl.AddCircleFilled(centre, side * 0.48f, 0xE8F2F5F7u, 24);
+        dl.AddCircle(centre, side * 0.48f, ImGui.ColorConvertFloat4ToU32(element.Accent with { W = 0.78f }),
+            24, MathF.Max(1f, side * 0.035f));
+        DrawSnackCrystal(dl, element, centre, side * 0.62f);
+
+        if (pressed && !_feedBusy)
+        {
+            StartSnackFeed(element);
+        }
+    }
+
+    private void DrawSnackCrystal(ImDrawListPtr dl, Elements.ElementDef element, Vector2 centre, float side)
+    {
+        if (CoreAssets.CrystalPath(element.Key) is { } path && host.Textures.Get(path) is { } texture)
+        {
+            var half = side * 0.5f;
+            dl.AddImage(texture, centre - new Vector2(half), centre + new Vector2(half), Vector2.Zero, Vector2.One,
+                0xFFFFFFFFu);
+            return;
+        }
+        IconDraw.AddCentered(dl, FontAwesomeIcon.Gem, side * 0.62f, centre,
+            ImGui.ColorConvertFloat4ToU32(element.Accent));
+    }
+
+    private void StartSnackFeed(Elements.ElementDef element)
+    {
+        if (host.Snapshot is not { } core || PetState.AdultFeedsLeft(core) <= 0
+            || PetState.CrystalCount(_inventory, element) <= 0)
+        {
+            _snack = null;
+            EnsureSnackInventory(force: true);
+            return;
+        }
+        _feedBusy = true;
+        _feedBefore = core;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var dto = await host.FeedAsync((short)element.Value).ConfigureAwait(false);
+                Interlocked.Exchange(ref _pendingFed, dto);
+            }
+            catch (Exception ex)
+            {
+                Interlocked.Exchange(ref _pendingFeedError, host.DescribeError(ex));
+            }
+        });
+    }
+
+    private void DrainSnackState()
+    {
+        if (Interlocked.Exchange(ref _pendingInventory, null) is { } items)
+        {
+            _inventory = items;
+        }
+        if (Interlocked.Exchange(ref _pendingFed, null) is { } fed)
+        {
+            _feedBusy = false;
+            var element = _snack;
+            _snack = null;
+            _nextSnackAt = ImGui.GetTime() + SnackGapSeconds;
+            if (element is { } eaten)
+            {
+                pet.PlayFeedLand(eaten.Accent, host.ReduceMotion, eaten.Key);
+            }
+            if (_feedBefore is not null && PetState.AdultFeedsLeft(_feedBefore) > 0
+                && PetState.AdultFeedsLeft(fed) == 0)
+            {
+                pet.PlayFullMeal(Random.Shared.Next(3), host.ReduceMotion);
+            }
+            _feedBefore = null;
+            EnsureSnackInventory(force: true);
+        }
+        if (Interlocked.Exchange(ref _pendingFeedError, null) is { } error)
+        {
+            _feedBusy = false;
+            _feedBefore = null;
+            _feedError = error;
+            _feedErrorUntil = ImGui.GetTime() + 4f;
+            pet.PlayRefusal(host.ReduceMotion);
+            EnsureSnackInventory(force: true);
+        }
+    }
+
+    private void EnsureSnackInventory(bool force = false)
+    {
+        if (_inventoryLoading || (!force && _inventory is not null))
+        {
+            return;
+        }
+        _inventoryLoading = true;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                if (await host.GetOwnedItemsAsync().ConfigureAwait(false) is { } items)
+                {
+                    Interlocked.Exchange(ref _pendingInventory, items);
+                }
+            }
+            finally
+            {
+                _inventoryLoading = false;
+            }
+        });
     }
 
     /// <summary>The right-click menu, on the phone's own card rather than ImGui's grey box. It reads its own

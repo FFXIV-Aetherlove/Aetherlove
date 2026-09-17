@@ -18,8 +18,10 @@ internal sealed class SoftWrapInputField
 
     private string _last = string.Empty;
     private HashSet<int> _hard = [];
+    private bool _pendingReflow;
 
-    /// <summary>Adopts freshly-assigned text (open/edit); every existing newline counts as user-typed.</summary>
+    /// <summary>Adopts freshly-assigned text (open/edit); every existing newline counts as user-typed. The
+    /// wrap itself waits for the first Draw, which is when the field width is known.</summary>
     public void Reset(string text)
     {
         _last = text;
@@ -31,6 +33,7 @@ internal sealed class SoftWrapInputField
                 _hard.Add(i);
             }
         }
+        _pendingReflow = true;
     }
 
     /// <summary>The submit-ready text: wrap-inserted newlines become spaces, user-typed ones survive.</summary>
@@ -49,12 +52,13 @@ internal sealed class SoftWrapInputField
 
     public bool Draw(string label, ref string text, int maxLength, Vector2 size)
     {
-        if (text != _last)
-        {
-            // External change (emoji append, programmatic set): re-sync outside the widget.
-            text = Sync(text);
-        }
         _width = size.X - ImGui.GetStyle().FramePadding.X * 2f - ImGui.GetStyle().ScrollbarSize;
+        if ((text != _last || _pendingReflow) && _width > 0f)
+        {
+            // External change (emoji append, programmatic set) or a fresh Reset: re-sync outside the widget.
+            text = Sync(text);
+            _pendingReflow = false;
+        }
         _active = this;
         var changed = ImGui.InputTextMultiline(label, ref text, maxLength, size,
             ImGuiInputTextFlags.CallbackAlways | ImGuiInputTextFlags.CallbackEdit, Callback);

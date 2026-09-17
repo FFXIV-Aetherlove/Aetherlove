@@ -101,8 +101,11 @@ internal static class OnboardingUi
 
         using (UiFonts.H1?.Push())
         {
-            ImGui.SetCursorPosX(MathF.Max(Px(12f), (winW - ImGui.CalcTextSize(title).X) * 0.5f));
-            ImGui.TextUnformatted(title);
+            foreach (var line in WrapLines(title, winW - Px(24f)))
+            {
+                ImGui.SetCursorPosX(MathF.Max(Px(12f), (winW - ImGui.CalcTextSize(line).X) * 0.5f));
+                ImGui.TextUnformatted(line);
+            }
         }
         if (subtitle != null)
         {
@@ -121,32 +124,39 @@ internal static class OnboardingUi
         using ((font ?? UiFonts.H3)?.Push())
         {
             var winW = ImGui.GetWindowSize().X;
-            var words = text.Replace('\n', ' ').Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            var lines = new List<string>();
-            var line = string.Empty;
-            foreach (var w in words)
-            {
-                var candidate = line.Length == 0 ? w : line + " " + w;
-                if (line.Length > 0 && ImGui.CalcTextSize(candidate).X > maxWidth)
-                {
-                    lines.Add(line);
-                    line = w;
-                }
-                else
-                {
-                    line = candidate;
-                }
-            }
-            if (line.Length > 0)
-            {
-                lines.Add(line);
-            }
-            foreach (var l in lines)
+            foreach (var l in WrapLines(text, maxWidth))
             {
                 ImGui.SetCursorPosX(MathF.Max(Px(12f), (winW - ImGui.CalcTextSize(l).X) * 0.5f));
                 ImGui.TextColored(color, l);
             }
         }
+    }
+
+    /// <summary>Greedy word wrap of <paramref name="text"/> to <paramref name="maxWidth"/>, measured in the font
+    /// the caller has pushed. A single word wider than the limit keeps its own line.</summary>
+    private static List<string> WrapLines(string text, float maxWidth)
+    {
+        var words = text.Replace('\n', ' ').Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var lines = new List<string>();
+        var line = string.Empty;
+        foreach (var w in words)
+        {
+            var candidate = line.Length == 0 ? w : line + " " + w;
+            if (line.Length > 0 && ImGui.CalcTextSize(candidate).X > maxWidth)
+            {
+                lines.Add(line);
+                line = w;
+            }
+            else
+            {
+                line = candidate;
+            }
+        }
+        if (line.Length > 0)
+        {
+            lines.Add(line);
+        }
+        return lines;
     }
 
     /// <summary>One line of a feature list: a soft accent chip with an icon, and wrapped body text beside it.

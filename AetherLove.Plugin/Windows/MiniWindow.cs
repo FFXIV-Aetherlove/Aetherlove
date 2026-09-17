@@ -489,8 +489,7 @@ public sealed class MiniWindow : Window, IDisposable
 
         try
         {
-            var dir = Path.GetDirectoryName(Plugin.PluginInterface.AssemblyLocation.FullName) ?? "";
-            var path = Path.Combine(dir, "Media", LogoFileName);
+            var path = Services.Media.MediaPaths.Shipped(LogoFileName);
             if (File.Exists(path))
             {
                 _logoTex = Plugin.TextureProvider.GetFromFile(path);

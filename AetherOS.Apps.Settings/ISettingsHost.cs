@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using AetherLove.Shared.Patreon;
@@ -30,6 +30,12 @@ public enum SupporterFlowState
 /// plugin-only navigations.</summary>
 public interface ISettingsHost
 {
+    bool EncryptionReady { get; }
+    string EncryptionStateKey { get; }
+    Task ChangePassphraseAsync(string passphrase);
+    Task SaveRecoveryFileAsync(string path);
+    Task RestoreRecoveryFileAsync(string path);
+    Task RefreshEncryptionAsync();
     /// <summary>The built-in wallpaper file names bundled with the plugin.</summary>
     IReadOnlyList<string> BuiltIns { get; }
 
@@ -64,12 +70,6 @@ public interface ISettingsHost
     /// <summary>Drops this install's copy of a purchased theme and pulls it again, so a corrected palette
     /// or frame geometry lands without a reinstall.</summary>
     Task<bool> RefreshPremiumThemeAsync(Guid productId);
-
-    /// <summary>Sets the wallpaper to a purchased theme's background without touching the palette.</summary>
-    Task<bool> SelectPremiumWallpaperAsync(Guid productId);
-
-    /// <summary>A purchased theme's wallpaper for the picker thumb, null while it is still decoding.</summary>
-    Dalamud.Interface.Textures.TextureWraps.IDalamudTextureWrap? PremiumWallpaper(Guid productId);
 
     /// <summary>Saves the OS profile: the display name (when changed) and optionally a new avatar, then
     /// refreshes the cached avatar and account snapshot. Throws a hub error on failure.</summary>

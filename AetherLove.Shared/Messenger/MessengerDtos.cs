@@ -144,20 +144,28 @@ public sealed record MessengerGroupKeyDto(
     int Epoch,
     Guid WrapperAccountId,
     byte[] WrappedKey,
-    byte[] Nonce);
+    byte[] Nonce,
+    byte[]? WrapperPublicKey = null,
+    byte[]? RecipientPublicKey = null);
 
 /// <summary>One member's wrap of a group key epoch, as uploaded by the wrapping client.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record MessengerGroupKeyWrapDto(
     Guid MemberAccountId,
     byte[] WrappedKey,
-    byte[] Nonce);
+    byte[] Nonce,
+    byte[]? RecipientPublicKey = null);
 
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record UploadGroupKeysRequest(
     Guid GroupId,
     int Epoch,
-    MessengerGroupKeyWrapDto[] Wraps);
+    MessengerGroupKeyWrapDto[] Wraps,
+    byte[]? Commitment = null,
+    byte[]? WrapperPublicKey = null);
+
+[MessagePackObject(keyAsPropertyName: true)]
+public sealed record MessengerGroupEpochDto(bool Established, byte[]? Commitment);
 
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record SendMessengerMessageRequest(

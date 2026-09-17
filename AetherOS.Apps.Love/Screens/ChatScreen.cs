@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -36,6 +36,7 @@ public partial class ChatScreen
     private readonly AetherHubContext _hub;
     private readonly CryptoService _crypto;
     private readonly KeyStorageService _keys;
+    private readonly AccountEncryptionService _encryption;
     private readonly ChatEventBus _events;
     private readonly ChatSyncService _sync;
 
@@ -143,6 +144,7 @@ public partial class ChatScreen
 
     private bool _reportPendingOpen;
     private string _reportReason = string.Empty;
+    private readonly SoftWrapInputField _reportReasonField = new();
     private bool _reportCheckAgree;
     private bool _reportCheckContents;
     private volatile bool _reportSubmitting;
@@ -164,6 +166,7 @@ public partial class ChatScreen
         AetherHubContext hub,
         CryptoService crypto,
         KeyStorageService keys,
+        AccountEncryptionService encryption,
         ChatEventBus events,
         NotificationCenter notifications,
         ChatSyncService sync,
@@ -189,6 +192,7 @@ public partial class ChatScreen
         _hub = hub;
         _crypto = crypto;
         _keys = keys;
+        _encryption = encryption;
         _events = events;
         _notifications = notifications;
         _sync = sync;
@@ -629,6 +633,15 @@ public partial class ChatScreen
         }
         catch (Exception ex)
         {
+            var peers = (_sync.Cache.GetPeerKeyHistory(_peerId) ?? []).Select(h => h.PublicKey);
+            if (_peerPublicKey is { } current) { peers = peers.Prepend(current); }
+            var restored = _encryption.TryDecryptHistory("love", UiHost.Configuration.Auth.ActiveProfileId ?? Guid.Empty,
+                peers, m.Ciphertext, m.Nonce);
+            if (restored is not null)
+            {
+                return new DisplayedMessage(m.Id, Encoding.UTF8.GetString(restored), m.SenderProfileId != _peerId,
+                    m.CreatedAtUtc, m.ReadByOtherAtUtc, Image: m.Image);
+            }
             // A message from before an OWN key reset can never decrypt again; anything else is a real fault.
             var ownReset = _myKeysCreatedAt is { } at && m.CreatedAtUtc < at;
             if (!ownReset)
@@ -854,6 +867,7 @@ public partial class ChatScreen
     private bool _noteOpen;
     private float _notePanelH;
     private string _noteText = string.Empty;
+    private readonly SoftWrapInputField _noteTextField = new();
 
     /// <summary>Local-only note about this match; saving an empty text removes it.</summary>
     private void DrawUserNoteOverlay()
@@ -872,11 +886,11 @@ public partial class ChatScreen
             ImGui.PopTextWrapPos();
             ImGui.Spacing();
             ImGui.SetNextItemWidth(w);
-            InputTextMultilineWithPaste("##chatNoteText", ref _noteText, 1000, new Vector2(w, Px(90f)));
+            _noteTextField.Draw("##chatNoteText", ref _noteText, 1000, new Vector2(w, Px(90f)));
             ImGui.Spacing();
             if (Widgets.ModalUi.Button($"{Loc.T("chat.note_save")}##chatNoteSave", w))
             {
-                var trimmed = _noteText.Trim();
+                var trimmed = _noteTextField.Value(_noteText).Trim();
                 if (trimmed.Length == 0)
                 {
                     UiHost.Configuration.MatchNotes.Remove(_peerId);
@@ -1184,7 +1198,7 @@ public partial class ChatScreen
 
     private void OpenVerify()
     {
-        _verifyScreen.SetContext(_peerName, _peerPublicKey);
+        _verifyScreen.SetContext(_peerId, _peerName, _peerPublicKey);
         _router.Navigate(LoveView.EncryptionVerification);
     }
 
@@ -1198,7 +1212,7 @@ public partial class ChatScreen
         _reportError = null;
 
         var peer = _peerId;
-        var reason = _reportReason;
+        var reason = _reportReasonField.Value(_reportReason);
         var includeConvo = _reportCheckContents;
 
         ConversationSnapshotEntry[]? snapshot = null;
@@ -2452,7 +2466,7 @@ public partial class ChatScreen
         ImGui.PopTextWrapPos();
         ImGui.Spacing();
         ImGui.SetNextItemWidth(availW);
-        InputTextMultilineWithPaste("##reportReason", ref _reportReason, 500, new Vector2(availW, Px(80f)));
+        _reportReasonField.Draw("##reportReason", ref _reportReason, 500, new Vector2(availW, Px(80f)));
         ImGui.Spacing();
 
         ImGui.Checkbox("##chkAgree", ref _reportCheckAgree);

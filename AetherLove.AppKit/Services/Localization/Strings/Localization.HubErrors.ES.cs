@@ -185,7 +185,8 @@ internal static class HubErrorsEs
         ["huberror.lumirace_disabled"] = "Las carreras están desactivadas ahora mismo.",
         ["huberror.lumirace_no_pet"] = "Necesitas un Aetherling nacido para correr.",
         ["huberror.lumirace_not_adult"] = "Tu Aetherling corre cuando se hace adulto. Sigue alimentándolo.",
-        ["huberror.lumirace_gated"] = "La próxima carrera abre en {0} minutos.",
+        ["huberror.lumirace_gated"] = "La próxima carrera abre en {0}.",
+        ["huberror.lumirace_card_not_ready"] = "Completa una tarjeta de sellos antes de canjearla por un sobre.",
         ["huberror.lumirace_pack_none"] = "No hay ningún sobre para abrir.",
         ["huberror.lumirace_run_exists"] = "Ya hay una carrera en grupo abierta.",
         ["huberror.lumirace_run_not_found"] = "Ahora mismo no hay carrera en grupo.",
@@ -193,11 +194,25 @@ internal static class HubErrorsEs
         ["huberror.lumirace_too_few"] = "Primero deben unirse al menos dos corredores.",
         ["huberror.lumirace_no_offer"] = "Esas carreras ya no están disponibles. Abre la página otra vez y saldrán tres nuevas.",
 
+        // added after update 2.7.0 (starlight cup)
+        ["huberror.lumirace_cup_in_party"] = "La Copa Estelar es en solitario. Sal primero de tu grupo.",
+
+        // added after update 2.7.0 (racing cards)
+        ["huberror.lumirace_card_unknown"] = "Esa carta ya no está en el juego.",
+        ["huberror.lumirace_card_not_owned"] = "No tienes esa carta.",
+        ["huberror.lumirace_card_wrong_band"] = "Esa carta no va en este hueco. La de oro va en el primero, las de plata en los otros dos.",
+        ["huberror.lumirace_card_duplicate"] = "Esa copia ya está en tu mano. Elige otra copia.",
+        ["huberror.lumirace_hand_shape"] = "Esa mano no es válida. Abre el álbum e inténtalo de nuevo.",
+
         // listing boosts (added after update 2.5.2)
         ["huberror.boost_none_owned"] = "No tienes ningún impulso para eso. Consigue uno en la Tienda.",
         ["huberror.boost_target_not_found"] = "Eso no es tuyo.",
         ["huberror.boost_cap_reached"] = "No puedes sumar más días. Un impulso dura {0} días como máximo.",
         ["huberror.boost_style_invalid"] = "Elige uno de los cuatro efectos.",
         ["huberror.boost_target_not_live"] = "Eso todavía no está publicado. Impúlsalo cuando esté activo.",
+
+        // added after update 2.7.0 (move photos)
+        ["huberror.main_photo_must_be_sfw"] = "La foto principal debe ser SFW.",
+        ["huberror.photo_still_checking"] = "Todavía estamos revisando esta foto. Inténtalo de nuevo en un minuto.",
     };
 }

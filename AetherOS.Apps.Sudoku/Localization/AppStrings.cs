@@ -50,6 +50,14 @@ public static class AppStrings
         ["os.sudoku_breakdown_mistakes"] = "Mistakes -{0}",
         ["os.sudoku_breakdown_logic"] = "Logic {0}%",
         ["os.sudoku_breakdown_total"] = "Grid total {0}",
+        // added after update 2.7.0 (sudoku practice)
+        ["os.sudoku_practice"] = "Practice",
+        ["os.sudoku_practice_about"] = "Pick a difficulty. There is no clock, no score and no mistake limit.",
+        ["os.sudoku_practice_hud"] = "Practice: {0}",
+        ["os.sudoku_practice_stop_title"] = "Stop practice?",
+        ["os.sudoku_practice_keep"] = "Keep playing",
+        ["os.sudoku_practice_stop"] = "Stop practice",
+        ["os.sudoku_practice_new"] = "New grid",
     };
 
     private static readonly IReadOnlyDictionary<string, string> De = new Dictionary<string, string>
@@ -97,6 +105,14 @@ public static class AppStrings
         ["os.sudoku_breakdown_mistakes"] = "Fehler -{0}",
         ["os.sudoku_breakdown_logic"] = "Logik {0}%",
         ["os.sudoku_breakdown_total"] = "Gitter gesamt {0}",
+        // added after update 2.7.0 (sudoku practice)
+        ["os.sudoku_practice"] = "Übung",
+        ["os.sudoku_practice_about"] = "Wähle eine Schwierigkeit. Es gibt keine Uhr, keine Punkte und keine Fehlergrenze.",
+        ["os.sudoku_practice_hud"] = "Übung: {0}",
+        ["os.sudoku_practice_stop_title"] = "Übung beenden?",
+        ["os.sudoku_practice_keep"] = "Weiterspielen",
+        ["os.sudoku_practice_stop"] = "Übung beenden",
+        ["os.sudoku_practice_new"] = "Neues Gitter",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Es = new Dictionary<string, string>
@@ -144,6 +160,14 @@ public static class AppStrings
         ["os.sudoku_breakdown_mistakes"] = "Errores -{0}",
         ["os.sudoku_breakdown_logic"] = "Lógica {0}%",
         ["os.sudoku_breakdown_total"] = "Total de la cuadrícula {0}",
+        // added after update 2.7.0 (sudoku practice)
+        ["os.sudoku_practice"] = "Práctica",
+        ["os.sudoku_practice_about"] = "Elige una dificultad. No hay reloj, ni puntos, ni límite de errores.",
+        ["os.sudoku_practice_hud"] = "Práctica: {0}",
+        ["os.sudoku_practice_stop_title"] = "¿Terminar la práctica?",
+        ["os.sudoku_practice_keep"] = "Seguir jugando",
+        ["os.sudoku_practice_stop"] = "Terminar la práctica",
+        ["os.sudoku_practice_new"] = "Nueva cuadrícula",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Fr = new Dictionary<string, string>
@@ -191,6 +215,14 @@ public static class AppStrings
         ["os.sudoku_breakdown_mistakes"] = "Erreurs -{0}",
         ["os.sudoku_breakdown_logic"] = "Logique {0}%",
         ["os.sudoku_breakdown_total"] = "Total de la grille {0}",
+        // added after update 2.7.0 (sudoku practice)
+        ["os.sudoku_practice"] = "Entraînement",
+        ["os.sudoku_practice_about"] = "Choisissez une difficulté. Il n'y a ni chrono, ni points, ni limite d'erreurs.",
+        ["os.sudoku_practice_hud"] = "Entraînement : {0}",
+        ["os.sudoku_practice_stop_title"] = "Arrêter l'entraînement ?",
+        ["os.sudoku_practice_keep"] = "Continuer à jouer",
+        ["os.sudoku_practice_stop"] = "Arrêter l'entraînement",
+        ["os.sudoku_practice_new"] = "Nouvelle grille",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Pt = new Dictionary<string, string>
@@ -238,6 +270,14 @@ public static class AppStrings
         ["os.sudoku_breakdown_mistakes"] = "Erros -{0}",
         ["os.sudoku_breakdown_logic"] = "Lógica {0}%",
         ["os.sudoku_breakdown_total"] = "Total da grelha {0}",
+        // added after update 2.7.0 (sudoku practice)
+        ["os.sudoku_practice"] = "Treino",
+        ["os.sudoku_practice_about"] = "Escolhe uma dificuldade. Não há relógio, nem pontos, nem limite de erros.",
+        ["os.sudoku_practice_hud"] = "Treino: {0}",
+        ["os.sudoku_practice_stop_title"] = "Parar o treino?",
+        ["os.sudoku_practice_keep"] = "Continuar a jogar",
+        ["os.sudoku_practice_stop"] = "Parar o treino",
+        ["os.sudoku_practice_new"] = "Nova grelha",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Ru = new Dictionary<string, string>
@@ -285,6 +325,14 @@ public static class AppStrings
         ["os.sudoku_breakdown_mistakes"] = "Ошибки -{0}",
         ["os.sudoku_breakdown_logic"] = "Логика {0}%",
         ["os.sudoku_breakdown_total"] = "Итог сетки {0}",
+        // added after update 2.7.0 (sudoku practice)
+        ["os.sudoku_practice"] = "Тренировка",
+        ["os.sudoku_practice_about"] = "Выбери сложность. Здесь нет таймера, очков и лимита ошибок.",
+        ["os.sudoku_practice_hud"] = "Тренировка: {0}",
+        ["os.sudoku_practice_stop_title"] = "Закончить тренировку?",
+        ["os.sudoku_practice_keep"] = "Играть дальше",
+        ["os.sudoku_practice_stop"] = "Закончить тренировку",
+        ["os.sudoku_practice_new"] = "Новая сетка",
     };
 
     public static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> Packs =

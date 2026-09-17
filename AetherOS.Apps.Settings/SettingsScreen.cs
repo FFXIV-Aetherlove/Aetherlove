@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Numerics;
@@ -22,7 +22,7 @@ namespace AetherOS.Apps.Settings;
 
 /// <summary>The AetherOS settings app body: a categorized hub (General / Appearance / Other) with back-pill
 /// sub-pages, plus the app list that hosts other apps' settings.</summary>
-public sealed class SettingsScreen
+public sealed partial class SettingsScreen
 {
     private readonly ISettingsHost _host;
     private readonly IAppCapabilities _caps;
@@ -35,7 +35,7 @@ public sealed class SettingsScreen
         _caps = caps;
     }
 
-    private enum View { Hub, General, Language, Notifications, Audio, Appearance, Wallpaper, Profile, AvatarRing, Supporter, StaffNotices, Tos, Contributors, Developer, Party }
+    private enum View { MyAccount, Hub, General, Language, Notifications, Audio, Appearance, Wallpaper, Profile, AvatarRing, Supporter, StaffNotices, Tos, Contributors, Developer, Party }
 
     private View _view = View.Hub;
 
@@ -135,6 +135,9 @@ public sealed class SettingsScreen
 
         switch (_view)
         {
+            case View.MyAccount:
+                DrawMyAccount();
+                break;
             case View.Hub:
                 DrawHub(ctx);
                 break;
@@ -215,6 +218,7 @@ public sealed class SettingsScreen
             GroupLabel(Loc.T("os.cat_general"));
             DrawMenuCard("osGeneral", winW, PadX, new List<MenuRow>
             {
+                new(FontAwesomeIcon.Key, t.Accent, Loc.T("account.title"), 0, false, () => _view = View.MyAccount),
                 new(FontAwesomeIcon.Cog, t.Accent, Loc.T("os.menu_general"), 0, false, () => _view = View.General),
                 new(FontAwesomeIcon.Language, t.Accent, Loc.T("settings.menu_language"), 0, false, () => _view = View.Language),
                 new(FontAwesomeIcon.Bell, t.Accent, Loc.T("settings.section_notifications"), 0, false, () => _view = View.Notifications),
@@ -1144,6 +1148,7 @@ public sealed class SettingsScreen
         ImGui.Spacing();
         AppearancePicker.DrawThemeCards(winW, PadX);
         DrawPremiumThemes(winW);
+        DrawSkinStoreButton(winW);
         ImGui.Spacing();
         ImGui.Spacing();
         DrawSubpageHeading(Loc.T("settings.font_header"), PadX);
@@ -1161,6 +1166,28 @@ public sealed class SettingsScreen
         ImGui.Spacing();
         DrawLockRow();
         ImGui.Spacing();
+    }
+
+    /// <summary>The way from the appearance page into the store's skins shelf. Shown whether or not the
+    /// account owns a skin yet: the owned shelf above it hides itself until one is bought, and the free
+    /// first skin is the reason most people will go.</summary>
+    private void DrawSkinStoreButton(float winW)
+    {
+        ImGui.Spacing();
+        ImGui.SetCursorPosX(Px(PadX));
+        var t = ThemeService.Current;
+        ImGui.PushStyleColor(ImGuiCol.Button, t.ButtonNormal);
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, t.ButtonHovered);
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive, t.ButtonActive);
+        ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, Px(9f));
+        if (SharedUiHelpers.Button($"{Loc.T("settings.premium_get_skins")}##skinsStore",
+                new Vector2(winW - Px(PadX) * 2f, Px(34f))))
+        {
+            _shell?.SendIntent("store",
+                AetherOS.Sdk.OsIntents.CreatePath(AetherOS.Sdk.OsIntents.StoreOpen, "premium-themes"));
+        }
+        ImGui.PopStyleVar();
+        ImGui.PopStyleColor(3);
     }
 
     private enum PremiumThemeState { Busy, Failed }
@@ -1232,6 +1259,7 @@ public sealed class SettingsScreen
             if (hovered && !busy)
             {
                 SharedUiHelpers.HandOnHover();
+                ImGui.SetTooltip(ThemeName(theme));
             }
             if (ImGui.BeginPopupContextItem($"##premiumThemeCtx{i}", ImGuiPopupFlags.MouseButtonRight))
             {
@@ -1267,11 +1295,14 @@ public sealed class SettingsScreen
             {
                 var name = state == PremiumThemeState.Failed
                     ? Loc.T("settings.premium_enable_failed")
-                    : ThemeName(theme);
+                    : ShortThemeName(ThemeName(theme));
                 var nameSz = ImGui.CalcTextSize(name);
                 var nameY = tl.Y + swatchH + (cardH - swatchH - nameSz.Y) * 0.5f;
-                dl.AddText(new Vector2(tl.X + (cardW - nameSz.X) * 0.5f, nameY),
+                var inset = Px(6f);
+                dl.PushClipRect(new Vector2(tl.X + inset, tl.Y), new Vector2(br.X - inset, br.Y), true);
+                dl.AddText(new Vector2(tl.X + MathF.Max(inset, (cardW - nameSz.X) * 0.5f), nameY),
                     OsDrawShared.White(selected ? 1f : (hovered ? 0.85f : 0.62f)), name);
+                dl.PopClipRect();
             }
         }
 
@@ -1328,6 +1359,14 @@ public sealed class SettingsScreen
             _ => null,
         };
         return string.IsNullOrWhiteSpace(pick) ? theme.NameEnglish : pick;
+    }
+
+    /// <summary>The part of a skin's name before its " - " subtitle ("Nyan Cat - Rainbow Orbit" reads
+    /// "Nyan Cat"), so it fits a card; the card's tooltip carries the whole name.</summary>
+    private static string ShortThemeName(string name)
+    {
+        var dash = name.IndexOf(" - ", StringComparison.Ordinal);
+        return dash > 0 ? name[..dash].TrimEnd() : name;
     }
 
     /// <summary>Theme colours ride the wire as 0xAARRGGBB; ImGui wants 0xAABBGGRR.</summary>
@@ -2167,8 +2206,6 @@ public sealed class SettingsScreen
         var rows = (idx + 2) / 3;
         ImGui.SetCursorScreenPos(gridStart + new Vector2(0f, rows * (thumbH + Px(12f))));
 
-        DrawPremiumWallpapers(thumbW, thumbH);
-
         ImGui.SetCursorPosX(padX);
         var t = ThemeService.Current;
         ImGui.PushStyleColor(ImGuiCol.Button, t.ButtonNormal);
@@ -2197,56 +2234,6 @@ public sealed class SettingsScreen
         {
             UiHost.Configuration.Save();
         }
-    }
-
-    /// <summary>The wallpapers that came with purchased themes, in their own shelf. Picking one changes only
-    /// the background; the palette stays whatever the user has chosen.</summary>
-    private void DrawPremiumWallpapers(float thumbW, float thumbH)
-    {
-        EnsureOwnedThemes();
-        var owned = Array.FindAll(_ownedThemes, t => t.HasBackground);
-        if (owned.Length == 0)
-        {
-            return;
-        }
-        var os = UiHost.Configuration.Os;
-        var dl = ImGui.GetWindowDrawList();
-
-        ImGui.Spacing();
-        DrawSubpageHeading(Loc.T("settings.premium_backgrounds"), PadX);
-        ImGui.SetCursorPosX(Px(PadX));
-        var gridStart = ImGui.GetCursorScreenPos();
-
-        for (var i = 0; i < owned.Length; i++)
-        {
-            var theme = owned[i];
-            var rect = ThumbRect(gridStart, thumbW, thumbH, i);
-            ImGui.SetCursorScreenPos(rect.TL);
-            if (ImGui.InvisibleButton($"##wallPremium{i}", rect.BR - rect.TL))
-            {
-                _ = Task.Run(() => _host.SelectPremiumWallpaperAsync(theme.ProductId));
-            }
-            SharedUiHelpers.HandOnHover();
-            if (_host.PremiumWallpaper(theme.ProductId) is { } wrap)
-            {
-                var (uv0, uv1) = OsDrawShared.CoverUv(wrap.Width, wrap.Height,
-                    rect.BR.X - rect.TL.X, rect.BR.Y - rect.TL.Y);
-                dl.AddImageRounded(wrap.Handle, rect.TL, rect.BR, uv0, uv1, 0xFFFFFFFFu, Px(12f));
-                DrawDimPreview(dl, rect);
-            }
-            else
-            {
-                dl.AddRectFilled(rect.TL, rect.BR, OsDrawShared.White(0.06f), Px(12f));
-                LoadingSpinner.Draw((rect.TL + rect.BR) * 0.5f, Px(9f), Px(2f), ThemeService.Current.AccentU32);
-            }
-            var selected = os.WallpaperMode == WallpaperMode.Premium
-                && os.PremiumWallpaperProductId == theme.ProductId;
-            FinishThumb(dl, rect, selected, null);
-            SparkIcon.Draw(dl, rect.TL + new Vector2(Px(14f), Px(14f)), Px(15f));
-        }
-
-        var rows = (owned.Length + 2) / 3;
-        ImGui.SetCursorScreenPos(gridStart + new Vector2(0f, rows * (thumbH + Px(12f))));
     }
 
     private static (Vector2 TL, Vector2 BR) ThumbRect(Vector2 gridStart, float w, float h, int index)

@@ -15,12 +15,21 @@ internal sealed class PetSettingsScreen(IAetherlingHost host)
 
     public event Action? RecentreRequested;
 
+    /// <summary>Raised when the help row is tapped; the app starts the tour from here.</summary>
+    public event Action? TourRequested;
+
+    /// <summary>Where the tour row was last drawn, for the tour's own last ring.</summary>
+    public (Vector2 TL, Vector2 BR)? TourRowRect { get; private set; }
+
     /// <summary>Raised when a sound setting settles, so the app can persist it. Separate from
     /// <see cref="SettingsChanged"/> because the volume moves continuously while it is dragged and only
     /// the value it is let go on is worth writing.</summary>
     public event Action? SoundsChanged;
 
     public bool FloatingEnabled { get; set; }
+
+    /// <summary>Where the "show outside" row was last drawn, for the tour's ring.</summary>
+    public (Vector2 TL, Vector2 BR)? ShowOutsideRect { get; private set; }
 
     public bool FloatingLocked { get; set; }
 
@@ -29,6 +38,8 @@ internal sealed class PetSettingsScreen(IAetherlingHost host)
 
     /// <summary>Whether it speaks in glyphs out over the game. Never silenced inside the app.</summary>
     public bool WorldGlyphs { get; set; } = true;
+
+    public bool HungerReminders { get; set; } = true;
 
     private int _size = FloatingPet.DefaultSizeIndex;
 
@@ -54,6 +65,7 @@ internal sealed class PetSettingsScreen(IAetherlingHost host)
             ctx.Localize("os.aetherling_status_outside"));
         y += Px(26f);
 
+        ShowOutsideRect = (new Vector2(origin.X + pad, y), new Vector2(origin.X + size.X - pad, y + Px(38f)));
         if (PetPageUi.Toggle(dl, origin, size, y, ctx.Localize("os.aetherling_status_show_outside"),
                 FloatingEnabled))
         {
@@ -107,6 +119,13 @@ internal sealed class PetSettingsScreen(IAetherlingHost host)
         }
         y += Px(42f);
 
+        if (PetPageUi.Toggle(dl, origin, size, y, ctx.Localize("os.aetherling_hunger_reminders"), HungerReminders))
+        {
+            HungerReminders = !HungerReminders;
+            SettingsChanged?.Invoke();
+        }
+        y += Px(42f);
+
         // Its voice. Nothing to do with the floating window, so it sits outside that section rather than
         // disappearing with it.
         y += Px(8f);
@@ -131,21 +150,32 @@ internal sealed class PetSettingsScreen(IAetherlingHost host)
         }
         y += Px(42f);
 
-        if (host.SoundsMuted)
+        if (!host.SoundsMuted)
         {
-            return;
+            var volume = host.SoundVolume;
+            if (PetPageUi.Slider(dl, origin, size, y, ctx.Localize("os.aetherling_sound_volume"), ref volume,
+                    out var settled))
+            {
+                host.SoundVolume = volume;
+            }
+            if (settled)
+            {
+                SoundsChanged?.Invoke();
+                // One chirp at the level just chosen, because a volume nobody hears is a number.
+                host.PlayChirp();
+            }
+            y += Px(42f);
         }
-        var volume = host.SoundVolume;
-        if (PetPageUi.Slider(dl, origin, size, y, ctx.Localize("os.aetherling_sound_volume"), ref volume,
-                out var settled))
+
+        y += Px(8f);
+        dl.AddText(new Vector2(origin.X + pad, y), Look.U32(Look.Crystal, 0.85f),
+            ctx.Localize("os.aetherling_help_section"));
+        y += Px(26f);
+
+        TourRowRect = (new Vector2(origin.X + pad, y), new Vector2(origin.X + size.X - pad, y + Px(38f)));
+        if (PetPageUi.Toggle(dl, origin, size, y, ctx.Localize("os.aetherling_menu_tour"), null))
         {
-            host.SoundVolume = volume;
-        }
-        if (settled)
-        {
-            SoundsChanged?.Invoke();
-            // One chirp at the level just chosen, because a volume nobody hears is a number.
-            host.PlayChirp();
+            TourRequested?.Invoke();
         }
     }
 }

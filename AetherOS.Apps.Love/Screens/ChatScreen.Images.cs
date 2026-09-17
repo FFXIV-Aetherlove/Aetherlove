@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -47,6 +47,7 @@ public partial class ChatScreen
 
     private Guid _imageReportId = Guid.Empty;
     private string _imageReportReason = string.Empty;
+    private readonly SoftWrapInputField _imageReportReasonField = new();
     private float _imageReportPanelH;
     private volatile bool _imageReportSubmitting;
     private volatile string? _imageReportError;
@@ -543,7 +544,7 @@ public partial class ChatScreen
             ImGui.PopTextWrapPos();
             ImGui.Dummy(new Vector2(0f, Px(6f)));
             ImGui.SetNextItemWidth(innerW);
-            InputTextMultilineWithPaste("##chatImgReport", ref _imageReportReason, 500, new Vector2(innerW, Px(80f)));
+            _imageReportReasonField.Draw("##chatImgReport", ref _imageReportReason, 500, new Vector2(innerW, Px(80f)));
             if (_imageReportError is { } err)
             {
                 ImGui.TextColored(UiColors.Danger, err);
@@ -579,7 +580,7 @@ public partial class ChatScreen
         _imageReportSubmitting = true;
         _imageReportError = null;
         var imageId = _imageReportId;
-        var reason = _imageReportReason.Trim();
+        var reason = _imageReportReasonField.Value(_imageReportReason).Trim();
         _ = Task.Run(async () =>
         {
             try

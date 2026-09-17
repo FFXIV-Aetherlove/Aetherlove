@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -43,7 +43,7 @@ internal sealed partial class PetScreen
     /// re-read on the way in, because the purchase that sent us here is newer than anything cached.</summary>
     public void OpenRename()
     {
-        if (_core is not { HatchedAtUtc: not null })
+        if (_core is not { Adult: not null })
         {
             return;
         }

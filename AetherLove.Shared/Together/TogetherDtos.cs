@@ -25,8 +25,8 @@ public sealed record TogetherMemberDto(
 /// <summary>A party member's Aetherling, as much of it as another client needs to draw one: the form it
 /// has grown into, what it is painted and wearing, and what it is called. Sent only for members whose own
 /// sharing switch is on, and read fresh from each snapshot rather than stored anywhere by the receiver.
-/// <see cref="Stage"/> is 0-2 for the three hatchling forms and 3 for the adult, which is the same ladder
-/// the client's own form resolver walks; asset names never cross the wire.</summary>
+/// <see cref="Stage"/> is always 3 since 2.7: only grown pets are sent, and the field stays on the wire
+/// so the record's shape never moves. Asset names never cross the wire.</summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public sealed record TogetherPetDto(
     short Stage,

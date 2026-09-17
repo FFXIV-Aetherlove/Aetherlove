@@ -8,7 +8,8 @@ using Dalamud.Plugin.Services;
 namespace AetherLove.Services;
 
 /// <summary>Probes once per launch whether this machine's decoder can decode WebP, persisting the result to
-/// <see cref="Configuration.WebpSupported"/>. <see cref="Tick"/> must run on the draw thread; texture wraps only resolve there.</summary>
+/// <see cref="Configuration.WebpSupported"/>. The test image is encoded on a worker thread; <see cref="Tick"/>
+/// must run on the draw thread, because texture wraps only resolve there.</summary>
 public sealed class WebpCapabilityProbe
 {
     private const double TimeoutSeconds = 3.0;
@@ -17,8 +18,8 @@ public sealed class WebpCapabilityProbe
     private readonly IPluginLog _log;
     private readonly TaskCompletionSource<bool> _tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
+    private Task<byte[]>? _encode;
     private ISharedImmediateTexture? _tex;
-    private bool _started;
     private double _elapsed;
 
     public WebpCapabilityProbe(Configuration config, IPluginLog log)
@@ -35,14 +36,28 @@ public sealed class WebpCapabilityProbe
             return;
         }
 
-        if (!_started)
+        if (_encode is null)
         {
-            _started = true;
+            _encode = Task.Run(AetherLove.Shared.PhotoTransform.CreateProbeWebp);
+            return;
+        }
+
+        if (_tex is null)
+        {
+            if (!_encode.IsCompleted)
+            {
+                return;
+            }
+            if (_encode.IsFaulted)
+            {
+                _log.Warning(_encode.Exception, "[WebpProbe] Failed to encode the WebP probe image.");
+                Resolve(false);
+                return;
+            }
             try
             {
-                var bytes = AetherLove.Shared.PhotoTransform.CreateProbeWebp();
                 var dir = Path.Combine(Plugin.PluginInterface.ConfigDirectory.FullName, "WebpProbe");
-                _tex = AvatarDiskCache.Store(dir, "probe", bytes);
+                _tex = AvatarDiskCache.Store(dir, "probe", _encode.Result);
             }
             catch (Exception ex)
             {
@@ -58,7 +73,7 @@ public sealed class WebpCapabilityProbe
         }
 
         _elapsed += deltaSeconds;
-        if (_tex?.GetWrapOrDefault() is { Width: > 0 })
+        if (_tex.GetWrapOrDefault() is { Width: > 0 })
         {
             Resolve(true);
         }

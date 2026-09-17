@@ -18,7 +18,7 @@ namespace AetherLove.Shared.Racing;
 /// The per-runner timing draws a carded runner would consume are still drawn, unconditionally,
 /// so the RNG stream's shape never depends on who is carded.</para>
 /// </summary>
-public static class AetherRaceLive
+public static partial class AetherRaceLive
 {
     /// <summary>Seeded RNG: mulberry32 plus Box-Muller with a spare. All chance flows through
     /// one stream. Never substitute <see cref="Random"/> anywhere: the RNG and its draw order
@@ -87,8 +87,12 @@ public static class AetherRaceLive
         /// Duskwind's ford clamped a railing runner 1.4 bounds sideways in one tick. Width now ramps
         /// over <see cref="WidthTaper"/> and a runner reads a narrowing ahead of itself
         /// (<see cref="NarrowLookBase"/>). Only the Duskwind moves: it owns the only per-segment
-        /// width, and the taper is skipped on a uniform course.</para></summary>
-        public const string DialsVersion = "racelive-p4.1";
+        /// width, and the taper is skipped on a uniform course.</para>
+        ///
+        /// <para><b>p4.2: the fade floor doubled.</b> <see cref="FadeSpan"/> went 0.10 to 0.20, so a
+        /// spent runner with more Heart than its field keeps more of its pace. It moves only the
+        /// courses where runners fade, which are the journeys; sprints and loops read the same.</para></summary>
+        public const string DialsVersion = "racelive-p4.2";
 
         public const float Dt = 1f / 30f;
         public const float V0 = 10.0f;
@@ -148,7 +152,7 @@ public static class AetherRaceLive
 
         /// <summary>Heart's first channel: how well a spent runner keeps going, measured
         /// against the field.</summary>
-        public const float FadeSpan = 0.10f;
+        public const float FadeSpan = 0.20f;
 
         /// <summary>Where the closing stretch starts, as a fraction of the course.</summary>
         public const float ClutchFrom = 0.875f;
@@ -384,6 +388,11 @@ public static class AetherRaceLive
         public float? Width;
         public string Element = string.Empty;
         public string Name = string.Empty;
+
+        /// <summary>Height of this piece of road above the ground, in bounds: zero except on a bridge.
+        /// Drawing only. No <c>Step</c> path reads it and it is outside the geometry contract, so a
+        /// deck never moves a result; a bridge that climbed would be <see cref="Grade"/>.</summary>
+        public float Deck;
     }
 
     public sealed class CourseDef
@@ -397,6 +406,19 @@ public static class AetherRaceLive
         public required float Width;
         public required Segment[] Segments;
         public float RunInGrade;
+        public SceneryKind Scenery;
+
+        /// <summary>Point to point, or one authored lap run <see cref="Laps"/> times.</summary>
+        public CourseShape Shape = CourseShape.PointToPoint;
+
+        /// <summary>Laps on a loop course. Must stay zero on a point-to-point course.</summary>
+        public int Laps;
+    }
+
+    public enum CourseShape
+    {
+        PointToPoint,
+        Loop,
     }
 
     public readonly record struct TrackSample(float X, float Y, float Heading, float Kappa, float Grade, float Width, string Element, string Section);
@@ -410,6 +432,8 @@ public static class AetherRaceLive
         public required float Width;
         public required float Step;
         public required int Count;
+        public SceneryKind Scenery;
+        public TrackSample[][]? Roads;
         public required float[] Xs;
         public required float[] Ys;
         public required float[] Hs;
@@ -419,9 +443,41 @@ public static class AetherRaceLive
         public required string[] Elems;
         public required string[] Names;
 
+        /// <summary>Laps on a loop course, 0 on point to point. <see cref="Length"/> is the whole race
+        /// either way, so every progress and finish test in <c>Step</c> is untouched by laps.</summary>
+        public int Laps;
+
+        /// <summary>One lap on a loop, the whole race otherwise.</summary>
+        public float LapLength;
+
+        /// <summary>Sample rows in one lap, the modulus every reader wraps by. Zero on a point-to-point
+        /// course, where every wrap branch is dead code and the geometry is bit-identical.</summary>
+        public int LapRows;
+
+        /// <summary>Road height above the ground per row, in bounds. Drawing only.</summary>
+        public float[] Decks = [];
+
+        /// <summary>How covered each row is by a deck overhead, 0 to 1, or null when nothing on this
+        /// course passes over anything.</summary>
+        public float[]? Under;
+
+        public TrackSample AtRoad(float s, int branch, bool smooth = false)
+        {
+            if (this.Roads is not { } roads) return smooth ? this.AtLerp(s) : this.At(s);
+            var j = this.RowAt(s);
+            var a = roads[branch & 1][j];
+            if (!smooth) return a;
+            var f = Math.Clamp(s / this.Step, 0f, this.Count - 1);
+            j = (int)f;
+            a = roads[branch & 1][j];
+            var b = roads[branch & 1][Math.Min(j + 1, this.Count - 1)];
+            var t = f - j;
+            return a with { X = Mix(a.X, b.X, t), Y = Mix(a.Y, b.Y, t), Heading = Mix(a.Heading, b.Heading, t) };
+        }
+
         public TrackSample At(float sQ)
         {
-            var j = Math.Clamp((int)MathF.Round(sQ / this.Step), 0, this.Count - 1);
+            var j = this.RowAt(sQ);
             return new TrackSample(this.Xs[j], this.Ys[j], this.Hs[j], this.Ks[j], this.Gs[j], this.Ws[j], this.Elems[j], this.Names[j]);
         }
 
@@ -438,14 +494,43 @@ public static class AetherRaceLive
         /// rather than blending.</para></summary>
         public TrackSample AtLerp(float sQ)
         {
-            var f = Math.Clamp(sQ / this.Step, 0f, this.Count - 1);
-            var j = Math.Clamp((int)MathF.Floor(f), 0, this.Count - 1);
-            var k = Math.Min(j + 1, this.Count - 1);
-            var t = f - j;
+            int j;
+            int k;
+            float t;
+            var seam = false;
+            if (this.LapRows > 0)
+            {
+                var f = sQ / this.Step;
+                var floor = MathF.Floor(f);
+                j = (((int)floor % this.LapRows) + this.LapRows) % this.LapRows;
+                t = f - floor;
+                if (j + 1 < this.LapRows)
+                {
+                    k = j + 1;
+                }
+                else
+                {
+                    // Row 0 reads a full turn behind the last row (heading is unwrapped), so the seam
+                    // takes one walk step instead of blending into it.
+                    k = 0;
+                    seam = true;
+                }
+            }
+            else
+            {
+                var f = Math.Clamp(sQ / this.Step, 0f, this.Count - 1);
+                j = Math.Clamp((int)MathF.Floor(f), 0, this.Count - 1);
+                k = Math.Min(j + 1, this.Count - 1);
+                t = f - j;
+            }
+
+            var xk = seam ? this.Xs[j] + (MathF.Cos(this.Hs[j]) * this.Step) : this.Xs[k];
+            var yk = seam ? this.Ys[j] + (MathF.Sin(this.Hs[j]) * this.Step) : this.Ys[k];
+            var hk = seam ? this.Hs[j] + (this.Ks[j] * this.Step) : this.Hs[k];
             return new TrackSample(
-                Mix(this.Xs[j], this.Xs[k], t),
-                Mix(this.Ys[j], this.Ys[k], t),
-                Mix(this.Hs[j], this.Hs[k], t),
+                Mix(this.Xs[j], xk, t),
+                Mix(this.Ys[j], yk, t),
+                Mix(this.Hs[j], hk, t),
                 Mix(this.Ks[j], this.Ks[k], t),
                 Mix(this.Gs[j], this.Gs[k], t),
                 Mix(this.Ws[j], this.Ws[k], t),
@@ -453,8 +538,78 @@ public static class AetherRaceLive
                 t < 0.5f ? this.Names[j] : this.Names[k]);
         }
 
+        /// <summary>Deck height at a distance and how covered that spot is by a deck overhead. Both
+        /// wrap on a loop exactly as <see cref="At"/> does. Drawing only.</summary>
+        public (float Deck, float Under) DeckAt(float sQ)
+        {
+            var j = this.RowAt(sQ);
+            var deck = j < this.Decks.Length ? this.Decks[j] : 0f;
+            var under = this.Under is { } u && j < u.Length ? u[j] : 0f;
+            return (deck, under);
+        }
+
+        /// <summary>Whether any part of the road claims this patch of world, by running through it or
+        /// by passing over it on a deck. Scenery asks before it is placed: on a course that crosses
+        /// itself the verge of one piece of road is the middle of another, so clearing a doodad's own
+        /// road is not enough. Generation time only, one pass over a lap's rows.</summary>
+        public bool RoadClaims(float wx, float wy, float radius)
+        {
+            var rows = this.LapRows > 0 ? this.LapRows : this.Count;
+            var decked = this.Under is not null;
+            for (var j = 0; j < rows; j++)
+            {
+                var dx = this.Xs[j] - wx;
+                var dy = this.Ys[j] - wy;
+                var d2 = (dx * dx) + (dy * dy);
+                var onRoad = (this.Ws[j] / 2f) + radius;
+                if (d2 < onRoad * onRoad)
+                {
+                    return true;
+                }
+
+                if (decked && this.Decks[j] > DeckDrawn)
+                {
+                    var shade = (this.Ws[j] / 2f) + radius + DeckShadeReach;
+                    if (d2 < shade * shade)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>Which lap a distance falls on, 1-based, and 1 on a course without laps.</summary>
+        public int LapAt(float sQ) =>
+            this.Laps <= 1 ? 1 : Math.Clamp(((int)(sQ / this.LapLength)) + 1, 1, this.Laps);
+
+        /// <summary>The sample row for a distance, wrapped into the lap on a loop course.</summary>
+        public int RowAt(float sQ)
+        {
+            if (this.LapRows > 0)
+            {
+                // A runner behind the line at the break has a negative distance.
+                var j = (int)MathF.Round(sQ / this.Step) % this.LapRows;
+                return j < 0 ? j + this.LapRows : j;
+            }
+
+            return Math.Clamp((int)MathF.Round(sQ / this.Step), 0, this.Count - 1);
+        }
+
         private static float Mix(float a, float b, float t) => a + ((b - a) * t);
     }
+
+    /// <summary>A deck height above which a row counts as raised. Keeps a ramp's own shoulders from
+    /// shadowing the road they rise out of.</summary>
+    public const float DeckDrawn = 0.4f;
+
+    /// <summary>How far past a deck's edge its shadow reaches, in bounds.</summary>
+    private const float DeckShadeReach = 0.5f;
+
+    /// <summary>How far a bridge deck ramps up to its height and back down, in bounds. Drawing only,
+    /// so it is not a dial.</summary>
+    private const float DeckRamp = 12f;
 
     public static Track BuildTrack(CourseDef def)
     {
@@ -468,21 +623,38 @@ public static class AetherRaceLive
             authored += lens[i];
         }
 
-        var pad = target - authored;
-        if (pad < 20f)
+        var loop = def.Shape == CourseShape.Loop;
+        var pad = 0f;
+        if (loop)
         {
-            throw new InvalidOperationException($"{def.Name}: authored {authored} of {target}, run-in too short");
+            CheckLoop(def, lens, authored, target);
+        }
+        else
+        {
+            if (def.Laps != 0)
+            {
+                throw new InvalidOperationException($"{def.Name}: Laps is for loop courses, not point-to-point");
+            }
+
+            pad = target - authored;
+            if (pad < 20f)
+            {
+                throw new InvalidOperationException($"{def.Name}: authored {authored} of {target}, run-in too short");
+            }
         }
 
-        // Sample every half-bound: position, heading, curvature, grade, width, ground element.
+        // Sample every half-bound: position, heading, curvature, grade, width, ground element. A loop
+        // samples one lap and the readers wrap into it.
         const float step = 0.5f;
-        var n = (int)MathF.Ceiling(target / step) + 2;
+        var span = loop ? authored : target;
+        var n = (int)MathF.Ceiling(span / step) + 2;
         var xs = new float[n];
         var ys = new float[n];
         var hs = new float[n];
         var ks = new float[n];
         var gs = new float[n];
         var ws = new float[n];
+        var ds = new float[n];
         var elems = new string[n];
         var names = new string[n];
         for (var i = 0; i < n; i++)
@@ -491,15 +663,18 @@ public static class AetherRaceLive
             names[i] = string.Empty;
         }
 
-        var effSegs = new List<(SegmentKind Kind, float Len, float Kappa, float Grade, float Width, string Element, string Name)>();
+        var effSegs = new List<(SegmentKind Kind, float Len, float Kappa, float Grade, float Width, string Element, string Name, float Deck)>();
         for (var i = 0; i < def.Segments.Length; i++)
         {
             var seg = def.Segments[i];
             var kappa = seg.Kind == SegmentKind.Corner ? (seg.Turn > 0f ? 1f : -1f) / seg.Radius : 0f;
-            effSegs.Add((seg.Kind, lens[i], kappa, seg.Grade, seg.Width ?? def.Width, seg.Element, seg.Name));
+            effSegs.Add((seg.Kind, lens[i], kappa, seg.Grade, seg.Width ?? def.Width, seg.Element, seg.Name, seg.Deck));
         }
 
-        effSegs.Add((SegmentKind.Straight, pad, 0f, def.RunInGrade, def.Width, string.Empty, "the run-in"));
+        if (!loop)
+        {
+            effSegs.Add((SegmentKind.Straight, pad, 0f, def.RunInGrade, def.Width, string.Empty, "the run-in", 0f));
+        }
 
         float x = 0f, y = 0f, h = -MathF.PI / 2f, s = 0f; // heading starts "up the page"
         var idx = 0;
@@ -514,6 +689,7 @@ public static class AetherRaceLive
                 ks[idx] = seg.Kappa;
                 gs[idx] = seg.Grade;
                 ws[idx] = seg.Width;
+                ds[idx] = seg.Deck;
                 elems[idx] = seg.Element;
                 names[idx] = seg.Name;
 
@@ -527,6 +703,10 @@ public static class AetherRaceLive
             }
         }
 
+        // Taken before the tail fill: those rows repeat the closure point, and wrapping through them
+        // would stall a runner on the start line every lap.
+        var walked = idx;
+
         for (; idx < n; idx++)
         {
             xs[idx] = x;
@@ -535,14 +715,160 @@ public static class AetherRaceLive
             ws[idx] = def.Width;
         }
 
-        TaperWidths(ws, def, step);
+        if (loop && MathF.Abs((walked * step) - authored) > 1e-3f)
+        {
+            throw new InvalidOperationException(
+                $"{def.Name}: walked {walked} rows ({walked * step}) for an authored lap of {authored}");
+        }
 
-        return new Track
+        TaperWidths(ws, def, step);
+        var rows = loop ? walked : n;
+        RampDecks(ds, step, rows);
+        var under = CoverUnderDecks(xs, ys, ws, ds, rows);
+
+        var track = new Track
         {
             Name = def.Name, Category = def.Category, Terrain = def.Terrain,
             Length = target, Width = def.Width, Step = step, Count = n,
             Xs = xs, Ys = ys, Hs = hs, Ks = ks, Gs = gs, Ws = ws, Elems = elems, Names = names,
+            Laps = loop ? def.Laps : 0, LapLength = loop ? authored : target, LapRows = loop ? walked : 0,
+            Decks = ds, Under = under, Scenery = def.Scenery,
         };
+        BuildScenicRoads(track);
+        return track;
+    }
+
+    /// <summary>The laws a loop course must meet before it is sampled. A lap cannot take a run-in, so
+    /// its laps must land the category distance on their own. Every segment must be a whole number of
+    /// half-bound rows, because the walk runs each segment until it crosses its end: an off-grid
+    /// segment rounds up, the lap walks longer than authored, the road does not close, and the race
+    /// finishes short of the line it is drawn on. The loop radii are solved backwards from whole-row
+    /// arcs for this reason. Per-segment width is refused because the width taper does not wrap.</summary>
+    private static void CheckLoop(CourseDef def, float[] lens, float authored, float target)
+    {
+        if (def.Laps < 2)
+        {
+            throw new InvalidOperationException($"{def.Name}: a loop needs at least 2 laps, has {def.Laps}");
+        }
+
+        if (MathF.Abs((authored * def.Laps) - target) > 0.05f)
+        {
+            throw new InvalidOperationException(
+                $"{def.Name}: {def.Laps} laps of {authored} is {authored * def.Laps}, not {target}");
+        }
+
+        foreach (var seg in def.Segments)
+        {
+            if (seg.Width is { } w && w != def.Width)
+            {
+                throw new InvalidOperationException($"{def.Name}: a loop course runs one width, the width taper does not wrap");
+            }
+        }
+
+        for (var i = 0; i < def.Segments.Length; i++)
+        {
+            var rowsIn = lens[i] / 0.5f;
+            if (MathF.Abs(rowsIn - MathF.Round(rowsIn)) > 2e-3f)
+            {
+                throw new InvalidOperationException(
+                    $"{def.Name}: loop segment {i} ('{def.Segments[i].Name}') is {lens[i]} long, not a whole number of 0.5-bound rows");
+            }
+        }
+    }
+
+    /// <summary>Turns the authored per-segment deck heights into ramps, so a bridge rises over
+    /// <see cref="DeckRamp"/> instead of appearing between two rows. A plain mean, wrapped across the
+    /// lap. Skipped when no segment declares a deck, which leaves every other course an all-zero array.</summary>
+    private static void RampDecks(float[] ds, float step, int rows)
+    {
+        var any = false;
+        for (var i = 0; i < rows; i++)
+        {
+            if (ds[i] != 0f)
+            {
+                any = true;
+                break;
+            }
+        }
+
+        if (!any)
+        {
+            return;
+        }
+
+        var reach = (int)MathF.Round(DeckRamp / 2f / step);
+        var src = (float[])ds.Clone();
+        for (var i = 0; i < rows; i++)
+        {
+            var sum = 0f;
+            for (var d = -reach; d <= reach; d++)
+            {
+                var j = (((i + d) % rows) + rows) % rows;
+                sum += src[j];
+            }
+
+            ds[i] = sum / ((2 * reach) + 1);
+        }
+    }
+
+    /// <summary>How covered each row is by a raised deck, 0 to 1, resolved once at build time because
+    /// "is another piece of this road overhead" is a search over the whole lap. A smoothstep ramp
+    /// rather than a flag, so a runner dims going under and brightens coming out. Null when no row is
+    /// covered.</summary>
+    private static float[]? CoverUnderDecks(float[] xs, float[] ys, float[] ws, float[] ds, int rows)
+    {
+        var any = false;
+        for (var i = 0; i < rows; i++)
+        {
+            if (ds[i] > 0.01f)
+            {
+                any = true;
+                break;
+            }
+        }
+
+        if (!any)
+        {
+            return null;
+        }
+
+        var under = new float[xs.Length];
+        var covered = false;
+        for (var i = 0; i < rows; i++)
+        {
+            var best = 0f;
+            for (var j = 0; j < rows; j++)
+            {
+                if (ds[j] - ds[i] < DeckDrawn)
+                {
+                    continue;
+                }
+
+                var dx = xs[j] - xs[i];
+                var dy = ys[j] - ys[i];
+                var dist = MathF.Sqrt((dx * dx) + (dy * dy));
+                var reach = ((ws[i] + ws[j]) / 2f) + DeckShadeReach;
+                if (dist >= reach)
+                {
+                    continue;
+                }
+
+                var t = 1f - (dist / reach);
+                var v = t * t * (3f - (2f * t));
+                if (v > best)
+                {
+                    best = v;
+                }
+            }
+
+            under[i] = best;
+            if (best > 0f)
+            {
+                covered = true;
+            }
+        }
+
+        return covered ? under : null;
     }
 
     /// <summary>Turns the width profile's segment steps into ramps (Dials p4.1). Width is authored
@@ -609,18 +935,18 @@ public static class AetherRaceLive
         }
     }
 
-    private static Segment Straight(float len, float grade, string name, string? element = null, float? width = null) => new()
+    private static Segment Straight(float len, float grade, string name, string? element = null, float? width = null, float deck = 0f) => new()
     {
-        Kind = SegmentKind.Straight, Len = len, Grade = grade, Name = name, Element = element ?? string.Empty, Width = width,
+        Kind = SegmentKind.Straight, Len = len, Grade = grade, Name = name, Element = element ?? string.Empty, Width = width, Deck = deck,
     };
 
-    private static Segment Corner(float turn, float radius, float grade, string name, float? width = null, string? element = null) => new()
+    private static Segment Corner(float turn, float radius, float grade, string name, float? width = null, string? element = null, float deck = 0f) => new()
     {
-        Kind = SegmentKind.Corner, Turn = turn, Radius = radius, Grade = grade, Name = name, Width = width, Element = element ?? string.Empty,
+        Kind = SegmentKind.Corner, Turn = turn, Radius = radius, Grade = grade, Name = name, Width = width, Element = element ?? string.Empty, Deck = deck,
     };
 
     // The roster. Fixed distances per category; radii 14-45 (14 is a real brake, 40 never
-    // binds). Every element has a home course.
+    // binds). Every element races at two distances and fire at all three. A key is append-only.
     public static readonly CourseDef[] Courses =
     [
         new CourseDef
@@ -743,7 +1069,196 @@ public static class AetherRaceLive
             ],
             RunInGrade = -0.01f,
         },
+
+        // Fire's journey, and the only dead-level road on the roster.
+        new CourseDef
+        {
+            Key = "long-burn",
+            Name = "the Long Burn", Category = RaceCategory.Journey, Terrain = "fire", Width = 6.5f,
+            Segments =
+            [
+                Straight(78f, 0f, "the settle"),
+                Corner(-45f, 38f, 0f, "the first bend"),
+                Straight(66f, 0f, "the ashplain", element: "fire"),
+                Corner(50f, 34f, 0f, "the slow turn"),
+                Straight(62f, 0f, "the long smoulder"),
+                Corner(-40f, 42f, 0f, "the far bend"),
+                Straight(60f, 0f, "the cooling", element: "fire"),
+                Corner(55f, 36f, 0f, "the last bend"),
+            ],
+            RunInGrade = 0f,
+        },
+
+        // Lightning's sprint: two bends that never bind and a long run-in. The plain Speed course.
+        new CourseDef
+        {
+            Key = "riven-straight",
+            Name = "the Riven Straight", Category = RaceCategory.Sprint, Terrain = "lightning", Width = 6.4f,
+            Segments =
+            [
+                Straight(64f, 0f, "the break"),
+                Corner(-48f, 40f, 0f, "the long sweep"),
+                Straight(52f, 0f, "the split", element: "lightning"),
+                Corner(47f, 36f, 0f, "the turn for home"),
+            ],
+            RunInGrade = 0f,
+        },
+
+        // Earth's route, Focus' second ground: narrow, eight corners, three pinches. A corner-heavy
+        // course stays off wind, ice and water, the elements that draw snowfall.
+        new CourseDef
+        {
+            Key = "hollow-way",
+            Name = "the Hollow Way", Category = RaceCategory.Route, Terrain = "earth", Width = 4.8f,
+            Segments =
+            [
+                Straight(34f, 0f, "the lane"),
+                Corner(-55f, 20f, 0f, "the first bend"),
+                Straight(28f, 0f, "the cutting", element: "earth", width: 3.4f),
+                Corner(62f, 18f, 0f, "the elbow"),
+                Straight(22f, 0f, "the banks"),
+                Corner(-48f, 22f, 0f, "the turn under the roots"),
+                Straight(19f, 0f, "the shade"),
+                Corner(70f, 19f, 0f, "the hairpin"),
+                Straight(21f, 0f, "the deep", element: "earth"),
+                Corner(-58f, 21f, 0f, "the far bend"),
+                Straight(28f, 0f, "the narrows", width: 3.4f),
+                Corner(52f, 18f, 0f, "the crook"),
+                Straight(20f, 0f, "the green road", element: "earth"),
+                Corner(-65f, 20f, 0f, "the last bend"),
+                Corner(60f, 22f, 0f, "the turn for home"),
+                Straight(18f, 0f, "the last of the walls", width: 3.4f),
+            ],
+            RunInGrade = 0f,
+        },
+
+        // Wind's sprint. Wind draws snowfall, so its corners stay lazy.
+        new CourseDef
+        {
+            Key = "squall-line",
+            Name = "the Squall Line", Category = RaceCategory.Sprint, Terrain = "wind", Width = 6.2f,
+            Segments =
+            [
+                Straight(56f, 0f, "the break"),
+                Corner(-52f, 30f, 0f, "the first gust"),
+                Straight(42f, -0.015f, "the crosswind", element: "wind"),
+                Corner(58f, 28f, 0f, "the shoulder"),
+            ],
+            RunInGrade = -0.01f,
+        },
+
+        // Water's sprint, pinched once at the leat. Water draws snowfall, so its radii stay open.
+        new CourseDef
+        {
+            Key = "millrace",
+            Name = "the Millrace", Category = RaceCategory.Sprint, Terrain = "water", Width = 5.8f,
+            Segments =
+            [
+                Straight(46f, 0f, "the head race"),
+                Corner(-45f, 36f, 0f, "the first sluice"),
+                Straight(34f, 0f, "the leat", element: "water", width: 4.6f),
+                Corner(62f, 30f, 0f, "the wheel"),
+                Straight(28f, 0f, "the tail race", element: "water"),
+                Corner(-38f, 34f, 0f, "the turn for home"),
+            ],
+            RunInGrade = -0.01f,
+        },
+
+        // Ice's route and the second control: four bends that never bind.
+        new CourseDef
+        {
+            Key = "glassway",
+            Name = "the Glassway", Category = RaceCategory.Route, Terrain = "ice", Width = 6f,
+            Segments =
+            [
+                Straight(62f, 0f, "the break"),
+                Corner(-50f, 36f, 0f, "the first bend"),
+                Straight(50f, -0.015f, "the glass", element: "ice"),
+                Corner(55f, 32f, 0f, "the pale turn"),
+                Straight(46f, 0f, "the still"),
+                Corner(-45f, 40f, 0f, "the far bend"),
+                Straight(39f, -0.01f, "the frost road", element: "ice"),
+                Corner(50f, 34f, 0f, "the turn for home"),
+            ],
+            RunInGrade = 0f,
+        },
+
+        // A journey with no terrain whose subject is width. A squeeze shorter than 14 bounds never
+        // reaches its width, because the width taper reaches seven bounds either side.
+        new CourseDef
+        {
+            Key = "the-bellows",
+            Name = "the Bellows", Category = RaceCategory.Journey, Terrain = string.Empty, Width = 6.8f,
+            Segments =
+            [
+                Straight(34f, 0f, "the mouth"),
+                Straight(26f, 0f, "the first squeeze", width: 3.6f),
+                Straight(28f, 0f, "the first easing"),
+                Corner(-40f, 34f, 0f, "the wide bend"),
+                Straight(26f, 0f, "the second squeeze", width: 3.6f),
+                Straight(28f, 0f, "the second easing"),
+                Straight(26f, 0f, "the third squeeze", width: 3.6f),
+                Corner(45f, 30f, 0f, "the turn in the open"),
+                Straight(30f, 0f, "the long breath"),
+                Straight(26f, 0f, "the fourth squeeze", width: 3.6f),
+                Straight(28f, 0f, "the fourth easing"),
+                Corner(-38f, 32f, 0f, "the far bend"),
+                Straight(26f, 0f, "the fifth squeeze", width: 3.6f),
+                Straight(28f, 0f, "the last easing"),
+                Straight(26f, 0f, "the last squeeze", width: 3.6f),
+                Corner(42f, 28f, 0f, "the turn for home"),
+            ],
+            RunInGrade = 0f,
+        },
+
+        // A loop: two laps of an oval. Loop radii are solved so every segment is a whole number of
+        // rows (see CheckLoop); never round them.
+        new CourseDef
+        {
+            Key = "the-ring",
+            Name = "the Ring", Category = RaceCategory.Route, Terrain = string.Empty, Width = 6f,
+            Shape = CourseShape.Loop, Laps = 2,
+            Segments =
+            [
+                Straight(66f, 0f, "the home straight"),
+                Corner(180f, 14.801410f, 0f, "the first turn"),
+                Straight(66f, 0f, "the back straight"),
+                Corner(180f, 14.801410f, 0f, "the last turn"),
+            ],
+        },
+
+        // A figure of eight crossing itself on a deck. On fire because it turns 444 degrees a lap
+        // and fire never draws a grip weather.
+        new CourseDef
+        {
+            Key = "the-knot",
+            Name = "the Knot", Category = RaceCategory.Route, Terrain = "fire", Width = 5.4f,
+            Shape = CourseShape.Loop, Laps = 2,
+            Segments =
+            [
+                Straight(64.5f, 0f, "the under-road"),
+                Corner(222f, 12.388341f, 0f, "the first lobe", element: "fire"),
+                Straight(64.5f, 0f, "the crossing", deck: 1.6f),
+                Corner(-222f, 12.388341f, 0f, "the second lobe", element: "fire"),
+            ],
+        },
+        .. ScenicCourses(),
     ];
+
+    /// <summary>A course by its wire key, or null when this build's roster has no such key. Null rather
+    /// than a fallback: a race resolved on an unknown course must not replay on the wrong road.</summary>
+    public static CourseDef? CourseByKey(string key)
+    {
+        foreach (var course in Courses)
+        {
+            if (course.Key == key)
+            {
+                return course;
+            }
+        }
+
+        return null;
+    }
 
     // Pacing styles, derived from the block deterministically. Fractions are of the runner's
     // own top speed; the whole plan is a tendency the fortune stream and the pack argue with.
@@ -1022,7 +1537,7 @@ public static class AetherRaceLive
         // pass is earned, overtaking is timed with Focus as the judge, and the front defends.
         private void DecideLine(Runner r)
         {
-            var here = this.track.At(r.S);
+            var here = this.track.AtRoad(r.S, r.Post & 1);
             var focus = MathF.Min(1f, r.CFocus + r.Silver.Craft);
 
             // The road AHEAD sets the line: a narrowing read underfoot is a collision, not a
@@ -1031,7 +1546,7 @@ public static class AetherRaceLive
             var narrow = here.Width;
             for (var d = 3f; d <= narrowLook; d += 3f)
             {
-                var w = this.track.At(r.S + d).Width;
+                var w = this.track.AtRoad(r.S + d, r.Post & 1).Width;
                 if (w < narrow)
                 {
                     narrow = w;
@@ -1047,7 +1562,7 @@ public static class AetherRaceLive
             {
                 for (var d = 3f; d <= anticip; d += 3f)
                 {
-                    var k = this.track.At(r.S + d).Kappa;
+                    var k = this.track.AtRoad(r.S + d, r.Post & 1).Kappa;
                     if (MathF.Abs(k) > 1e-4f)
                     {
                         bendK = k;
@@ -1073,6 +1588,7 @@ public static class AetherRaceLive
                 Runner? threat = null;
                 foreach (var o in this.runners)
                 {
+                    if (!this.SameRoad(r, o)) continue;
                     if (o == r || o.Finished)
                     {
                         continue;
@@ -1124,6 +1640,7 @@ public static class AetherRaceLive
                 {
                     foreach (var o in this.runners)
                     {
+                        if (!this.SameRoad(r, o)) continue;
                         if (o == r || o.Finished)
                         {
                             continue;
@@ -1152,6 +1669,7 @@ public static class AetherRaceLive
                 var free = scan;
                 foreach (var o in this.runners)
                 {
+                    if (!this.SameRoad(r, o)) continue;
                     if (o == r || o.Finished)
                     {
                         continue;
@@ -1191,7 +1709,7 @@ public static class AetherRaceLive
                         var outsideBend = 0f;
                         for (var d = 4f; d <= passDist; d += 4f)
                         {
-                            var k = this.track.At(r.S + d).Kappa;
+                            var k = this.track.AtRoad(r.S + d, r.Post & 1).Kappa;
                             if (MathF.Abs(k) > 1e-4f && MathF.Sign(k) != MathF.Sign(c != 0f ? c : 1f))
                             {
                                 outsideBend = MathF.Max(outsideBend, MathF.Abs(k) * 26f);
@@ -1219,7 +1737,8 @@ public static class AetherRaceLive
             }
         }
 
-        /// <summary>Advance the race one fixed tick.</summary>
+        private bool SameRoad(Runner a, Runner b) => !RoadsSeparated(this.track, a.S) || !RoadsSeparated(this.track, b.S) || (a.Post & 1) == (b.Post & 1);
+
         public void Step()
         {
             if (this.Done)
@@ -1276,7 +1795,7 @@ public static class AetherRaceLive
                     this.Log("firstAway", r.Idx);
                 }
 
-                var here = this.track.At(r.S);
+                var here = this.track.AtRoad(r.S, r.Post & 1);
                 var halfW = (here.Width / 2f) - Dials.LaneMargin;
                 var progress = r.S / this.track.Length;
                 var phase = PhaseAt(this.course.Category, progress);
@@ -1317,7 +1836,7 @@ public static class AetherRaceLive
                 var allow = float.PositiveInfinity;
                 for (var d = 0f; d <= 24f; d += 3f)
                 {
-                    var sample = this.track.At(r.S + d);
+                    var sample = this.track.AtRoad(r.S + d, r.Post & 1);
                     var kap = MathF.Abs(sample.Kappa);
                     if (kap < 1e-4f)
                     {
@@ -1401,6 +1920,7 @@ public static class AetherRaceLive
                 var neighbours = 0;
                 foreach (var o in this.runners)
                 {
+                    if (!this.SameRoad(r, o)) continue;
                     if (o == r)
                     {
                         continue;
@@ -1533,6 +2053,7 @@ public static class AetherRaceLive
                     var contested = false;
                     foreach (var o in this.runners)
                     {
+                        if (!this.SameRoad(r, o)) continue;
                         if (o.Idx != r.Idx && !o.Finished && MathF.Abs(o.S - r.S) <= Dials.ClutchReach)
                         {
                             contested = true;
@@ -1600,6 +2121,7 @@ public static class AetherRaceLive
                 {
                     foreach (var o in this.runners)
                     {
+                        if (!this.SameRoad(r, o)) continue;
                         if (o == r || o.Finished)
                         {
                             continue;
@@ -1661,6 +2183,10 @@ public static class AetherRaceLive
             }
 
             // The race ends when everyone is home, or the lingering clock clamps stragglers.
+            if (this.track.Roads != null)
+                foreach (var runner in this.runners)
+                    if (runner.BlockedBy >= 0 && !this.SameRoad(runner, this.runners[runner.BlockedBy])) runner.BlockedBy = -1;
+
             if (this.FinishedCount == this.runners.Length
                 || (this.FinishedCount > 0 && this.Time > this.WinnerTime + Dials.FinishLinger))
             {

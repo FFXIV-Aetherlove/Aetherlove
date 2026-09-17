@@ -17,4 +17,5 @@ public enum Screen
     SessionExpired,
     Outdated,
     StaffNotice,
+    AssetUpdate,
 }

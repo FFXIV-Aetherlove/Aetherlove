@@ -1,4 +1,4 @@
-﻿namespace AetherLove.Services.Localization;
+namespace AetherLove.Services.Localization;
 
 internal static class CommonPt
 {
@@ -223,5 +223,11 @@ internal static class CommonPt
         ["picker.save"] = "Salvar",
         ["picker.file_name_hint"] = "Nome do arquivo...",
         ["picker.selected_count"] = "{0} selecionados",
+        // added after update 2.6.1 (picture adjust)
+        ["common.adjust_picture"] = "Ajustar imagem",
+        ["common.use_picture"] = "Usar esta imagem",
+        ["common.rotate_left"] = "Girar para a esquerda",
+        ["common.rotate_right"] = "Girar para a direita",
+        ["common.crop_free_hint"] = "Arraste o canto para recortar. Use as setas para girar.",
     };
 }

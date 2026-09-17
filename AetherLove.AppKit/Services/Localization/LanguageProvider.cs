@@ -68,18 +68,63 @@ public static class LanguageProvider
             ["pt"] = "Portuguese",
         };
 
-    /// <summary>Merges an app-owned string pack into the language's table; app keys must be prefixed to avoid collisions.</summary>
+    private static readonly object PackGate = new();
+
+    private static readonly Dictionary<string, List<IReadOnlyDictionary<string, string>>> RegisteredPacks =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    private static volatile Dictionary<string, IReadOnlyDictionary<string, string>> _tables =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The active language's table with every published app pack merged in.</summary>
+    public static IReadOnlyDictionary<string, string> CurrentStrings => Table(Current);
+
+    /// <summary>The English table with every published app pack merged in.</summary>
+    public static IReadOnlyDictionary<string, string> EnglishStrings => Table(Fallback);
+
+    private static IReadOnlyDictionary<string, string> Table(ILanguageService svc) =>
+        _tables.TryGetValue(svc.LanguageName, out var merged) ? merged : svc.Strings;
+
+    /// <summary>Stages an app-owned string pack for the language; app keys must be prefixed to avoid collisions.
+    /// Nothing is visible to <see cref="Loc"/> until <see cref="PublishAppStrings"/> runs.</summary>
     public static void RegisterAppStrings(string isoCode, IReadOnlyDictionary<string, string> strings)
     {
-        if (!IsoToLanguageName.TryGetValue(isoCode, out var name)
-            || !Services.TryGetValue(name, out var svc)
-            || svc.Strings is not Dictionary<string, string> map)
+        if (!IsoToLanguageName.TryGetValue(isoCode, out var name) || !Services.ContainsKey(name))
         {
             return;
         }
-        foreach (var (key, value) in strings)
+        lock (PackGate)
         {
-            map[key] = value;
+            if (!RegisteredPacks.TryGetValue(name, out var packs))
+            {
+                packs = new List<IReadOnlyDictionary<string, string>>();
+                RegisteredPacks[name] = packs;
+            }
+            packs.Add(strings);
+        }
+    }
+
+    /// <summary>Builds fresh merged tables from the base tables and every registered pack, then swaps them in
+    /// with one reference write. Readers on other threads see either the old tables or the new, never a
+    /// dictionary being written to.</summary>
+    public static void PublishAppStrings()
+    {
+        lock (PackGate)
+        {
+            var tables = new Dictionary<string, IReadOnlyDictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (name, packs) in RegisteredPacks)
+            {
+                var merged = new Dictionary<string, string>(Services[name].Strings);
+                foreach (var pack in packs)
+                {
+                    foreach (var (key, value) in pack)
+                    {
+                        merged[key] = value;
+                    }
+                }
+                tables[name] = merged;
+            }
+            _tables = tables;
         }
     }
 

@@ -132,6 +132,10 @@ public static class AppStrings
         ["os.wallet_action_arcade_weekly_third"] = "Weekly leaderboard, 3rd place",
         // added after update 2.5.3
         ["os.wallet_action_staff_gift"] = "Gift from Staff",
+
+        // added after update 2.7.0
+        ["os.wallet_action_staff_correction"] = "Staff correction",
+        ["os.wallet_action_starlight_cup"] = "Starlight Cup",
     };
 
     private static readonly IReadOnlyDictionary<string, string> De = new Dictionary<string, string>
@@ -261,6 +265,10 @@ public static class AppStrings
         ["os.wallet_action_arcade_weekly_third"] = "Wochenrangliste, 3. Platz",
         // added after update 2.5.3
         ["os.wallet_action_staff_gift"] = "Geschenk vom Team",
+
+        // added after update 2.7.0
+        ["os.wallet_action_staff_correction"] = "Korrektur vom Team",
+        ["os.wallet_action_starlight_cup"] = "Sternenlicht-Pokal",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Es = new Dictionary<string, string>
@@ -390,6 +398,10 @@ public static class AppStrings
         ["os.wallet_action_arcade_weekly_third"] = "Clasificación semanal, 3.º puesto",
         // added after update 2.5.3
         ["os.wallet_action_staff_gift"] = "Regalo del equipo",
+
+        // added after update 2.7.0
+        ["os.wallet_action_staff_correction"] = "Corrección del equipo",
+        ["os.wallet_action_starlight_cup"] = "Copa Estelar",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Fr = new Dictionary<string, string>
@@ -519,6 +531,10 @@ public static class AppStrings
         ["os.wallet_action_arcade_weekly_third"] = "Classement de la semaine, 3e place",
         // added after update 2.5.3
         ["os.wallet_action_staff_gift"] = "Cadeau de l'équipe",
+
+        // added after update 2.7.0
+        ["os.wallet_action_staff_correction"] = "Correction de l'équipe",
+        ["os.wallet_action_starlight_cup"] = "Coupe des étoiles",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Pt = new Dictionary<string, string>
@@ -648,6 +664,10 @@ public static class AppStrings
         ["os.wallet_action_arcade_weekly_third"] = "Classificação semanal, 3.º lugar",
         // added after update 2.5.3
         ["os.wallet_action_staff_gift"] = "Presente da equipa",
+
+        // added after update 2.7.0
+        ["os.wallet_action_staff_correction"] = "Correção da equipa",
+        ["os.wallet_action_starlight_cup"] = "Taça Estelar",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Ru = new Dictionary<string, string>
@@ -777,6 +797,10 @@ public static class AppStrings
         ["os.wallet_action_arcade_weekly_third"] = "Недельный рейтинг, 3-е место",
         // added after update 2.5.3
         ["os.wallet_action_staff_gift"] = "Подарок от команды",
+
+        // added after update 2.7.0
+        ["os.wallet_action_staff_correction"] = "Исправление от команды",
+        ["os.wallet_action_starlight_cup"] = "Звёздный кубок",
     };
 
     public static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> Packs =

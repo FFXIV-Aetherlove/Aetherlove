@@ -19,7 +19,6 @@ public static class LanguageFlagService
     };
 
     private static readonly Dictionary<string, ISharedImmediateTexture?> Cache = new();
-    private static string? _mediaDir;
 
     public static ISharedImmediateTexture? GetFlag(string languageName)
     {
@@ -34,11 +33,7 @@ public static class LanguageFlagService
             return null;
         }
 
-        _mediaDir ??= Path.Combine(
-            Path.GetDirectoryName(UiHost.PluginInterface.AssemblyLocation.FullName) ?? "",
-            "Media");
-
-        var path = Path.Combine(_mediaDir, file);
+        var path = Media.MediaPaths.Shipped(file);
         if (!File.Exists(path))
         {
             Cache[languageName] = null;

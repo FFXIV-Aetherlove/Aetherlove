@@ -61,6 +61,9 @@ public sealed class CameraApp : IAetherApp
     private readonly ICameraLibrary library;
     private readonly Dictionary<string, Vector2> sizeCache = new();
 
+    /// <summary>Longer edge of a roll tile's thumbnail, comfortably above the tile at any phone scale.</summary>
+    private const int ThumbPixels = 256;
+
     private CaptureRequest? pending;
     private bool pendingLaunched;
     private IOsShell? shell;
@@ -571,6 +574,8 @@ public sealed class CameraApp : IAetherApp
         var start = ImGui.GetCursorScreenPos();
         var dl = ImGui.GetWindowDrawList();
         var headerH = ImGui.GetTextLineHeight() + ctx.Px(10f);
+        var viewTop = ImGui.GetWindowPos().Y - side;
+        var viewBottom = ImGui.GetWindowPos().Y + ImGui.GetWindowSize().Y + side;
         var y = start.Y;
         var i = 0;
         while (i < photos.Count)
@@ -588,6 +593,10 @@ public sealed class CameraApp : IAetherApp
                 var tl = new Vector2(
                     start.X + ((j - first) % Cols) * (side + gap),
                     y + ((j - first) / Cols) * (side + gap));
+                if (tl.Y + side < viewTop || tl.Y > viewBottom)
+                {
+                    continue;
+                }
                 this.DrawThumb(ctx, dl, photos[j], tl, side, j);
             }
             var rows = (i - first + Cols - 1) / Cols;
@@ -619,7 +628,7 @@ public sealed class CameraApp : IAetherApp
         var clicked = ImGui.InvisibleButton($"##cameraShot{index}", new Vector2(side, side));
         var hovered = ImGui.IsItemHovered();
 
-        var tex = this.caps.Textures.Get(photo.Path);
+        var tex = this.caps.Textures.GetThumbnail(photo.Path, ThumbPixels);
         if (tex is { } handle)
         {
             var (uv0, uv1) = CoverUv(this.FramedAspect(0f, 0f, photo.Path), 1f);

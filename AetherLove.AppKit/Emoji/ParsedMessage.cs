@@ -19,6 +19,10 @@ public sealed class ParsedMessage
 
     private static readonly Dictionary<string, ParsedMessage> Cache = new();
 
+    /// <summary>Live compose boxes parse every prefix typed, so the cache is wiped past this rather than
+    /// growing for the session.</summary>
+    private const int MaxCached = 4000;
+
     // Manual word-wrap breaks this many px before ImGui's PushTextWrapPos edge would, so the two wrap
     // authorities can't disagree at a sub-pixel boundary and force a word to break mid-glyph at line end.
     internal const float WrapSlack = 2f;
@@ -96,6 +100,10 @@ public sealed class ParsedMessage
         var key = text.Trim();
         if (!Cache.TryGetValue(key, out var msg))
         {
+            if (Cache.Count >= MaxCached)
+            {
+                Cache.Clear();
+            }
             Cache[key] = msg = new ParsedMessage(key);
         }
         return msg;

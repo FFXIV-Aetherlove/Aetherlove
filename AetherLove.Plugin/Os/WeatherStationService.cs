@@ -328,10 +328,7 @@ public sealed class WeatherStationService : IWeatherStation, IDisposable
         return weather == null ? null : GetIcon((uint)weather.Value.Icon);
     }
 
-    private static string MediaDir =>
-        System.IO.Path.Combine(
-            System.IO.Path.GetDirectoryName(Plugin.PluginInterface.AssemblyLocation.FullName) ?? "",
-            "Media", "weather");
+    private static string MediaDir => Services.Media.MediaPaths.Downloaded(Services.Media.MediaPaths.Weather);
 
     private readonly Dictionary<byte, string> _iconKeyCache = new();
     private readonly Dictionary<string, ISharedImmediateTexture?> _keyTextureCache = new();
@@ -350,14 +347,19 @@ public sealed class WeatherStationService : IWeatherStation, IDisposable
         return key;
     }
 
-    /// <summary>Custom icon from Media/weather/{key}.png; null (falling back to the game icon) when the file
-    /// is absent. The shared texture is cached, the wrap resolves per call because loading is async.</summary>
+    /// <summary>Custom icon from the downloaded weather pack's {key}.png; null (falling back to the game icon)
+    /// while the file is absent. A miss is not cached: the pack may still be on its way. The shared texture
+    /// is cached, the wrap resolves per call because loading is async.</summary>
     private ImTextureID? GetKeyIcon(string key)
     {
         if (!_keyTextureCache.TryGetValue(key, out var tex))
         {
             var path = System.IO.Path.Combine(MediaDir, key + ".png");
-            tex = System.IO.File.Exists(path) ? Plugin.TextureProvider.GetFromFile(path) : null;
+            if (!System.IO.File.Exists(path))
+            {
+                return null;
+            }
+            tex = Plugin.TextureProvider.GetFromFile(path);
             _keyTextureCache[key] = tex;
         }
         return tex?.GetWrapOrDefault()?.Handle;

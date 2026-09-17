@@ -197,8 +197,4 @@ public sealed partial class AetherHubContext
         }
         catch (HubException ex) when (RateLimitException.TryParse(ex) is { } rl) { throw rl; }
     }
-
-    /// <summary>The current playback host build; null when no host is published for this client.</summary>
-    public async Task<EchoHostManifestDto?> GetEchoHostManifestAsync(CancellationToken ct = default) =>
-        await (await ConnAsync(ct)).InvokeAsync<EchoHostManifestDto?>("GetEchoHostManifestAsync", ct).ConfigureAwait(false);
 }

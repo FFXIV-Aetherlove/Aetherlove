@@ -14,7 +14,7 @@ internal static class LiveGateReturn
     public static void Capture(ScreenRouter router, OsShell shell)
     {
         var current = router.Current;
-        if (current is Screen.WarningsAcknowledge or Screen.ModeratorMessages or Screen.StaffNotice)
+        if (current is Screen.WarningsAcknowledge or Screen.ModeratorMessages or Screen.StaffNotice or Screen.AssetUpdate)
         {
             return;
         }

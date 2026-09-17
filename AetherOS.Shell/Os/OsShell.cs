@@ -83,13 +83,14 @@ public sealed class OsShell : IOsShell
             {
                 RegisterAppStrings(app);
             }
+            Services.Localization.LanguageProvider.PublishAppStrings();
             RefreshExternalApps();
         }
         return _apps;
     }
 
-    /// <summary>Merges an app's owned localization pack (per ISO language code) into the OS string tables, so its
-    /// keys resolve through the normal <c>Localize</c> path with language-then-English fallback.</summary>
+    /// <summary>Stages an app's owned localization pack (per ISO language code) for the OS string tables, so its
+    /// keys resolve through the normal <c>Localize</c> path with language-then-English fallback once published.</summary>
     private static void RegisterAppStrings(IAetherApp app)
     {
         if (app.Strings is not { } packs)

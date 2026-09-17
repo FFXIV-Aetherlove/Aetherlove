@@ -33,6 +33,7 @@ public sealed partial class MessengerApp
     private Guid _reportAccountId;
     private string _reportPeerName = string.Empty;
     private string _reportReason = string.Empty;
+    private readonly SoftWrapInputField _reportReasonField = new();
     private volatile bool _reportDone;
 
     private string _confirmTitle = string.Empty;
@@ -690,7 +691,7 @@ public sealed partial class MessengerApp
             return;
         }
         ImGui.PushStyleColor(ImGuiCol.FrameBg, InputFill);
-        InputTextMultilineWithPaste("##reportReason", ref _reportReason, 500,
+        _reportReasonField.Draw("##reportReason", ref _reportReason, 500,
             new Vector2(ImGui.GetContentRegionAvail().X, Px(90f)));
         ImGui.PopStyleColor();
         ImGui.Dummy(new Vector2(0f, Px(6f)));
@@ -698,7 +699,7 @@ public sealed partial class MessengerApp
                 enabled: _reportReason.Trim().Length > 0))
         {
             var target = _reportAccountId;
-            var reason = _reportReason.Trim();
+            var reason = _reportReasonField.Value(_reportReason).Trim();
             RunHub(async () =>
             {
                 await _hub.ReportMessengerUserAsync(target, reason).ConfigureAwait(false);

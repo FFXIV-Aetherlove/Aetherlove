@@ -41,11 +41,6 @@ internal sealed class StoreMediaCache(IStoreHost host, string cacheDir)
     public Visual? GetCategory(Guid categoryId, int version = 0) =>
         Get(categoryId, version, host.GetStoreCategoryImageAsync);
 
-    /// <summary>A theme's wallpaper, watermarked by the server. Keyed by the same product id as the shelf
-    /// art, so this only ever runs on an instance with its own cache directory.</summary>
-    public Visual? GetThemeBackground(Guid productId, int version = 0) =>
-        Get(productId, version, host.GetStoreThemeBackgroundPreviewAsync);
-
     private Visual? Get(Guid id, int version, Func<Guid, CancellationToken, Task<byte[]?>> fetch)
     {
         var key = CacheKey(id, version);

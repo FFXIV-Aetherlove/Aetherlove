@@ -97,6 +97,9 @@ public sealed class AetherSignalService : IAsyncDisposable
     public SignalConnectionState State => (SignalConnectionState)_stateRaw;
     public bool IsConnected => State == SignalConnectionState.Connected;
 
+    /// <summary>True while the full phone window is open; the mini bubble does not count.</summary>
+    public bool IsPhoneOpen => _host.IsPhoneOpen;
+
     public bool LastFailureWasUnauthorized => _lastFailureWasUnauthorized;
 
     public bool DebouncedOffline => _debouncedOffline;
@@ -320,7 +323,7 @@ public sealed class AetherSignalService : IAsyncDisposable
             RefreshConnectionInfo();
             _ = RefreshStaffNoticesAsync();
             _ = _services.GetRequiredService<Messenger.MessengerSyncService>().SyncAsync();
-            _ = _services.GetRequiredService<Yapper.YapperDmCryptoService>().EnsureProvisionedAsync();
+            _services.GetRequiredService<Yapper.YapperDmCryptoService>().ProvisionInBackground();
             _log.Information($"[AetherSignalService] Hub reconnected (connectionId={id}).");
             return Task.CompletedTask;
         };

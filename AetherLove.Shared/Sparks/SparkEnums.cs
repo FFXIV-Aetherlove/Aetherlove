@@ -94,8 +94,8 @@ public enum SparkAction : short
     /// two clicks in the same instant can never book it twice.</summary>
     AetherlingAdopt = 20,
 
-    /// <summary>Offered sparks to an Aethercore, moving it one stage up. RefId is derived from the
-    /// account and the stage being left, so a stage can only ever be paid for once.</summary>
+    /// <summary>Retired with 2.7: an attunement under the old charge ladder. Never written again, but
+    /// ledgers still carry the rows and a reset still sweeps them.</summary>
     AetherlingAttune = 21,
 
     /// <summary>Finished a round of one of the companion's own minigames today; client-reported.</summary>
@@ -135,4 +135,13 @@ public enum SparkAction : short
     /// <summary>A staff mass-gift credited outside the earning system; RefId is derived from the gift
     /// batch and the account so a rerun books at most once. The wallet shows it as "Gift from Staff".</summary>
     StaffGift = 33,
+
+    /// <summary>A staff correction credited outside the earning system: sparks handed back for something the
+    /// rules no longer charge for. RefId is derived from the correction campaign and the account so a rerun
+    /// books at most once. The wallet shows it as "Staff correction".</summary>
+    StaffCorrection = 34,
+
+    /// <summary>The Starlight Cup completion prize, credited outside the earning system once all four
+    /// races of a week's cup are acknowledged; RefId is the cup. The wallet shows it as "Starlight Cup".</summary>
+    StarlightCup = 35,
 }

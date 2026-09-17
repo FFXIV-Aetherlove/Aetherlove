@@ -191,7 +191,7 @@ internal sealed class CartScreen(
         if (product is not null)
         {
             StoreChips.Price(dl, new Vector2(textX, tl.Y + Px(28f)),
-                product.DiscountedPriceSparks * line.Quantity, product.PriceSparks * line.Quantity, 0.95f);
+                LinePrice(line, product), product.PriceSparks * line.Quantity, 0.95f);
         }
         if (hasError)
         {
@@ -238,11 +238,32 @@ internal sealed class CartScreen(
         {
             if (_products.TryGetValue(line.ProductId, out var product))
             {
-                total += product.DiscountedPriceSparks * line.Quantity;
+                total += LinePrice(line, product);
                 worth += product.PriceSparks * line.Quantity;
             }
         }
         return (total, worth);
+    }
+
+    /// <summary>What a line costs with the free first skin taken off exactly once. The server marks every
+    /// skin eligible while the pick is open, but only one of them can be it, and checkout buys the lines
+    /// in cart order, so the first eligible line in that order is the one shown for nothing.</summary>
+    private int LinePrice(StoreCart.Line line, StoreProductDto product)
+    {
+        var price = product.DiscountedPriceSparks * line.Quantity;
+        return line.ProductId == FreeLineId() ? price - product.DiscountedPriceSparks : price;
+    }
+
+    private Guid? FreeLineId()
+    {
+        foreach (var line in cart.Lines)
+        {
+            if (_products.TryGetValue(line.ProductId, out var product) && product.FreeSkinEligible)
+            {
+                return line.ProductId;
+            }
+        }
+        return null;
     }
 
     private void DrawTotals(OsAppContext ctx, float winW)
@@ -303,7 +324,8 @@ internal sealed class CartScreen(
         ImGui.SetCursorPosX(Px(PadX));
         var ctaTl = ImGui.GetCursorScreenPos();
         var ctaSize = new Vector2(cardW, Px(42f));
-        var canCheckout = total > 0 && short_ <= 0 && !_loading;
+        // A cart holding only the free skin totals zero and is still a purchase.
+        var canCheckout = cart.Lines.Count > 0 && short_ <= 0 && !_loading;
         ImGui.SetCursorScreenPos(ctaTl);
         var clicked = ImGui.InvisibleButton("##checkout", ctaSize) && canCheckout;
         var hovered = canCheckout && ImGui.IsItemHovered();
@@ -364,7 +386,7 @@ internal sealed class CartScreen(
     /// failed and remaining lines with a typed error, because the bought lines were each real purchases.</summary>
     private void DrawConfirmOverlay(OsAppContext ctx, float winW)
     {
-        var origin = ImGui.GetWindowPos() + new Vector2(0f, ImGui.GetScrollY());
+        var origin = ImGui.GetWindowPos();
         var avail = ImGui.GetWindowSize();
         ImGui.SetCursorScreenPos(origin);
         using var layer = ImRaii.Child("##storeConfirm", avail, false,

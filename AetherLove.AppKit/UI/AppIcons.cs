@@ -16,8 +16,7 @@ public static class AppIcons
     {
         if (!Cache.TryGetValue(appId, out var tex))
         {
-            var dir = Path.GetDirectoryName(UiHost.PluginInterface.AssemblyLocation.FullName) ?? "";
-            var path = Path.Combine(dir, "Media", "appicons", appId + ".png");
+            var path = Services.Media.MediaPaths.Shipped(Services.Media.MediaPaths.AppIcons, appId + ".png");
             tex = File.Exists(path) ? UiHost.TextureProvider.GetFromFile(path) : null;
             Cache[appId] = tex;
         }

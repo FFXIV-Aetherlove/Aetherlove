@@ -45,6 +45,11 @@ public sealed class ThemeDefinition
     /// with a thin top frame push it below the frame line, inside the glass.</summary>
     public float StatusBarTop { get; init; } = 0f;
 
+    public float? StatusBarCenterY { get; init; }
+    public bool StatusBarHomeHeader { get; init; }
+    public float StatusBarBackgroundOpacity { get; init; }
+    public bool StatusBarCentered { get; init; }
+
     /// <summary>Tint for the status bar contents (clock, signal, battery). Default white; a theme whose top frame
     /// is light can set a dark tint for legibility.</summary>
     public Vector4 StatusBarTint { get; init; } = new(1f, 1f, 1f, 1f);

@@ -1,4 +1,4 @@
-﻿namespace AetherLove.Services.Localization;
+namespace AetherLove.Services.Localization;
 
 internal static class SettingsDe
 {
@@ -265,7 +265,7 @@ internal static class SettingsDe
         ["settings.staff_messages_section"] = "Nachrichten",
 
         // added after update 2.2.3
-        ["settings.premium_themes"] = "Premium-Designs",
+        ["settings.premium_themes"] = "Handy-Designs",
         ["settings.premium_refresh"] = "Design neu laden",
         ["settings.premium_backgrounds"] = "Premium-Hintergründe",
         ["settings.premium_enable_failed"] = "Wechsel fehlgeschlagen",
@@ -281,5 +281,33 @@ internal static class SettingsDe
         ["settings.translation_enable"] = "Übersetzungen aktivieren",
         ["settings.translation_language"] = "Übersetzen nach",
         ["settings.translation_search"] = "Sprachen durchsuchen...",
+        // phone skins (added after update 2.7.0)
+        ["settings.premium_get_skins"] = "Handy-Designs im Store holen",
+        // added after update 2.7.0
+        ["account.title"] = "Mein Konto",
+        ["account.change_help"] = "Deine Schlüssel und Chats bleiben erhalten. Verwende mindestens 12 Zeichen.",
+        ["account.new_passphrase"] = "Neue Passphrase",
+        ["account.repeat"] = "Passphrase wiederholen",
+        ["account.change"] = "Passphrase ändern",
+        ["account.backup_help"] = "Bewahre diese Datei sicher auf. Jeder mit dieser Datei kann deine Schlüssel wiederherstellen.",
+        ["account.save"] = "Wiederherstellungsdatei speichern",
+        ["account.restore"] = "Wiederherstellungsdatei auswählen",
+        ["account.retry"] = "Verbindung erneut versuchen",
+        ["account.working"] = "Wird bearbeitet...",
+        ["account.success"] = "Fertig.",
+        ["account.failed"] = "Dieser Schritt ist fehlgeschlagen. Prüfe deine Verbindung und wähle beim Speichern einen neuen Dateinamen.",
+        ["account.backup_title"] = "Speichere deine Wiederherstellungsdatei",
+        ["account.backup_required"] = "Speichere deine Sicherung, bevor du fortfährst. Sie hilft dir, wenn du deine Passphrase vergisst.",
+        ["account.unlock_choice"] = "Gib deine Passphrase ein oder wähle deine Wiederherstellungsdatei.",
+        ["account.state_offline"] = "Offline. Deine lokalen Schlüssel bleiben erhalten.",
+        ["account.state_unlockrequired"] = "Gib deine Passphrase ein oder wähle eine Wiederherstellungsdatei.",
+        ["account.state_ready"] = "Deine Schlüssel sind bereit.",
+        ["account.state_migrationincomplete"] = "Einige ältere Schlüssel fehlen noch. Verfügbare Chats bleiben nutzbar.",
+        ["account.state_recoveryrequired"] = "Stelle den Zugriff mit deiner Passphrase oder Wiederherstellungsdatei wieder her.",
+        ["account.state_corruptbundle"] = "Diese Sicherung konnte nicht geöffnet werden. Deine bisherigen Schlüssel bleiben erhalten.",
+        ["account.unverified"] = "Nicht bestätigt",
+        ["account.verified"] = "Bestätigt",
+        ["account.key_changed"] = "Die Schlüssel haben sich geändert. Vergleiche den Code erneut.",
+        ["account.compared"] = "Ich habe den Code verglichen",
     };
 }

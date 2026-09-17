@@ -8,38 +8,31 @@ using AetherOS.Apps.Racer.Rendering;
 using AetherOS.PetKit.Engine;
 using AetherOS.Sdk;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 
 namespace AetherOS.Apps.Racer.Screens;
 
-/// <summary>Race day: the picture, the day's three courses on cards over it, and the party flow
-/// underneath. The card and the numbers each live on their own page now.</summary>
-internal sealed class HomeScreen(
+internal sealed partial class HomeScreen(
     IRacerHost host,
     IAppCapabilities caps,
     Action<LumiRaceStartResultDto> openRace,
     Action openSelection,
-    Action openStats,
+    Action openCup,
+    Action openPacks,
     Action openStamps,
-    Action openWaiting,
-    Action openIntro,
-    Func<bool> muted,
-    Action toggleMute,
-    Func<float> volume,
-    Action<float> setVolume)
+    Action openWaiting)
 {
-
-    /// <summary>How much of the page the picture keeps: less when the three cards need the room.</summary>
-    private const float PictureShare = 0.46f;
 
     private LumiRaceStateDto? _state;
     private TimeSpan _serverOffset;
     private LumiRaceStateDto? _pendingState;
+    private LumiCupStateDto? _cupState;
+    private LumiCupStateDto? _pendingCup;
     private LumiRaceStartResultDto? _pendingStart;
     private string? _pendingError;
     private string? _error;
     private bool _busy;
-    private PackRipOverlay? _pack;
     private bool _gateOpen;
     private bool _gateAsked;
     private float _gateHeight;
@@ -73,16 +66,26 @@ internal sealed class HomeScreen(
         Drain();
 
         var avail = ImGui.GetContentRegionAvail();
-        using var body = ImRaii.Child("##racerHome", avail, false, ImGuiWindowFlags.NoScrollbar);
+        using var body = ImRaii.Child("##racerHome", avail, false, ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoBackground);
         if (!body)
         {
             return;
         }
 
-        RacerBackdrop.Draw(ctx, host, ImGui.GetWindowPos(), ImGui.GetWindowSize(), dim: 0f);
-        DrawButtonWash(ctx);
-        RacerChrome.DrawMuteChip(ctx, muted(), toggleMute, volume(), setVolume);
-
+        if (_error is { } failure)
+        {
+            GrandstandFrame.Panel(ctx, host, "paper", ImGui.GetWindowPos(), avail);
+            using var ink = ImRaii.PushColor(ImGuiCol.Text, GrandstandFrame.Ink);
+            ImGui.Dummy(new Vector2(1, Px(24)));
+            RacerChrome.CenteredWrapped(failure);
+            ImGui.Dummy(new Vector2(1, Px(16)));
+            if (GrandstandFrame.ActionButton(ctx, host, "##homeRetry", ctx.Localize("os.racer_cup_retry")))
+            {
+                _error = null;
+                Refresh();
+            }
+            return;
+        }
         if (_state is not { } state)
         {
             ImGui.Dummy(new Vector2(1f, avail.Y * 0.45f));
@@ -91,28 +94,38 @@ internal sealed class HomeScreen(
             return;
         }
 
-        // The picture holds the top; the menu sits on the road in the lower half of it.
-        ImGui.Dummy(new Vector2(1f, avail.Y * PictureShare));
         DrawMenu(ctx, state);
         ImGui.Dummy(new Vector2(1f, Px(10)));
         DrawError(ctx);
+    }
+
+    /// <summary>True while the gate is up, for the introduction, which shows the gate but not the notice.</summary>
+    public bool GateOpen => _gateOpen;
+
+    /// <summary>True while the gate or the practice notice is up.</summary>
+    public bool OverlayOpen => _error is null && _state is not null && (_gateOpen || _practiceOpen);
+
+    /// <summary>The home page's popups. The grandstand calls this after its content, in its own window, so each
+    /// popup centres on the whole app and not on the menu below the logo.</summary>
+    public void DrawOverlays(OsAppContext ctx)
+    {
+        if (_error is not null || _state is not { } state)
+        {
+            return;
+        }
+
         DrawGate(ctx, state);
         DrawPracticeNotice(ctx, state);
-
-        if (_pack is { } pack)
-        {
-            pack.Draw(ctx);
-            if (pack.Closed)
-            {
-                _pack = null;
-                Refresh();
-            }
-        }
     }
 
     private void Drain()
     {
         DrainState();
+        if (_pendingCup is { } cup)
+        {
+            _pendingCup = null;
+            _cupState = cup;
+        }
         if (_pendingStart is { } start)
         {
             _pendingStart = null;
@@ -135,6 +148,7 @@ internal sealed class HomeScreen(
         }
         _pendingState = null;
         _state = state;
+        _error = null;
         _serverOffset = state.ServerNowUtc - DateTimeOffset.UtcNow;
         if (!_gateAsked && (!state.PetHatched || !state.PetAdult))
         {
@@ -158,22 +172,24 @@ internal sealed class HomeScreen(
                 _pendingError = host.DescribeError(ex);
             }
         });
-    }
-
-    /// <summary>The ground under the buttons, so a label still reads on bright asphalt.</summary>
-    private static void DrawButtonWash(OsAppContext ctx)
-    {
-        var dl = ImGui.GetWindowDrawList();
-        var origin = ImGui.GetWindowPos();
-        var size = ImGui.GetWindowSize();
-        dl.AddRectFilledMultiColor(
-            new Vector2(origin.X, origin.Y + (size.Y * 0.40f)), origin + size,
-            0x00000000u, 0x00000000u, 0xB0000000u, 0xB0000000u);
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                _pendingCup = await host.GetCupAsync().ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+                // A server without the cup leaves the cup button live; the cup page reports the error.
+            }
+        });
     }
 
     /// <summary>What the player has to go and do before they can race, said on every visit while it
     /// holds. A creature that has not grown up is named, told what grows it, and handed the door to the
-    /// food shelf; one with no creature at all is sent to hatch one. The race button dims for both.</summary>
+    /// food shelf; one with no creature at all is sent to hatch one. The race button dims for both. Drawn
+    /// on the race card's paper in its blue ink with the flag's red button, like every other Racer page,
+    /// and the title wraps rather than running off the panel.</summary>
     private void DrawGate(OsAppContext ctx, LumiRaceStateDto state)
     {
         if (!_gateOpen)
@@ -183,125 +199,44 @@ internal sealed class HomeScreen(
 
         var grow = state.PetHatched;
         var name = string.IsNullOrWhiteSpace(state.PetName) ? ctx.Localize("os.racer_gate_your_pet") : state.PetName;
+        var ink = RacerChrome.CardBlue with { W = 1f };
+        var width = MathF.Min(ImGui.GetWindowSize().X - Px(48f), Px(380f));
         var dismissed = DrawPageOverlayPanel("racerGate", ImGui.GetWindowPos(), ImGui.GetWindowSize(),
-            ref _gateHeight, Px(grow ? 260f : 210f), innerW =>
+            ref _gateHeight, Px(grow ? 290f : 240f), innerW =>
             {
-                using (ctx.TitleFont?.Push())
-                {
-                    RacerChrome.CenteredText(grow
-                        ? string.Format(ctx.Localize("os.racer_gate_title_grow"), name)
-                        : ctx.Localize("os.racer_gate_title"));
-                }
-                ImGui.Dummy(new Vector2(1f, Px(8f)));
+                var top = ImGui.GetCursorScreenPos();
+                IconDraw.AddCentered(ImGui.GetWindowDrawList(), FontAwesomeIcon.Egg, Px(24f),
+                    new Vector2(top.X + (innerW * 0.5f), top.Y + Px(14f)),
+                    ImGui.ColorConvertFloat4ToU32(RacerChrome.DutchRed with { W = 1f }));
+                ImGui.Dummy(new Vector2(1f, Px(34f)));
+                OnboardingUi.DrawCenteredParagraph(
+                    grow ? string.Format(ctx.Localize("os.racer_gate_title_grow"), name) : ctx.Localize("os.racer_gate_title"),
+                    innerW - Px(8f), ink, ctx.TitleFont);
+                ImGui.Dummy(new Vector2(1f, Px(6f)));
                 OnboardingUi.DrawCenteredParagraph(
                     grow ? string.Format(ctx.Localize("os.racer_gate_grow"), name) : ctx.Localize("os.racer_gate_hatch"),
-                    innerW - Px(24f), new Vector4(0.86f, 0.88f, 0.94f, 1f));
-                ImGui.Dummy(new Vector2(1f, Px(12f)));
-                if (grow && OnboardingUi.DrawPrimaryButton(ctx.Localize("os.racer_gate_store"), true))
-                {
-                    _gateOpen = false;
-                    ctx.Shell.SendIntent("store", OsIntents.CreatePath(OsIntents.StoreOpen, "consumables"));
-                }
+                    innerW - Px(16f), ink with { W = 0.86f });
+                ImGui.Dummy(new Vector2(1f, Px(14f)));
                 if (grow)
                 {
+                    if (RacerChrome.FlagButton(ctx, "##racerGateStore", ctx.Localize("os.racer_gate_store"),
+                        RacerChrome.CardBlue, RacerChrome.WhiteInk, fullWidth: true))
+                    {
+                        _gateOpen = false;
+                        ctx.Shell.SendIntent("store", OsIntents.CreatePath(OsIntents.StoreOpen, "consumables"));
+                    }
                     ImGui.Dummy(new Vector2(1f, Px(6f)));
                 }
-                if (OnboardingUi.DrawPrimaryButton(ctx.Localize("os.racer_gate_ok"), true))
+                if (RacerChrome.FlagButton(ctx, "##racerGateOk", ctx.Localize("os.racer_gate_ok"),
+                    RacerChrome.DutchRed, RacerChrome.WhiteInk, fullWidth: true))
                 {
                     _gateOpen = false;
                 }
-            });
+            },
+            RacerChrome.Paper with { W = 1f }, RacerChrome.CardBlue with { W = 0.55f }, width);
         if (dismissed)
         {
             _gateOpen = false;
-        }
-    }
-
-    /// <summary>The ways out of this screen: the day's three courses on top, then the card and the
-    /// numbers in the flag's own colours.</summary>
-    private void DrawMenu(OsAppContext ctx, LumiRaceStateDto state)
-    {
-        var together = caps.Party.InParty;
-        var reason = RaceReason(ctx, state);
-        var practice = !together && IsPractice(state);
-        var label = together
-            ? ctx.Localize("os.racer_race_together")
-            : ctx.Localize(practice ? "os.racer_race_practice" : "os.racer_race_now");
-
-        // Why the button will not answer, on hover, so the reason survives the popup being closed: no
-        // creature, a creature not grown up, or one still resting. The rest is worn on the button itself
-        // too, as a countdown in its label, rather than a caption under a dimmed one: the caption was the
-        // line nobody could read.
-        var name = string.IsNullOrWhiteSpace(state.PetName) ? ctx.Localize("os.racer_gate_your_pet") : state.PetName;
-        string? tooltip = null;
-        if (state.Enabled && !state.PetHatched)
-        {
-            tooltip = ctx.Localize("os.racer_gate_title");
-        }
-        else if (state.Enabled && !state.PetAdult)
-        {
-            tooltip = string.Format(ctx.Localize("os.racer_gate_title_grow"), name);
-        }
-        else if (reason is null && RaceWait(state) is { } left)
-        {
-            label = string.Format(ctx.Localize("os.racer_race_wait"), $"{(int)left.TotalMinutes:0}:{left.Seconds:00}");
-            reason = string.Empty;
-            tooltip = string.Format(ctx.Localize("os.racer_rest_hover"), name);
-        }
-        if (RacerChrome.FlagButton(ctx, "##racerRace", label,
-            RacerChrome.DutchRed, RacerChrome.WhiteInk, reason, !_busy, chequered: true, tooltip: tooltip))
-        {
-            if (together)
-            {
-                openWaiting();
-            }
-            else if (practice && caps.Storage("racer").Get<bool?>(PracticeNoticeKey) != true)
-            {
-                _practiceOpen = true;
-            }
-            else
-            {
-                openSelection();
-            }
-        }
-        ImGui.Dummy(new Vector2(1f, Px(10)));
-        if (RacerChrome.FlagButton(ctx, "##racerStamps", ctx.Localize("os.racer_view_stamps"),
-            RacerChrome.DutchWhite, RacerChrome.DarkInk, null, !_busy))
-        {
-            openStamps();
-        }
-        ImGui.Dummy(new Vector2(1f, Px(10)));
-        if (RacerChrome.FlagButton(ctx, "##racerStats", ctx.Localize("os.racer_stats"),
-            RacerChrome.CardBlue, RacerChrome.WhiteInk, null, !_busy))
-        {
-            openStats();
-        }
-        ImGui.Dummy(new Vector2(1f, Px(8)));
-        DrawIntroLink(ctx);
-    }
-
-    /// <summary>A quiet line back into the onboarding, for anyone who skipped it or forgot.</summary>
-    private void DrawIntroLink(OsAppContext ctx)
-    {
-        var label = ctx.Localize("os.racer_intro_again");
-        var size = ImGui.CalcTextSize(label);
-        var avail = ImGui.GetContentRegionAvail().X;
-        ImGui.SetCursorPosX((avail - size.X) * 0.5f);
-        var at = ImGui.GetCursorScreenPos();
-        var pressed = ImGui.InvisibleButton("##racerIntroAgain", new Vector2(size.X, size.Y + Px(4)));
-        var hovered = ImGui.IsItemHovered();
-        if (hovered)
-        {
-            HandOnHover();
-        }
-        var dl = ImGui.GetWindowDrawList();
-        dl.AddText(at, ImGui.ColorConvertFloat4ToU32(new Vector4(1f, 1f, 1f, hovered ? 1f : 0.85f)), label);
-        dl.AddLine(new Vector2(at.X, at.Y + size.Y + Px(1)),
-            new Vector2(at.X + size.X, at.Y + size.Y + Px(1)),
-            ImGui.ColorConvertFloat4ToU32(new Vector4(1f, 1f, 1f, hovered ? 0.8f : 0.4f)), Px(1f));
-        if (pressed)
-        {
-            openIntro();
         }
     }
 
@@ -323,17 +258,7 @@ internal sealed class HomeScreen(
             return;
         }
 
-        var reopens = state.StampsPerWeek > 0 && state.StampsThisWeek >= state.StampsPerWeek
-            ? state.WeekResetAtUtc ?? NextUtcMidnight()
-            : NextUtcMidnight();
-        var left = reopens - ServerNow;
-        if (left < TimeSpan.Zero)
-        {
-            left = TimeSpan.Zero;
-        }
-        var timer = left.TotalHours >= 24
-            ? string.Format(ctx.Localize("os.racer_practice_days"), (int)left.TotalDays, left.Hours)
-            : string.Format(ctx.Localize("os.racer_practice_hours"), (int)left.TotalHours, left.Minutes);
+        var timer = Countdown(ctx, PracticeLeft(state, ServerNow));
 
         var dismissed = DrawPageOverlayPanel("racerPractice", ImGui.GetWindowPos(), ImGui.GetWindowSize(),
             ref _practiceHeight, Px(240f), innerW =>
@@ -372,10 +297,32 @@ internal sealed class HomeScreen(
         }
     }
 
-    private DateTimeOffset NextUtcMidnight()
+    /// <summary>Days and hours while a day or more is left, hours and minutes after that.</summary>
+    /// <summary>How long until the tournament opens again for a player in practice: the sparks week's reset when the
+    /// week cap is reached, otherwise the next UTC midnight, when the day cap rolls.</summary>
+    internal static TimeSpan PracticeLeft(LumiRaceStateDto state, DateTimeOffset serverNow)
     {
-        var now = ServerNow;
-        return new DateTimeOffset(now.UtcDateTime.Date, TimeSpan.Zero).AddDays(1);
+        var midnight = new DateTimeOffset(serverNow.UtcDateTime.Date, TimeSpan.Zero).AddDays(1);
+        var reopens = state.StampsPerWeek > 0 && state.StampsThisWeek >= state.StampsPerWeek
+            ? state.WeekResetAtUtc ?? midnight
+            : midnight;
+        var left = reopens - serverNow;
+        return left < TimeSpan.Zero ? TimeSpan.Zero : left;
+    }
+
+    internal static string Countdown(OsAppContext ctx, TimeSpan left) => left.TotalDays >= 1
+        ? string.Format(ctx.Localize("os.racer_practice_days"), (int)left.TotalDays, left.Hours)
+        : string.Format(ctx.Localize("os.racer_practice_hours"), (int)left.TotalHours, left.Minutes);
+
+    /// <summary>The wait for next week's cup once this week's is finished, or null while the cup page
+    /// has something to show. Blocking the button spares a trip back to a podium already seen.</summary>
+    private string? CupReason(OsAppContext ctx)
+    {
+        if (_cupState is not { Cup.FinishedRaces.Length: LumiCupRules.RaceCount } cup || cup.WeekResetAtUtc <= ServerNow)
+        {
+            return null;
+        }
+        return string.Format(ctx.Localize("os.racer_cup_next_in"), Countdown(ctx, cup.WeekResetAtUtc - ServerNow));
     }
 
     /// <summary>Why the race button cannot be pressed, or null when it can. The reason rides under
@@ -391,13 +338,19 @@ internal sealed class HomeScreen(
         {
             return string.Empty;
         }
+        if (IsCoolingDown(state))
+        {
+            var at = state.NextRaceAtUtc!.Value;
+            var left = at - ServerNow;
+            return string.Format(ctx.Localize("os.racer_next_race"), $"{(int)left.TotalMinutes:0}:{left.Seconds:00}");
+        }
         return null;
     }
 
-    /// <summary>How long the creature still rests before the next race, or null when it may race now.
-    /// Worn on the race button rather than returned as a reason, so it never becomes a caption.</summary>
-    private TimeSpan? RaceWait(LumiRaceStateDto state) =>
-        state.NextRaceAtUtc is { } at && at > ServerNow ? at - ServerNow : null;
+    /// <summary>Whether the race button is only waiting out the gap between two races. That wait is the one
+    /// refusal the button explains in a tooltip.</summary>
+    private bool IsCoolingDown(LumiRaceStateDto state) =>
+        state.Enabled && state.PetHatched && state.PetAdult && state.NextRaceAtUtc is { } at && at > ServerNow;
 
     /// <summary>Party members learn their reward from the refreshed state after playback; the begin
     /// reply carries the race alone.</summary>

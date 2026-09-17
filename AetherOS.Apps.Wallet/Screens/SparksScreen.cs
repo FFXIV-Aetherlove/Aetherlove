@@ -380,6 +380,7 @@ internal sealed class SparksScreen
         SparkAction.RaceFirst or SparkAction.RaceSecond or SparkAction.RaceThird => FontAwesomeIcon.Medal,
         SparkAction.AdminAdjust => FontAwesomeIcon.Wrench,
         SparkAction.StaffGift => FontAwesomeIcon.Gift,
+        SparkAction.StaffCorrection => FontAwesomeIcon.Undo,
         _ => FontAwesomeIcon.Question,
     };
 
@@ -416,6 +417,8 @@ internal sealed class SparksScreen
         SparkAction.ArcadeWeeklyThird => Loc.T("os.wallet_action_arcade_weekly_third"),
         SparkAction.AdminAdjust => Loc.T("os.wallet_action_admin_adjust"),
         SparkAction.StaffGift => Loc.T("os.wallet_action_staff_gift"),
+        SparkAction.StaffCorrection => Loc.T("os.wallet_action_staff_correction"),
+        SparkAction.StarlightCup => Loc.T("os.wallet_action_starlight_cup"),
         _ => Loc.T("os.wallet_action_unknown"),
     };
 

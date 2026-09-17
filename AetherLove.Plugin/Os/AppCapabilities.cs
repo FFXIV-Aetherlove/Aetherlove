@@ -1,7 +1,10 @@
-﻿using System;
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using AetherLove.Widgets;
@@ -9,6 +12,8 @@ using AetherOS.Sdk;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Game.ClientState.Keys;
 using Dalamud.Interface.Textures;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Processing;
 
 namespace AetherLove.Os;
 
@@ -24,9 +29,10 @@ public sealed class AppCapabilities : IAppCapabilities
     public AppCapabilities(SelfieCaptureOverlay selfie, ImageRequirementsModal imageReqModal, ShareService share,
         AppStorageService storage, AudioService audio, Services.Together.TogetherStateService togetherState,
         Services.Translation.TranslationService translation, Config.Configuration config,
-        ServerBarService serverBar)
+        ServerBarService serverBar, Services.Assets.AssetSyncService assets)
     {
         _serverBar = serverBar;
+        Assets = new AssetStateBridge(assets);
         Audio = audio;
         Camera = new CameraService(selfie);
         _images = new ImagePickerService(imageReqModal);
@@ -52,6 +58,8 @@ public sealed class AppCapabilities : IAppCapabilities
     public ITravelBridge Travel { get; }
     public IPartyState Party { get; }
     public ITranslationBridge Translation { get; }
+
+    public IAssetState Assets { get; }
 
     public IAppStorage Storage(string appId) => _storage.For(appId);
 
@@ -155,7 +163,100 @@ public sealed class AppCapabilities : IAppCapabilities
 
     private sealed class TextureCacheService : ITextureCache
     {
+        private static readonly TimeSpan ThumbnailKeep = TimeSpan.FromDays(60);
+
         private readonly Dictionary<string, ISharedImmediateTexture> _cache = new();
+        private readonly ConcurrentDictionary<string, string> _thumbPaths = new();
+        private readonly ConcurrentDictionary<string, byte> _thumbBuilding = new();
+        private readonly ConcurrentDictionary<string, byte> _thumbFailed = new();
+        private readonly string _thumbDir = Path.Combine(Plugin.PluginInterface.ConfigDirectory.FullName, "thumbs");
+        private int _thumbSwept;
+
+        public ImTextureID? GetThumbnail(string path, int maxSide)
+        {
+            if (path.Length == 0 || maxSide <= 0)
+            {
+                return null;
+            }
+            var key = $"{path}|{maxSide}";
+            if (_thumbPaths.TryGetValue(key, out var thumb))
+            {
+                return Get(thumb);
+            }
+            if (_thumbFailed.ContainsKey(key))
+            {
+                return Get(path);
+            }
+            if (_thumbBuilding.TryAdd(key, 0))
+            {
+                _ = Task.Run(() => BuildThumbnail(key, path, maxSide));
+            }
+            return null;
+        }
+
+        /// <summary>Thumbnails are named by the source's path, stamp and size, so an edited source gets a new
+        /// file and an unchanged one is reused across sessions. Orphans are swept by age once per load.</summary>
+        private void BuildThumbnail(string key, string path, int maxSide)
+        {
+            try
+            {
+                var info = new FileInfo(path);
+                if (!info.Exists)
+                {
+                    _thumbFailed[key] = 0;
+                    return;
+                }
+                var stamp = $"{info.FullName}|{info.LastWriteTimeUtc.Ticks}|{info.Length}|{maxSide}";
+                var name = Convert.ToHexString(SHA1.HashData(Encoding.UTF8.GetBytes(stamp)), 0, 10) + ".png";
+                var thumbPath = Path.Combine(_thumbDir, name);
+                Directory.CreateDirectory(_thumbDir);
+                if (Interlocked.Exchange(ref _thumbSwept, 1) == 0)
+                {
+                    SweepThumbnails();
+                }
+                if (!File.Exists(thumbPath))
+                {
+                    using var img = Image.Load(path);
+                    img.Mutate(x => x.Resize(new ResizeOptions
+                    {
+                        Mode = ResizeMode.Max,
+                        Size = new Size(maxSide, maxSide),
+                    }));
+                    var tmp = thumbPath + ".tmp";
+                    img.SaveAsPng(tmp);
+                    File.Move(tmp, thumbPath, true);
+                }
+                _thumbPaths[key] = thumbPath;
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.Debug(ex, "[Textures] Thumbnail failed. Path={Path}", path);
+                _thumbFailed[key] = 0;
+            }
+            finally
+            {
+                _thumbBuilding.TryRemove(key, out _);
+            }
+        }
+
+        private void SweepThumbnails()
+        {
+            try
+            {
+                var cutoff = DateTime.UtcNow - ThumbnailKeep;
+                foreach (var file in Directory.EnumerateFiles(_thumbDir))
+                {
+                    if (File.GetLastWriteTimeUtc(file) < cutoff || file.EndsWith(".tmp", StringComparison.Ordinal))
+                    {
+                        File.Delete(file);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.Debug(ex, "[Textures] Thumbnail sweep failed.");
+            }
+        }
 
         public ImTextureID? Get(string path)
         {
@@ -503,9 +604,11 @@ public sealed class AppCapabilities : IAppCapabilities
             _pendingPick.Begin(handle, request.MinWidth, request.MinHeight,
                 onValid: () => _cropPopup.Open(
                     request.CropTitle,
+                    path,
                     handle,
                     request.Aspect,
-                    cropRect => onPicked(new CroppedImage(path, handle, cropRect))),
+                    onPicked,
+                    freeForm: request.FreeForm),
                 onReject: () => { });
         }
 

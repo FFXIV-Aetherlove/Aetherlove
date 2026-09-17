@@ -30,6 +30,7 @@ internal sealed class LumiLinkGame : IPetGame
     private const float BadSwapSeconds = 0.5f;
     private const float PopSeconds = 0.22f;
     private const float MintSeconds = 0.16f;
+    private const float ChargeSeconds = 0.5f;
     private const float SwaySeconds = 0.9f;
     private const float ShuffleSeconds = 0.6f;
     private const float PowerSeconds = 0.55f;
@@ -420,7 +421,7 @@ internal sealed class LumiLinkGame : IPetGame
                 break;
 
             case Phase.Minting:
-                if (reduce || _phaseT >= MintSeconds)
+                if (reduce || _phaseT >= (_current is { Charge: true } ? ChargeSeconds : MintSeconds))
                 {
                     BeginFalls(stage);
                 }
@@ -618,6 +619,15 @@ internal sealed class LumiLinkGame : IPetGame
     private void BeginPop(ResolveStep step, GameStage stage)
     {
         _current = step;
+        if (step.Charge)
+        {
+            // Nothing clears yet: the colour is being handed its power, and the blast is the next step.
+            stage.Sound(GameSound.Chord0);
+            _shake = MathF.Max(_shake, 3f);
+            _lumiHopVy = -260f;
+            BeginMint(stage);
+            return;
+        }
         _cascadeIndex++;
         _biggestCascade = Math.Max(_biggestCascade, _cascadeIndex);
         _phase = Phase.Popping;

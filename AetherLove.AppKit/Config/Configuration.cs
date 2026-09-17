@@ -1,4 +1,4 @@
-﻿using AetherLove.Services;
+using AetherLove.Services;
 using AetherLove.UI;
 using Dalamud.Configuration;
 using System;
@@ -12,8 +12,20 @@ namespace AetherLove.Config;
 public class AuthState
 {
     public string AccessToken { get; set; } = "";
+    public bool ShouldSerializeAccessToken() => false;
+    public byte[] ProtectedAccessToken
+    {
+        get => LocalSecretProtection.Protect(System.Text.Encoding.UTF8.GetBytes(AccessToken));
+        set => AccessToken = System.Text.Encoding.UTF8.GetString(LocalSecretProtection.Open(value));
+    }
     public DateTimeOffset AccessTokenExpiresAtUtc { get; set; }
     public string RefreshToken { get; set; } = "";
+    public bool ShouldSerializeRefreshToken() => false;
+    public byte[] ProtectedRefreshToken
+    {
+        get => LocalSecretProtection.Protect(System.Text.Encoding.UTF8.GetBytes(RefreshToken));
+        set => RefreshToken = System.Text.Encoding.UTF8.GetString(LocalSecretProtection.Open(value));
+    }
     public DateTimeOffset RefreshTokenExpiresAtUtc { get; set; }
 
     /// <summary>The AetherLove profile this install is acting as. Sent with every token refresh so the
@@ -28,6 +40,17 @@ public class CryptoKeys
 {
     public byte[] PublicKey { get; set; } = [];
     public byte[] PrivateKey { get; set; } = [];
+    private byte[] _protectedPrivateKey = [];
+    public bool ShouldSerializePrivateKey() => false;
+    public byte[] ProtectedPrivateKey
+    {
+        get => PrivateKey.Length == 0 ? _protectedPrivateKey : LocalSecretProtection.Protect(PrivateKey);
+        set
+        {
+            _protectedPrivateKey = value;
+            PrivateKey = LocalSecretProtection.Open(value);
+        }
+    }
 }
 
 /// <summary>Echo's local state: where its browser runtime lives and how it is played back.</summary>
@@ -35,11 +58,8 @@ public class CryptoKeys
 public class EchoClientState
 {
     /// <summary>Development escape hatch pointing straight at a local WatchHost build output, skipping the
-    /// runtime download entirely. Empty in every shipped install.</summary>
+    /// downloaded bundle entirely. Empty in every shipped install.</summary>
     public string HostPathOverride { get; set; } = "";
-
-    /// <summary>The installed runtime version, so a manifest bump can be detected without touching disk.</summary>
-    public string InstalledHostVersion { get; set; } = "";
 
     /// <summary>Playback volume, 0 to 1, shared by solo and room watching.</summary>
     public float Volume { get; set; } = 0.7f;
@@ -283,6 +303,17 @@ public class Configuration : IPluginConfiguration
     /// passphrase. Stored with the same posture as the unwrapped private key above. Empty = not captured yet
     /// (the next passphrase entry stores it).</summary>
     public byte[] AccountKek { get; set; } = [];
+    private byte[] _protectedKek = [];
+    public bool ShouldSerializeAccountKek() => false;
+    public byte[] ProtectedAccountKek
+    {
+        get => AccountKek.Length == 0 ? _protectedKek : LocalSecretProtection.Protect(AccountKek);
+        set
+        {
+            _protectedKek = value;
+            AccountKek = LocalSecretProtection.Open(value);
+        }
+    }
 
     /// <summary>The Argon2id inputs the stored <see cref="AccountKek"/> was derived from, so provisioning can
     /// stamp new bundles with parameters that actually reproduce it. Empty salt = unknown (KEK stored before
@@ -295,6 +326,9 @@ public class Configuration : IPluginConfiguration
     /// <summary>The account-level X25519 messenger keypair, unwrapped. Account-scoped like the KEK (never
     /// swapped on profile switch); its wrapped form lives server-side as the account key bundle.</summary>
     public CryptoKeys AccountCrypto { get; set; } = new();
+    public Dictionary<string, string> VerifiedEncryptionPeers { get; set; } = new();
+    public Guid? CryptoAccountId { get; set; }
+    public Dictionary<Guid, byte[]> ProtectedKeyrings { get; set; } = new();
 
     /// <summary>Messenger notification toggles and first-run flags.</summary>
     public MessengerClientState Messenger { get; set; } = new();

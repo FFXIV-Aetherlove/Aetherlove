@@ -66,7 +66,7 @@ public sealed class OsTogetherService(
         }
     }
 
-    public bool HasPet => aetherling.Snapshot is { HatchedAtUtc: not null };
+    public bool HasPet => aetherling.Snapshot is { Adult: not null };
 
     /// <summary>Reads the pet snapshot and writes through the hub, because this half of the switch belongs
     /// to the account rather than to the device: signing in elsewhere must not un-share a pet.

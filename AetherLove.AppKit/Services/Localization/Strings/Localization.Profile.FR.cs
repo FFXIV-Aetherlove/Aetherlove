@@ -229,5 +229,11 @@ internal static class ProfileFr
 
         // added after update 2.4.0
         ["profile.region_min_hint"] = "Sélectionnez au moins une région.",
+
+        // added after update 2.7.0 (move photos)
+        ["profile.move_left"] = "Vers la gauche",
+        ["profile.move_right"] = "Vers la droite",
+        ["profile.move_blocked_nsfw"] = "La photo principale doit être SFW. Vous ne pouvez pas y déplacer une photo NSFW.",
+        ["profile.move_blocked_unsaved"] = "Enregistrez d'abord vos modifications. Vous pourrez ensuite déplacer les photos.",
     };
 }

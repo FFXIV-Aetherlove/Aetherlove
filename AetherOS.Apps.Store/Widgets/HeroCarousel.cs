@@ -280,7 +280,7 @@ internal sealed class HeroCarousel(StoreMediaCache media)
                         0xFFFFFFFFu, TruncateToWidth(StoreLoc.Name(featured.Product), size.X - Px(40f)));
                 }
                 StoreChips.Price(dl, tl + new Vector2(Px(23f), Px(55f)),
-                    featured.Product.DiscountedPriceSparks, featured.Product.PriceSparks, 1.1f, plate: true);
+                    StorePrice.Shown(featured.Product), featured.Product.PriceSparks, 1.1f, plate: true);
                 DrawCta(dl, br, Loc.T("os.store_banner_cta_look"));
                 break;
             }

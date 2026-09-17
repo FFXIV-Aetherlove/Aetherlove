@@ -47,10 +47,11 @@ public interface IStoreHost
         BoostTarget target, Guid targetId, BoostStyle style, CancellationToken ct = default);
 
     /// <summary>Opens a second phone-shaped window beside the real one showing a skin the user is
-    /// considering. The image is fetched from the server, which bakes the watermark in: the app never
-    /// holds a clean copy of a frame nobody has bought. A theme's wallpaper arrives already composed
-    /// into the frame by the server, so the preview is the whole look rather than an empty bezel.</summary>
-    void ShowSkinPreview(string title, Guid productId);
+    /// considering. The image is fetched from the server, which bakes the watermark in and punches the
+    /// screen clear: the app never holds a clean copy of a frame nobody has bought, and the window lays
+    /// the user's own wallpaper under the cleared screen, placed by <paramref name="screen"/>, so the
+    /// preview is the phone they would actually have.</summary>
+    void ShowSkinPreview(string title, Guid productId, StoreSkinScreenDto? screen);
 
     /// <summary>The user's OS avatar, for the ring try-on preview; null before the first fetch.</summary>
     Dalamud.Interface.Textures.ISharedImmediateTexture? OsAvatarTexture { get; }
@@ -60,9 +61,6 @@ public interface IStoreHost
 
     /// <summary>The user's Yapper avatar bytes, null when there is no yapper profile or no avatar.</summary>
     Task<byte[]?> GetYapperAvatarAsync(CancellationToken ct = default);
-
-    /// <summary>A theme's wallpaper as the server watermarks it for people who do not own it yet.</summary>
-    Task<byte[]?> GetStoreThemeBackgroundPreviewAsync(Guid productId, CancellationToken ct = default);
 
     /// <summary>Switches the phone to a purchased theme, fetching and sealing its assets first.</summary>
     Task<bool> EnableThemeAsync(Guid productId, CancellationToken ct = default);

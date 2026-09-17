@@ -20,6 +20,7 @@ internal sealed class ReportOverlay(IYapperHost host)
     private Guid? _profileId;
     private string _targetHandle = string.Empty;
     private string _reason = string.Empty;
+    private readonly SoftWrapInputField _reasonField = new();
     private volatile bool _sending;
     private bool _done;
     private volatile string? _error;
@@ -125,7 +126,7 @@ internal sealed class ReportOverlay(IYapperHost host)
         }
 
         ImGui.PushStyleColor(ImGuiCol.FrameBg, new Vector4(1f, 1f, 1f, 0.06f));
-        ImGui.InputTextMultiline("##yapReportReason", ref _reason, 500, new Vector2(innerW, Px(80f)));
+        _reasonField.Draw("##yapReportReason", ref _reason, 500, new Vector2(innerW, Px(80f)));
         ImGui.PopStyleColor();
         if (_error is { } error)
         {
@@ -145,7 +146,7 @@ internal sealed class ReportOverlay(IYapperHost host)
     {
         var yapId = _yapId;
         var profileId = _profileId;
-        var reason = _reason.Trim();
+        var reason = _reasonField.Value(_reason).Trim();
         _sending = true;
         _error = null;
         _ = Task.Run(async () =>

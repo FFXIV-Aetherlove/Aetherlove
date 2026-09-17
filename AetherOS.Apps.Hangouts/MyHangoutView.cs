@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -41,6 +41,7 @@ public sealed class MyHangoutView
     private int _hgCategoryIdx = 3;
     private int _hgCategoryZero;
     private string _hgDescription = "";
+    private readonly SoftWrapInputField _hgDescriptionField = new();
     private string _hgDataCenter = "";
     private string _hgWorld = "";
     private string _hgLocation = "";
@@ -153,7 +154,7 @@ public sealed class MyHangoutView
         DrawWarningBox(w, Loc.T("hangout.nsfw_warning"), UiColors.DangerBoxFill, UiColors.DangerBoxBorder);
         ImGui.Spacing();
         DrawFieldLabel(Loc.T("hangout.field_description"), t);
-        InputTextMultilineWithPaste("##hgDesc", ref _hgDescription, HangoutLimits.DescriptionRawMaxLength, new Vector2(w, Px(70f)));
+        _hgDescriptionField.Draw("##hgDesc", ref _hgDescription, HangoutLimits.DescriptionRawMaxLength, new Vector2(w, Px(70f)));
         var descLen = EmojiText.EffectiveLength(_hgDescription);
         var descOver = descLen > HangoutLimits.DescriptionMaxLength;
         ImGui.TextColored(descOver ? UiColors.Danger : UiColors.Muted with { W = 0.75f },
@@ -316,7 +317,7 @@ public sealed class MyHangoutView
         PendingPartyId = null;
         var req = new CreateHangoutRequest(
             Category: HangoutCategories.CreatableValues[Math.Clamp(_hgCategoryIdx, 0, HangoutCategories.CreatableValues.Length - 1)],
-            Description: _hgDescription.Trim(),
+            Description: _hgDescriptionField.Value(_hgDescription).Trim(),
             DataCenter: _hgDataCenter,
             World: _hgWorld,
             Location: _hgLocation.Trim(),

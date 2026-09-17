@@ -57,9 +57,7 @@ public sealed class PremiumThemeService : IDisposable
     {
         public required SealedTheme Theme { get; init; }
         public IDalamudTextureWrap? Bezel { get; set; }
-        public IDalamudTextureWrap? Background { get; set; }
         public bool BezelRequested { get; set; }
-        public bool BackgroundRequested { get; set; }
     }
 
     public PremiumThemeService(
@@ -119,7 +117,6 @@ public sealed class PremiumThemeService : IDisposable
         if (_loaded.TryRemove(productId, out var stale))
         {
             Retire(stale.Bezel);
-            Retire(stale.Background);
         }
         TryDelete(SealPath(productId));
         if (!await DownloadAndSealAsync(productId, ct).ConfigureAwait(false))
@@ -152,7 +149,8 @@ public sealed class PremiumThemeService : IDisposable
                 assets.Colors.SecondaryStart, assets.Colors.SecondaryEnd,
                 assets.Colors.ButtonNormal, assets.Colors.ButtonHovered, assets.Colors.ButtonActive,
                 assets.Colors.WindowControlColor, assets.Colors.HomeGlowColor,
-                assets.Bezel, assets.Background, assets.Geometry);
+                // The seal keeps a wallpaper slot so older seals still open; a skin ships without one.
+                assets.Bezel, null, assets.Geometry);
             Seal(productId, payload, accountKeys.PrivateKey);
             _loaded.TryRemove(productId, out _);
             return true;
@@ -206,6 +204,10 @@ public sealed class PremiumThemeService : IDisposable
             BezelLeft = g?.BezelLeft ?? fallback.BezelLeft,
             BezelRight = g?.BezelRight ?? fallback.BezelRight,
             StatusBarTop = g?.StatusBarTop ?? fallback.StatusBarTop,
+            StatusBarCenterY = g is null ? fallback.StatusBarCenterY : g.StatusBarCenterY,
+            StatusBarHomeHeader = g is null ? fallback.StatusBarHomeHeader : g.StatusBarHomeHeader,
+            StatusBarBackgroundOpacity = g is null ? fallback.StatusBarBackgroundOpacity : g.StatusBarBackgroundOpacity,
+            StatusBarCentered = g is null ? fallback.StatusBarCentered : g.StatusBarCentered,
             StatusBarTint = g is null ? fallback.StatusBarTint : Rgba(g.StatusBarTint),
             StatusBarTimeAlign = g?.StatusBarTimeAlign ?? fallback.StatusBarTimeAlign,
             StatusBarRightInset = g?.StatusBarRightInset ?? fallback.StatusBarRightInset,
@@ -224,29 +226,7 @@ public sealed class PremiumThemeService : IDisposable
             HomeButton = g is null ? fallback.HomeButton : BuildHomeButton(g, theme.HomeGlowColor),
         };
         ThemeService.SetPremiumTheme(productId, definition);
-        if (theme.Background is { Length: > 0 })
-        {
-            _config.Os.WallpaperMode = AetherOS.Sdk.WallpaperMode.Premium;
-            _config.Os.PremiumWallpaperProductId = productId;
-            _config.Save();
-        }
         return true;
-    }
-
-    /// <summary>The theme's wallpaper, for the shell's premium wallpaper mode. Null while it is loading or
-    /// when the theme ships without one.</summary>
-    public IDalamudTextureWrap? BackgroundWrap(Guid productId)
-    {
-        if (Load(productId) is not { } loaded || loaded.Theme.Background is not { Length: > 0 } bytes)
-        {
-            return null;
-        }
-        if (!loaded.BackgroundRequested)
-        {
-            loaded.BackgroundRequested = true;
-            CreateTexture(bytes, wrap => loaded.Background = wrap);
-        }
-        return loaded.Background;
     }
 
     /// <summary>Restores the theme the user last chose. Runs at boot from the plugin's bootstrap, never
@@ -458,7 +438,6 @@ public sealed class PremiumThemeService : IDisposable
         foreach (var loaded in _loaded.Values)
         {
             loaded.Bezel?.Dispose();
-            loaded.Background?.Dispose();
         }
         _loaded.Clear();
         while (_retired.TryTake(out var entry))

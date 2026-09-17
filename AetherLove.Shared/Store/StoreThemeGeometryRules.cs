@@ -53,6 +53,10 @@ public static class StoreThemeGeometryRules
             errors.Add($"Content is only {contentH:0.##} tall; {MinContentHeight:0} is the minimum.");
         }
 
+        if (!float.IsFinite(g.StatusBarBackgroundOpacity) || g.StatusBarBackgroundOpacity < 0f || g.StatusBarBackgroundOpacity > 1f)
+            errors.Add("Status backing opacity must be between 0 and 1.");
+        if (g.StatusBarCenterY is { } center && (!float.IsFinite(center) || center < 8f || center > g.BezelTop - 8f))
+            errors.Add("Explicit status center must leave 8px above and below the glyphs within the bezel.");
         if (g.StatusBarTop < 0f || g.StatusBarTop >= g.BezelTop)
         {
             errors.Add("The status strip has to start above the content: 0 <= StatusBarTop < BezelTop.");

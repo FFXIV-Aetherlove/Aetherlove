@@ -64,9 +64,8 @@ public static class NotificationSoundPlayer
     private static WaveOutEvent? _output;
     private static WaveFileReader? _reader;
 
-    /// <summary>The bundled-sound folder (Media/notifications, next to the plugin assembly).</summary>
-    public static string SoundDirectory =>
-        Path.Combine(Path.GetDirectoryName(UiHost.PluginInterface.AssemblyLocation.FullName) ?? "", "Media", "notifications");
+    /// <summary>The downloaded notification-sound pack under the config directory.</summary>
+    public static string SoundDirectory => Media.MediaPaths.Downloaded(Media.MediaPaths.Notifications);
 
     /// <summary>Full path to a sound's .wav on disk.</summary>
     public static string ResolvePath(NotificationSound sound) => Path.Combine(SoundDirectory, sound.FileName());

@@ -45,8 +45,7 @@ public sealed class PhoneShellWidget : IDisposable
 
         try
         {
-            var dir = Path.GetDirectoryName(UiHost.PluginInterface.AssemblyLocation.FullName) ?? string.Empty;
-            var path = Path.Combine(dir, "Media", targetFile);
+            var path = Services.Media.MediaPaths.Shipped(targetFile);
 
             if (File.Exists(path))
             {

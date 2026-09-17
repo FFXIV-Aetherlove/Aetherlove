@@ -11,7 +11,8 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace AetherLove.Os;
 
-/// <summary>Warns a player before the game demolishes a private estate they have stopped visiting.
+/// <summary>Warns a player before the game demolishes a house they have stopped visiting: their own private
+/// estate, and the house of their Free Company.
 ///
 /// The game only ever shows the countdown inside its Timers window, which the player has to open, and nothing
 /// on the client exposes it as data. So this tracks the thing the countdown is derived from instead: the
@@ -22,7 +23,12 @@ namespace AetherLove.Os;
 /// What it can and cannot know, which is why the wording everywhere is "days away from home" rather than the
 /// game's countdown: absence is measured from what THIS install saw, so a second PC or a fresh install reads
 /// as a longer absence than the truth (erring towards warning, which is the right direction), and the
-/// server-side demolition pauses Square applies from time to time are invisible to it.</summary>
+/// server-side demolition pauses Square applies from time to time are invisible to it.
+///
+/// A Free Company house is reset by ANY member entering, and only this install's own characters are visible
+/// here. So its count is the longest the absence can be, which errs towards warning too. One character's
+/// visit resets the record of every other character here that shares the house. Both kinds are always
+/// recorded; the app's Free Company setting only decides whether that kind is shown and announced.</summary>
 public sealed class EstateWatchService : IEstateWatch, IDisposable
 {
     private const string BookKey = "estates";
@@ -34,12 +40,15 @@ public sealed class EstateWatchService : IEstateWatch, IDisposable
     private static readonly TimeSpan LifestreamRecheck = TimeSpan.FromSeconds(5);
 
     private static readonly TimeSpan CheckEvery = TimeSpan.FromSeconds(5);
-    private static readonly TimeSpan CountRecompute = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan RestampVisitEvery = TimeSpan.FromMinutes(5);
 
     /// <summary>Consecutive "owns nothing" reads before a tracked estate is dropped. The manager reads empty
     /// for a moment around zoning, so one read is not enough to conclude the house is gone.</summary>
     private const int ForgetAfterEmptyReads = 6;
+
+    private const int KindCount = 2;
+    private const int MaxWard = 30;
+    private const int MaxPlot = 60;
 
     private sealed class EstateBook
     {
@@ -57,10 +66,8 @@ public sealed class EstateWatchService : IEstateWatch, IDisposable
     private int _orderedForVersion = -1;
     private IReadOnlyList<EstateRecord> _ordered = [];
     private DateTime _nextCheckUtc = DateTime.MinValue;
-    private DateTime _countComputedUtc = DateTime.MinValue;
-    private int _atRiskCount;
-    private ulong _emptyForContentId;
-    private int _emptyReads;
+    private readonly ulong[] _emptyForContentId = new ulong[KindCount];
+    private readonly int[] _emptyReads = new int[KindCount];
     private DateTime _lifestreamCheckedUtc = DateTime.MinValue;
     private bool _lifestreamReady;
 
@@ -106,26 +113,6 @@ public sealed class EstateWatchService : IEstateWatch, IDisposable
         }
     }
 
-    /// <summary>Recomputed on a slow timer rather than per frame: this is a count of whole days, so it cannot
-    /// change between two frames.</summary>
-    public int AtRiskCount
-    {
-        get
-        {
-            var now = DateTime.UtcNow;
-            lock (_gate)
-            {
-                if (now - _countComputedUtc < CountRecompute)
-                {
-                    return _atRiskCount;
-                }
-                _countComputedUtc = now;
-                _atRiskCount = EstateRisk.AtRiskCount(Estates, now);
-                return _atRiskCount;
-            }
-        }
-    }
-
     public EstateRecord? Current
     {
         get
@@ -138,7 +125,7 @@ public sealed class EstateWatchService : IEstateWatch, IDisposable
             lock (_gate)
             {
                 EnsureBookLoadedLocked();
-                return _book.Estates.FirstOrDefault(e => e.ContentId == currentId);
+                return _book.Estates.FirstOrDefault(e => e.ContentId == currentId && e.Kind == EstateKind.Personal);
             }
         }
     }
@@ -199,6 +186,24 @@ public sealed class EstateWatchService : IEstateWatch, IDisposable
 
     public int Version => Volatile.Read(ref _version);
 
+    public void Remove(ulong contentId, EstateKind kind)
+    {
+        bool had;
+        lock (_gate)
+        {
+            EnsureBookLoadedLocked();
+            had = _book.Estates.RemoveAll(e => e.ContentId == contentId && e.Kind == kind) > 0;
+            if (had)
+            {
+                PersistLocked();
+            }
+        }
+        if (had)
+        {
+            Interlocked.Increment(ref _version);
+        }
+    }
+
     public void DismissWarnings()
     {
         try
@@ -246,42 +251,59 @@ public sealed class EstateWatchService : IEstateWatch, IDisposable
         }
         Volatile.Write(ref _currentContentId, contentId);
 
-        var owned = OwnedPrivateEstate(out var territoryTypeId);
+        var (name, world) = CurrentIdentity();
+        PollKind(EstateKind.Personal, contentId, name, world, now);
+        PollKind(EstateKind.FreeCompany, contentId, name, world, now);
+    }
+
+    private void PollKind(EstateKind kind, ulong contentId, string name, string world, DateTime now)
+    {
+        var owned = OwnedEstate(kind, out var territoryTypeId, out var ownedWard, out var ownedPlot);
         if (owned == 0)
         {
-            HandleNoEstate(contentId);
+            HandleNoEstate(kind, contentId);
             return;
         }
-        _emptyReads = 0;
+        _emptyReads[(int)kind] = 0;
 
         var inside = InsideOwnEstate(owned, out var ward, out var plot);
-        var (name, world) = CurrentIdentity();
 
         EstateRecord tracked;
         var changed = false;
         lock (_gate)
         {
             EnsureBookLoadedLocked();
-            tracked = RecordLocked(contentId, name, world, ref changed);
+            tracked = RecordLocked(kind, contentId, name, world, ref changed);
             if (territoryTypeId != 0 && tracked.TerritoryTypeId != territoryTypeId)
             {
                 tracked.TerritoryTypeId = territoryTypeId;
+                changed = true;
+            }
+            if (ownedWard > 0 && ownedPlot > 0 && (tracked.Ward != ownedWard || tracked.Plot != ownedPlot))
+            {
+                tracked.Ward = ownedWard;
+                tracked.Plot = ownedPlot;
+                changed = true;
+            }
+            if (kind == EstateKind.FreeCompany && tracked.HouseId != owned)
+            {
+                tracked.HouseId = owned;
                 changed = true;
             }
             // Re-stamped on a coarse interval rather than every poll: the answer is measured in days, so
             // somebody idling in their house for an evening must not rewrite the book hundreds of times.
             if (inside && (!tracked.VisitObserved || now - tracked.LastVisitUtc >= RestampVisitEvery))
             {
-                tracked.LastVisitUtc = now;
-                tracked.VisitObserved = true;
-                tracked.NotifiedStage = 0;
-                if (ward > 0)
+                StampVisit(tracked, now, ward, plot);
+                if (kind == EstateKind.FreeCompany)
                 {
-                    tracked.Ward = ward;
-                }
-                if (plot > 0)
-                {
-                    tracked.Plot = plot;
+                    foreach (var sibling in _book.Estates)
+                    {
+                        if (sibling != tracked && sibling.Kind == EstateKind.FreeCompany && sibling.HouseId == owned)
+                        {
+                            StampVisit(sibling, now, ward, plot);
+                        }
+                    }
                 }
                 changed = true;
             }
@@ -301,23 +323,39 @@ public sealed class EstateWatchService : IEstateWatch, IDisposable
         }
     }
 
-    private void HandleNoEstate(ulong contentId)
+    private static void StampVisit(EstateRecord estate, DateTime now, int ward, int plot)
     {
-        if (_emptyForContentId != contentId)
+        estate.LastVisitUtc = now;
+        estate.VisitObserved = true;
+        estate.NotifiedStage = 0;
+        if (ward > 0)
         {
-            _emptyForContentId = contentId;
-            _emptyReads = 0;
+            estate.Ward = ward;
         }
-        if (++_emptyReads < ForgetAfterEmptyReads)
+        if (plot > 0)
+        {
+            estate.Plot = plot;
+        }
+    }
+
+    private void HandleNoEstate(EstateKind kind, ulong contentId)
+    {
+        var slot = (int)kind;
+        if (_emptyForContentId[slot] != contentId)
+        {
+            _emptyForContentId[slot] = contentId;
+            _emptyReads[slot] = 0;
+        }
+        if (++_emptyReads[slot] < ForgetAfterEmptyReads)
         {
             return;
         }
-        _emptyReads = 0;
+        _emptyReads[slot] = 0;
         var had = false;
         lock (_gate)
         {
             EnsureBookLoadedLocked();
-            had = _book.Estates.RemoveAll(e => e.ContentId == contentId) > 0;
+            had = _book.Estates.RemoveAll(e => e.ContentId == contentId && e.Kind == kind) > 0;
             if (had)
             {
                 PersistLocked();
@@ -326,7 +364,7 @@ public sealed class EstateWatchService : IEstateWatch, IDisposable
         if (had)
         {
             Interlocked.Increment(ref _version);
-            Plugin.Log.Debug("[Realtor] Dropped an estate record: the character no longer owns a private estate.");
+            Plugin.Log.Debug($"[Realtor] Dropped a {kind} estate record: the character no longer has that house.");
         }
     }
 
@@ -346,7 +384,10 @@ public sealed class EstateWatchService : IEstateWatch, IDisposable
         }
         // Checked before the stage is recorded, so switching the setting on later warns at once instead of
         // silently swallowing the crossing that already happened.
-        if (!new RealtorSettings(_storage.For("realtor")).NotifyEstate)
+        var settings = new RealtorSettings(_storage.For("realtor"));
+        var isFc = estate.Kind == EstateKind.FreeCompany;
+        var wanted = isFc ? settings.TrackFcEstate : settings.NotifyEstate;
+        if (!wanted)
         {
             return;
         }
@@ -357,7 +398,8 @@ public sealed class EstateWatchService : IEstateWatch, IDisposable
             PersistLocked();
         }
 
-        var text = Loc.T("notif.realtor_estate", estate.Character, EstateRisk.DaysLeft(days), days);
+        var text = Loc.T(isFc ? "notif.realtor_estate_fc" : "notif.realtor_estate", estate.Character,
+            EstateRisk.DaysLeft(days), days);
         _notifier.NotifyEstateRisk(text);
         try
         {
@@ -371,15 +413,30 @@ public sealed class EstateWatchService : IEstateWatch, IDisposable
         }
     }
 
-    /// <summary>The logged-in character's own private estate, or 0. Free Company houses, chambers, shared
-    /// estates and apartments all carry their own EstateType and are deliberately not asked for.</summary>
-    private static ulong OwnedPrivateEstate(out uint territoryTypeId)
+    /// <summary>The logged-in character's house of that kind, or 0. The id carries the address, so ward and
+    /// plot are known before any visit; both stay 0 when they read outside a real ward. Chambers, shared
+    /// estates and apartments carry their own EstateType and are deliberately not asked for.</summary>
+    private static ulong OwnedEstate(EstateKind kind, out uint territoryTypeId, out int ward, out int plot)
     {
         territoryTypeId = 0;
+        ward = 0;
+        plot = 0;
         try
         {
-            var owned = HousingManager.GetOwnedHouseId(EstateType.PersonalEstate);
+            var owned = HousingManager.GetOwnedHouseId(
+                kind == EstateKind.FreeCompany ? EstateType.FreeCompanyEstate : EstateType.PersonalEstate);
+            if (owned.Id == ulong.MaxValue)
+            {
+                return 0;
+            }
             territoryTypeId = owned.TerritoryTypeId;
+            var wardNumber = owned.WardIndex + 1;
+            var plotNumber = owned.PlotIndex + 1;
+            if (wardNumber is >= 1 and <= MaxWard && plotNumber is >= 1 and <= MaxPlot)
+            {
+                ward = wardNumber;
+                plot = plotNumber;
+            }
             return owned.Id;
         }
         catch
@@ -473,12 +530,13 @@ public sealed class EstateWatchService : IEstateWatch, IDisposable
         }
     }
 
-    private EstateRecord RecordLocked(ulong contentId, string name, string world, ref bool changed)
+    private EstateRecord RecordLocked(EstateKind kind, ulong contentId, string name, string world,
+        ref bool changed)
     {
-        var estate = _book.Estates.FirstOrDefault(e => e.ContentId == contentId);
+        var estate = _book.Estates.FirstOrDefault(e => e.ContentId == contentId && e.Kind == kind);
         if (estate is null)
         {
-            estate = new EstateRecord { ContentId = contentId, FirstSeenUtc = DateTime.UtcNow };
+            estate = new EstateRecord { ContentId = contentId, Kind = kind, FirstSeenUtc = DateTime.UtcNow };
             _book.Estates.Add(estate);
             changed = true;
         }

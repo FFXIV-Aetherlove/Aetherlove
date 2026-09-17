@@ -27,6 +27,7 @@ public sealed partial class MessengerApp
     private volatile string? _hgError;
     private bool _hgReportMode;
     private string _hgReportReason = "";
+    private readonly SoftWrapInputField _hgReportReasonField = new();
     private volatile bool _hgReportSent;
     private double _hgCopiedUntil;
 
@@ -286,7 +287,7 @@ public sealed partial class MessengerApp
         ImGui.TextColored(UiColors.Body, Loc.T("hangout.report_body"));
         ImGui.PopTextWrapPos();
         ImGui.Spacing();
-        InputTextMultilineWithPaste("##msgrHgRepReason", ref _hgReportReason, 1000, new Vector2(w, Px(70f)));
+        _hgReportReasonField.Draw("##msgrHgRepReason", ref _hgReportReason, 1000, new Vector2(w, Px(70f)));
         if (_hgError is { } err)
         {
             ImGui.PushTextWrapPos(w);
@@ -343,7 +344,7 @@ public sealed partial class MessengerApp
     {
         _hgBusy = true;
         _hgError = null;
-        var reason = _hgReportReason.Trim();
+        var reason = _hgReportReasonField.Value(_hgReportReason).Trim();
         _ = Task.Run(async () =>
         {
             try

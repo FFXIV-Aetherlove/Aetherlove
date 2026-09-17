@@ -24,8 +24,6 @@ internal sealed class HomeScreen
 {
     private const float PadX = 16f;
 
-    private static readonly Dictionary<uint, string> _zoneNames = [];
-
     private readonly RealtorDataService _data;
     private readonly RealtorFilters _filters;
     private readonly LotteryClock _clock;
@@ -648,33 +646,11 @@ internal sealed class HomeScreen
         }
 
         var textX = circleTl.X + circle + Px(11f);
-        var name = Loc.T("os.realtor_home_row", ZoneName(home.TerritoryTypeId));
+        var name = Loc.T("os.realtor_home_row", RealtorUi.ZoneName(home.TerritoryTypeId));
         dl.AddText(new Vector2(textX, tl.Y + (cardH - ImGui.GetTextLineHeight()) * 0.5f),
             ImGui.GetColorU32(UiColors.Body), TruncateToWidth(name, right - textX - Px(8f)));
 
         ImGui.Dummy(new Vector2(0f, Px(6f)));
-    }
-
-    /// <summary>The residential zone's own name in the player's client language, so it matches the district
-    /// rows above without depending on PaissaDB having answered.</summary>
-    private static string ZoneName(uint territoryTypeId)
-    {
-        if (_zoneNames.TryGetValue(territoryTypeId, out var cached))
-        {
-            return cached;
-        }
-        var name = string.Empty;
-        try
-        {
-            name = UiHost.DataManager.GetExcelSheet<Lumina.Excel.Sheets.TerritoryType>()
-                .GetRowOrDefault(territoryTypeId)?.PlaceName.ValueNullable?.Name.ExtractText() ?? string.Empty;
-        }
-        catch (Exception ex)
-        {
-            UiHost.Log.Debug($"[Realtor] Zone name lookup failed: {ex.Message}");
-        }
-        _zoneNames[territoryTypeId] = name;
-        return name;
     }
 
     private void DrawRetry(float winW)

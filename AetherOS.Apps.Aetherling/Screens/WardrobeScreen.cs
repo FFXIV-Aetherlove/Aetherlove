@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -215,12 +215,19 @@ internal sealed class WardrobeScreen(IAetherlingHost host, PetRuntime pet)
         // sockets sit under them, both outside the scroller, so what is equipped where stays on screen
         // while the list below scrolls.
         var stripTop = previewBottom + Px(8f);
+        SlotsRect = null;
+        EmotesHeadingRect = null;
+        ReactionsHeadingRect = null;
+        ShopPillRect = null;
         if (core.Adult is not null && _face == Face.Dressing)
         {
             stripTop += DrawPaletteLane(ctx, dl, origin, size, stripTop);
             _slot = EquipSlots.Draw(ctx, dl, new Vector2(origin.X, stripTop), size.X, _slot,
                 WornInSlot, OwnsForSlot);
-            stripTop += EquipSlots.HeightFor(size.X);
+            var stripH = EquipSlots.HeightFor(size.X);
+            SlotsRect = (new Vector2(origin.X + Px(10f), stripTop - Px(4f)),
+                new Vector2(origin.X + size.X - Px(10f), stripTop + stripH + Px(4f)));
+            stripTop += stripH;
         }
 
         var shelfTop = stripTop + Px(8f);
@@ -302,6 +309,23 @@ internal sealed class WardrobeScreen(IAetherlingHost host, PetRuntime pet)
     /// thing anybody changes. Past the edge the lane is driven by its own arrows and eased by hand: an
     /// ImGui scrollbar would need a child window, and a child here would eat the shelf's vertical scroll.
     /// Returns the height it used.</summary>
+    /// <summary>Where the palette lane was last drawn, for the tour's ring.</summary>
+    public (Vector2 TL, Vector2 BR)? PaletteLaneRect { get; private set; }
+
+    /// <summary>Where the socket strip was last drawn, for the tour's ring.</summary>
+    public (Vector2 TL, Vector2 BR)? SlotsRect { get; private set; }
+
+    /// <summary>Where the learned-emotes heading was last drawn on the performance face, for the tour's
+    /// ring. Null while the creature has no emote block or the dressing face is up.</summary>
+    public (Vector2 TL, Vector2 BR)? EmotesHeadingRect { get; private set; }
+
+    /// <summary>Where the reactions heading was last drawn on the performance face, for the tour's ring.
+    /// Null until a reaction is owned or while the dressing face is up.</summary>
+    public (Vector2 TL, Vector2 BR)? ReactionsHeadingRect { get; private set; }
+
+    /// <summary>Where a socket's shop pill was last drawn on the dressing face, for the tour's ring.</summary>
+    public (Vector2 TL, Vector2 BR)? ShopPillRect { get; private set; }
+
     private float DrawPaletteLane(OsAppContext ctx, ImDrawListPtr dl, Vector2 origin, Vector2 size, float top)
     {
         var catalogue = pet.Catalogue;
@@ -337,6 +361,7 @@ internal sealed class WardrobeScreen(IAetherlingHost host, PetRuntime pet)
         }
         var laneW = laneRight - laneLeft;
         var reach = MathF.Max(0f, total - laneW);
+        PaletteLaneRect = (new Vector2(laneLeft, top - Px(4f)), new Vector2(laneRight, top + side + Px(4f)));
 
         if (_paletteCentreOnSelected)
         {
@@ -534,7 +559,7 @@ internal sealed class WardrobeScreen(IAetherlingHost host, PetRuntime pet)
 
     /// <summary>The way out of an owned list and into the shelf it came from. Named for the store's own
     /// category key, which is what the deep link resolves against.</summary>
-    private static void DrawShopPill(OsAppContext ctx, string categoryKey)
+    private void DrawShopPill(OsAppContext ctx, string categoryKey)
     {
         var dl = ImGui.GetWindowDrawList();
         var origin = ImGui.GetWindowPos();
@@ -553,6 +578,7 @@ internal sealed class WardrobeScreen(IAetherlingHost host, PetRuntime pet)
         }
 
         var br = tl + new Vector2(width, height);
+        ShopPillRect = (tl, br);
         dl.AddRectFilled(tl, br, Look.U32(Look.Spark with { W = hovered ? 0.28f : 0.16f }), height * 0.5f);
         dl.AddRect(tl, br, Look.U32(Look.Spark, hovered ? 0.7f : 0.35f), height * 0.5f,
             ImDrawFlags.RoundCornersAll, Px(1f));
@@ -649,6 +675,7 @@ internal sealed class WardrobeScreen(IAetherlingHost host, PetRuntime pet)
             return;
         }
 
+        var headingTop = ImGui.GetCursorScreenPos().Y;
         SectionLabel(ctx.Localize("os.aetherling_wardrobe_reactions"));
 
         var dl = ImGui.GetWindowDrawList();
@@ -661,6 +688,8 @@ internal sealed class WardrobeScreen(IAetherlingHost host, PetRuntime pet)
         var lines = Look.CentredWrapped(dl, hint, origin.X + (size.X * 0.5f), hintY,
             size.X - Px(48f), Look.U32(Look.Whisper, 0.8f), 0.86f);
         ImGui.SetCursorScreenPos(new Vector2(origin.X, hintY + (lines * Look.LineStep(0.86f)) + Px(10f)));
+        ReactionsHeadingRect = (new Vector2(origin.X + Px(10f), headingTop),
+            new Vector2(origin.X + size.X - Px(10f), ImGui.GetCursorScreenPos().Y));
 
         foreach (var def in ReactionDef.All)
         {
@@ -682,6 +711,7 @@ internal sealed class WardrobeScreen(IAetherlingHost host, PetRuntime pet)
             return;
         }
 
+        var headingTop = ImGui.GetCursorScreenPos().Y;
         SectionLabel(ctx.Localize("os.aetherling_wardrobe_emotes"));
 
         var dl = ImGui.GetWindowDrawList();
@@ -694,6 +724,8 @@ internal sealed class WardrobeScreen(IAetherlingHost host, PetRuntime pet)
         var lines = Look.CentredWrapped(dl, hint, origin.X + (size.X * 0.5f), hintY,
             size.X - Px(48f), Look.U32(Look.Whisper, 0.8f), 0.86f);
         ImGui.SetCursorScreenPos(new Vector2(origin.X, hintY + (lines * Look.LineStep(0.86f)) + Px(10f)));
+        EmotesHeadingRect = (new Vector2(origin.X + Px(10f), headingTop),
+            new Vector2(origin.X + size.X - Px(10f), ImGui.GetCursorScreenPos().Y));
 
         // Only what it actually knows. A list of things it has NOT learned is a checklist of chores, and
         // it also tells on the meter: what is shown here is what the creature can do, nothing else.

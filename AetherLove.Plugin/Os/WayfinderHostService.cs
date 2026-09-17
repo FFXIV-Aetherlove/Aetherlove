@@ -227,7 +227,7 @@ public sealed class WayfinderHostService : IWayfinderHost
     }
 
     public string? WorldName(int worldId) =>
-        UiHost.DataManager.GetExcelSheet<World>().GetRowOrDefault((uint)worldId) is { } world
+        UiHost.DataManager.GetExcelSheet<World>()?.GetRowOrDefault((uint)worldId) is { } world
             ? world.Name.ExtractText()
             : null;
 }

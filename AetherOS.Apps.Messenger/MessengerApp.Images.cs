@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Numerics;
@@ -44,6 +44,7 @@ public sealed partial class MessengerApp
 
     private Guid _imageReportId = Guid.Empty;
     private string _imageReportReason = string.Empty;
+    private readonly SoftWrapInputField _imageReportReasonField = new();
     private volatile bool _imageReportSubmitting;
     private volatile string? _imageReportError;
 
@@ -76,14 +77,17 @@ public sealed partial class MessengerApp
         if (DrawIconMenuItem(FontAwesomeIcon.FolderOpen, Loc.T("os.msgr_attach_disk")))
         {
             ImGui.CloseCurrentPopup();
-            _caps.Images.PickFile(
-                new ImagePickRequest(Loc.T("os.msgr_attach_disk"), "Images{.png,.jpg,.jpeg,.webp}"),
-                path => _uiActions.Enqueue(() => BeginImageCompose(chatId, kind, epoch, path, WholeImage)));
+            _caps.Images.PickAndCrop(AttachmentCrop(Loc.T("os.msgr_attach_disk")),
+                pick => _uiActions.Enqueue(() => BeginImageCompose(chatId, kind, epoch, pick.Path, pick.Crop)));
         }
     }
 
-    /// <summary>The sentinel crop rect meaning "keep all of it": a picked picture is sent whole, because a
-    /// chat attachment is not a portrait and a forced square would cut half of a landscape shot away.</summary>
+    /// <summary>A chat attachment is not a portrait, so the crop is free-hand and starts as the whole picture;
+    /// the popup is where the user can also rotate it.</summary>
+    private static ImageCropRequest AttachmentCrop(string title) =>
+        new(title, "Images{.png,.jpg,.jpeg,.webp}", Loc.T("common.adjust_picture"), 1f, 1, 1, FreeForm: true);
+
+    /// <summary>The crop rect meaning "keep all of it", for a photo shared into a chat from another app.</summary>
     private static readonly Vector4 WholeImage = new(0f, 0f, 100000f, 100000f);
 
     /// <summary>The Photos app returned a picked image path (PhotoPicked intent).</summary>
@@ -94,7 +98,8 @@ public sealed partial class MessengerApp
             return;
         }
         _pendingPhotoChat = null;
-        BeginImageCompose(ctx.ChatId, ctx.Kind, ctx.Epoch, path, WholeImage);
+        _caps.Images.CropFile(path, AttachmentCrop(Loc.T("os.msgr_attach_photos")),
+            pick => _uiActions.Enqueue(() => BeginImageCompose(ctx.ChatId, ctx.Kind, ctx.Epoch, pick.Path, pick.Crop)));
     }
 
     private void BeginImageCompose(Guid chatId, MessengerChatKind kind, int epoch, string path, Vector4 crop,
@@ -349,7 +354,7 @@ public sealed partial class MessengerApp
             ImGui.PopTextWrapPos();
             ImGui.Dummy(new Vector2(0f, Px(6f)));
 
-            InputTextMultilineWithPaste("##msgrImgReport", ref _imageReportReason, 500, new Vector2(innerW, Px(80f)));
+            _imageReportReasonField.Draw("##msgrImgReport", ref _imageReportReason, 500, new Vector2(innerW, Px(80f)));
             if (_imageReportError is { } err)
             {
                 ImGui.TextColored(DangerRed, err);
@@ -385,7 +390,7 @@ public sealed partial class MessengerApp
         _imageReportSubmitting = true;
         _imageReportError = null;
         var imageId = _imageReportId;
-        var reason = _imageReportReason;
+        var reason = _imageReportReasonField.Value(_imageReportReason);
         _ = Task.Run(async () =>
         {
             try

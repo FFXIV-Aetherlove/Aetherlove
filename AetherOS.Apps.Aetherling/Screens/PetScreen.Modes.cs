@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Threading;
@@ -50,10 +50,7 @@ internal sealed partial class PetScreen
     private AetherlingDto? _pendingFed;
     private string? _pendingFeedError;
 
-    /// <summary>The growing-up ceremony. Built once and reused; it owns the page while it runs.</summary>
-    internal EvolutionScene Evolution => _evolution ??= BuildEvolution();
-
-    /// <summary>The earned-flourish ticket, built once for the same reason.</summary>
+    /// <summary>The earned-flourish ticket, built once and reused.</summary>
     internal ReactionTicketOverlay Ticket => _ticket ??= BuildTicket();
 
     private ReactionTicketOverlay? _ticket;
@@ -73,23 +70,6 @@ internal sealed partial class PetScreen
         return overlay;
     }
 
-    /// <summary>Whether a growing-up is on screen right now. Asked without building the scene, so a
-    /// page that has never grown anything does not construct one to answer no.</summary>
-    public bool CeremonyRunning => _evolution?.Playing == true;
-
-    private EvolutionScene? _evolution;
-
-    private EvolutionScene BuildEvolution()
-    {
-        var scene = new EvolutionScene(pet);
-        scene.Flashed += () =>
-        {
-            pet.CommitHeldForm(host.AssetRoot);
-            host.PlayCrack();
-        };
-        return scene;
-    }
-
     private float _petStroke;
     private float _petLineCooldown;
     private int _petLinesShown;
@@ -97,41 +77,34 @@ internal sealed partial class PetScreen
     private readonly List<(string Text, Vector2 At, float Age)> _petLines = [];
     private readonly Random _petRng = new();
 
-    /// <summary>Raised when the adulting moment has played out, so the app can hand over to the
-    /// onboarding.</summary>
-    public event Action? AdultingFinished;
-
-    private const float BasketChipSize = 44f;
-    private const float ShopChipHeight = 24f;
-    private const float CountdownHeight = 46f;
+    private const float BasketChipSize = 54f;
+    private const float BowlHeight = 46f;
+    private const float CountdownHeight = 54f;
+    private Elements.ElementDef? _emptyCrystal;
 
     /// <summary>Inside this many seconds the countdown warms in colour: the last stretch is the only
     /// part of a wait anybody actually watches.</summary>
     private const float CountdownFinalSeconds = 10f;
     private const float ModesRowGap = 10f;
+    private const float AppetiteCueGapSeconds = 300f;
 
-    /// <summary>Whether something on the page owns it: the arrival, the naming card, an unopened ticket,
-    /// or a growing-up. The stage runs full height while one of those is up and its whole-card target is
+    private double _nextAppetiteCueAt;
+
+    /// <summary>Whether something on the page owns it: the arrival, the naming card, an unopened ticket
+    /// or the wheel. The stage runs full height while one of those is up and its whole-card target is
     /// submitted first, so a nav bar drawn over it would be structurally dead as well as in the way.</summary>
     public bool HoldingPage =>
-        _core is not { } core || !ModesAvailable(core) || Ticket.Visible || WheelOpen || FootChipVisible;
+        _core is not { } core || !ModesAvailable(core) || Ticket.Visible || WheelOpen || FootChipVisible || _emptyCrystal is not null;
 
-    /// <summary>The naming chip, for a creature that was born without one. It is the whole reason an owner
-    /// who skipped the card can still reach it.</summary>
-    private bool NameChipVisible => _core is { NameChosen: false } && !_namingOpen && _settle >= 1f;
-
-    /// <summary>Either chip that stands in the page's foot. They are drawn on the nav bar's own row, so
-    /// while one is up the page is held and the bar stands down: two things on one row is one of them
+    /// <summary>The ticket chip standing in the page's foot. It is drawn on the nav bar's own row, so
+    /// while it is up the page is held and the bar stands down: two things on one row is one of them
     /// unreadable and, since the bar submits later, unclickable too.</summary>
     private bool FootChipVisible =>
-        NameChipVisible
-        || (!_namingOpen && !Ticket.Visible && _settle >= 1f && UnclaimedTicketSlot() is not null);
+        !_namingOpen && !Ticket.Visible && _settle >= 1f && UnclaimedTicketSlot() is not null;
 
     private bool ModesAvailable(AetherlingDto core) =>
-        IntroSeen && !_namingOpen && !RenameOverlayOpen && _arrive >= 1f && _settle >= 1f && core.Growth is not null;
+        core.Adult is not null && !_namingOpen && !RenameOverlayOpen && _arrive >= 1f && _settle >= 1f;
 
-    /// <summary>True while the basket has nothing in it, which is the only time the shop chip
-    /// takes a row of its own.</summary>
     private bool BasketEmpty()
     {
         foreach (var element in Elements.All)
@@ -155,27 +128,20 @@ internal sealed partial class PetScreen
         }
 
         var height = PetNavBar.Reserved + Px(ModesRowGap) + Px(BasketChipSize);
+        if (NearestUnlock(core) is not null)
+            height += Px(6f) + Px(BowlHeight);
         if (FeedWaitRemaining(core) > TimeSpan.Zero)
         {
             height += Px(4f) + Px(CountdownHeight);
         }
-        if (BasketEmpty())
-        {
-            height += Px(6f) + Px(ShopChipHeight);
-        }
         return height;
     }
 
-    /// <summary>How long until it will eat again: the hour gate while it is growing, the wait for
-    /// the next UTC day once a grown pet has had its three. Zero means it is hungry now. Measured
-    /// against the server's clock through the snapshot's own stamp, so a skewed system clock cannot
-    /// move it.</summary>
+    /// <summary>How long until it will eat again: the wait for the next UTC day once it has had its
+    /// three. Zero means it is hungry now. Measured against the server's clock through the snapshot's
+    /// own stamp, so a skewed system clock cannot move it.</summary>
     private TimeSpan FeedWaitRemaining(AetherlingDto core)
     {
-        if (core.Adult is null)
-        {
-            return PetState.FeedGateRemaining(core, ServerOffset(core));
-        }
         if (PetState.AdultFeedsLeft(core) > 0)
         {
             return TimeSpan.Zero;
@@ -187,10 +153,7 @@ internal sealed partial class PetScreen
 
     /// <summary>The whole wait this countdown is a fraction of, so the track can drain rather than
     /// just sit there.</summary>
-    private static TimeSpan FeedWaitTotal(AetherlingDto core) =>
-        core.Adult is null
-            ? TimeSpan.FromMinutes(Math.Max(1, core.Growth?.FeedGateMinutes ?? 60))
-            : TimeSpan.FromDays(1);
+    private static TimeSpan FeedWaitTotal => TimeSpan.FromDays(1);
 
     /// <summary>The wait as h:mm:ss, or m:ss under an hour. Seconds on purpose: a line that only
     /// said "about 60 minutes" for the first minute of an hour reads as though it is stuck.</summary>
@@ -218,12 +181,12 @@ internal sealed partial class PetScreen
         var trackColour = final ? warm : Look.Crystal;
 
         Look.Centred(dl, ctx.Localize("os.aetherling_feed_countdown"), centreX, top,
-            Look.U32(Look.Whisper, 0.65f), 0.72f);
-        Look.Centred(dl, FormatWait(wait), centreX, top + Px(13f), Look.U32(digitColour, 0.95f), 1.3f);
+            Look.U32(Look.Body), 0.95f);
+        Look.Centred(dl, FormatWait(wait), centreX, top + Px(19f), Look.U32(digitColour), 1.4f);
 
         // The track drains left to right: what is left of the wait is what is left of the bar.
         var left = centreX - (trackWidth * 0.5f);
-        var trackY = top + Px(38f);
+        var trackY = top + Px(47f);
         var height = Px(3f);
         var remaining = total.TotalSeconds <= 0d
             ? 0f
@@ -238,15 +201,25 @@ internal sealed partial class PetScreen
         }
     }
 
-    /// <summary>The basket, laid out bottom-up from the page's foot: it sits on top of the space the
-    /// nav bar keeps for itself, with the countdown and the shop chip stacking above it.</summary>
     private void DrawFoot(OsAppContext ctx, ImDrawListPtr dl, Vector2 origin, Vector2 size, AetherlingDto core)
     {
         var barTop = origin.Y + size.Y - PetNavBar.Reserved;
-        DrawBasket(ctx, dl, origin, size, barTop - Px(ModesRowGap) - Px(BasketChipSize), core);
-    }
+        var hasUnlock = NearestUnlock(core) is not null;
+        var unlockTop = barTop - Px(ModesRowGap) - Px(BowlHeight);
+        var basketTop = barTop - Px(ModesRowGap) - Px(BasketChipSize)
+            - (hasUnlock ? Px(6f) + Px(BowlHeight) : 0f);
+        DrawBasket(ctx, dl, origin, size, basketTop, core);
+        if (hasUnlock)
+            DrawNearestUnlock(ctx, dl, origin, size, unlockTop, core);
 
-    // ------------------------------------------------------------------ feeding
+        var above = basketTop;
+        var wait = FeedWaitRemaining(core);
+        if (wait > TimeSpan.Zero)
+        {
+            above -= Px(4f) + Px(CountdownHeight);
+            DrawCountdown(ctx, dl, origin, size, above, wait, FeedWaitTotal, size.X - Px(36f));
+        }
+    }
 
     private void DrawBasket(
         OsAppContext ctx, ImDrawListPtr dl, Vector2 origin, Vector2 size, float top, AetherlingDto core)
@@ -257,59 +230,60 @@ internal sealed partial class PetScreen
         var total = (chip * count) + (gap * (count - 1));
 
         // The row never runs off a narrow phone: it tightens the gap first, then the chips.
-        if (total > size.X - Px(24f))
+        if (total > size.X - Px(56f))
         {
-            gap = MathF.Max(Px(3f), (size.X - Px(24f) - (chip * count)) / (count - 1));
+            gap = MathF.Max(Px(3f), (size.X - Px(56f) - (chip * count)) / (count - 1));
             total = (chip * count) + (gap * (count - 1));
-            if (total > size.X - Px(24f))
+            if (total > size.X - Px(56f))
             {
-                chip = (size.X - Px(24f) - (gap * (count - 1))) / count;
+                chip = (size.X - Px(56f) - (gap * (count - 1))) / count;
                 total = (chip * count) + (gap * (count - 1));
             }
         }
         var left = origin.X + ((size.X - total) * 0.5f);
+        BasketRect = (new Vector2(left, top), new Vector2(left + total, top + chip));
 
-        var gate = PetState.FeedGateRemaining(core, ServerOffset(core));
-        var full = core.Adult is not null && PetState.AdultFeedsLeft(core) <= 0;
-        // A growing-up takes the page over, and a crystal thrown into it is thrown at a creature that is
-        // not there: the feed lands on a body held at its old shape, behind the ceremony, with nothing to
-        // watch it happen. Read off the field rather than the property, which builds the scene on first
-        // touch and would build it here every frame before there was ever anything to play.
-        var evolving = _evolution is { Playing: true };
-        var blocked = gate > TimeSpan.Zero || full || _feedBusy || _flying is not null || evolving;
+        var full = PetState.AdultFeedsLeft(core) <= 0;
+        var blocked = full || _feedBusy || _flying is not null;
 
-        var anyOwned = false;
+        var trackedElement = ShellCatalog.ElementOf(TrackedUnlockRef);
         for (var i = 0; i < count; i++)
         {
             var element = Elements.All[i];
             var owned = PetState.CrystalCount(_inventory, element);
-            anyOwned |= owned > 0;
             var tl = new Vector2(left + (i * (chip + gap)), top);
 
             ImGui.SetCursorScreenPos(tl);
-            ImGui.InvisibleButton($"##aetherlingCrystal{element.Key}", new Vector2(chip, chip));
+            var pressed = ImGui.InvisibleButton($"##aetherlingCrystal{element.Key}", new Vector2(chip, chip));
             var hovered = ImGui.IsItemHovered();
             var usable = owned > 0 && !blocked;
-            if (hovered && usable)
+            var canShop = owned <= 0 && _inventory is not null && !_inventoryLoading && !_feedBusy
+                && !Ticket.Visible && !WheelOpen && !RenameOverlayOpen;
+            if (hovered && (usable || canShop))
             {
                 HandOnHover();
             }
             if (hovered)
             {
-                ImGui.SetTooltip(BasketTooltip(ctx, element, owned, gate, full));
+                ImGui.SetTooltip(FeedingTooltip(ctx, core) + "\n\n" + BasketTooltip(ctx, element, owned, full));
             }
+            if (pressed && canShop)
+                _emptyCrystal = element;
             if (ImGui.IsItemActivated() && usable && _carried is null)
             {
                 _carried = element;
                 _carryVelocity = Vector2.Zero;
                 _lastMouse = ImGui.GetMousePos();
+                pet.AnticipateCrystal(ctx.ReduceMotion, element.Key);
             }
 
             var alpha = usable ? 1f : 0.35f;
             dl.AddRectFilled(tl, tl + new Vector2(chip, chip),
                 Look.U32(element.Accent with { W = 0.12f * alpha }), Px(12f));
+            var tracked = string.Equals(trackedElement, element.Key, StringComparison.OrdinalIgnoreCase);
             dl.AddRect(tl, tl + new Vector2(chip, chip),
-                Look.U32(element.Accent with { W = 0.45f * alpha }), Px(12f), ImDrawFlags.RoundCornersAll, Px(1.2f));
+                Look.U32(element.Accent with { W = (tracked ? 0.90f : 0.45f) * alpha }), Px(12f),
+                ImDrawFlags.RoundCornersAll, Px(tracked ? 2.2f : 1.2f));
             DrawCrystal(ctx, dl, element, tl + new Vector2(chip * 0.5f, chip * 0.44f), chip * 0.66f, alpha);
             if (owned > 0)
             {
@@ -321,18 +295,6 @@ internal sealed partial class PetScreen
             }
         }
 
-        var above = top;
-        var wait = FeedWaitRemaining(core);
-        if (wait > TimeSpan.Zero)
-        {
-            above -= Px(4f) + Px(CountdownHeight);
-            DrawCountdown(ctx, dl, origin, size, above, wait, FeedWaitTotal(core), total);
-        }
-
-        if (!anyOwned)
-        {
-            DrawShopChip(ctx, dl, origin, size, above - Px(6f) - Px(ShopChipHeight));
-        }
     }
 
     /// <summary>The crystal itself, centred on a point at the given height. Falls back to the gem
@@ -353,48 +315,18 @@ internal sealed partial class PetScreen
         IconDraw.AddCentered(dl, FontAwesomeIcon.Gem, size * 0.55f, centre, Look.U32(element.Accent, 0.95f * alpha));
     }
 
-    private string BasketTooltip(
-        OsAppContext ctx, Elements.ElementDef element, int count, TimeSpan gate, bool full)
+    private static string BasketTooltip(OsAppContext ctx, Elements.ElementDef element, int count, bool full)
     {
         var name = ctx.Localize(Elements.NameKey(element));
         if (full)
         {
             return ctx.Localize("os.aetherling_feed_full_tip");
         }
-        if (gate > TimeSpan.Zero)
-        {
-            return string.Format(ctx.Localize("os.aetherling_feed_gate_tip"),
-                Math.Max(1, (int)Math.Ceiling(gate.TotalMinutes)));
-        }
         if (count <= 0)
         {
             return string.Format(ctx.Localize("os.aetherling_feed_none_tip"), name);
         }
         return string.Format(ctx.Localize("os.aetherling_feed_chip_tip"), name, count);
-    }
-
-    private void DrawShopChip(OsAppContext ctx, ImDrawListPtr dl, Vector2 origin, Vector2 size, float y)
-    {
-        var label = ctx.Localize("os.aetherling_feed_shop");
-        var height = Px(24f);
-        var width = ImGui.CalcTextSize(label).X + Px(28f);
-        var tl = new Vector2(origin.X + ((size.X - width) * 0.5f), y);
-        ImGui.SetCursorScreenPos(tl);
-        var pressed = ImGui.InvisibleButton("##aetherlingFeedShop", new Vector2(width, height));
-        if (ImGui.IsItemHovered())
-        {
-            HandOnHover();
-        }
-        dl.AddRectFilled(tl, tl + new Vector2(width, height),
-            Look.U32(Look.Spark with { W = 0.18f }), height * 0.5f);
-        Look.Centred(dl, label, tl.X + (width * 0.5f),
-            tl.Y + ((height - (ImGui.GetTextLineHeight() * 0.82f)) * 0.5f), Look.U32(Look.CrystalPale, 0.9f), 0.82f);
-        if (pressed)
-        {
-            // The shelf's own name: the store resolves a deep link against category names and falls back
-            // to a text search, and "crystal" matched nothing, so this chip has always been a search.
-            ctx.Shell.SendIntent("store", OsIntents.CreatePath(OsIntents.StoreOpen, "consumables"));
-        }
     }
 
     /// <summary>The crystal in hand and in the air. Called every frame after the stage, so the
@@ -511,20 +443,17 @@ internal sealed partial class PetScreen
         _ = ctx;
     }
 
-    /// <summary>Where the creature is on screen, roughly: the middle band of the stage's lower
-    /// half, wide enough to be kind at every form.</summary>
     private bool PetHit(Vector2 at, Vector2 stageTl, Vector2 stageSize)
     {
-        var centreX = stageTl.X + (stageSize.X * 0.5f);
-        var half = stageSize.X * 0.24f;
-        var top = stageTl.Y + (stageSize.Y * 0.34f);
-        var bottom = stageTl.Y + stageSize.Y - Px(6f);
+        var centreX = _homePetBottom.X;
+        var half = _homePetSize * 0.45f;
+        var top = _homePetBottom.Y - _homePetSize;
+        var bottom = _homePetBottom.Y + Px(8f);
         return at.X >= centreX - half && at.X <= centreX + half && at.Y >= top && at.Y <= bottom;
     }
 
-    private Vector2 MouthScreenPoint(Vector2 stageTl, Vector2 stageSize) => new(
-        stageTl.X + (stageSize.X * 0.5f),
-        stageTl.Y + (stageSize.Y * 0.68f));
+    private Vector2 MouthScreenPoint(Vector2 stageTl, Vector2 stageSize) =>
+        _homePetBottom - new Vector2(0, _homePetSize * 0.25f);
 
     private void LandCrystal(OsAppContext ctx, Elements.ElementDef element)
     {
@@ -553,8 +482,8 @@ internal sealed partial class PetScreen
         });
     }
 
-    /// <summary>Takes what the feed round trip left: the new snapshot, an evolution if the form
-    /// changed, the adulting hand-off, or a warm refusal.</summary>
+    /// <summary>Takes what the feed round trip left: the new snapshot, a ticket if the diet earned one,
+    /// or a warm refusal.</summary>
     private void DrainFeeding(OsAppContext ctx, float dt)
     {
         if (Interlocked.Exchange(ref _pendingFed, null) is { } fed)
@@ -563,27 +492,21 @@ internal sealed partial class PetScreen
             var before = _core;
             AdoptCore(fed);
             RefreshInventory();
+            _postGameHint = false;
+            _nextAppetiteCueAt = ImGui.GetTime() + AppetiteCueGapSeconds;
 
-            var wasAdult = before?.Adult is not null;
-            var oldForm = PetState.FormFolder(before);
-            var newForm = PetState.FormFolder(fed);
-            if (oldForm != newForm)
+            if (before is not null && PetState.AdultFeedsLeft(before) > 0 && PetState.AdultFeedsLeft(fed) == 0)
             {
-                // The body is held at the old shape until the ceremony's flash asks for it, so no
-                // surface can swap it early and nobody sees the change happen.
-                var accent = Elements.Find(fed.Adult?.Element ?? 0)?.Accent
-                    ?? new Vector4(0.62f, 0.88f, 0.85f, 1f);
-                _adultingHandOff = !wasAdult && fed.Adult is not null;
-                pet.HoldForm(newForm);
-                Evolution.Begin(_adultingHandOff, accent);
+                pet.PlayFullMeal(Random.Shared.Next(3), ctx.ReduceMotion);
             }
-            else if (NewTicketSlot(before, fed) is { } ticket)
+
+            if (NewTicketSlot(before, fed) is { } ticket)
             {
                 Ticket.Open(fed, ticket);
             }
             else
             {
-                ShowFeedToast(ctx, fed);
+                ShowFeedToast(ctx);
             }
         }
         if (Interlocked.Exchange(ref _pendingFeedError, null) is { } error)
@@ -637,21 +560,29 @@ internal sealed partial class PetScreen
         return null;
     }
 
-    private bool _adultingHandOff;
     private string? _feedToast;
     private float _feedToastLeft;
 
-    private void ShowFeedToast(OsAppContext ctx, AetherlingDto fed)
+    private void ShowFeedToast(OsAppContext ctx)
     {
-        if (fed.Adult is null)
-        {
-            _feedToast = ctx.Localize("os.aetherling_feed_growth_toast");
-        }
-        else
-        {
-            _feedToast = ctx.Localize("os.aetherling_feed_treat_toast");
-        }
+        _feedToast = ctx.Localize("os.aetherling_feed_treat_toast");
         _feedToastLeft = 3.5f;
+    }
+
+    private void TickAppetite(OsAppContext ctx, AetherlingDto core)
+    {
+        if (_inventory is null || BasketEmpty() || PetState.AdultFeedsLeft(core) <= 0 || pet.Napping
+            || _feedBusy || _carried is not null || _flying is not null || Ticket.Visible || WheelOpen)
+        {
+            return;
+        }
+        var now = ImGui.GetTime();
+        if (now < _nextAppetiteCueAt)
+        {
+            return;
+        }
+        _nextAppetiteCueAt = now + AppetiteCueGapSeconds;
+        pet.PlayHungerCue(ctx.ReduceMotion);
     }
 
     /// <summary>The clock offset sampled when the last reply landed; see AdoptCore.</summary>
@@ -730,7 +661,7 @@ internal sealed partial class PetScreen
         }
 
         // A hand with a crystal in it is aiming, not stroking.
-        if (_carried is not null || _flying is not null)
+        if (_carried is not null || _flying is not null || InputHeld)
         {
             return;
         }
