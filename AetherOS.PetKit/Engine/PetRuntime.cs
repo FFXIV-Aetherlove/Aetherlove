@@ -397,6 +397,21 @@ public sealed class PetRuntime
         RebuildBoopPool();
     }
 
+    private (string Palette, IReadOnlyList<string> Accessories, string Reaction, IReadOnlyList<string> Disabled)? _worn;
+
+    /// <summary>Re-reads the catalogue and re-wears the current look. The catalogue is read the moment
+    /// the body sheets load, which on a first boot is before the accessory pack has finished landing,
+    /// so every def read then is missing or partial until this runs.</summary>
+    public void ReloadCatalogue()
+    {
+        _catalogue = PetCatalogue.Load();
+        _appliedLook = string.Empty;
+        if (_worn is { } worn)
+        {
+            Wear(worn.Palette, worn.Accessories, worn.Reaction, worn.Disabled);
+        }
+    }
+
     /// <summary>What the pet wears. Sent whole, exactly like the server stores it; unknown refs
     /// drop silently so a stale look never breaks the draw.</summary>
     private void Wear(
@@ -405,6 +420,7 @@ public sealed class PetRuntime
         string reactionRef,
         IReadOnlyList<string> disabledReactions)
     {
+        _worn = (paletteRef, accessoryRefs, reactionRef, disabledReactions);
         _palette = _catalogue?.PaletteByRef(paletteRef);
         _equippedReaction = reactionRef;
         _disabledReactions = [.. disabledReactions];

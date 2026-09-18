@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace AetherOS.Apps.Aetherling.Localization;
 
@@ -454,6 +454,9 @@ public static class AppStrings
         ["os.aetherling_tour_settings_body"] = "Let {0} stand on your screen, pick a size, and choose what it may learn and say. Each switch says what it does.",
         ["os.aetherling_tour_again_title"] = "Want this tour again?",
         ["os.aetherling_tour_again_body"] = "Start it from this row any time.",
+
+        // added after update 2.7.1 (free rename for the old default name)
+        ["os.aetherling_rename_free_body"] = "The old name was picked for you. This name change is free.",
     };
 
     private static readonly IReadOnlyDictionary<string, string> De = new Dictionary<string, string>
@@ -905,6 +908,9 @@ public static class AppStrings
         ["os.aetherling_tour_settings_body"] = "Lass {0} auf deinem Bildschirm stehen, wähl eine Größe und bestimme, was es lernen und sagen darf. Jeder Schalter sagt, was er tut.",
         ["os.aetherling_tour_again_title"] = "Willst du die Tour noch mal sehen?",
         ["os.aetherling_tour_again_body"] = "Starte sie jederzeit über diese Zeile.",
+
+        // added after update 2.7.1 (free rename for the old default name)
+        ["os.aetherling_rename_free_body"] = "Der alte Name wurde für dich gewählt. Diese Namensänderung ist kostenlos.",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Es = new Dictionary<string, string>
@@ -1356,6 +1362,9 @@ public static class AppStrings
         ["os.aetherling_tour_settings_body"] = "Deja que {0} se quede en tu pantalla, elige un tamaño y decide qué puede aprender y decir. Cada interruptor dice lo que hace.",
         ["os.aetherling_tour_again_title"] = "¿Quieres ver el recorrido otra vez?",
         ["os.aetherling_tour_again_body"] = "Empiézalo desde esta fila cuando quieras.",
+
+        // added after update 2.7.1 (free rename for the old default name)
+        ["os.aetherling_rename_free_body"] = "El nombre anterior se eligió por ti. Este cambio de nombre es gratis.",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Fr = new Dictionary<string, string>
@@ -1807,6 +1816,9 @@ public static class AppStrings
         ["os.aetherling_tour_settings_body"] = "Laisse {0} rester sur ton écran, choisis une taille et décide ce qu’il peut apprendre et dire. Chaque interrupteur dit ce qu’il fait.",
         ["os.aetherling_tour_again_title"] = "Tu veux revoir cette visite ?",
         ["os.aetherling_tour_again_body"] = "Relance-la depuis cette ligne quand tu veux.",
+
+        // added after update 2.7.1 (free rename for the old default name)
+        ["os.aetherling_rename_free_body"] = "L'ancien nom a été choisi pour toi. Ce changement de nom est gratuit.",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Pt = new Dictionary<string, string>
@@ -2258,6 +2270,9 @@ public static class AppStrings
         ["os.aetherling_tour_settings_body"] = "Deixe {0} ficar na sua tela, escolha um tamanho e decida o que ele pode aprender e dizer. Cada chave diz o que faz.",
         ["os.aetherling_tour_again_title"] = "Quer ver o tour de novo?",
         ["os.aetherling_tour_again_body"] = "Comece por esta linha quando quiser.",
+
+        // added after update 2.7.1 (free rename for the old default name)
+        ["os.aetherling_rename_free_body"] = "O nome antigo foi escolhido por ti. Esta mudança de nome é grátis.",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Ru = new Dictionary<string, string>
@@ -2709,6 +2724,9 @@ public static class AppStrings
         ["os.aetherling_tour_settings_body"] = "Пусть {0} стоит на твоём экране, выбери размер и решай, что ему можно учить и говорить. Каждый переключатель говорит сам за себя.",
         ["os.aetherling_tour_again_title"] = "Хочешь пройти экскурсию ещё раз?",
         ["os.aetherling_tour_again_body"] = "Запускай её из этой строки в любой момент.",
+
+        // added after update 2.7.1 (free rename for the old default name)
+        ["os.aetherling_rename_free_body"] = "Старое имя выбрали за тебя. Эта смена имени бесплатна.",
     };
 
     public static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> Packs =

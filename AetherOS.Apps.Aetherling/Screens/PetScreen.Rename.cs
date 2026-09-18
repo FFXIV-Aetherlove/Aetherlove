@@ -82,11 +82,17 @@ internal sealed partial class PetScreen
     }
 
     /// <summary>Asks the account what it owns, right now. The cached inventory is not trusted here: the
-    /// player may have bought one seconds ago in another app.</summary>
+    /// player may have bought one seconds ago in another app. A pet the server says renames free skips
+    /// the question.</summary>
     private void AskRename()
     {
         if (_renameChecking || RenameOverlayOpen || _namingOpen)
         {
+            return;
+        }
+        if (_core is { FreeRename: true })
+        {
+            OpenRenameBox();
             return;
         }
         _renameChecking = true;
@@ -106,6 +112,13 @@ internal sealed partial class PetScreen
         });
     }
 
+    private void OpenRenameBox()
+    {
+        _renameOpen = true;
+        _nameFocusPending = true;
+        _nameBuffer = _core?.PetName ?? AetherlingLimits.DefaultName;
+    }
+
     /// <summary>Takes what the ownership check and the rename round trip left. Called from Draw: both
     /// open overlays and one of them starts a dance, all of which belong to the draw thread.</summary>
     private void DrainRename()
@@ -120,9 +133,7 @@ internal sealed partial class PetScreen
             }
             else if (check.Owned)
             {
-                _renameOpen = true;
-                _nameFocusPending = true;
-                _nameBuffer = _core?.PetName ?? AetherlingLimits.DefaultName;
+                OpenRenameBox();
             }
             else
             {
@@ -225,7 +236,8 @@ internal sealed partial class PetScreen
         Look.Centred(dl, ctx.Localize("os.aetherling_rename_title"), tl.X + (cardW * 0.5f), y,
             Look.U32(Look.CrystalPale), 1.15f);
         y += Px(30f);
-        Look.CentredWrapped(dl, ctx.Localize("os.aetherling_rename_body"), tl.X + (cardW * 0.5f), y,
+        var body = _core is { FreeRename: true } ? "os.aetherling_rename_free_body" : "os.aetherling_rename_body";
+        Look.CentredWrapped(dl, ctx.Localize(body), tl.X + (cardW * 0.5f), y,
             cardW - Px(28f), Look.U32(Look.Whisper, 0.9f), 0.9f);
         y += Px(40f);
 

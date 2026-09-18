@@ -63,7 +63,8 @@ public sealed record AetherlingDto(
     bool SharesWithParty = true,
     AetherlingWheelStateDto? Wheel = null,
     DateTimeOffset? PromotedAtUtc = null,
-    DateTimeOffset? LastFedAtUtc = null);
+    DateTimeOffset? LastFedAtUtc = null,
+    bool FreeRename = false);
 
 /// <summary>The grown pet: the element it was born with, the element it is attuned to now, and the
 /// lifetime diet ledger the radar and the signature turns read. Counts only ever go up.

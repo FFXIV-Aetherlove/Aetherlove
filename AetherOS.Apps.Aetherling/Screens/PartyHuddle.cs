@@ -36,6 +36,14 @@ internal sealed class PartyHuddle(IAetherlingHost host)
     private readonly Dictionary<Guid, Companion> _companions = [];
     private readonly List<Guid> _stale = [];
 
+    public void ReloadCatalogue()
+    {
+        foreach (var companion in _companions.Values)
+        {
+            companion.Runtime.ReloadCatalogue();
+        }
+    }
+
     private sealed class Companion
     {
         public readonly PetRuntime Runtime = new();

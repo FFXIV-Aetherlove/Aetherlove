@@ -23,6 +23,16 @@ internal sealed class PetRendererService(IAetherlingHost host, PetRuntime own) :
     private readonly Dictionary<Guid, Companion> _companions = [];
     private readonly List<Guid> _stale = [];
 
+    /// <summary>Every companion re-reads the catalogue; the own creature is the app's runtime and the
+    /// app reloads it itself.</summary>
+    public void ReloadCatalogue()
+    {
+        foreach (var companion in _companions.Values)
+        {
+            companion.Runtime.ReloadCatalogue();
+        }
+    }
+
     public void Draw(ImDrawListPtr dl, Guid key, Vector2 bottomCentre, float size,
         string palette, IReadOnlyList<string> accessories, bool reduceMotion,
         string shell = "")

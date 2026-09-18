@@ -107,6 +107,10 @@ internal sealed class FloatingPet(IAetherlingHost host, PetRuntime pet) : IAethe
 
     public bool Visible => Enabled && !Hidden && host.Snapshot is { Adult: not null };
 
+    /// <summary>Whether the body and accessory packs are both on disk. Drawing before the second one
+    /// lands reads the catalogue while it is still filling.</summary>
+    public Func<bool>? AssetsReady { get; set; }
+
     /// <summary>Whether the creature speaks out over the game. The one off switch (the glyph channel is
     /// never silenced in the app, where it is the pet's voice rather than a feature); the app persists it.</summary>
     public bool WorldGlyphs { get; set; } = true;
@@ -116,10 +120,16 @@ internal sealed class FloatingPet(IAetherlingHost host, PetRuntime pet) : IAethe
     /// <summary>Puts it back in the middle of the screen, for anyone who has lost it off an edge.</summary>
     public void Recentre() => _recentre = true;
 
+    public void ReloadCatalogue() => _huddle.ReloadCatalogue();
+
     public void Draw()
     {
         DrainSnackState();
         EnsureSnackInventory();
+        if (AssetsReady is { } ready && !ready())
+        {
+            return;
+        }
 
         // The same form AND the same look the phone page asks for. Both are the runtime's, not a page's:
         // dressing it from the pet page alone meant the creature out here wore the default blue until the

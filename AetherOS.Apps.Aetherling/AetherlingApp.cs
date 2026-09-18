@@ -242,7 +242,20 @@ public sealed class AetherlingApp : IAetherApp
         LoadFloatingSettings();
         _host.Overlay = _floating;
         _host.InteractLab = new InteractLab(_runtime);
-        _host.PetRenderer = new PetRendererService(_host, _runtime);
+        var renderer = new PetRendererService(_host, _runtime);
+        _host.PetRenderer = renderer;
+        _floating.AssetsReady = () => _caps.Assets.IsReady(AssetPacks.Aetherling)
+            && _caps.Assets.IsReady(AssetPacks.AetherlingAccessories);
+        _caps.Assets.PackReady += pack =>
+        {
+            if (pack is not (AssetPacks.Aetherling or AssetPacks.AetherlingAccessories))
+            {
+                return;
+            }
+            _runtime.ReloadCatalogue();
+            renderer.ReloadCatalogue();
+            _floating.ReloadCatalogue();
+        };
     }
 
     /// <summary>The dev window's handle into the creature: the real runtime, gates forced open.</summary>
